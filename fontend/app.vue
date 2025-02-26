@@ -1,9 +1,9 @@
 <template>
   <NuxtLayout>
-    <index/>
+    <home/>
   </NuxtLayout >
 </template>
 <script setup lang="ts">
 
-import Index from "./pages/index.vue";
+import Home from "./layout/home.vue";
 </script>
