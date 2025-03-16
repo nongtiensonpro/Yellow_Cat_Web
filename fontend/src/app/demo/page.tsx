@@ -8,6 +8,8 @@ interface DemoModel {
   age: number;
 }
 
+import LoadingSpinner from '@/components/LoadingSpinner';
+
 export default function Demo() {
   const [demoData, setDemoData] = useState<DemoModel[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -59,9 +61,7 @@ export default function Demo() {
       </h1>
       <div className="max-w-4xl mx-auto">
         {loading ? (
-          <div className="text-center py-10">
-            <p className="text-gray-600 dark:text-gray-300">Loading data...</p>
-          </div>
+          <LoadingSpinner />
         ) : error ? (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
             <span className="block sm:inline">{error}</span>
