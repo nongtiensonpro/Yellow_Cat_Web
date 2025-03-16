@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -13,6 +13,15 @@ interface NavbarProps {
 export default function Navbar({ darkMode, toggleDarkMode }: NavbarProps) {
     const router = useRouter();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    
+    useEffect(() => {
+        // Ensure the dark mode class is applied when the component mounts
+        if (darkMode) {
+            document.documentElement.classList.add("dark");
+        } else {
+            document.documentElement.classList.remove("dark");
+        }
+    }, [darkMode]);
     
     const handleNavigation = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
         e.preventDefault();

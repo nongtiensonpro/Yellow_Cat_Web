@@ -9,12 +9,12 @@ export default function SharedLayout({ children }: { children: React.ReactNode }
   const router = useRouter();
   const pathname = usePathname();
   const [content, setContent] = useState<React.ReactNode>(children);
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem("darkMode") === "true";
-    }
-    return false;
-  });
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem("darkMode") === "true";
+    setDarkMode(savedDarkMode);
+  }, []);
 
   useEffect(() => {
     // Apply dark mode class when component mounts and when darkMode state changes
