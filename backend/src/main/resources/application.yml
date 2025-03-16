@@ -1,0 +1,16 @@
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:9082/realms/yellowcat
+          jwk-set-uri: http://localhost:9082/realms/yellowcat/protocol/openid-connect/certs
+
+keycloak:
+  realm: yellowcat
+  auth-server-url: http://localhost:9082
+  resource: backend-client
+  public-client: true
+  bearer-only: true
+  use-resource-role-mappings: true
+  principal-attribute: preferred_username

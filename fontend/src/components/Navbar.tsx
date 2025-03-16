@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useAuthStore } from "../app/auth/store";
 
 interface NavbarProps {
     darkMode: boolean;
@@ -13,6 +14,9 @@ interface NavbarProps {
 export default function Navbar({ darkMode, toggleDarkMode }: NavbarProps) {
     const router = useRouter();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    
+    // Use the auth store at the top level of the component
+    const { isAuthenticated, user, login, logout } = useAuthStore();
     
     useEffect(() => {
         // Ensure the dark mode class is applied when the component mounts
@@ -58,6 +62,27 @@ export default function Navbar({ darkMode, toggleDarkMode }: NavbarProps) {
                         <a href="/demo" onClick={(e) => handleNavigation(e, "/demo")} className="px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
                             Demo
                         </a>
+                        {/* Auth Buttons */}
+                        {isAuthenticated ? (
+                            <div className="flex items-center space-x-4">
+                                <span className="text-gray-700 dark:text-gray-200">
+                                    {user?.username}
+                                </span>
+                                <button
+                                    onClick={() => logout()}
+                                    className="px-4 py-2 font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                >
+                                    Đăng xuất
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => login()}
+                                className="px-4 py-2 font-medium text-white bg-yellow-600 rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+                            >
+                                Đăng nhập
+                            </button>
+                        )}
                         {/* Dark Mode Toggle */}
                         <button
                             onClick={toggleDarkMode}
@@ -114,6 +139,27 @@ export default function Navbar({ darkMode, toggleDarkMode }: NavbarProps) {
                         <a href="/contact" onClick={(e) => handleNavigation(e, "/contact")} className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
                             Liên hệ
                         </a>
+                        {/* Add auth buttons to mobile menu */}
+                        {isAuthenticated ? (
+                            <div className="flex flex-col space-y-2 px-3 py-2">
+                                <span className="text-gray-700 dark:text-gray-200">
+                                    {user?.username}
+                                </span>
+                                <button
+                                    onClick={() => logout()}
+                                    className="px-4 py-2 font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                >
+                                    Đăng xuất
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => login()}
+                                className="w-full text-left px-4 py-2 font-medium text-white bg-yellow-600 rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 mx-3"
+                            >
+                                Đăng nhập
+                            </button>
+                        )}
                         <button
                             onClick={toggleDarkMode}
                             className="flex items-center w-full px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
