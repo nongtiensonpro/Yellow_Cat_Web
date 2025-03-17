@@ -12,14 +12,25 @@ interface KeycloakProviderProps {
 export default function KeycloakProvider({ children }: KeycloakProviderProps) {
   const { setAuth } = useAuthStore();
 
-  const eventLogger = async (event: unknown, error: unknown) => {
+  const eventLogger = (event: unknown, error: unknown) => {
     console.log('onKeycloakEvent', event, error);
-    const profile = await keycloak.loadUserProfile();
-    console.log('Authenticated user:', profile);
   };
 
-  const tokenLogger = (tokens: unknown) => {
+  const tokenLogger = async (tokens: unknown) => {
     console.log('onKeycloakTokens', tokens);
+    
+    if (keycloak.authenticated) {
+      try {
+        const profile = await keycloak.loadUserProfile();
+        console.log('Authenticated user:', profile);
+        setAuth(true, profile);
+      } catch (error) {
+        console.error('Failed to load user profile:', error);
+        setAuth(false, null);
+      }
+    } else {
+      setAuth(false, null);
+    }
   };
 
   useEffect(() => {
@@ -29,6 +40,7 @@ export default function KeycloakProvider({ children }: KeycloakProviderProps) {
           onLoad: 'check-sso',
           silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
         });
+        
         if (authenticated) {
           const profile = await keycloak.loadUserProfile();
           console.log('Authenticated user:', profile);

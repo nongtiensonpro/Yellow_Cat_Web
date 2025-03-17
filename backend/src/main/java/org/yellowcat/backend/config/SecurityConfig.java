@@ -22,7 +22,9 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/api/public/**").permitAll()
+                // Cho phép truy cập không cần xác thực cho các endpoint công khai
+                .requestMatchers("/demo/all").permitAll()
+                // Yêu cầu xác thực cho tất cả các yêu cầu khác
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2
