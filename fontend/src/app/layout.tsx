@@ -3,6 +3,7 @@
 import "./globals.css";
 import KeycloakProvider from './auth/KeycloakProvider';
 import SharedLayout from './shared-layout';
+import React from "react";
 
 export default function RootLayout({
   children,

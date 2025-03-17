@@ -12,8 +12,10 @@ interface KeycloakProviderProps {
 export default function KeycloakProvider({ children }: KeycloakProviderProps) {
   const { setAuth } = useAuthStore();
 
-  const eventLogger = (event: unknown, error: unknown) => {
+  const eventLogger = async (event: unknown, error: unknown) => {
     console.log('onKeycloakEvent', event, error);
+    const profile = await keycloak.loadUserProfile();
+    console.log('Authenticated user:', profile);
   };
 
   const tokenLogger = (tokens: unknown) => {
@@ -29,6 +31,7 @@ export default function KeycloakProvider({ children }: KeycloakProviderProps) {
         });
         if (authenticated) {
           const profile = await keycloak.loadUserProfile();
+          console.log('Authenticated user:', profile);
           setAuth(true, profile);
         } else {
           setAuth(false, null);
@@ -36,10 +39,12 @@ export default function KeycloakProvider({ children }: KeycloakProviderProps) {
       } catch (error) {
         console.error('Keycloak initialization failed:', error);
         setAuth(false, null);
+      }finally {
+        await initKeycloak();
       }
     };
 
-    initKeycloak();
+
   }, [setAuth]);
 
   return (

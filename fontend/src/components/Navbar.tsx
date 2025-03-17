@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "../app/auth/store";
+import { useAuthStore } from "@/app/auth/store";
+import keycloak from "@/app/auth/keycloak";
 
 interface NavbarProps {
     darkMode: boolean;
@@ -14,12 +14,10 @@ interface NavbarProps {
 export default function Navbar({ darkMode, toggleDarkMode }: NavbarProps) {
     const router = useRouter();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    
-    // Use the auth store at the top level of the component
+
     const { isAuthenticated, user, login, logout } = useAuthStore();
     
     useEffect(() => {
-        // Ensure the dark mode class is applied when the component mounts
         if (darkMode) {
             document.documentElement.classList.add("dark");
         } else {
