@@ -46,25 +46,9 @@ export default function Navbar({darkMode, toggleDarkMode}: NavbarProps) {
 
                     {/* Desktop Menu */}
                     <div className="hidden md:flex items-center space-x-4">
-                        <a href="/" onClick={(e) => handleNavigation(e, "/")}
+                        <a href="/users" onClick={(e) => handleNavigation(e, "/users")}
                            className="px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                            Trang chủ
-                        </a>
-                        <a href="/about" onClick={(e) => handleNavigation(e, "/about")}
-                           className="px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                            Giới thiệu
-                        </a>
-                        <a href="/services" onClick={(e) => handleNavigation(e, "/services")}
-                           className="px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                            Dịch vụ
-                        </a>
-                        <a href="/contact" onClick={(e) => handleNavigation(e, "/contact")}
-                           className="px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                            Liên hệ
-                        </a>
-                        <a href="/demo" onClick={(e) => handleNavigation(e, "/demo")}
-                           className="px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                            Demo
+                            Quản lý tài khoản
                         </a>
                         {/* Auth Buttons */}
                         {isAuthenticated ? (
