@@ -31,6 +31,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(authorize -> authorize
                 // Cho phép truy cập không cần xác thực cho các endpoint công khai
                 .requestMatchers("/demo/all", "/api/public/**","/api/users/**").permitAll()
+                // Thêm các đường dẫn Swagger UI và API docs
+                .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll()
                 // Phân quyền dựa trên authority (client role) thay vì role
                 .requestMatchers("/api/admin/**").hasAnyAuthority("Admin_Web")
                 .requestMatchers("/api/manager/**").hasAnyAuthority("Manager_Web")
