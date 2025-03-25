@@ -30,7 +30,7 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(authorize -> authorize
                 // Cho phép truy cập không cần xác thực cho các endpoint công khai
-                .requestMatchers("/demo/all", "/api/public/**","/api/users/**").permitAll()
+                .requestMatchers("/demo/all", "/api/public/**","/api/users/**","/api/vnpay/**").permitAll()
                 // Thêm các đường dẫn Swagger UI và API docs
                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll()
                 // Phân quyền dựa trên authority (client role) thay vì role
@@ -45,16 +45,16 @@ public class SecurityConfig {
                     .jwtAuthenticationConverter(jwtAuthenticationConverter())
                 )
             );
-    
+
         return http.build();
     }
-    
+
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
 
         grantedAuthoritiesConverter.setAuthorityPrefix("");
-        
+
         JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwt -> {
             List<GrantedAuthority> authorities = new ArrayList<>();
@@ -73,10 +73,10 @@ public class SecurityConfig {
                 List<String> realmRoles = (List<String>) realmAccess.get("roles");
                 realmRoles.forEach(role -> authorities.add(new SimpleGrantedAuthority("REALM_" + role)));
             }
-            
+
             return authorities;
         });
-        
+
         return jwtAuthenticationConverter;
     }
 }

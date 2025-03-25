@@ -1,5 +1,5 @@
 import { title, subtitle } from "@/components/primitives";
-
+import VNPAY from "@/components/vnpay-demo"
 
 export default function Home() {
   return (
@@ -14,6 +14,7 @@ export default function Home() {
         <div className={subtitle({ class: "mt-4" })}>
           Don Vito Corleone.
         </div>
+        <VNPAY/>
       </div>
     </section>
   );
