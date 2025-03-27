@@ -35,7 +35,6 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll()
                 // Phân quyền dựa trên authority (client role) thay vì role
                 .requestMatchers("/api/admin/**").hasAnyAuthority("Admin_Web")
-                .requestMatchers("/api/manager/**").hasAnyAuthority("Manager_Web")
                 .requestMatchers("/api/user/**").hasAnyAuthority("Staff_Web")
                 // Yêu cầu xác thực cho tất cả các yêu cầu khác
                 .anyRequest().authenticated()
