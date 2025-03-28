@@ -6,6 +6,7 @@ import {
     NavbarBrand,
     NavbarItem,
 } from "@heroui/navbar";
+import { MdMenu, MdClose } from 'react-icons/md';
 
 import { Button } from "@heroui/button";
 import { Kbd } from "@heroui/kbd";
@@ -133,12 +134,13 @@ export const Navbar = () => {
                     {isAdmin && (
                         <NavbarItem>
                             <Button
+                                isIconOnly
                                 size="sm"
-                                color={showAdminMenu ? "primary" : "default"}
+                                variant="light"
                                 onPress={toggleMenu}
-                                className="min-w-28"
+                                aria-label={showAdminMenu ? "Close admin menu" : "Open admin menu"}
                             >
-                                {showAdminMenu ? "Menu Admin" : "Menu Thường"}
+                                {showAdminMenu ? <MdClose size={24} /> : <MdMenu size={24} />}
                             </Button>
                         </NavbarItem>
                     )}
