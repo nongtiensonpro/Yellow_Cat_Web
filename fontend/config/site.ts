@@ -19,6 +19,16 @@ export const siteConfig = {
     {
       label: "Quản lý tài khoản",
       href: "/admin/account_management",
+    },
+    {
+      label: "Quản lý sản phẩm",
+      href: "/admin/product_management",
+    }
+  ],
+  navMenuItemsProduct:[
+    {
+      label: "Thêm sản phẩm",
+      href:"/admin/product_management/add_product",
     }
   ],
   links: {

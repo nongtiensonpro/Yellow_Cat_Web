@@ -9,6 +9,8 @@ import { siteConfig } from "@/config/site";
 import { fontSans } from "@/config/fonts";
 import { Navbar } from "@/components/navbar";
 import KeycloakProvider from "@/keycloak/KeycloakProvider";
+import LoadingCard  from "@/components/LoadingAnimation";
+import Love from "@/components/Love"
 
 export const metadata: Metadata = {
   title: {
@@ -56,8 +58,7 @@ export default function RootLayout({
               href="https://www.facebook.com/nongtiensonpro"
               title="Facebook Yellow Cat"
             >
-              <span className="text-default-600">Made with love from</span>
-              <p className="text-primary">Yellow Cat</p>
+              <LoadingCard/><Love/>
             </Link>
           </footer>
         </div>
