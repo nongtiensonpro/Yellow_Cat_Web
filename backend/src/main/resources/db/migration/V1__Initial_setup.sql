@@ -35,12 +35,15 @@ CREATE TABLE Categories
 -- Bảng Brands
 CREATE TABLE Brands
 (
-    brand_id   SERIAL PRIMARY KEY,
-    brand_name VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    brand_id    SERIAL PRIMARY KEY,
+    brand_name  VARCHAR(255) NOT NULL,
+    logo_public_id VARCHAR(255) NOT NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+INSERT INTO Brands (brand_name, logo_public_id)
+VALUES ('Samsung', 'YellowCatWeb/mm0ibkgcunne0oa8odx1');
 -- Bảng Products
 CREATE TABLE Products
 (

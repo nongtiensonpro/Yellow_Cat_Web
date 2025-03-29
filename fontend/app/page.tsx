@@ -1,7 +1,6 @@
 "use client"
 import { title, subtitle } from "@/components/primitives";
 import VNPAY from "@/components/vnpay-demo"
-import { CldImage } from 'next-cloudinary';
 import UploadImage from "@/components/upload"
 import {Table, TableBody, TableCell, TableColumn, TableHeader, TableRow} from "@heroui/react";
 export default function Home() {
@@ -33,8 +32,6 @@ export default function Home() {
         <div className={subtitle({ class: "mt-4" })}>
           Don Vito Corleone.
         </div>
-
-
       </div>
     </section>
   );

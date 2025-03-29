@@ -29,13 +29,39 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authorizeHttpRequests(authorize -> authorize
+
+
                 // Cho phép truy cập không cần xác thực cho các endpoint công khai
-                .requestMatchers("/demo/all", "/api/public/**","/api/users/**","/api/vnpay/**").permitAll()
+                .requestMatchers(
+                        "/demo/all",
+                        "/api/public/**",
+                        "/api/users/**",
+                        "/api/vnpay/**",
+                        "/api/examples/**")
+                .permitAll()
+
+
                 // Thêm các đường dẫn Swagger UI và API docs
-                .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll()
-                // Phân quyền dựa trên authority (client role) thay vì role
-                .requestMatchers("/api/admin/**").hasAnyAuthority("Admin_Web")
-                .requestMatchers("/api/user/**").hasAnyAuthority("Staff_Web")
+                .requestMatchers(
+                        "/swagger-ui.html",
+                        "/swagger-ui/**",
+                        "/api-docs/**",
+                        "/v3/api-docs/**")
+                .permitAll().
+
+               // Phân quyền dựa trên authority (client role) thay vì role
+                    requestMatchers(
+                            "/api/user/**")
+
+                            .hasAnyAuthority("Staff_Web","Admin_Web")
+
+                .requestMatchers(
+
+                        "/api/admin/**"
+
+                )
+                    .hasAnyAuthority("Admin_Web")
+
                 // Yêu cầu xác thực cho tất cả các yêu cầu khác
                 .anyRequest().authenticated()
             )
