@@ -40,23 +40,14 @@ export default function UploadPage() {
             {resource && (
                 <div>
                     <p>Ảnh đã được upload: {resource.public_id}</p>
-                    <div className="relative drop-shadow-xl w-100 h-64 overflow-hidden rounded-xl ">
-                        <div
-                            className="absolute flex items-center justify-center text-white z-[1] opacity-90 rounded-xl inset-0.5 ">
-
-                            {resource.public_id && (
-
-                                <CldImage
-                                    width={1000}
-                                    height={1000}
-                                    src={resource.public_id}
-                                    alt="Ảnh đã upload"
-                                    sizes="100vw"
-                                    className="w-full h-full object-cover"
-                                />
-                            )}
-                        </div>
-                    </div>
+                    <CldImage
+                        width={1000}
+                        height={1000}
+                        src={resource.public_id}
+                        alt="Ảnh đã upload"
+                        sizes="100vw"
+                        className="w-full h-full object-cover"
+                    />
                 </div>
             )}
         </div>
