@@ -1,7 +1,8 @@
-package org.yellowcat.backend.config;
+package org.yellowcat.backend.config.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -30,7 +31,15 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(authorize -> authorize
                 // Cho phép truy cập không cần xác thực cho các endpoint công khai
-                .requestMatchers("/demo/all", "/api/public/**","/api/users/**","/api/vnpay/**").permitAll()
+                .requestMatchers(HttpMethod.GET,"/demo/all",
+
+                        //Brand của người dùng
+                        "/api/user/brands",
+                        "/api/user/brands/{id}",
+
+                        "/api/public/**",
+                        "/api/users/**",
+                        "/api/vnpay/**").permitAll()
                 // Thêm các đường dẫn Swagger UI và API docs
                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll()
                 // Phân quyền dựa trên authority (client role) thay vì role

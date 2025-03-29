@@ -1,4 +1,4 @@
-package org.yellowcat.backend.config;
+package org.yellowcat.backend.config.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
