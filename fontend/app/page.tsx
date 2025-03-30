@@ -1,7 +1,7 @@
 "use client"
 import { title, subtitle } from "@/components/primitives";
 import VNPAY from "@/components/vnpay-demo"
-import UploadImage from "@/components/upload"
+import UploadImage from "@/components/UploadImage"
 import {Table, TableBody, TableCell, TableColumn, TableHeader, TableRow} from "@heroui/react";
 export default function Home() {
   return (

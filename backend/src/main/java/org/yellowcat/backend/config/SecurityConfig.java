@@ -49,6 +49,14 @@ public class SecurityConfig {
                         "/v3/api-docs/**")
                 .permitAll().
 
+
+                // Brands public API
+                requestMatchers(
+                        "/api/brands",
+                        "/api/brands/{id}"
+                ).permitAll().
+
+
                // Phân quyền dựa trên authority (client role) thay vì role
                     requestMatchers(
                             "/api/user/**")

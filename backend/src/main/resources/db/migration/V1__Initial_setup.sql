@@ -31,19 +31,21 @@ CREATE TABLE Categories
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
+INSERT INTO Categories (category_name)
+VALUES ('Smartphones');
 -- Bảng Brands
 CREATE TABLE Brands
 (
     brand_id    SERIAL PRIMARY KEY,
     brand_name  VARCHAR(255) NOT NULL,
     logo_public_id VARCHAR(255) NOT NULL,
+    brand_info TEXT NOT NULL ,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO Brands (brand_name, logo_public_id)
-VALUES ('Samsung', 'YellowCatWeb/mm0ibkgcunne0oa8odx1');
+INSERT INTO Brands (brand_name, logo_public_id,brand_info)
+VALUES ('Samsung', 'YellowCatWeb/mm0ibkgcunne0oa8odx1','Samsung Group (Korean: 삼성; Hanja: 三星; RR: samseong [samsʌŋ]; stylised as SΛMSUNG) is a South Korean multinational manufacturing conglomerate headquartered in the Samsung Town office complex in Seoul. The group consists of numerous affiliated businesses, most of which operate under the Samsung brand, and is the largest chaebol (business conglomerate) in South Korea. As of 2024, Samsung has the worlds fifth-highest brand value.');
 -- Bảng Products
 CREATE TABLE Products
 (
@@ -57,7 +59,8 @@ CREATE TABLE Products
     updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_active    BOOLEAN   DEFAULT TRUE
 );
-
+INSERT INTO Products (product_name, category_id, brand_id, description, purchases, is_active)
+VALUES ('Samsung Galaxy S23', 1, 1, 'The Samsung Galaxy S23 is a flagship smartphone featuring a 6.1-inch Dynamic AMOLED display, Snapdragon 8 Gen 2 processor, and a triple-camera system.', 150, TRUE);
 -- Bảng Attributes
 CREATE TABLE Attributes
 (
@@ -65,7 +68,10 @@ CREATE TABLE Attributes
     attribute_name VARCHAR(255) NOT NULL,
     data_type      VARCHAR(50)  NOT NULL
 );
-
+INSERT INTO Attributes (attribute_name, data_type)
+VALUES
+    ('Color', 'VARCHAR'),
+    ('Storage', 'VARCHAR');
 -- Bảng Attribute_Values
 CREATE TABLE Attribute_Values
 (
@@ -73,7 +79,12 @@ CREATE TABLE Attribute_Values
     attribute_id       INT REFERENCES Attributes (attribute_id) ON DELETE CASCADE,
     value              VARCHAR(255) NOT NULL
 );
-
+INSERT INTO Attribute_Values (attribute_id, value)
+VALUES
+    (1, 'Phantom Black'),  -- Color
+    (1, 'Green'),         -- Color
+    (2, '128GB'),         -- Storage
+    (2, '256GB');         -- Storage
 -- Bảng Product_Attributes
 CREATE TABLE Product_Attributes
 (
@@ -81,7 +92,12 @@ CREATE TABLE Product_Attributes
     product_id           INT REFERENCES Products (product_id) ON DELETE CASCADE,
     attribute_value_id   INT REFERENCES Attribute_Values (attribute_value_id) ON DELETE CASCADE
 );
-
+INSERT INTO Product_Attributes (product_id, attribute_value_id)
+VALUES
+    (1, 1),  -- Samsung Galaxy S23 có màu Phantom Black
+    (1, 2),  -- Samsung Galaxy S23 có màu Green
+    (1, 3),  -- Samsung Galaxy S23 có dung lượng 128GB
+    (1, 4);  -- Samsung Galaxy S23 có dung lượng 256GB
 -- Bảng Product_Variants
 CREATE TABLE Product_Variants
 (
@@ -93,7 +109,11 @@ CREATE TABLE Product_Variants
     image_url   VARCHAR(255),
     weight      DECIMAL(10, 2)
 );
-
+INSERT INTO Product_Variants (product_id, sku, price, stock_level, image_url, weight)
+VALUES
+    (1, 'S23-PB-128', 799.99, 50, 'YellowCatWeb/s23-phantom-black-128gb.jpg', 168.0),  -- Phantom Black, 128GB
+    (1, 'S23-G-128', 799.99, 30, 'YellowCatWeb/s23-green-128gb.jpg', 168.0),       -- Green, 128GB
+    (1, 'S23-PB-256', 849.99, 20, 'YellowCatWeb/s23-phantom-black-256gb.jpg', 168.0); -- Phantom Black, 256GB
 -- Bảng Variant_Attributes
 CREATE TABLE Variant_Attributes
 (
@@ -101,7 +121,14 @@ CREATE TABLE Variant_Attributes
     variant_id           INT REFERENCES Product_Variants (variant_id) ON DELETE CASCADE,
     attribute_value_id   INT REFERENCES Attribute_Values (attribute_value_id) ON DELETE CASCADE
 );
-
+INSERT INTO Variant_Attributes (variant_id, attribute_value_id)
+VALUES
+    (1, 1),  -- Variant 1 (Phantom Black, 128GB) - Color: Phantom Black
+    (1, 3),  -- Variant 1 (Phantom Black, 128GB) - Storage: 128GB
+    (2, 2),  -- Variant 2 (Green, 128GB) - Color: Green
+    (2, 3),  -- Variant 2 (Green, 128GB) - Storage: 128GB
+    (3, 1),  -- Variant 3 (Phantom Black, 256GB) - Color: Phantom Black
+    (3, 4);  -- Variant 3 (Phantom Black, 256GB) - Storage: 256GB
 -- Bảng Roles
 CREATE TABLE Roles
 (

@@ -1,88 +1,90 @@
 "use client";
-import {
-    Navbar as HeroUINavbar,
-    NavbarContent,
-    NavbarItem,
-} from "@heroui/navbar";
-
+import { usePathname } from "next/navigation";
 import { link as linkStyles } from "@heroui/theme";
 import NextLink from "next/link";
 import clsx from "clsx";
 import { siteConfig } from "@/config/site";
-import {Divider, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow} from "@heroui/react";
-import {Card, CardBody, CardFooter, CardHeader} from "@heroui/card";
-import {Button} from "@heroui/button";
+import {
+    Divider,
+    Table,
+    TableBody,
+    TableCell,
+    TableColumn,
+    TableHeader,
+    TableRow,
+} from "@heroui/react";
+import { Card, CardBody, CardFooter, CardHeader } from "@heroui/card";
 
 export default function Page() {
+    const pathname = usePathname();
+
     return (
-        <section>
-            <Card className="xl">
-                <CardHeader>
-                    <h1 className="text-3xl font-bold">Quản lý sản phẩm</h1>
-                </CardHeader>
-                <CardHeader className="flex gap-3">
-                    <HeroUINavbar maxWidth="xl">
-                        <NavbarContent className="basis-1/5 sm:basis-full " justify="start">
-                            <ul className="hidden lg:flex gap-4 justify-start ml-2 text-2xl font-bold">
-                                {siteConfig.navMenuItemsProduct.map((item) => (
-                                    <NavbarItem key={item.href}>
-                                        <Button color="default" variant="ghost">
-                                            <NextLink
-                                                className={clsx(
-                                                    linkStyles({ color: "foreground" }),
-                                                    "data-[active=true]:text-primary data-[active=true]:font-medium",
-                                                )}
-                                                color="foreground"
-                                                href={item.href}
-                                            >
-                                                {item.label}
-                                            </NextLink>
-                                        </Button>
+        <section className="flex min-h-screen">
+            {/* Sidebar */}
+            <div className="w-64 h-screen fixed bg-gray-100 dark:bg-gray-900 shadow-md transition-colors">
+                <div className="p-4">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+                        Quản lý sản phẩm
+                    </h2>
+                </div>
+                <ul className="mt-2 space-y-1 px-2">
+                    {siteConfig.navMenuItemsProduct.map((item) => (
+                        <li key={item.href}>
+                            <NextLink
+                                href={item.href}
+                                className={clsx(
+                                    linkStyles({ color: "foreground" }),
+                                    "block p-3 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md transition-colors",
+                                    pathname === item.href
+                                        ? "bg-gray-300 dark:bg-gray-700 font-medium"
+                                        : ""
+                                )}
+                            >
+                                {item.label}
+                            </NextLink>
+                        </li>
+                    ))}
+                </ul>
+            </div>
 
-                                    </NavbarItem>
-                                ))}
-                            </ul>
-                        </NavbarContent>
-                    </HeroUINavbar>
-                </CardHeader>
-                <Divider />
-                <CardBody>
-                    <Table aria-label="Example static collection table">
-                        <TableHeader>
-                            <TableColumn>NAME</TableColumn>
-                            <TableColumn>ROLE</TableColumn>
-                            <TableColumn>STATUS</TableColumn>
-                        </TableHeader>
-                        <TableBody>
-                            <TableRow key="1">
-                                <TableCell>Tony Reichert</TableCell>
-                                <TableCell>CEO</TableCell>
-                                <TableCell>Active</TableCell>
-                            </TableRow>
-                            <TableRow key="2">
-                                <TableCell>Zoey Lang</TableCell>
-                                <TableCell>Technical Lead</TableCell>
-                                <TableCell>Paused</TableCell>
-                            </TableRow>
-                            <TableRow key="3">
-                                <TableCell>Jane Fisher</TableCell>
-                                <TableCell>Senior Developer</TableCell>
-                                <TableCell>Active</TableCell>
-                            </TableRow>
-                            <TableRow key="4">
-                                <TableCell>William Howard</TableCell>
-                                <TableCell>Community Manager</TableCell>
-                                <TableCell>Vacation</TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
-                </CardBody>
-                <Divider />
-                <CardFooter>
+            {/* Main Content */}
+            <div className="flex-1 ml-64 bg-gray-50 dark:bg-gray-800 transition-colors">
+                <Card className="xl bg-white dark:bg-gray-900 shadow-md">
+                    <CardHeader>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                            Danh sách sản phẩm có trong cửa hàng
+                        </h1>
+                    </CardHeader>
+                    <Divider className="bg-gray-200 dark:bg-gray-700" />
+                    <CardBody>
+                        <Table
+                            aria-label="Products table"
+                            className="text-gray-900 dark:text-gray-200"
+                        >
+                            <TableHeader>
+                                <TableColumn>ID</TableColumn>
+                                <TableColumn>NAME</TableColumn>
+                                <TableColumn>BRAND</TableColumn>
+                                <TableColumn>CATEGORY</TableColumn>
+                                <TableColumn>STATUS</TableColumn>
+                            </TableHeader>
+                            <TableBody>
+                                <TableRow key="1">
+                                    <TableCell>1</TableCell>
+                                    <TableCell>Samsung Galaxy S23</TableCell>
+                                    <TableCell>Samsung</TableCell>
+                                    <TableCell>Smartphones</TableCell>
+                                    <TableCell>Active</TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
+                    </CardBody>
+                    <Divider className="bg-gray-200 dark:bg-gray-700" />
+                    <CardFooter>
 
-                </CardFooter>
-            </Card>
-
+                    </CardFooter>
+                </Card>
+            </div>
         </section>
     );
 }

@@ -27,8 +27,8 @@ export const siteConfig = {
   ],
   navMenuItemsProduct:[
     {
-      label: "Thêm sản phẩm",
-      href:"/admin/product_management/add_product",
+      label: "Quản lý Brand",
+      href:"/admin/product_management/brands",
     }
   ],
   links: {
