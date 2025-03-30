@@ -4,14 +4,16 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.yellowcat.backend.security.annotation.RequirePermission;
+import org.yellowcat.backend.security.annotation.SecuredResource;
 
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/users")
+@SecuredResource(resource = "Admin_Web", description = "Quản lý người dùng và phân quyền")
 public class UserManagementController {
 
     private final KeycloakAdminService keycloakAdminService;
@@ -27,7 +29,7 @@ public class UserManagementController {
             @ApiResponse(responseCode = "403", description = "Từ chối truy cập - Người dùng không có quyền truy cập vào điểm cuối này")
     })
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    @RequirePermission(permission = "user.view", description = "Xem danh sách người dùng")
     public ResponseEntity<List<UserDTO>> getAllUsers() {
         return ResponseEntity.ok(keycloakAdminService.getUsersWithRoles());
     }
@@ -40,7 +42,7 @@ public class UserManagementController {
             @ApiResponse(responseCode = "403", description = "Từ chối truy cập - Người dùng không có quyền truy cập vào điểm cuối này")
     })
     @PutMapping("/{userId}/roles")
-    @PreAuthorize("hasAuthority('Admin_Web')")
+    @RequirePermission(permission = "user.assign_roles", description = "Gán vai trò cho người dùng")
     public ResponseEntity<Void> assignRoles(@PathVariable String userId, @RequestBody Map<String, List<String>> roles) {
         keycloakAdminService.assignRoles(userId, roles.get("roles"));
         return ResponseEntity.ok().build();
@@ -54,7 +56,7 @@ public class UserManagementController {
             @ApiResponse(responseCode = "403", description = "Từ chối truy cập - Người dùng không có quyền truy cập vào điểm cuối này")
     })
     @DeleteMapping("/{userId}/roles")
-    @PreAuthorize("hasAuthority('Admin_Web')")
+    @RequirePermission(permission = "user.remove_roles", description = "Xóa vai trò của người dùng")
     public ResponseEntity<Void> removeRoles(@PathVariable String userId, @RequestBody Map<String, List<String>> roles) {
         keycloakAdminService.removeRoles(userId, roles.get("roles"));
         return ResponseEntity.ok().build();

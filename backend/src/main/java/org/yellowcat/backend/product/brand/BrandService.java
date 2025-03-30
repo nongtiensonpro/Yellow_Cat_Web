@@ -40,9 +40,9 @@ public class BrandService {
 
     public BrandDTO addBrand(BrandCreateDto brandDTO) {
         Brand newBrand = new Brand();
-        newBrand.setBrandName(brandDTO.getBrandName());
-        newBrand.setLogoPublicId(brandDTO.getLogoPublicId());
-        newBrand.setBrandInfo(brandDTO.getBrandInfo());
+        newBrand.setBrandName(brandDTO.brandName());
+        newBrand.setLogoPublicId(brandDTO.logoPublicId());
+        newBrand.setBrandInfo(brandDTO.brandInfo());
         Brand savedBrand = brandRepository.save(newBrand);
         return new BrandDTO(savedBrand);
     }
@@ -50,9 +50,9 @@ public class BrandService {
     public BrandDTO updateBrand(Integer id, BrandUpdateDto brandDTO) {
         Brand existingBrand = brandRepository.findById(id).orElse(null);
         if (existingBrand!= null) {
-            existingBrand.setBrandName(brandDTO.getBrandName());
-            existingBrand.setLogoPublicId(brandDTO.getLogoPublicId());
-            existingBrand.setBrandInfo(brandDTO.getBrandInfo());
+            existingBrand.setBrandName(brandDTO.brandName());
+            existingBrand.setLogoPublicId(brandDTO.logoPublicId());
+            existingBrand.setBrandInfo(brandDTO.brandInfo());
             existingBrand.setUpdatedAt(Instant.now());
             Brand updatedBrand = brandRepository.save(existingBrand);
             return new BrandDTO(updatedBrand);

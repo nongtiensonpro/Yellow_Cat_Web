@@ -102,7 +102,15 @@ public class SecurityConfig {
                 Map<String, Object> clientResource = (Map<String, Object>) resourceAccess.get("YellowCatCompanyWeb");
                 if (clientResource != null && clientResource.containsKey("roles")) {
                     List<String> clientRoles = (List<String>) clientResource.get("roles");
-                    clientRoles.forEach(role -> authorities.add(new SimpleGrantedAuthority(role)));
+                    for (String role : clientRoles) {
+                        authorities.add(new SimpleGrantedAuthority(role));
+                        // Add specific permissions based on roles
+                        if (role.equals("Admin_Web")) {
+                            authorities.add(new SimpleGrantedAuthority("user.view"));
+                            authorities.add(new SimpleGrantedAuthority("user.assign_roles"));
+                            authorities.add(new SimpleGrantedAuthority("user.remove_roles"));
+                        }
+                    }
                 }
             }
 
