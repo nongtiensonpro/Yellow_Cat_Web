@@ -54,11 +54,14 @@ public class BrandController {
         return ResponseEntityBuilder.success("Brand đã được thêm mới thành công", savedBrand);
     }
 
-    @PutMapping
+    @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('Admin_Web')")
-    @Operation(summary = "Cập nhật Brand", description = "Cập nhật Brand và trả về thông báo thành công nếu thành công, ngược lại trả về thông báo l��i")
-    public ResponseEntity<?> updateBrand(@RequestBody BrandUpdateDto brandDTO) {
-        BrandDTO updatedBrand = brandService.updateBrand(brandDTO.getId(),brandDTO);
+    @Operation(summary = "Cập nhật Brand bằng ID", description = "Cập nhật Brand theo ID được cung cấp trong đường dẫn URL")
+    public ResponseEntity<?> updateBrand(
+            @PathVariable Integer id,
+            @RequestBody BrandUpdateDto brandDTO
+    ) {
+        BrandDTO updatedBrand = brandService.updateBrand(id, brandDTO);
         return ResponseEntityBuilder.success("Brand đã được cập nhật thành công", updatedBrand);
     }
 
