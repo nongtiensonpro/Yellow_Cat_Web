@@ -1,6 +1,7 @@
-package org.yellowcat.backend.product.brand;
+package org.yellowcat.backend.product.brand.dto;
 
 import org.yellowcat.backend.product.Product;
+import org.yellowcat.backend.product.brand.Brand;
 
 import java.time.Instant;
 import java.util.Set;

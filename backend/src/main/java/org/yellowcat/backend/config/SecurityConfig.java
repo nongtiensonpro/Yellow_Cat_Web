@@ -2,6 +2,7 @@ package org.yellowcat.backend.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -51,11 +52,15 @@ public class SecurityConfig {
 
 
                 // Brands public API
-                requestMatchers(
+                requestMatchers(HttpMethod.GET,
                         "/api/brands",
                         "/api/brands/{id}"
                 ).permitAll().
 
+                // Brands private API
+                requestMatchers(
+                        "/api/brands/**")
+                    .hasAnyAuthority("Admin_Web").
 
                // Phân quyền dựa trên authority (client role) thay vì role
                     requestMatchers(
