@@ -10,6 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.yellowcat.backend.product.brand.dto.BrandCreateDto;
 import org.yellowcat.backend.product.brand.dto.BrandDTO;
+import org.yellowcat.backend.product.brand.dto.BrandUpdateDto;
 import org.yellowcat.backend.response.PageResponse;
 import org.yellowcat.backend.response.ResponseEntityBuilder;
 
@@ -34,6 +35,16 @@ public class BrandController {
         return ResponseEntityBuilder.success(pageResponse);
     }
 
+    @GetMapping("/{id}")
+    @Operation(summary = "Lấy Brand theo id", description = "Trả về Brand với id tương ứng")
+    public ResponseEntity<?> getBrandById(@PathVariable Integer id) {
+        BrandDTO brand = brandService.getBrandById(id);
+        if (brand == null) {
+            return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Brand không tồn tại", null);
+        }
+        return ResponseEntityBuilder.success(brand);
+    }
+
     @PostMapping
     @PreAuthorize("hasAnyAuthority('Admin_Web')")
     @Operation(summary = "Thêm mới Brand", description = "Thêm mới Brand và trả về thông báo thành công nếu thành công, ngược lại trả về thông báo l��i")
@@ -41,6 +52,14 @@ public class BrandController {
         System.out.println(brandDTO.toString());
         BrandDTO savedBrand = brandService.addBrand(brandDTO);
         return ResponseEntityBuilder.success("Brand đã được thêm mới thành công", savedBrand);
+    }
+
+    @PutMapping
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    @Operation(summary = "Cập nhật Brand", description = "Cập nhật Brand và trả về thông báo thành công nếu thành công, ngược lại trả về thông báo l��i")
+    public ResponseEntity<?> updateBrand(@RequestBody BrandUpdateDto brandDTO) {
+        BrandDTO updatedBrand = brandService.updateBrand(brandDTO.getId(),brandDTO);
+        return ResponseEntityBuilder.success("Brand đã được cập nhật thành công", updatedBrand);
     }
 
     @DeleteMapping("/{id}")

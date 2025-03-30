@@ -41,7 +41,7 @@ public class Brand {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @OneToMany(mappedBy = "brand", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "brand", fetch = FetchType.EAGER)
     private Set<Product> products = new LinkedHashSet<>();
 
     public Integer getId() {

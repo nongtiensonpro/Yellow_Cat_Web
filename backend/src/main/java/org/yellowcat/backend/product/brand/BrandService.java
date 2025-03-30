@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.yellowcat.backend.product.brand.dto.BrandCreateDto;
 import org.yellowcat.backend.product.brand.dto.BrandDTO;
+import org.yellowcat.backend.product.brand.dto.BrandUpdateDto;
 
 import java.time.Instant;
 
@@ -44,5 +45,19 @@ public class BrandService {
         newBrand.setBrandInfo(brandDTO.getBrandInfo());
         Brand savedBrand = brandRepository.save(newBrand);
         return new BrandDTO(savedBrand);
+    }
+
+    public BrandDTO updateBrand(Integer id, BrandUpdateDto brandDTO) {
+        Brand existingBrand = brandRepository.findById(id).orElse(null);
+        if (existingBrand!= null) {
+            existingBrand.setBrandName(brandDTO.getBrandName());
+            existingBrand.setLogoPublicId(brandDTO.getLogoPublicId());
+            existingBrand.setBrandInfo(brandDTO.getBrandInfo());
+            existingBrand.setUpdatedAt(Instant.now());
+            Brand updatedBrand = brandRepository.save(existingBrand);
+            return new BrandDTO(updatedBrand);
+        } else {
+            return null;
+        }
     }
 }
