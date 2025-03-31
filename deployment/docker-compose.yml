@@ -5,6 +5,11 @@ services:
     image: postgres:17.4
     environment:
       POSTGRES_PASSWORD: changemeinprod
+      # Thêm biến môi trường giới hạn bộ nhớ
+      POSTGRES_SHARED_BUFFERS: 128MB
+      POSTGRES_WORK_MEM: 4MB
+      POSTGRES_MAINTENANCE_WORK_MEM: 32MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 256MB
     ports:
       - "5432:5432"
     volumes:
@@ -17,6 +22,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.1.2
@@ -33,12 +44,20 @@ services:
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_HOSTNAME: localhost
       KC_FEATURES: token-exchange,admin-fine-grained-authz
+      # Thêm cấu hình JVM
+      JAVA_OPTS: "-Xms64m -Xmx256m -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=128m -XX:+UseG1GC"
     depends_on:
       - postgres
     networks:
       - local
     volumes:
       - keycloak_data:/opt/keycloak/data
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+        reservations:
+          memory: 128M
 
 volumes:
   postgres_data:
