@@ -2,26 +2,6 @@
 import React from 'react';
 import styled from 'styled-components';
 
-const LoadingAnimation = () => {
-    return (
-        <StyledWrapper>
-            <div className="xl">
-                <div className="loader">
-                    <p>Made with love from </p>
-                    <div className="words">
-                        <span className="word" style={{ color: 'red' }}> Red</span>
-                        <span className="word" style={{ color: 'yellow' }}> Yellow </span>
-                        <span className="word" style={{ color: 'orange' }}> Orange </span>
-                        <span className="word" style={{ color: 'green' }}> Green </span>
-                        <span className="word" style={{ color: 'blue' }}> Blue </span>
-                    </div>
-                    <p> Cat</p>
-                </div>
-            </div>
-        </StyledWrapper>
-    );
-}
-
 const StyledWrapper = styled.div`
   .loader {
     color: rgb(124, 124, 124);
@@ -103,5 +83,25 @@ const StyledWrapper = styled.div`
       transform: translateY(-400%);
     }
   }`;
+
+const LoadingAnimation = () => {
+    return (
+        <StyledWrapper>
+            <div className="xl">
+                <div className="loader">
+                    <p>Made with love from </p>
+                    <div className="words">
+                        <span className="word" style={{ color: 'red' }}> Red</span>
+                        <span className="word" style={{ color: 'yellow' }}> Yellow </span>
+                        <span className="word" style={{ color: 'orange' }}> Orange </span>
+                        <span className="word" style={{ color: 'green' }}> Green </span>
+                        <span className="word" style={{ color: 'blue' }}> Blue </span>
+                    </div>
+                    <p> Cat</p>
+                </div>
+            </div>
+        </StyledWrapper>
+    );
+}
 
 export default LoadingAnimation;
