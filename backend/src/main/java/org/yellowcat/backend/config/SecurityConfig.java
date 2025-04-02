@@ -31,6 +31,10 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(authorize -> authorize
 
+               // Thêm WebSocket endpoint
+               .requestMatchers("/ws/**") // Cho phép tất cả request tới /ws/**
+                    .permitAll()
+
 
                 // Cho phép truy cập không cần xác thực cho các endpoint công khai
                 .requestMatchers(
