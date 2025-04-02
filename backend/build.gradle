@@ -57,6 +57,10 @@ dependencies {
     //Swagger
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5'
 
+
+    //Websocket
+    // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-websocket
+    implementation 'org.springframework.boot:spring-boot-starter-websocket:3.4.4'
 }
 tasks.named('test') {
     useJUnitPlatform()

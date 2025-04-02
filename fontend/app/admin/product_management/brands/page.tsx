@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import {
     Card,
     CardHeader,
@@ -19,10 +19,12 @@ import {
     useDisclosure
 } from "@heroui/react";
 import NextLink from "next/link";
-import {useEffect, useState} from "react";
+import { useEffect, useState } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import {CldImage} from "next-cloudinary";
+import { CldImage } from "next-cloudinary";
 import keycloak from '@/keycloak/keycloak';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 
 interface Brands {
     id: number;
@@ -36,40 +38,89 @@ interface ApiResponse {
     data: {
         content: Brands[];
         totalPages: number;
-    }
+    };
 }
 
 export default function Page() {
-    const [brandsData, setbrandsData] = useState<Brands[]>([]);
+    const [brandsData, setBrandsData] = useState<Brands[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState<number>(0);
     const [itemsPerPage] = useState<number>(5);
     const [totalPages, setTotalPages] = useState<number>(1);
-    const [brandToDelete, setBrandToDelete] = useState<{id: number, name: string} | null>(null);
-    const {isOpen, onOpen, onClose} = useDisclosure();
+    const [brandToDelete, setBrandToDelete] = useState<{ id: number, name: string } | null>(null);
+    const [notification, setNotification] = useState<string | null>(null);
+    const { isOpen, onOpen, onClose } = useDisclosure();
+    const [stompClient, setStompClient] = useState<Client | null>(null);
+
+    const initializeStompClient = () => {
+        const socket = new SockJS('http://localhost:8080/ws');
+        const client = new Client({
+            webSocketFactory: () => socket,
+            reconnectDelay: 5000, // Tự động reconnect sau 5s nếu mất kết nối
+            onConnect: () => {
+                console.log('Kết nối STOMP đã được thiết lập');
+                client.subscribe('/topic/brands', (message) => {
+                    const data = JSON.parse(message.body);
+                    console.log('Nhận thông báo từ server:', data);
+                    setNotification(`Hành động: ${data.action} - Brand: ${data.brand.brandName}`);
+
+                    if (data.action === 'add') {
+                        setBrandsData((prev) => [...prev, data.brand]);
+                    } else if (data.action === 'update') {
+                        setBrandsData((prev) =>
+                            prev.map((b) => (b.id === data.brand.id ? data.brand : b))
+                        );
+                    } else if (data.action === 'delete') {
+                        setBrandsData((prev) => prev.filter((b) => b.id !== data.brand.id));
+                    }
+                });
+            },
+            onStompError: (frame) => {
+                console.error('Lỗi STOMP:', frame);
+                setError('Lỗi kết nối STOMP. Vui lòng thử lại.');
+            },
+        });
+
+        client.activate();
+        setStompClient(client);
+    };
+
+    const fetchBrandsData = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch(`http://localhost:8080/api/brands?page=${currentPage}&size=${itemsPerPage}`);
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+            const apiResponse: ApiResponse = await response.json();
+            setBrandsData(apiResponse.data.content);
+            setTotalPages(apiResponse.data.totalPages);
+        } catch (err) {
+            setError('Không thể tải dữ liệu. Vui lòng thử lại sau.');
+            console.error('Lỗi khi tải dữ liệu:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchbrandsData = async () => {
-            try {
-                setLoading(true);
-                const response = await fetch(`http://localhost:8080/api/brands?page=${currentPage}&size=${itemsPerPage}`);
-                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                const apiResponse: ApiResponse = await response.json();
-                setbrandsData(apiResponse.data.content);
-                setTotalPages(apiResponse.data.totalPages);
-            } catch (err) {
-                setError('Không thể tải dữ liệu. Vui lòng thử lại sau.');
-                console.error('Lỗi khi tải dữ liệu:', err);
-            } finally {
-                setLoading(false);
+        fetchBrandsData();
+        initializeStompClient();
+        if (notification) {
+            const timer = setTimeout(() => {
+                setNotification(null);
+            }, 3000);
+
+            return () => clearTimeout(timer);
+        }
+        return () => {
+            if (stompClient) {
+                stompClient.deactivate();
             }
         };
-        fetchbrandsData();
-    }, [currentPage, itemsPerPage]);
+    }, [currentPage, itemsPerPage,notification]);
 
     const openDeleteConfirm = (brandId: number, brandName: string) => {
-        setBrandToDelete({id: brandId, name: brandName});
+        setBrandToDelete({ id: brandId, name: brandName });
         onOpen();
     };
 
@@ -77,7 +128,6 @@ export default function Page() {
         if (!brandToDelete) return;
 
         try {
-            // Kiểm tra xác thực và lấy token
             if (!keycloak.authenticated) {
                 await keycloak.login();
                 return;
@@ -85,7 +135,6 @@ export default function Page() {
 
             const token = keycloak.token;
 
-            // Gửi request xóa với token xác thực
             const response = await fetch(`http://localhost:8080/api/brands/${brandToDelete.id}`, {
                 method: 'DELETE',
                 headers: {
@@ -99,8 +148,6 @@ export default function Page() {
                 throw new Error(errorData?.message || `HTTP error! Status: ${response.status}`);
             }
 
-            // Cập nhật state để loại bỏ brand đã xóa
-            setbrandsData(brandsData.filter(b => b.id !== brandToDelete.id));
             onClose();
             setBrandToDelete(null);
 
@@ -125,8 +172,20 @@ export default function Page() {
                 </NextLink>
             </CardHeader>
             <CardBody>
+                {notification && (
+                    <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
+                        <span className="block sm:inline">{notification}</span>
+                        <button
+                            className="absolute top-0 right-0 px-2 py-1"
+                            onClick={() => setNotification(null)}
+                        >
+                            ×
+                        </button>
+                    </div>
+                )}
+
                 {loading ? (
-                    <LoadingSpinner/>
+                    <LoadingSpinner />
                 ) : error ? (
                     <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
                         <span className="block sm:inline">{error}</span>
@@ -149,8 +208,8 @@ export default function Page() {
                                         <TableCell>
                                             {brand.logoPublicId && (
                                                 <CldImage
-                                                    width={5}
-                                                    height={5}
+                                                    width={50}
+                                                    height={50}
                                                     src={brand.logoPublicId}
                                                     alt="Ảnh đã upload"
                                                     sizes="10vw"
@@ -189,7 +248,6 @@ export default function Page() {
                     </Table>
                 )}
 
-                {/* Simple pagination */}
                 {!loading && !error && brandsData.length > 0 && (
                     <div className="flex justify-center mt-4">
                         <button
@@ -210,7 +268,6 @@ export default function Page() {
                     </div>
                 )}
 
-                {/* Delete Confirmation Modal */}
                 <Modal isOpen={isOpen} onClose={onClose}>
                     <ModalContent>
                         <ModalHeader className="flex flex-col gap-1">
@@ -220,7 +277,7 @@ export default function Page() {
                             {brandToDelete && (
                                 <p>
                                     Bạn có chắc chắn muốn xóa brand "{brandToDelete.name}"?
-                                    <br/>
+                                    <br />
                                     Hành động này không thể hoàn tác.
                                 </p>
                             )}
