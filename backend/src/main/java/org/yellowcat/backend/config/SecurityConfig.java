@@ -55,6 +55,17 @@ public class SecurityConfig {
                 .permitAll().
 
 
+                // Categories public API
+                    requestMatchers(HttpMethod.GET,
+                        "/api/categories",
+                        "/api/categories/{id}"
+                ).permitAll().
+
+                // Categories private API
+                requestMatchers(
+                        "/api/categories/**")
+                    .hasAnyAuthority("Admin_Web").
+
                 // Brands public API
                 requestMatchers(HttpMethod.GET,
                         "/api/brands",
