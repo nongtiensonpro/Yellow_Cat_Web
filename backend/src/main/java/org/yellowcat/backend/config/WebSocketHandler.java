@@ -1,4 +1,4 @@
-package org.yellowcat.backend.product.brand.websocket;
+package org.yellowcat.backend.config;
 
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.util.concurrent.CopyOnWriteArrayList;
 @Component
-public class BrandWebSocketHandler extends TextWebSocketHandler {
+public class WebSocketHandler extends TextWebSocketHandler {
 
     private final CopyOnWriteArrayList<WebSocketSession> sessions = new CopyOnWriteArrayList<>();
 

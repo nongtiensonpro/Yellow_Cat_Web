@@ -21,17 +21,13 @@ import {
 import NextLink from "next/link";
 import { useEffect, useState } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { CldImage } from "next-cloudinary";
 import keycloak from '@/keycloak/keycloak';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
 interface Brands {
     id: number;
-    brandName: string;
-    logoPublicId: string;
-    brandInfo: string;
-    productIds: number[];
+    name: string;
 }
 
 interface ApiResponse {
@@ -42,7 +38,7 @@ interface ApiResponse {
 }
 
 export default function Page() {
-    const [brandsData, setBrandsData] = useState<Brands[]>([]);
+    const [categoriesData, setcategoriesData] = useState<Brands[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState<number>(0);
@@ -60,19 +56,19 @@ export default function Page() {
             reconnectDelay: 5000, // Tự động reconnect sau 5s nếu mất kết nối
             onConnect: () => {
                 console.log('Kết nối STOMP đã được thiết lập');
-                client.subscribe('/topic/brands', (message) => {
+                client.subscribe('/topic/categories', (message) => {
                     const data = JSON.parse(message.body);
                     console.log('Nhận thông báo từ server:', data);
-                    setNotification(`Hành động: ${data.action} - Brand: ${data.entity.brandName}`);
+                    setNotification(`Hành động: ${data.action} - Categories: ${data.entity.name}`);
 
                     if (data.action === 'add') {
-                        setBrandsData((prev) => [...prev, data.entity]);
+                        setcategoriesData((prev) => [...prev, data.entity]);
                     } else if (data.action === 'update') {
-                        setBrandsData((prev) =>
+                        setcategoriesData((prev) =>
                             prev.map((b) => (b.id === data.entity.id ? data.entity : b))
                         );
                     } else if (data.action === 'delete') {
-                        setBrandsData((prev) => prev.filter((b) => b.id !== data.entity.id));
+                        setcategoriesData((prev) => prev.filter((b) => b.id !== data.entity.id));
                     }
                 });
             },
@@ -86,13 +82,13 @@ export default function Page() {
         setStompClient(client);
     };
 
-    const fetchBrandsData = async () => {
+    const fetchcategoriesData = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`http://localhost:8080/api/brands?page=${currentPage}&size=${itemsPerPage}`);
+            const response = await fetch(`http://localhost:8080/api/categories?page=${currentPage}&size=${itemsPerPage}`);
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
             const apiResponse: ApiResponse = await response.json();
-            setBrandsData(apiResponse.data.content);
+            setcategoriesData(apiResponse.data.content);
             setTotalPages(apiResponse.data.totalPages);
         } catch (err) {
             setError('Không thể tải dữ liệu. Vui lòng thử lại sau.');
@@ -103,7 +99,7 @@ export default function Page() {
     };
 
     useEffect(() => {
-        fetchBrandsData();
+        fetchcategoriesData();
         initializeStompClient();
         if (notification) {
             const timer = setTimeout(() => {
@@ -135,7 +131,7 @@ export default function Page() {
 
             const token = keycloak.token;
 
-            const response = await fetch(`http://localhost:8080/api/brands/${brandToDelete.id}`, {
+            const response = await fetch(`http://localhost:8080/api/categories/${brandToDelete.id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -162,12 +158,12 @@ export default function Page() {
         <Card className="xl">
             <CardHeader className="flex gap-3">
                 <div className="flex flex-col">
-                    <p className="text-4xl font-bold">Quản lý Brand</p>
+                    <p className="text-4xl font-bold">Quản lý Category</p>
                 </div>
             </CardHeader>
             <Divider />
             <CardHeader>
-                <NextLink href={"/admin/product_management/brands/create"} className="inline-block w-fit cursor-pointer transition-all bg-blue-500 text-white px-6 py-2 rounded-lg border-blue-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]">
+                <NextLink href={"/admin/product_management/categories/create"} className="inline-block w-fit cursor-pointer transition-all bg-blue-500 text-white px-6 py-2 rounded-lg border-blue-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]">
                     Thêm mới
                 </NextLink>
             </CardHeader>
@@ -191,45 +187,28 @@ export default function Page() {
                         <span className="block sm:inline">{error}</span>
                     </div>
                 ) : (
-                    <Table aria-label="Brands table">
+                    <Table aria-label="Categories table">
                         <TableHeader>
-                            <TableColumn>Brand Id</TableColumn>
-                            <TableColumn>Brand Name</TableColumn>
-                            <TableColumn>Logo</TableColumn>
-                            <TableColumn>Brand Info</TableColumn>
+                            <TableColumn>Categories Id</TableColumn>
+                            <TableColumn>Categories Name</TableColumn>
                             <TableColumn>Actions</TableColumn>
                         </TableHeader>
                         <TableBody>
-                            {brandsData && brandsData.length > 0 ? (
-                                brandsData.map((brand) => (
-                                    <TableRow key={brand.id}>
-                                        <TableCell>{brand.id}</TableCell>
-                                        <TableCell>{brand.brandName}</TableCell>
-                                        <TableCell>
-                                            {brand.logoPublicId && (
-                                                <CldImage
-                                                    width={50}
-                                                    height={50}
-                                                    src={brand.logoPublicId}
-                                                    alt="Ảnh đã upload"
-                                                    sizes="10vw"
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="max-w-xs truncate">
-                                            {brand.brandInfo.substring(0, 50)}...
-                                        </TableCell>
+                            {categoriesData && categoriesData.length > 0 ? (
+                                categoriesData.map((categories) => (
+                                    <TableRow key={categories.id}>
+                                        <TableCell>{categories.id}</TableCell>
+                                        <TableCell>{categories.name}</TableCell>
                                         <TableCell>
                                             <div className="flex space-x-2">
-                                                <NextLink href={`/admin/product_management/brands/update/${brand.id}`}>
+                                                <NextLink href={`/admin/product_management/categories/update/${categories.id}`}>
                                                     <button className="inline-block w-fit cursor-pointer transition-all bg-yellow-500 text-white px-6 py-2 rounded-lg border-yellow-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]">
                                                         Sửa
                                                     </button>
                                                 </NextLink>
                                                 <button
                                                     className="inline-block w-fit cursor-pointer transition-all bg-red-500 text-white px-6 py-2 rounded-lg border-red-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]"
-                                                    onClick={() => openDeleteConfirm(brand.id, brand.brandName)}
+                                                    onClick={() => openDeleteConfirm(categories.id, categories.name)}
                                                 >
                                                     Xóa
                                                 </button>
@@ -248,7 +227,7 @@ export default function Page() {
                     </Table>
                 )}
 
-                {!loading && !error && brandsData.length > 0 && (
+                {!loading && !error && categoriesData.length > 0 && (
                     <div className="flex justify-center mt-4">
                         <button
                             onClick={() => setCurrentPage(currentPage - 1)}

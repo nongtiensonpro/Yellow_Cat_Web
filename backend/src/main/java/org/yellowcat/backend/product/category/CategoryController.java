@@ -9,8 +9,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.yellowcat.backend.product.category.dto.CategoryCreateDto;
 import org.yellowcat.backend.product.category.dto.CategoryRequestDto;
 import org.yellowcat.backend.product.category.dto.CategoryResponseDto;
+import org.yellowcat.backend.response.ApiResponse;
+import org.yellowcat.backend.response.PageResponse;
+import org.yellowcat.backend.response.ResponseEntityBuilder;
 
 @RestController
 @RequestMapping("/api/categories")
@@ -20,22 +24,24 @@ public class CategoryController {
     CategoryService categoryService;
 
     @GetMapping
-    public ResponseEntity<Page<CategoryResponseDto>> getAllCategories(
+    public ResponseEntity<?> getAllCategories(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(categoryService.getAllCategories(pageable));
+        Page<CategoryResponseDto> categories = categoryService.getAllCategories(pageable);
+        PageResponse<CategoryResponseDto> pageResponse = new PageResponse<>(categories);
+        return ResponseEntityBuilder.success(pageResponse);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<CategoryResponseDto> getCategoryById(@PathVariable Integer id) {
-        return ResponseEntity.ok(categoryService.getCategoryById(id));
+    public ResponseEntity<?> getCategoryById(@PathVariable Integer id) {
+        return ResponseEntityBuilder.success(categoryService.getCategoryById(id));
     }
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('Admin_Web')")
-    public ResponseEntity<CategoryResponseDto> addCategory(@RequestBody CategoryRequestDto categoryRequestDto) {
-        return ResponseEntity.ok(categoryService.addCategory(categoryRequestDto));
+    public ResponseEntity<?> addCategory(@RequestBody CategoryCreateDto categoryCreateDto) {
+        return ResponseEntityBuilder.success(categoryService.addCategory(categoryCreateDto));
     }
 
     @PutMapping("/{id}")
