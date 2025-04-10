@@ -4,10 +4,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.yellowcat.backend.config.EntityMessage;
+import org.yellowcat.backend.config.WebSocketHandler;
 import org.yellowcat.backend.product.brand.dto.BrandCreateDto;
 import org.yellowcat.backend.product.brand.dto.BrandDTO;
 import org.yellowcat.backend.product.brand.dto.BrandUpdateDto;
-import org.yellowcat.backend.product.brand.websocket.BrandWebSocketHandler;
 
 import java.time.Instant;
 
@@ -17,7 +18,7 @@ public class BrandService {
     private final BrandRepository brandRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
-    public BrandService(BrandRepository brandRepository, BrandWebSocketHandler webSocketHandler, SimpMessagingTemplate messagingTemplate) {
+    public BrandService(BrandRepository brandRepository, WebSocketHandler webSocketHandler, SimpMessagingTemplate messagingTemplate) {
         this.brandRepository = brandRepository;
         this.messagingTemplate = messagingTemplate;
     }
@@ -37,7 +38,7 @@ public class BrandService {
         if (brandRepository.existsById(id)) {
             Brand brand = brandRepository.findById(id).get();
             BrandDTO result = convertToDTO(brand);
-            messagingTemplate.convertAndSend("/topic/brands",new BrandMessage( "delete",result));
+            messagingTemplate.convertAndSend("/topic/brands",new EntityMessage( "delete",result));
             brandRepository.deleteById(id);
             return true;
         }else {
@@ -53,7 +54,7 @@ public class BrandService {
         newBrand.setLogoPublicId(brandDTO.logoPublicId());
         newBrand.setBrandInfo(brandDTO.brandInfo());
         Brand savedBrand = brandRepository.save(newBrand);
-        messagingTemplate.convertAndSend("/topic/brands", new BrandMessage( "add", convertToDTO(savedBrand)                                                       ));
+        messagingTemplate.convertAndSend("/topic/brands", new EntityMessage( "add", convertToDTO(savedBrand)                                                       ));
         return new BrandDTO(savedBrand);
     }
 
@@ -65,7 +66,7 @@ public class BrandService {
             existingBrand.setBrandInfo(brandDTO.brandInfo());
             existingBrand.setUpdatedAt(Instant.now());
             Brand updatedBrand = brandRepository.save(existingBrand);
-            messagingTemplate.convertAndSend("/topic/brands", new BrandMessage( "update", convertToDTO(updatedBrand)                                                       ));
+            messagingTemplate.convertAndSend("/topic/brands", new EntityMessage( "update", convertToDTO(updatedBrand)                                                       ));
             return new BrandDTO(updatedBrand);
         } else {
             return null;
@@ -83,17 +84,4 @@ public class BrandService {
     }
 }
 
-class BrandMessage {
-    private String action;
-    private BrandDTO brand;
-
-    public BrandMessage(String action, BrandDTO brand) {
-        this.action = action;
-        this.brand = brand;
-    }
-
-    // Getter, Setter
-    public String getAction() { return action; }
-    public BrandDTO getBrand() { return brand; }
-}
 

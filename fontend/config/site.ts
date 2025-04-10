@@ -29,6 +29,10 @@ export const siteConfig = {
     {
       label: "Quản lý Brand",
       href:"/admin/product_management/brands",
+    },
+    {
+      label: "Quản lý Category",
+      href: "/admin/product_management/categories",
     }
   ],
   links: {

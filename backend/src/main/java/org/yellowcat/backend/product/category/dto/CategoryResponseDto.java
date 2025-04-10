@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CategoryResponseDto {
+    private Integer id;
     private String name;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
