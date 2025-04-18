@@ -1,14 +1,13 @@
 package org.yellowcat.backend.product.category;
 
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
-import org.yellowcat.backend.config.EntityMessage;
+import org.yellowcat.backend.common.websocket.EntityMessage;
 import org.yellowcat.backend.product.category.dto.CategoryCreateDto;
 import org.yellowcat.backend.product.category.dto.CategoryRequestDto;
 import org.yellowcat.backend.product.category.dto.CategoryResponseDto;

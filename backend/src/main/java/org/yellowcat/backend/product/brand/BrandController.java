@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.*;
 import org.yellowcat.backend.product.brand.dto.BrandCreateDto;
 import org.yellowcat.backend.product.brand.dto.BrandDTO;
 import org.yellowcat.backend.product.brand.dto.BrandUpdateDto;
-import org.yellowcat.backend.response.PageResponse;
-import org.yellowcat.backend.response.ResponseEntityBuilder;
+import org.yellowcat.backend.common.config_api.response.PageResponse;
+import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
 
 @RestController
 @RequestMapping("/api/brands")
