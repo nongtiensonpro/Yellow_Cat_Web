@@ -23,26 +23,26 @@ export async function middleware(request: any) {
 
     // Nếu không có token, redirect về /login (chỉ áp dụng cho /admin/*)
     if (!token) {
-        console.log("No token found, redirecting to /login");
+    //    console.log("No token found, redirecting to /login");
         return NextResponse.redirect(new URL("/login", request.url));
     }
 
     try {
         const decoded: any = jwt.decode(token);
-        console.log("Decoded token:", decoded);
+    //    console.log("Decoded token:", decoded);
 
         const clientRoles = decoded?.resource_access?.["YellowCatCompanyWeb"]?.roles || [];
-        console.log("Client roles for YellowCatCompanyWeb:", clientRoles);
+    //    console.log("Client roles for YellowCatCompanyWeb:", clientRoles);
 
         if (!clientRoles.includes("Admin_Web")) {
-            console.log("Admin_Web role not found, redirecting to /unauthorized");
+    //        console.log("Admin_Web role not found, redirecting to /unauthorized");
             return NextResponse.redirect(new URL("/unauthorized", request.url));
         }
 
-        console.log("Access granted to", request.url);
+    //    console.log("Access granted to", request.url);
         return NextResponse.next();
     } catch (error) {
-        console.error("Middleware error:", error);
+    //    console.error("Middleware error:", error);
         return NextResponse.redirect(new URL("/login", request.url));
     }
 }
