@@ -9,10 +9,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.yellowcat.backend.response.PageResponse;
-import org.yellowcat.backend.response.ResponseEntityBuilder;
+import org.yellowcat.backend.common.config_api.response.PageResponse;
+import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
 
-import java.util.List;
 @RestController
 @RequestMapping("/demo/all")
 public class DemoController {

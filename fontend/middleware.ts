@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 
 export async function middleware(request: any) {
-    console.log("Middleware triggered for:", request.url);
+    //  console.log("Middleware triggered for:", request.url);
 
     // Chỉ áp dụng bảo vệ cho các route /admin và /admin/*
     const pathname = request.nextUrl.pathname;

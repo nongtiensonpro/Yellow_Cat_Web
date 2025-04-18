@@ -12,9 +12,8 @@ import org.springframework.web.bind.annotation.*;
 import org.yellowcat.backend.product.category.dto.CategoryCreateDto;
 import org.yellowcat.backend.product.category.dto.CategoryRequestDto;
 import org.yellowcat.backend.product.category.dto.CategoryResponseDto;
-import org.yellowcat.backend.response.ApiResponse;
-import org.yellowcat.backend.response.PageResponse;
-import org.yellowcat.backend.response.ResponseEntityBuilder;
+import org.yellowcat.backend.common.config_api.response.PageResponse;
+import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
 
 @RestController
 @RequestMapping("/api/categories")
