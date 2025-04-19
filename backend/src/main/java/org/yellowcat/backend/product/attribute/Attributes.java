@@ -1,9 +1,6 @@
 package org.yellowcat.backend.product.attribute;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -15,7 +12,7 @@ import org.hibernate.annotations.ColumnDefault;
 @Table(name = "attributes")
 public class Attributes {
     @Id
-    @ColumnDefault("nextval('attributes_attribute_id_seq')")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "attribute_id", nullable = false)
     private Integer id;
 

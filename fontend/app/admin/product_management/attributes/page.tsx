@@ -57,7 +57,7 @@ export default function Page() {
             reconnectDelay: 5000, // Tự động reconnect sau 5s nếu mất kết nối
             onConnect: () => {
                 console.log('Kết nối STOMP đã được thiết lập');
-                client.subscribe('/topic/Attributes', (message) => {
+                client.subscribe('/topic/attributes', (message) => {
                     const data = JSON.parse(message.body);
                     console.log('Nhận thông báo từ server:', data);
                     setNotification(`Hành động: ${data.action} - Attributes: ${data.entity.attributeName}`);
@@ -147,7 +147,7 @@ export default function Page() {
 
             onClose();
             setAttributesToDelete(null);
-
+            await fetchAttributesData();
         } catch (err) {
             console.error('Lỗi khi xóa attributes:', err);
             setError(err instanceof Error ? err.message : 'Không thể xóa attributes. Vui lòng thử lại sau.');

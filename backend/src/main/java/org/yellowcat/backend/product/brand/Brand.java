@@ -15,7 +15,6 @@ import java.util.Set;
 public class Brand {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "brands_id_gen")
-    @SequenceGenerator(name = "brands_id_gen", sequenceName = "brands_brand_id_seq", allocationSize = 1)
     @Column(name = "brand_id", nullable = false)
     private Integer id;
 

@@ -2,7 +2,9 @@ package org.yellowcat.backend.product.attribute.dto;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.Value;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.yellowcat.backend.product.attribute.Attributes;
 
 import java.io.Serializable;
@@ -10,15 +12,17 @@ import java.io.Serializable;
 /**
  * DTO for {@link org.yellowcat.backend.product.attribute.Attributes}
  */
-@Value
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class AttributesDto implements Serializable {
-    Integer id;
+    private Integer id;
     @NotNull
     @Size(max = 255)
-    String attributeName;
+    private String attributeName;
     @NotNull
     @Size(max = 50)
-    String dataType;
+    private String dataType;
 
     public AttributesDto(Attributes attributes) {
         this.id = attributes.getId();
