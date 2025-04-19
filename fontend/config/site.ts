@@ -33,6 +33,10 @@ export const siteConfig = {
     {
       label: "Quản lý Category",
       href: "/admin/product_management/categories",
+    },
+    {
+      label: "Quản lý Attribute",
+      href: "/admin/product_management/attributes",
     }
   ],
   links: {
