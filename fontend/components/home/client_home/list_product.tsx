@@ -1,22 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import Link from 'next/link';
-
-interface Brand {
-  id: number;
-  brandName: string;
-}
-
-interface Category {
-  id: number;
-  name: string;
-}
+import Image from 'next/image';
+import {CldImage} from "next-cloudinary";
 
 interface Product {
-  id: number;
+  productId: number;
   productName: string;
-  category: Category;
-  brand: Brand;
+  description: string;
+  purchases: number;
+  createdAt: string;
+  updatedAt: string;
+  categoryId: number;
+  categoryName: string;
+  brandId: number;
+  brandName: string;
+  brandInfo: string;
+  logoPublicId: string;
+  minPrice: number | null;
+  totalStock: number | null;
+  thumbnail: string | null;
+  activePromotions: string | null;
+  active: boolean;
 }
 
 interface PageInfo {
@@ -52,7 +57,9 @@ const ProductList = () => {
         }
         const data: ApiResponse = await response.json();
         if (data.status === 200 && data.data && data.data.content) {
-          setProducts(data.data.content);
+          // Chỉ hiển thị sản phẩm active
+          const activeProducts = data.data.content.filter(product => product.active);
+          setProducts(activeProducts);
         } else {
           throw new Error(data.message || 'Failed to fetch products');
         }
@@ -74,23 +81,46 @@ const ProductList = () => {
     return <div>Error: {error}</div>;
   }
 
+  // Format giá tiền
+  const formatPrice = (price: number | null) => {
+    if (price === null) return 'Liên hệ';
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+  };
+
   return (
     <StyledWrapper>
       <h2 className="section-title">Our Products</h2>
       <div className="product-grid">
         {products.map((product) => (
-          <div className="card" key={product.id}>
-            <div className="image" />
+          <div className="card" key={product.productId}>
+            {product.thumbnail ? (
+              <div className="image">
+                <CldImage
+                    width={400}
+                    height={400}
+                    src={product.thumbnail}
+                    alt={product.productName}
+                    className="object-contain max-h-[400px]"
+                />
+              </div>
+            ) : (
+              <div className="image placeholder" />
+            )}
             <div className="content">
-              <Link href={`/products/${product.id}`}>
+              <Link href={`/products/${product.productId}`}>
                 <span className="title">
                   {product.productName}
                 </span>
               </Link>
+              <p className="price">{formatPrice(product.minPrice)}</p>
               <p className="desc">
-                Category: {product.category.name} | Brand: {product.brand.brandName}
+                Category: {product.categoryName} | Brand: {product.brandName}
               </p>
-              <Link className="action" href={`/products/${product.id}`}>
+              <div className="stats">
+                <span className="stock">Stock: {product.totalStock || 'N/A'}</span>
+                <span className="purchases">Sold: {product.purchases}</span>
+              </div>
+              <Link className="action" href={`/products/${product.productId}`}>
                 View Details
                 <span aria-hidden="true">
                   →
@@ -143,12 +173,16 @@ const StyledWrapper = styled.div`
     }
 
     .image {
-        object-fit: cover;
+        position: relative;
         width: 100%;
         height: 200px;
-        background-color: rgb(255, 239, 205);
         border-top-left-radius: 0.5rem;
         border-top-right-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+    .image.placeholder {
+        background-color: rgb(255, 239, 205);
     }
 
     .title {
@@ -160,11 +194,26 @@ const StyledWrapper = styled.div`
         margin-bottom: 0.5rem;
     }
 
+    .price {
+        font-weight: 600;
+        color: #ef4444;
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
     .desc {
         margin-top: 0.5rem;
         color: #6B7280;
         font-size: 0.875rem;
         line-height: 1.25rem;
+    }
+
+    .stats {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 0.5rem;
+        font-size: 0.75rem;
+        color: #6B7280;
     }
 
     .action {
