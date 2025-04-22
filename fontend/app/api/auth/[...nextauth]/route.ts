@@ -177,7 +177,7 @@ export const authOptions: NextAuthOptions = {
                             ...customToken,
                             error: "RefreshAccessTokenError",
                             accessToken: undefined,
-                            refreshToken: undefined, 
+                            refreshToken: undefined,
                             expiresAt: 0 // Đặt thời gian hết hạn về 0
                         } as JWT;
                     }
