@@ -198,10 +198,8 @@ export const authOptions: NextAuthOptions = {
             customSession.user.email = customToken.email || "";
             customSession.user.name = customToken.name || "";
 
-            customSession.accessToken = customToken.accessToken; // Đưa accessToken trở lại session client
-            // Không cần gửi refreshToken và idToken về client, chúng được quản lý trong JWT
-            // customSession.refreshToken = customToken.refreshToken;
-            // customSession.idToken = customToken.idToken;
+            customSession.accessToken = customToken.accessToken;
+
             customSession.error = customToken.error;
             customSession.expiresAt = customToken.expiresAt;
 

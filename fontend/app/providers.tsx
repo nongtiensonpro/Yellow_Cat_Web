@@ -6,16 +6,13 @@ import * as React from "react";
 import { HeroUIProvider } from "@heroui/system";
 import { useRouter } from "next/navigation";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
-import { SessionProvider } from "next-auth/react"; // Keep SessionProvider import
+import { SessionProvider } from "next-auth/react";
 
 export interface ProvidersProps {
   children: React.ReactNode;
   themeProps?: ThemeProviderProps;
 }
 
-// Removed the duplicate interface declaration
-
-// Keep this declaration if needed by HeroUIProvider or other libraries
 declare module "@react-types/shared" {
   interface RouterConfig {
     routerOptions: NonNullable<
@@ -24,12 +21,10 @@ declare module "@react-types/shared" {
   }
 }
 
-// Merged Providers component
 export default function Providers({ children, themeProps }: ProvidersProps) {
   const router = useRouter();
 
   return (
-    // Wrap with SessionProvider first
     <SessionProvider>
       <HeroUIProvider navigate={router.push}>
         <NextThemesProvider {...themeProps}>{children}</NextThemesProvider>
@@ -38,4 +33,3 @@ export default function Providers({ children, themeProps }: ProvidersProps) {
   );
 }
 
-// Removed the second 'Providers' definition and its interface```
