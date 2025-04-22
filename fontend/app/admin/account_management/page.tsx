@@ -41,7 +41,6 @@ export default function Page() {
         try {
             setLoading(true);
 
-            // Use the accessToken from the session
             const token = session?.accessToken;
 
             if (!token) {

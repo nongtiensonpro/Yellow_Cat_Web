@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { CldImage } from 'next-cloudinary';
 
-// Define types based on the API response
+
 interface ProductVariant {
   variantId: number;
   sku: string;
