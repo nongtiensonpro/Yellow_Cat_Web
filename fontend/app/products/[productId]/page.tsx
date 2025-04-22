@@ -45,7 +45,7 @@ export default function ProductDetailPage() {
   const router = useRouter();
   const params = useParams();
   const productId = params.productId;
-  
+
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,13 +61,13 @@ export default function ProductDetailPage() {
     try {
       setLoading(true);
       const response = await fetch(`http://localhost:8080/api/products/${id}`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-      
+
       const data: ApiResponse = await response.json();
-      
+
       if (data.status === 200 && data.data) {
         setProduct(data.data);
         // Set the first variant as selected by default
@@ -88,37 +88,37 @@ export default function ProductDetailPage() {
   // Parse variant attributes to display in a more readable format
   const parseVariantAttributes = (attributesString: string) => {
     const attributes: Record<string, string> = {};
-    
+
     attributesString.split(', ').forEach(attr => {
       const [key, value] = attr.split(': ');
       if (key && value) {
         attributes[key] = value;
       }
     });
-    
+
     return attributes;
   };
 
   // Group variants by color for the color selection UI
   const getUniqueColors = () => {
     if (!product?.variants) return [];
-    
+
     const colors = new Set<string>();
-    
+
     product.variants.forEach(variant => {
       const attributes = parseVariantAttributes(variant.variantAttributes);
       if (attributes['Màu sắc']) {
         colors.add(attributes['Màu sắc']);
       }
     });
-    
+
     return Array.from(colors);
   };
 
   // Get available sizes for a specific color
   const getSizesForColor = (color: string) => {
     if (!product?.variants) return [];
-    
+
     return product.variants
       .filter(variant => {
         const attributes = parseVariantAttributes(variant.variantAttributes);
@@ -140,9 +140,9 @@ export default function ProductDetailPage() {
 
   // Format price with Vietnamese currency
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN', { 
-      style: 'currency', 
-      currency: 'VND' 
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
     }).format(price);
   };
 
@@ -193,9 +193,9 @@ export default function ProductDetailPage() {
       <Card className="w-full max-w-6xl mx-auto">
         <CardHeader className="flex flex-col items-start">
           <div className="flex items-center gap-2 mb-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => router.back()}
               className="text-gray-500"
             >
@@ -262,14 +262,14 @@ export default function ProductDetailPage() {
                         const attrs = parseVariantAttributes(v.variantAttributes);
                         return attrs['Màu sắc'] === color;
                       });
-                      
-                      const isSelected = selectedVariant && 
+
+                      const isSelected = selectedVariant &&
                         parseVariantAttributes(selectedVariant.variantAttributes)['Màu sắc'] === color;
-                      
+
                       return (
                         <Button
                           key={color}
-                          variant={isSelected ? "solid" : "outline"}
+                          variant={isSelected ? "flat" : "ghost"}
                           color={isSelected ? "primary" : "default"}
                           onClick={() => variantWithColor && handleVariantSelect(variantWithColor.variantId)}
                           className="min-w-[80px]"
@@ -285,22 +285,22 @@ export default function ProductDetailPage() {
                 <div>
                   <h3 className="text-sm font-medium mb-2">Kích cỡ:</h3>
                   <div className="flex flex-wrap gap-2">
-                    {selectedVariant && 
+                    {selectedVariant &&
                       getSizesForColor(parseVariantAttributes(selectedVariant.variantAttributes)['Màu sắc']).map(size => {
                         // Find the variant with this color and size
                         const variantWithSize = product.variants.find(v => {
                           const attrs = parseVariantAttributes(v.variantAttributes);
-                          return attrs['Màu sắc'] === parseVariantAttributes(selectedVariant.variantAttributes)['Màu sắc'] && 
+                          return attrs['Màu sắc'] === parseVariantAttributes(selectedVariant.variantAttributes)['Màu sắc'] &&
                                  attrs['Kích cỡ'] === size;
                         });
-                        
-                        const isSelected = selectedVariant && 
+
+                        const isSelected = selectedVariant &&
                           parseVariantAttributes(selectedVariant.variantAttributes)['Kích cỡ'] === size;
-                        
+
                         return (
                           <Button
                             key={size}
-                            variant={isSelected ? "solid" : "outline"}
+                            variant={isSelected ? "flat" : "ghost"}
                             color={isSelected ? "primary" : "default"}
                             onClick={() => variantWithSize && handleVariantSelect(variantWithSize.variantId)}
                             className="min-w-[50px]"
@@ -315,9 +315,9 @@ export default function ProductDetailPage() {
 
               {/* Add to Cart Button */}
               <div className="pt-4">
-                <Button 
-                  color="success" 
-                  size="lg" 
+                <Button
+                  color="success"
+                  size="lg"
                   className="w-full"
                   disabled={!selectedVariant || selectedVariant.stockLevel <= 0}
                 >

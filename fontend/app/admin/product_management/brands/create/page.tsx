@@ -1,12 +1,12 @@
 "use client";
 
-import { Card, CardHeader, CardBody, Divider,  Button, addToast } from "@heroui/react";
+import { Card, CardHeader, CardBody, Divider, Button, addToast } from "@heroui/react";
 import { Input } from "@heroui/input";
 import { CldUploadButton, CldImage } from 'next-cloudinary';
 import { useState, useEffect } from "react";
-import keycloak from '@/keycloak/keycloak';
 import { useRouter } from "next/navigation";
-import {CardFooter} from "@heroui/card";
+import { CardFooter } from "@heroui/card";
+import { useSession } from "next-auth/react";
 
 export interface Brand {
     brandName: string;
@@ -16,7 +16,7 @@ export interface Brand {
 
 const createBrand = async (data: Brand, token: string | undefined) => {
     if (!token) {
-        console.error("Lỗi: Không tìm thấy token Keycloak.");
+        console.error("Lỗi: Không tìm thấy token xác thực.");
         throw new Error("Yêu cầu chưa được xác thực. Vui lòng đăng nhập lại.");
     }
 
@@ -51,20 +51,25 @@ const createBrand = async (data: Brand, token: string | undefined) => {
 
 export default function CreateBrandPage() {
     const router = useRouter();
+    const { data: session, status } = useSession();
     const [resource, setResource] = useState<any>(null);
     const [formError, setFormError] = useState<string | null>(null);
     const [brandName, setBrandName] = useState("");
     const [brandInfo, setBrandInfo] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [authToken, setAuthToken] = useState<string | undefined>(undefined);
 
+    // Kiểm tra trạng thái xác thực khi component được tải
     useEffect(() => {
-        if (keycloak.authenticated) {
-            setAuthToken(keycloak.token);
-        } else {
-            console.warn("Keycloak chưa được xác thực khi vào trang tạo Brand.");
+        if (status === 'unauthenticated') {
+            console.warn("Người dùng chưa đăng nhập.");
+            addToast({
+                title: "Cần đăng nhập",
+                description: "Vui lòng đăng nhập để tiếp tục.",
+                color: "warning"
+            });
+            router.push('/login');
         }
-    }, [router]);
+    }, [status, router]);
 
     const handleUploadSuccess = (result: any) => {
         if (result.event === "success" && result.info) {
@@ -110,9 +115,10 @@ export default function CreateBrandPage() {
         setIsSubmitting(true);
 
         try {
-            const currentToken = keycloak.token;
-            if (!currentToken) {
-                throw new Error("Yêu cầu chưa được xác thực. Vui lòng đăng nhập lại.");
+            // Lấy token từ session của NextAuth
+            const token = session?.accessToken;
+            if (!token) {
+                throw new Error("Phiên đăng nhập hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.");
             }
 
             const response = await createBrand(
@@ -121,7 +127,7 @@ export default function CreateBrandPage() {
                     brandInfo: brandInfo.trim(),
                     logoPublicId: resource.public_id
                 },
-                currentToken
+                token
             );
 
             addToast({
@@ -167,7 +173,7 @@ export default function CreateBrandPage() {
                         placeholder="Nhập tên Brand"
                         type="text"
                         value={brandName}
-                        onChange={(e) => { setBrandName(e.target.value); setFormError(null); }} // Xóa lỗi khi nhập
+                        onChange={(e) => { setBrandName(e.target.value); setFormError(null); }}
                         isRequired
                     />
 
@@ -176,7 +182,7 @@ export default function CreateBrandPage() {
                         placeholder="Nhập thông tin chi tiết về Brand"
                         type="text"
                         value={brandInfo}
-                        onChange={(e) => { setBrandInfo(e.target.value); setFormError(null); }} // Xóa lỗi khi nhập
+                        onChange={(e) => { setBrandInfo(e.target.value); setFormError(null); }}
                         isRequired
                     />
 
@@ -225,7 +231,7 @@ export default function CreateBrandPage() {
                     <Button
                         color="success"
                         type="submit"
-                        isDisabled={isSubmitting || !authToken}
+                        isDisabled={isSubmitting || status !== 'authenticated'}
                     >
                         {isSubmitting ? "Đang xử lý..." : "Tạo Brand"}
                     </Button>

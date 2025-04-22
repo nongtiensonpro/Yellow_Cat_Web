@@ -1,52 +1,58 @@
 import { NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
+import { jwtDecode } from "jwt-decode"; // Thay đổi từ jsonwebtoken sang jwt-decode
+import { getToken } from "next-auth/jwt";
 
 export async function middleware(request: any) {
-    //  console.log("Middleware triggered for:", request.url);
-
-    // Chỉ áp dụng bảo vệ cho các route /admin và /admin/*
     const pathname = request.nextUrl.pathname;
     if (!pathname.startsWith("/admin")) {
-        return NextResponse.next(); // Không can thiệp vào các route khác
-    }
-
-    // Lấy token từ header Authorization hoặc cookie
-    let token = request.headers.get("authorization")?.replace("Bearer ", "");
-    if (!token) {
-        const cookies = request.headers.get("cookie");
-        token = cookies
-            ?.split("; ")
-            .find((row: string) => row.startsWith("token="))
-            ?.split("=")[1];
-    }
-    console.log("Token received:", token);
-
-    // Nếu không có token, redirect về /login (chỉ áp dụng cho /admin/*)
-    if (!token) {
-    //    console.log("No token found, redirecting to /login");
-        return NextResponse.redirect(new URL("/login", request.url));
+        return NextResponse.next();
     }
 
     try {
-        const decoded: any = jwt.decode(token);
-    //    console.log("Decoded token:", decoded);
+        // Sử dụng getToken từ next-auth/jwt để lấy token
+        const token = await getToken({ 
+            req: request,
+            secret: process.env.NEXTAUTH_SECRET
+        });
 
-        const clientRoles = decoded?.resource_access?.["YellowCatCompanyWeb"]?.roles || [];
-    //    console.log("Client roles for YellowCatCompanyWeb:", clientRoles);
+        if (!token) {
+            console.log("No token found, redirecting to /login");
+            return NextResponse.redirect(new URL("/login", request.url));
+        }
 
-        if (!clientRoles.includes("Admin_Web")) {
-    //        console.log("Admin_Web role not found, redirecting to /unauthorized");
+        console.log("Token received from NextAuth");
+
+        // Kiểm tra quyền từ token.roles hoặc từ accessToken đã decode
+        let hasAdminRole = false;
+        
+        // Kiểm tra từ token.roles (đã được xử lý bởi NextAuth)
+        if (token.roles && Array.isArray(token.roles)) {
+            hasAdminRole = token.roles.includes("Admin_Web");
+        }
+        
+        // Nếu không có trong token.roles, thử kiểm tra từ accessToken
+        if (!hasAdminRole && token.accessToken) {
+            try {
+                const decodedAccessToken = jwtDecode<any>(token.accessToken as string);
+                const clientRoles = decodedAccessToken?.resource_access?.["YellowCatCompanyWeb"]?.roles || [];
+                hasAdminRole = clientRoles.includes("Admin_Web");
+            } catch (decodeError) {
+                console.error("Error decoding access token:", decodeError);
+            }
+        }
+
+        if (!hasAdminRole) {
+            console.log("User does not have Admin_Web role, redirecting to /unauthorized");
             return NextResponse.redirect(new URL("/unauthorized", request.url));
         }
 
-    //    console.log("Access granted to", request.url);
         return NextResponse.next();
     } catch (error) {
-    //    console.error("Middleware error:", error);
+        console.error("Middleware error:", error);
         return NextResponse.redirect(new URL("/login", request.url));
     }
 }
 
 export const config = {
-    matcher: ["/admin", "/admin/:path*"], // Chỉ áp dụng cho /admin và sub-route
+    matcher: ["/admin", "/admin/:path*"],
 };

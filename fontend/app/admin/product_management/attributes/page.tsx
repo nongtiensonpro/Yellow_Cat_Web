@@ -16,12 +16,13 @@ import {
     ModalBody,
     ModalFooter,
     Button,
-    useDisclosure
+    useDisclosure,
+    Spinner // Thêm Spinner
 } from "@heroui/react";
 import NextLink from "next/link";
 import { useEffect, useState } from "react";
-import LoadingSpinner from "@/components/LoadingSpinner";
-import keycloak from '@/keycloak/keycloak';
+import { useSession, signIn } from "next-auth/react";
+// import LoadingSpinner from "@/components/LoadingSpinner"; // Xóa import này
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
@@ -39,6 +40,7 @@ interface ApiResponse {
 }
 
 export default function Page() {
+    const { data: session, status } = useSession();
     const [AttributesData, setAttributesData] = useState<Attributes[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -114,7 +116,7 @@ export default function Page() {
                 stompClient.deactivate();
             }
         };
-    }, [currentPage, itemsPerPage,notification]);
+    }, [currentPage, itemsPerPage, notification, stompClient]); // Thêm stompClient vào dependency array
 
     const openDeleteConfirm = (attributesId: number, attributeName: string) => {
         setAttributesToDelete({ id: attributesId, name: attributeName });
@@ -125,12 +127,19 @@ export default function Page() {
         if (!AttributesToDelete) return;
 
         try {
-            if (!keycloak.authenticated) {
-                await keycloak.login();
+            // Kiểm tra xem người dùng đã đăng nhập chưa
+            if (status !== 'authenticated' || !session) {
+                // Chuyển hướng đến trang đăng nhập nếu chưa đăng nhập
+                signIn();
                 return;
             }
 
-            const token = keycloak.token;
+            // Lấy token từ session
+            const token = session.accessToken;
+            
+            if (!token) {
+                throw new Error('Không có token xác thực. Vui lòng đăng nhập lại.');
+            }
 
             const response = await fetch(`http://localhost:8080/api/attributes/${AttributesToDelete.id}`, {
                 method: 'DELETE',
@@ -182,7 +191,10 @@ export default function Page() {
                 )}
 
                 {loading ? (
-                    <LoadingSpinner />
+                    // <LoadingSpinner /> // Thay thế dòng này
+                    <div className="flex justify-center py-10">
+                        <Spinner label="Đang tải thuộc tính..." />
+                    </div>
                 ) : error ? (
                     <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
                         <span className="block sm:inline">{error}</span>
@@ -195,34 +207,27 @@ export default function Page() {
                             <TableColumn>Data Type</TableColumn>
                             <TableColumn>Actions</TableColumn>
                         </TableHeader>
-                        <TableBody>
-                            {AttributesData && AttributesData.length > 0 ? (
-                                AttributesData.map((attributes) => (
-                                    <TableRow key={attributes.id}>
-                                        <TableCell>{attributes.id}</TableCell>
-                                        <TableCell>{attributes.attributeName}</TableCell>
-                                        <TableCell>{attributes.dataType}</TableCell>
-                                        <TableCell>
-                                            <div className="flex space-x-2">
-                                                <NextLink href={`/admin/product_management/attributes/update/${attributes.id}`}>
-                                                    <button className="inline-block w-fit cursor-pointer transition-all bg-yellow-500 text-white px-6 py-2 rounded-lg border-yellow-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]">
-                                                        Sửa
-                                                    </button>
-                                                </NextLink>
-                                                <button
-                                                    className="inline-block w-fit cursor-pointer transition-all bg-red-500 text-white px-6 py-2 rounded-lg border-red-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]"
-                                                    onClick={() => openDeleteConfirm(attributes.id, attributes.attributeName)}
-                                                >
-                                                    Xóa
-                                                </button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="text-center py-4">
-                                        Không có dữ liệu
+                        <TableBody items={AttributesData} emptyContent={"Không có dữ liệu thuộc tính."}>
+                            {(attributes) => (
+                                <TableRow key={attributes.id}>
+                                    <TableCell>{attributes.id}</TableCell>
+                                    <TableCell>{attributes.attributeName}</TableCell>
+                                    <TableCell>{attributes.dataType}</TableCell>
+                                    <TableCell>
+                                        <div className="flex space-x-2">
+                                            {/* Sử dụng Button của Hero UI */}
+                                            <Button as={NextLink} href={`/admin/product_management/attributes/update/${attributes.id}`} color="warning" size="sm" variant="flat">
+                                                Sửa
+                                            </Button>
+                                            <Button
+                                                color="danger"
+                                                size="sm"
+                                                variant="flat"
+                                                onPress={() => openDeleteConfirm(attributes.id, attributes.attributeName)}
+                                            >
+                                                Xóa
+                                            </Button>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -230,23 +235,26 @@ export default function Page() {
                     </Table>
                 )}
 
+                {/* Pagination - Sử dụng Button của Hero UI */}
                 {!loading && !error && AttributesData.length > 0 && (
-                    <div className="flex justify-center mt-4">
-                        <button
+                    <div className="flex justify-center items-center mt-4 gap-2">
+                        <Button
                             onClick={() => setCurrentPage(currentPage - 1)}
-                            disabled={currentPage === 0}
-                            className="px-3 py-1 mx-1 bg-blue-500 text-white rounded disabled:bg-gray-300"
+                            isDisabled={currentPage === 0}
+                            size="sm"
+                            variant="flat"
                         >
                             Trước
-                        </button>
-                        <span className="px-3 py-1">Trang {currentPage + 1}/{totalPages}</span>
-                        <button
+                        </Button>
+                        <span className="text-sm">Trang {currentPage + 1}/{totalPages}</span>
+                        <Button
                             onClick={() => setCurrentPage(currentPage + 1)}
-                            disabled={currentPage === totalPages - 1}
-                            className="px-3 py-1 mx-1 bg-blue-500 text-white rounded disabled:bg-gray-300"
+                            isDisabled={currentPage >= totalPages - 1} // Sửa điều kiện disable
+                            size="sm"
+                            variant="flat"
                         >
                             Sau
-                        </button>
+                        </Button>
                     </div>
                 )}
 

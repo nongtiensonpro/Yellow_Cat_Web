@@ -1,24 +1,26 @@
 "use client";
 
-import { Card, CardHeader, CardBody, Divider,  Button, addToast } from "@heroui/react";
+import { Card, CardHeader, CardBody, Divider, Button, addToast } from "@heroui/react";
 import { Input } from "@heroui/input";
 import { useState, useEffect } from "react";
-import keycloak from '@/keycloak/keycloak';
 import { useRouter } from "next/navigation";
-import {CardFooter} from "@heroui/card";
+import { CardFooter } from "@heroui/card";
+import { useSession } from "next-auth/react";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api';
 
 export interface Categories {
     name: string;
 }
 
-const createBrand = async (data: Categories, token: string | undefined) => {
+const createCategory = async (data: Categories, token: string) => {
     if (!token) {
-        console.error("Lỗi: Không tìm thấy token Keycloak.");
+        console.error("Lỗi: Không tìm thấy token xác thực.");
         throw new Error("Yêu cầu chưa được xác thực. Vui lòng đăng nhập lại.");
     }
 
     try {
-        const response = await fetch("http://localhost:8080/api/categories", {
+        const response = await fetch(`${API_BASE_URL}/categories`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -41,31 +43,41 @@ const createBrand = async (data: Categories, token: string | undefined) => {
 
         return await response.json();
     } catch (error) {
-        console.error("Lỗi khi gọi API tạo brand:", error);
+        console.error("Lỗi khi gọi API tạo category:", error);
         throw error instanceof Error ? error : new Error("Đã xảy ra lỗi mạng hoặc hệ thống.");
     }
 };
 
-export default function CreateBrandPage() {
+export default function CreateCategoryPage() {
     const router = useRouter();
     const [formError, setFormError] = useState<string | null>(null);
-    const [brandName, setBrandName] = useState("");
+    const [categoryName, setCategoryName] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [authToken, setAuthToken] = useState<string | undefined>(undefined);
+    
+    // Sử dụng NextAuth session để lấy token
+    const { data: session, status } = useSession();
+    const authToken = session?.accessToken;
+    const isAuthenticated = status === "authenticated" && !!authToken;
+    const isAuthLoading = status === "loading";
 
+    // Kiểm tra xác thực khi component được tải
     useEffect(() => {
-        if (keycloak.authenticated) {
-            setAuthToken(keycloak.token);
-        } else {
-            console.warn("Keycloak chưa được xác thực khi vào trang tạo Brand.");
+        if (status === "unauthenticated") {
+            console.warn("Người dùng chưa đăng nhập khi vào trang tạo Category.");
+            addToast({ 
+                title: "Yêu cầu đăng nhập", 
+                description: "Vui lòng đăng nhập để tiếp tục.", 
+                color: "warning" 
+            });
+            router.push("/auth/signin?callbackUrl=" + encodeURIComponent(window.location.href));
         }
-    }, [router]);
+    }, [status, router]);
+
     const validateForm = (): boolean => {
-        if (!brandName.trim()) {
+        if (!categoryName.trim()) {
             addToast({ title: "Thiếu thông tin", description: "Vui lòng nhập tên Categories.", color: "warning" });
             return false;
         }
-
         return true;
     };
 
@@ -77,35 +89,40 @@ export default function CreateBrandPage() {
             return;
         }
 
+        if (!authToken) {
+            addToast({ 
+                title: "Lỗi xác thực", 
+                description: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.", 
+                color: "danger" 
+            });
+            router.push("/auth/signin?callbackUrl=" + encodeURIComponent(window.location.href));
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
-            const currentToken = keycloak.token;
-            if (!currentToken) {
-                throw new Error("Yêu cầu chưa được xác thực. Vui lòng đăng nhập lại.");
-            }
-
-            const response = await createBrand(
+            const response = await createCategory(
                 {
-                    name: brandName.trim()
+                    name: categoryName.trim()
                 },
-                currentToken
+                authToken
             );
 
             addToast({
                 title: "Thành công",
-                description: "Thêm thương hiệu thành công!",
+                description: "Thêm category thành công!",
                 color: "success",
             });
 
-            setBrandName("");
+            setCategoryName("");
             setFormError(null);
             setTimeout(() => {
                 router.push("/admin/product_management/categories");
             }, 1500);
 
         } catch (err: any) {
-            const errorMessage = err instanceof Error ? err.message : "Không thể tạo Brand. Đã xảy ra lỗi không mong muốn.";
+            const errorMessage = err instanceof Error ? err.message : "Không thể tạo Category. Đã xảy ra lỗi không mong muốn.";
             console.error("Lỗi khi submit:", err);
             setFormError(errorMessage);
             addToast({
@@ -118,6 +135,20 @@ export default function CreateBrandPage() {
         }
     };
 
+    // Hiển thị loading khi đang kiểm tra xác thực
+    if (isAuthLoading) {
+        return (
+            <Card className="w-full max-w-2xl mx-auto">
+                <CardBody className="flex justify-center items-center p-10">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-4"></div>
+                        <p>Đang kiểm tra thông tin xác thực...</p>
+                    </div>
+                </CardBody>
+            </Card>
+        );
+    }
+
     return (
         <Card className="w-full max-w-2xl mx-auto">
             <form onSubmit={handleSubmit}>
@@ -129,11 +160,11 @@ export default function CreateBrandPage() {
                 <Divider />
                 <CardBody className="space-y-6 p-5">
                     <Input
-                        label="Tên Brand"
+                        label="Tên Category"
                         placeholder="Nhập tên Categories"
                         type="text"
-                        value={brandName}
-                        onChange={(e) => { setBrandName(e.target.value); setFormError(null); }} // Xóa lỗi khi nhập
+                        value={categoryName}
+                        onChange={(e) => { setCategoryName(e.target.value); setFormError(null); }} // Xóa lỗi khi nhập
                         isRequired
                     />
 
@@ -149,7 +180,7 @@ export default function CreateBrandPage() {
                     <Button
                         color="success"
                         type="submit"
-                        isDisabled={isSubmitting || !authToken}
+                        isDisabled={isSubmitting || !isAuthenticated}
                     >
                         {isSubmitting ? "Đang xử lý..." : "Tạo Categories"}
                     </Button>

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useSession, signIn } from 'next-auth/react';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import keycloak from '@/keycloak/keycloak';
 
 interface Users {
     id: string;
@@ -17,72 +17,32 @@ interface Users {
 }
 
 export default function Page() {
+    const { data: session, status } = useSession();
     const [demoData, setDemoData] = useState<Users[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     // Pagination state
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [itemsPerPage] = useState<number>(5);
-    // Add state to track authentication status
-    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
     useEffect(() => {
-        // Check if keycloak is initialized
-        if (keycloak.authenticated !== undefined) {
-            setIsAuthenticated(keycloak.authenticated || false);
-
-            if (keycloak.authenticated) {
-                fetchDemoData();
-            } else {
-                setLoading(false);
-            }
-        } else {
-            const checkAuth = setInterval(() => {
-                if (keycloak.authenticated !== undefined) {
-                    setIsAuthenticated(keycloak.authenticated || false);
-
-                    if (keycloak.authenticated) {
-                        fetchDemoData();
-                    } else {
-                        setLoading(false);
-                    }
-
-                    clearInterval(checkAuth);
-                }
-            }, 100);
-
-            // Clean up interval on component unmount
-            return () => clearInterval(checkAuth);
+        if (status === 'authenticated' && session) {
+            fetchDemoData();
+        } else if (status !== 'loading') {
+            setLoading(false);
         }
-    }, []);
-
-    useEffect(() => {
-        const updateAuthStatus = () => {
-            setIsAuthenticated(keycloak.authenticated || false);
-            if (keycloak.authenticated) {
-                fetchDemoData();
-            }
-        };
-
-        keycloak.onAuthSuccess = updateAuthStatus;
-        keycloak.onAuthRefreshSuccess = updateAuthStatus;
-
-        return () => {
-            keycloak.onAuthSuccess = undefined;
-            keycloak.onAuthRefreshSuccess = undefined;
-        };
-    }, []);
+    }, [status, session]);
 
     const login = () => {
-        keycloak.login();
+        signIn('keycloak');
     };
 
     const fetchDemoData = async () => {
         try {
             setLoading(true);
 
-            // Just use the token directly
-            const token = keycloak.token;
+            // Use the accessToken from the session
+            const token = session?.accessToken;
 
             if (!token) {
                 throw new Error('No authentication token available');
@@ -132,8 +92,8 @@ export default function Page() {
     // Calculate total pages
     const totalPages = Math.ceil(demoData.length / itemsPerPage);
 
-    // Change this condition to use the state variable
-    if (!isAuthenticated) {
+    // Check if user is authenticated
+    if (status === 'unauthenticated') {
         return (
             <section className="mb-12">
                 <div className="max-w-6xl mx-auto text-center">
@@ -149,6 +109,17 @@ export default function Page() {
                     >
                         Login
                     </button>
+                </div>
+            </section>
+        );
+    }
+
+    // Show loading state while checking authentication
+    if (status === 'loading') {
+        return (
+            <section className="mb-12">
+                <div className="max-w-6xl mx-auto text-center">
+                    <LoadingSpinner />
                 </div>
             </section>
         );

@@ -3,9 +3,9 @@
 import { Card, CardHeader, CardBody, Divider, Button, addToast, Spinner } from "@heroui/react";
 import { Input } from "@heroui/input";
 import { useState, useEffect } from "react";
-import keycloak from '@/keycloak/keycloak';
 import { useRouter, useParams } from "next/navigation";
-import {CardFooter} from "@heroui/card";
+import { CardFooter } from "@heroui/card";
+import { useSession } from "next-auth/react";
 
 export interface Attribute {
     id: number | string;
@@ -88,7 +88,8 @@ export default function UpdateAttributePage() {
     const router = useRouter();
     const params = useParams();
     const AttributeId = params.attributesId;
-   const [AttributeData, setAttributeData] = useState<Omit<Attribute, 'id' | 'createdAt' | 'updatedAt' | 'productIds'>>({
+    const { data: session, status } = useSession();
+    const [AttributeData, setAttributeData] = useState<Omit<Attribute, 'id' | 'createdAt' | 'updatedAt' | 'productIds'>>({
         attributeName: '',
         dataType: '',
     });
@@ -96,21 +97,27 @@ export default function UpdateAttributePage() {
     const [loading, setLoading] = useState(true);
     const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [authToken, setAuthToken] = useState<string | undefined>(undefined);
+
+    // Kiểm tra trạng thái xác thực khi component được tải
     useEffect(() => {
-        if (keycloak.authenticated) {
-            setAuthToken(keycloak.token);
-        } else {
-            console.warn("Keycloak chưa xác thực.");
-            addToast({ title: "Lỗi", description: "Bạn cần đăng nhập.", color: "danger" });
+        if (status === 'unauthenticated') {
+            console.warn("Người dùng chưa đăng nhập.");
+            addToast({ 
+                title: "Cần đăng nhập", 
+                description: "Vui lòng đăng nhập để tiếp tục.", 
+                color: "danger" 
+            });
+            router.push('/login');
         }
-    }, [router]);
+    }, [status, router]);
+
+    // Tải dữ liệu Attribute khi đã xác thực
     useEffect(() => {
-        if (AttributeId && authToken) {
+        if (AttributeId && session?.accessToken) {
             setLoading(true);
             setFormError(null);
             console.log(`Fetching data for Attribute ID: ${AttributeId}`);
-            fetchAttributeById(AttributeId, authToken)
+            fetchAttributeById(AttributeId, session.accessToken)
                 .then(response => {
                     const fetchedAttribute = response.data;
                     console.log("Fetched Attribute data:", fetchedAttribute);
@@ -140,16 +147,17 @@ export default function UpdateAttributePage() {
                 });
         } else {
             if (!AttributeId) console.log("Attribute ID is missing.");
-            if (!authToken) console.log("Auth token is missing.");
-            setLoading(false);
+            if (!session?.accessToken) console.log("Access token is missing.");
+            if (status !== 'loading') setLoading(false);
         }
-    }, [AttributeId, authToken]);
+    }, [AttributeId, session?.accessToken, status]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setAttributeData(prev => ({ ...prev, [name]: value }));
         setFormError(null);
     };
+
     const validateForm = (): boolean => {
         if (!AttributeData.attributeName.trim()) {
             addToast({ title: "Thiếu thông tin", description: "Vui lòng nhập tên Attribute.", color: "warning" });
@@ -166,8 +174,8 @@ export default function UpdateAttributePage() {
         event.preventDefault();
         setFormError(null);
 
-        if (!validateForm() || isSubmitting || !authToken) {
-            if (!authToken) addToast({ title: "Lỗi", description: "Phiên đăng nhập hết hạn.", color: "danger" });
+        if (!validateForm() || isSubmitting || !session?.accessToken) {
+            if (!session?.accessToken) addToast({ title: "Lỗi", description: "Phiên đăng nhập hết hạn.", color: "danger" });
             return;
         }
 
@@ -179,11 +187,11 @@ export default function UpdateAttributePage() {
         };
 
         try {
-            await updateAttribute(AttributeId, dataToUpdate, keycloak.token);
+            await updateAttribute(AttributeId, dataToUpdate, session.accessToken);
 
             addToast({
                 title: "Thành công",
-                description: "Cập nhật thương hiệu thành công!",
+                description: "Cập nhật thuộc tính thành công!",
                 color: "success",
             });
 
@@ -205,9 +213,8 @@ export default function UpdateAttributePage() {
         }
     };
 
-    // ----- JSX Rendering -----
-
-    if (loading) {
+    // Hiển thị trạng thái loading khi đang xác thực hoặc tải dữ liệu
+    if (status === 'loading' || loading) {
         return (
             <div className="flex justify-center items-center min-h-screen">
                 <Spinner label="Đang tải dữ liệu Attribute..." size="lg" />
@@ -215,7 +222,8 @@ export default function UpdateAttributePage() {
         );
     }
 
-    if (formError  && !loading) {
+    // Hiển thị lỗi nếu có
+    if (formError && !loading) {
         return (
             <Card className="w-full max-w-2xl mx-auto my-10">
                 <CardHeader><p className="text-lg font-semibold text-red-600">Lỗi tải dữ liệu</p></CardHeader>
@@ -229,7 +237,9 @@ export default function UpdateAttributePage() {
             </Card>
         );
     }
-   return (
+
+    // Hiển thị form cập nhật
+    return (
         <Card className="w-full max-w-2xl mx-auto my-10">
             <form onSubmit={handleUpdateSubmit}>
                 <CardHeader className="flex gap-3">
@@ -239,7 +249,6 @@ export default function UpdateAttributePage() {
                 </CardHeader>
                 <Divider />
                 <CardBody className="space-y-6 p-5">
-
                     <Input
                         label="Tên Attribute"
                         placeholder="Nhập tên Attribute"
@@ -251,8 +260,8 @@ export default function UpdateAttributePage() {
                     />
 
                     <Input
-                        label="Thông tin Attribute"
-                        placeholder="Nhập thông tin chi tiết"
+                        label="Kiểu dữ liệu"
+                        placeholder="Nhập kiểu dữ liệu"
                         type="text"
                         name="dataType"
                         value={AttributeData.dataType}
@@ -273,7 +282,7 @@ export default function UpdateAttributePage() {
                     <Button
                         color="success"
                         type="submit"
-                        isDisabled={isSubmitting || !authToken}
+                        isDisabled={isSubmitting || !session?.accessToken}
                     >
                         {isSubmitting ? "Đang cập nhật..." : "Lưu thay đổi"}
                     </Button>

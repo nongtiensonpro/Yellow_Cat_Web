@@ -1,394 +1,185 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useKeycloak } from "@react-keycloak/web";
-import { useAuthStore } from "@/keycloak/store";
+import {
+    Navbar as HeroUINavbar,
+    NavbarContent,
+    NavbarMenu,
+    NavbarMenuToggle,
+    NavbarBrand,
+    NavbarItem,
+    NavbarMenuItem,
+} from "@heroui/navbar";
+import { Button } from "@heroui/button";
+import { Link } from "@heroui/link";
+import { siteConfig } from "@/config/site";
 import NextLink from "next/link";
 import clsx from "clsx";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-    MdSearch,
-    MdMenu,
-    MdClose,
-    MdDashboard,
-    MdSettings,
-    MdPerson,
-    MdExitToApp,
-    MdLightMode,
-    MdDarkMode,
-    MdExpandMore,
-    MdChevronRight
-} from 'react-icons/md';
-import { FaGithub } from 'react-icons/fa';
-import { siteConfig } from "@/config/site";
-import LoadingSpinner from "@/components/LoadingSpinner";
-
-// Định nghĩa kiểu dữ liệu người dùng
-interface User {
-    id: string;
-    username: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    roles: string[];
-    realmRoles: string[];
-    clientRoles: string[];
-    enabled: boolean;
-}
+import { ThemeSwitch } from "@/components/theme-switch";
+import { Avatar } from "@heroui/react";
+import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown";
+import { useSession, signIn, signOut } from "next-auth/react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export const Navbar = () => {
-    // States
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
-    const [isAdminView, setIsAdminView] = useState<boolean>(false);
-    const [theme, setTheme] = useState<'light' | 'dark'>('light');
-    const [searchExpanded, setSearchExpanded] = useState<boolean>(false);
-    const [userMenuOpen, setUserMenuOpen] = useState<boolean>(false);
+    const { data: session, status } = useSession();
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const router = useRouter();
 
-    // Hooks
-    const { keycloak, initialized } = useKeycloak();
-    const { isAuthenticated, login, logout } = useAuthStore();
+    const handleLogout = async () => {
+        try {
+            const homeUrl = process.env.NEXT_PUBLIC_HOME_URL || "http://localhost:3000";
+            // Đảm bảo các biến môi trường được đọc chính xác
+            const issuer = process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
+            const clientId = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID;
 
-    // Lấy thông tin người dùng từ Keycloak
-    useEffect(() => {
-        const getUserInfo = () => {
-            if (!initialized) return;
-
-            try {
-                const tokenParsed = keycloak.tokenParsed || {};
-                const clientId = keycloak.clientId || '';
-                const clientRoles = clientId && tokenParsed.resource_access?.[clientId]?.roles || [];
-
-                const userData: User = {
-                    id: tokenParsed.sub || '',
-                    username: tokenParsed.preferred_username || '',
-                    email: tokenParsed.email || '',
-                    firstName: tokenParsed.given_name || '',
-                    lastName: tokenParsed.family_name || '',
-                    roles: tokenParsed.realm_access?.roles || [],
-                    realmRoles: tokenParsed.realm_access?.roles || [],
-                    clientRoles: clientRoles,
-                    enabled: true
-                };
-
-                setUser(userData);
-            } catch (err) {
-                console.error("Không thể lấy thông tin người dùng:", err);
-            } finally {
-                setLoading(false);
+            if (!issuer || !clientId) {
+                console.error("Lỗi: Biến môi trường Keycloak cho logout chưa được cấu hình.");
+                // Xử lý lỗi, ví dụ: đăng xuất cục bộ và chuyển hướng về trang chủ
+                await signOut({ redirect: false });
+                router.push(homeUrl);
+                return;
             }
-        };
 
-        getUserInfo();
-    }, [keycloak, initialized]);
-
-    // Đọc theme từ localStorage khi component mount
-    useEffect(() => {
-        const savedTheme = localStorage.getItem('theme') as 'light' | 'dark';
-        if (savedTheme) {
-            setTheme(savedTheme);
-            document.documentElement.classList.toggle('dark', savedTheme === 'dark');
-        } else {
-            // Mặc định theo system preference
-            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            setTheme(isDark ? 'dark' : 'light');
-            document.documentElement.classList.toggle('dark', isDark);
+            const keycloakLogoutUrl = `${issuer}/protocol/openid-connect/logout?post_logout_redirect_uri=${encodeURIComponent(homeUrl)}&client_id=${clientId}`;
+            // Đăng xuất cục bộ trước
+            await signOut({ redirect: false });
+            // Sau đó chuyển hướng trình duyệt đến URL đăng xuất của Keycloak
+            window.location.href = keycloakLogoutUrl;
+        } catch (error) {
+            console.error("Logout error:", error);
+            // Nếu có lỗi, vẫn cố gắng chuyển hướng về trang chủ
+            const homeUrl = process.env.NEXT_PUBLIC_HOME_URL || "http://localhost:3000";
+            window.location.href = homeUrl;
         }
-    }, []);
-
-    // Toggle theme function
-    const toggleTheme = () => {
-        const newTheme = theme === 'light' ? 'dark' : 'light';
-        setTheme(newTheme);
-        localStorage.setItem('theme', newTheme);
-        document.documentElement.classList.toggle('dark', newTheme === 'dark');
     };
 
-    // Kiểm tra người dùng có phải admin không
-    const isAdmin = user?.roles?.includes('Admin_Web') || user?.clientRoles?.includes('Admin_Web') || false;
+    const handleLogin = () => {
+        // Redirect directly to Keycloak login page
+        signIn("keycloak", { callbackUrl: window.location.href });
+    };
 
-    // Xác định menu items hiện tại
-    const currentMenuItems = isAdmin && isAdminView
-        ? siteConfig.navMenuItemsAdmin || []
-        : siteConfig.navItems;
-
-    // Loading state
-    if (!initialized || loading) {
-        return <LoadingSpinner />;
-    }
-
-    // Render UserInfo component
-    const renderUserInfo = () => {
-        if (!isAuthenticated) {
-            return (
-                <button
-                    onClick={() => login()}
-                    className="px-4 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                >
-                    Đăng nhập
-                </button>
-            );
+    const renderAuthSection = () => {
+        if (status === "loading") {
+            return <Button isLoading className="bg-primary-500/20 text-primary">Loading...</Button>;
         }
 
-        const displayName = user?.firstName
-            ? `${user.firstName} ${user.lastName || ''}`.trim()
-            : user?.username || 'Người dùng';
+        if (session) {
+            const roles: string[] =
+                (session.user && Array.isArray((session.user as any).roles))
+                    ? (session.user as any).roles
+                    : (
+                        typeof (session.user as any).roles === "string"
+                            ? [(session.user as any).roles]
+                            : []
+                    );
 
-        return (
-            <div className="relative">
-                <button
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                >
-                    <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center">
-                        {displayName.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="hidden md:block max-w-32 truncate">{displayName}</span>
-                    <MdExpandMore
-                        className={`transition-transform ${userMenuOpen ? 'rotate-180' : ''}`}
-                        size={20}
-                    />
-                </button>
-
-                <AnimatePresence>
-                    {userMenuOpen && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 10 }}
-                            className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50"
+            return (
+                <Dropdown placement="bottom-end">
+                    <DropdownTrigger>
+                        <Avatar
+                            isBordered
+                            as="button"
+                            className="transition-transform"
+                            color="secondary"
+                            name={session.user?.name || session.user?.email || "User"}
+                            size="sm"
+                            src={session.user?.image || undefined}
+                        />
+                    </DropdownTrigger>
+                    <DropdownMenu aria-label="Profile Actions" variant="flat">
+                        <DropdownItem key="profile" className="h-14 gap-2">
+                            <p className="font-semibold">Signed in as</p>
+                            <p className="font-semibold">{session.user?.email}</p>
+                        </DropdownItem>
+                        {roles.includes("admin") ? (
+                            <DropdownItem key="admin_dashboard" href="/admin">
+                                Admin Dashboard
+                            </DropdownItem>
+                        ) : null}
+                        <DropdownItem key="user_info" href="/user_info">
+                            User Profile
+                        </DropdownItem>
+                        <DropdownItem
+                            key="logout"
+                            className="text-danger"
+                            onClick={handleLogout}
                         >
-                            <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-                                <p className="text-sm font-medium text-gray-900 dark:text-white">{displayName}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
-                            </div>
-                            <div className="py-1">
-                                {siteConfig.navMenuItems.map((item) => (
-                                    <NextLink
-                                        key={item.href}
-                                        href={item.href}
-                                        onClick={() => setUserMenuOpen(false)}
-                                        className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                    >
-                    <span className="mr-2">
-                      <MdPerson size={18} />
-                    </span>
-                                        {item.label}
-                                    </NextLink>
-                                ))}
-                            </div>
-                            <div className="py-1 border-t border-gray-200 dark:border-gray-700">
-                                <button
-                                    onClick={() => {
-                                        logout();
-                                        setUserMenuOpen(false);
-                                    }}
-                                    className="flex w-full items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                >
-                  <span className="mr-2">
-                    <MdExitToApp size={18} />
-                  </span>
-                                    Đăng xuất
-                                </button>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
-        );
+                            Log Out
+                        </DropdownItem>
+                    </DropdownMenu>
+                </Dropdown>
+            );
+        } else {
+            return (
+                <Button
+                    onClick={handleLogin}
+                    className="bg-primary-500/20 text-primary"
+                >
+                    Login
+                </Button>
+            );
+        }
     };
 
     return (
-        <header className="sticky top-0 z-40 w-full backdrop-blur supports-backdrop-blur:bg-white/60 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-800">
-            <div className="container mx-auto px-4">
-                <div className="flex h-16 items-center justify-between">
-                    {/* Logo và Brand */}
-                    <div className="flex items-center">
-                        <NextLink href="/" className="flex items-center space-x-2">
-                            <div className="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center">
-                                <span className="text-white font-bold">YC</span>
-                            </div>
-                            <span className="font-bold text-lg hidden sm:inline-block">Yellow Cat Company</span>
-                        </NextLink>
-                    </div>
-
-                    {/* Desktop Menu */}
-                    <nav className="hidden md:flex items-center space-x-1">
-                        {/* Admin Toggle (if admin) */}
-                        {isAdmin && (
-                            <button
-                                onClick={() => setIsAdminView(!isAdminView)}
-                                className={clsx(
-                                    "px-3 py-1.5 rounded-md text-sm font-medium transition-colors mr-2",
-                                    isAdminView
-                                        ? "bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100"
-                                        : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-                                )}
-                            >
-                                {isAdminView ? "Admin View" : "Admin Mode"}
-                            </button>
-                        )}
-
-                        {/* Menu Items */}
-                        {currentMenuItems.map((item) => (
-                            <NextLink
-                                key={item.href}
-                                href={item.href}
-                                className="px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800 transition-colors"
-                            >
+        <HeroUINavbar maxWidth="xl" position="sticky" isMenuOpen={isMenuOpen} onMenuOpenChange={setIsMenuOpen}>
+            <NavbarContent className="basis-1/5 sm:basis-full" justify="start">
+                <NavbarBrand as="li" className="gap-3 max-w-fit">
+                    <NextLink className="flex justify-start items-center gap-1" href="/">
+                        <p className="font-bold text-inherit">ACME</p>
+                    </NextLink>
+                </NavbarBrand>
+                <ul className="hidden lg:flex gap-4 justify-start ml-2">
+                    {siteConfig.navItems.map((item) => (
+                        <NavbarItem key={item.href}>
+                            <NextLink className={clsx("data-[active=true]:text-primary data-[active=true]:font-medium")} href={item.href}>
                                 {item.label}
                             </NextLink>
-                        ))}
-                    </nav>
+                        </NavbarItem>
+                    ))}
+                    {siteConfig.navMenuItemsAdmin.map((item) => (
+                        <NavbarItem key={item.href}>
+                            <NextLink className={clsx("data-[active=true]:text-primary data-[active=true]:font-medium")} href={item.href}>
+                                {item.label}
+                            </NextLink>
+                        </NavbarItem>
+                    ))}
+                </ul>
+            </NavbarContent>
 
-                    {/* Right Side Items */}
-                    <div className="flex items-center space-x-2">
-                        {/* Search */}
-                        <div className={clsx(
-                            "relative transition-all duration-300 ease-in-out flex items-center",
-                            searchExpanded ? "w-64" : "w-10"
-                        )}>
-                            <input
-                                type="text"
-                                placeholder="Search..."
-                                className={clsx(
-                                    "h-10 rounded-full bg-gray-100 dark:bg-gray-800 border-transparent focus:border-gray-300 dark:focus:border-gray-600 focus:ring-0 text-sm transition-all duration-300 pl-10 pr-3 w-full",
-                                    searchExpanded ? "opacity-100" : "opacity-0"
-                                )}
-                                onBlur={() => setTimeout(() => setSearchExpanded(false), 200)}
-                            />
-                            <button
-                                onClick={() => setSearchExpanded(true)}
-                                className="absolute left-0 p-2 text-gray-500 dark:text-gray-400 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+            <NavbarContent className="hidden sm:flex basis-1/5 sm:basis-full" justify="end">
+                <NavbarItem className="hidden sm:flex gap-2">
+                    <ThemeSwitch />
+                </NavbarItem>
+                <NavbarItem className="hidden md:flex">
+                    {renderAuthSection()}
+                </NavbarItem>
+            </NavbarContent>
+
+            <NavbarContent className="sm:hidden basis-1 pl-4" justify="end">
+                <ThemeSwitch />
+                <NavbarMenuToggle aria-label={isMenuOpen ? "Close menu" : "Open menu"}/>
+            </NavbarContent>
+
+            <NavbarMenu>
+                <div className="mx-4 mt-2 flex flex-col gap-2">
+                    {siteConfig.navMenuItems.map((item, index) => (
+                        <NavbarMenuItem key={`${item}-${index}`}>
+                            <Link
+                                className={index === siteConfig.navMenuItems.length - 1 ? "text-danger" : "text-foreground"}
+                                href="#"
+                                size="lg"
                             >
-                                <MdSearch size={20} />
-                            </button>
-                        </div>
-
-                        {/* GitHub Link */}
-                        <a
-                            href={siteConfig.links.github}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2 text-gray-500 dark:text-gray-400 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
-                        >
-                            <FaGithub size={20} />
-                        </a>
-
-                        {/* Theme Toggle */}
-                        <button
-                            onClick={toggleTheme}
-                            className="p-2 text-gray-500 dark:text-gray-400 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
-                        >
-                            {theme === 'dark' ? <MdLightMode size={20} /> : <MdDarkMode size={20} />}
-                        </button>
-
-                        {/* User Menu */}
-                        {renderUserInfo()}
-
-                        {/* Mobile Menu Button */}
-                        <button
-                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                            className="md:hidden p-2 text-gray-500 dark:text-gray-400 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
-                        >
-                            {mobileMenuOpen ? <MdClose size={24} /> : <MdMenu size={24} />}
-                        </button>
-                    </div>
+                                {item.label}
+                            </Link>
+                        </NavbarMenuItem>
+                    ))}
+                    <NavbarMenuItem>
+                        {renderAuthSection()}
+                    </NavbarMenuItem>
                 </div>
-            </div>
-
-            {/* Mobile Menu */}
-            <AnimatePresence>
-                {mobileMenuOpen && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="md:hidden"
-                    >
-                        <div className="container mx-auto px-4 pb-4 pt-2 space-y-1 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
-                            {/* Admin Toggle (if admin) */}
-                            {isAdmin && (
-                                <button
-                                    onClick={() => setIsAdminView(!isAdminView)}
-                                    className={clsx(
-                                        "w-full flex items-center justify-between px-4 py-3 rounded-md text-sm font-medium transition-colors",
-                                        isAdminView
-                                            ? "bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100"
-                                            : "text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800"
-                                    )}
-                                >
-                  <span className="flex items-center">
-                    <MdDashboard className="mr-3" size={20} />
-                      {isAdminView ? "Admin View" : "Switch to Admin Mode"}
-                  </span>
-                                    <MdChevronRight
-                                        className={`transition-transform ${isAdminView ? 'rotate-90' : ''}`}
-                                        size={20}
-                                    />
-                                </button>
-                            )}
-
-                            {/* Menu Items */}
-                            {currentMenuItems.map((item) => (
-                                <NextLink
-                                    key={item.href}
-                                    href={item.href}
-                                    onClick={() => setMobileMenuOpen(false)}
-                                    className="flex items-center px-4 py-3 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
-                                >
-                                    {item.label}
-                                </NextLink>
-                            ))}
-
-                            {/* Search in Mobile View */}
-                            <div className="px-4 py-3">
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        placeholder="Search..."
-                                        className="w-full h-10 rounded-md bg-gray-100 dark:bg-gray-800 border-transparent focus:border-gray-300 dark:focus:border-gray-600 focus:ring-0 text-sm pl-10"
-                                    />
-                                    <div className="absolute left-0 top-0 p-2 text-gray-500 dark:text-gray-400">
-                                        <MdSearch size={20} />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* User Menu Items for Mobile */}
-                            {isAuthenticated && (
-                                <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
-                                    <p className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                        Tài khoản
-                                    </p>
-                                    {siteConfig.navMenuItems.map((item) => (
-                                        <NextLink
-                                            key={`mobile-${item.href}`}
-                                            href={item.href}
-                                            onClick={() => setMobileMenuOpen(false)}
-                                            className="flex items-center px-4 py-3 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
-                                        >
-                                            <MdPerson className="mr-3" size={18} />
-                                            {item.label}
-                                        </NextLink>
-                                    ))}
-                                    <button
-                                        onClick={() => {
-                                            logout();
-                                            setMobileMenuOpen(false);
-                                        }}
-                                        className="w-full flex items-center px-4 py-3 rounded-md text-sm font-medium text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-                                    >
-                                        <MdExitToApp className="mr-3" size={18} />
-                                        Đăng xuất
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </header>
+            </NavbarMenu>
+        </HeroUINavbar>
     );
 };

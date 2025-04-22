@@ -3,9 +3,9 @@
 import { Card, CardHeader, CardBody, CardFooter, Divider, Button, Spinner } from "@heroui/react";
 import { Input } from "@heroui/input";
 import { useState, useEffect, useCallback } from "react";
-import keycloak from '@/keycloak/keycloak';
 import { useRouter, useParams } from "next/navigation";
 import { addToast } from "@heroui/react";
+import { useSession } from "next-auth/react";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api';
 
@@ -91,23 +91,22 @@ const updateCategory = async (id: string, data: CategoryFormData, token: string)
         throw error instanceof Error ? error : new Error("Đã xảy ra lỗi khi gửi yêu cầu cập nhật.");
     }
 };
+
 export default function UpdateCategoryPage() {
     const router = useRouter();
     const params = useParams();
     const categoryId = params.categoriesId as string | undefined;
     const [categoryData, setCategoryData] = useState<CategoryFormData>({ name: '' });
-    const [authToken, setAuthToken] = useState<string | undefined>(undefined);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    useEffect(() => {
-        if (keycloak.authenticated && keycloak.token) {
-            setAuthToken(keycloak.token);
-            console.log("Keycloak authenticated. Token set.");
-        } else {
-            console.warn("Keycloak is not authenticated.");
-        }
-    }, []);
+    
+    // Sử dụng NextAuth session để lấy token
+    const { data: session, status } = useSession();
+    const authToken = session?.accessToken;
+    const isAuthenticated = status === "authenticated" && !!authToken;
+    const isAuthLoading = status === "loading";
+
     useEffect(() => {
         if (categoryId && authToken) {
             setIsLoading(true);
@@ -141,21 +140,25 @@ export default function UpdateCategoryPage() {
                 setError("Không tìm thấy ID của Category trong đường dẫn.");
                 addToast({ title: "Lỗi", description: "ID Category không hợp lệ.", color: "danger" });
             }
-            if (!authToken && keycloak.authenticated) {
-                console.log("Auth token is not yet available.");
-            } else if (!keycloak.authenticated) {
+            if (!authToken && !isAuthLoading) {
+                console.log("Auth token is not available.");
                 setError("Người dùng chưa được xác thực.");
                 addToast({ title: "Lỗi Xác Thực", description: "Vui lòng đăng nhập.", color: "danger" });
+                // Chuyển hướng đến trang đăng nhập nếu không có token
+                router.push("/auth/signin?callbackUrl=" + encodeURIComponent(window.location.href));
             }
-            setIsLoading(false);
+            if (!isAuthLoading) {
+                setIsLoading(false);
+            }
         }
-    }, [categoryId, authToken]);
+    }, [categoryId, authToken, isAuthLoading, router]);
 
     const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setCategoryData(prev => ({ ...prev, [name]: value }));
         if (error) setError(null);
     }, [error]);
+
     const validateForm = useCallback((): boolean => {
         if (!categoryData.name.trim()) {
             addToast({ title: "Thiếu thông tin", description: "Vui lòng nhập tên Category.", color: "warning" });
@@ -163,12 +166,14 @@ export default function UpdateCategoryPage() {
         }
         return true;
     }, [categoryData.name]);
+
     const handleUpdateSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setError(null);
         if (!validateForm() || isSubmitting || !authToken || !categoryId) {
             if (!authToken) {
                 addToast({ title: "Lỗi", description: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.", color: "danger" });
+                router.push("/auth/signin?callbackUrl=" + encodeURIComponent(window.location.href));
             }
             if (!categoryId) {
                 addToast({ title: "Lỗi", description: "Không xác định được Category cần cập nhật.", color: "danger" });
@@ -207,7 +212,9 @@ export default function UpdateCategoryPage() {
             setIsSubmitting(false);
         }
     };
-    if (isLoading) {
+
+    // Hiển thị loading khi đang kiểm tra xác thực hoặc đang tải dữ liệu
+    if (isAuthLoading || isLoading) {
         return (
             <div className="flex justify-center items-center min-h-screen">
                 <Spinner label="Đang tải dữ liệu Category..." size="lg" />
@@ -215,6 +222,7 @@ export default function UpdateCategoryPage() {
         );
     }
 
+    // Hiển thị lỗi nếu có
     if (error && !isLoading && !categoryData.name && !categoryId) {
         return (
             <Card className="w-full max-w-2xl mx-auto my-10">
@@ -231,6 +239,7 @@ export default function UpdateCategoryPage() {
             </Card>
         );
     }
+
     return (
         <Card className="w-full max-w-2xl mx-auto my-10">
             <form onSubmit={handleUpdateSubmit}>
