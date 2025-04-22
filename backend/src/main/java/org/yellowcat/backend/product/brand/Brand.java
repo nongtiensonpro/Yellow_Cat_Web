@@ -15,7 +15,7 @@ import java.util.Set;
 @Table(name = "brands")
 public class Brand {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "brands_id_gen")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "brand_id", nullable = false)
     private Integer id;
 

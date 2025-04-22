@@ -20,9 +20,9 @@ import {
 } from "@heroui/react";
 import NextLink from "next/link";
 import { useEffect, useState } from "react";
+import { useSession, signIn } from "next-auth/react";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { CldImage } from "next-cloudinary";
-import keycloak from '@/keycloak/keycloak';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
@@ -42,6 +42,7 @@ interface ApiResponse {
 }
 
 export default function Page() {
+    const { data: session, status } = useSession();
     const [brandsData, setBrandsData] = useState<Brands[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -117,7 +118,14 @@ export default function Page() {
                 stompClient.deactivate();
             }
         };
-    }, [currentPage, itemsPerPage,notification]);
+    }, [currentPage, itemsPerPage, notification]);
+
+    // Kiểm tra trạng thái đăng nhập
+    useEffect(() => {
+        if (status === "unauthenticated") {
+            signIn();
+        }
+    }, [status]);
 
     const openDeleteConfirm = (brandId: number, brandName: string) => {
         setBrandToDelete({ id: brandId, name: brandName });
@@ -128,12 +136,17 @@ export default function Page() {
         if (!brandToDelete) return;
 
         try {
-            if (!keycloak.authenticated) {
-                await keycloak.login();
+            // Kiểm tra xem người dùng đã đăng nhập chưa
+            if (status !== "authenticated" || !session) {
+                signIn();
                 return;
             }
 
-            const token = keycloak.token;
+            const token = session.accessToken;
+
+            if (!token) {
+                throw new Error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
+            }
 
             const response = await fetch(`http://localhost:8080/api/brands/${brandToDelete.id}`, {
                 method: 'DELETE',
@@ -150,6 +163,7 @@ export default function Page() {
 
             onClose();
             setBrandToDelete(null);
+            // Không cần gọi fetchBrandsData vì WebSocket sẽ cập nhật dữ liệu
 
         } catch (err) {
             console.error('Lỗi khi xóa brand:', err);
@@ -157,6 +171,15 @@ export default function Page() {
             onClose();
         }
     };
+
+    // Hiển thị loading khi đang kiểm tra phiên đăng nhập
+    if (status === "loading") {
+        return (
+            <div className="flex justify-center items-center min-h-screen">
+                <LoadingSpinner />
+            </div>
+        );
+    }
 
     return (
         <Card className="xl">

@@ -4,9 +4,9 @@ import { Card, CardHeader, CardBody, Divider, Button, addToast, Spinner } from "
 import { Input } from "@heroui/input";
 import { CldUploadButton, CldImage } from 'next-cloudinary';
 import { useState, useEffect } from "react";
-import keycloak from '@/keycloak/keycloak';
 import { useRouter, useParams } from "next/navigation";
-import {CardFooter} from "@heroui/card";
+import { CardFooter } from "@heroui/card";
+import { useSession } from "next-auth/react";
 
 export interface Brand {
     id: number | string;
@@ -93,7 +93,8 @@ export default function UpdateBrandPage() {
     const router = useRouter();
     const params = useParams();
     const brandId = params.brandId;
-   const [brandData, setBrandData] = useState<Omit<Brand, 'id' | 'createdAt' | 'updatedAt' | 'productIds'>>({
+    const { data: session, status } = useSession();
+    const [brandData, setBrandData] = useState<Omit<Brand, 'id' | 'createdAt' | 'updatedAt' | 'productIds'>>({
         brandName: '',
         brandInfo: '',
         logoPublicId: ''
@@ -103,15 +104,18 @@ export default function UpdateBrandPage() {
     const [loading, setLoading] = useState(true);
     const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [authToken, setAuthToken] = useState<string | undefined>(undefined);
+    
+    // Lấy token từ session của NextAuth
+    const authToken = session?.accessToken;
+
     useEffect(() => {
-        if (keycloak.authenticated) {
-            setAuthToken(keycloak.token);
-        } else {
-            console.warn("Keycloak chưa xác thực.");
+        if (status === 'unauthenticated') {
+            console.warn("Người dùng chưa đăng nhập.");
             addToast({ title: "Lỗi", description: "Bạn cần đăng nhập.", color: "danger" });
+            router.push('/login');
         }
-    }, [router]);
+    }, [status, router]);
+
     useEffect(() => {
         if (brandId && authToken) {
             setLoading(true);
@@ -210,7 +214,7 @@ export default function UpdateBrandPage() {
         };
 
         try {
-            await updateBrand(brandId, dataToUpdate, keycloak.token);
+            await updateBrand(brandId, dataToUpdate, authToken);
 
             addToast({
                 title: "Thành công",

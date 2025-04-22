@@ -21,9 +21,9 @@ import {
 import NextLink from "next/link";
 import { useEffect, useState } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import keycloak from '@/keycloak/keycloak';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
+import { useSession } from "next-auth/react";
 
 interface Brands {
     id: number;
@@ -38,6 +38,7 @@ interface ApiResponse {
 }
 
 export default function Page() {
+    const { data: session, status } = useSession();
     const [categoriesData, setcategoriesData] = useState<Brands[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -113,7 +114,7 @@ export default function Page() {
                 stompClient.deactivate();
             }
         };
-    }, [currentPage, itemsPerPage,notification]);
+    }, [currentPage, itemsPerPage, notification]);
 
     const openDeleteConfirm = (brandId: number, brandName: string) => {
         setBrandToDelete({ id: brandId, name: brandName });
@@ -124,12 +125,19 @@ export default function Page() {
         if (!brandToDelete) return;
 
         try {
-            if (!keycloak.authenticated) {
-                await keycloak.login();
+            // Kiểm tra trạng thái đăng nhập với NextAuth
+            if (status !== "authenticated" || !session) {
+                setError("Bạn cần đăng nhập để thực hiện hành động này");
                 return;
             }
 
-            const token = keycloak.token;
+            // Lấy token từ session NextAuth
+            const token = session.accessToken;
+            
+            if (!token) {
+                setError("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
+                return;
+            }
 
             const response = await fetch(`http://localhost:8080/api/categories/${brandToDelete.id}`, {
                 method: 'DELETE',
@@ -146,10 +154,11 @@ export default function Page() {
 
             onClose();
             setBrandToDelete(null);
+            // Không cần gọi fetchcategoriesData vì WebSocket sẽ cập nhật dữ liệu
 
         } catch (err) {
-            console.error('Lỗi khi xóa brand:', err);
-            setError(err instanceof Error ? err.message : 'Không thể xóa brand. Vui lòng thử lại sau.');
+            console.error('Lỗi khi xóa category:', err);
+            setError(err instanceof Error ? err.message : 'Không thể xóa category. Vui lòng thử lại sau.');
             onClose();
         }
     };
