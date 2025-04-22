@@ -45,7 +45,7 @@ const fetchAttributeById = async (id: string | string[] | undefined, token: stri
     }
 };
 
-const updateAttribute = async (id: string | string[] | undefined, data: Omit<Attribute, 'id' | 'attributeName' | 'dataType'>, token: string | undefined): Promise<any> => {
+const updateAttribute = async (id: string | string[] | undefined, data: Attribute, token: string | undefined): Promise<any> => {
     if (!id || Array.isArray(id)) {
         throw new Error("Attribute ID không hợp lệ.");
     }
@@ -89,7 +89,8 @@ export default function UpdateAttributePage() {
     const params = useParams();
     const AttributeId = params.attributesId;
     const { data: session, status } = useSession();
-    const [AttributeData, setAttributeData] = useState<Omit<Attribute, 'id' | 'createdAt' | 'updatedAt' | 'productIds'>>({
+    const [AttributeData, setAttributeData] = useState<Attribute>({
+        id: '',
         attributeName: '',
         dataType: '',
     });
@@ -113,7 +114,7 @@ export default function UpdateAttributePage() {
 
     // Tải dữ liệu Attribute khi đã xác thực
     useEffect(() => {
-        if (AttributeId && session?.accessToken) {
+        if (AttributeId && session?.accessToken && status === 'authenticated') {
             setLoading(true);
             setFormError(null);
             console.log(`Fetching data for Attribute ID: ${AttributeId}`);
@@ -127,10 +128,12 @@ export default function UpdateAttributePage() {
                     }
 
                     setAttributeData({
+                        id: fetchedAttribute.id,
                         attributeName: fetchedAttribute.attributeName || '',
                         dataType: fetchedAttribute.dataType || '',
                     });
                     console.log('State updated:', {
+                        id: fetchedAttribute.id,
                         attributeName: fetchedAttribute.attributeName,
                         dataType: fetchedAttribute.dataType,
                     });
@@ -181,13 +184,8 @@ export default function UpdateAttributePage() {
 
         setIsSubmitting(true);
 
-        const dataToUpdate: Omit<Attribute, 'id' | 'createdAt' | 'updatedAt' | 'productIds'> = {
-            attributeName: AttributeData.attributeName.trim(),
-            dataType: AttributeData.dataType.trim(),
-        };
-
         try {
-            await updateAttribute(AttributeId, dataToUpdate, session.accessToken);
+            await updateAttribute(AttributeId, AttributeData, session.accessToken);
 
             addToast({
                 title: "Thành công",

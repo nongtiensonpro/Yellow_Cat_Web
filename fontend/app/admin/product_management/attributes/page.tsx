@@ -1,30 +1,10 @@
-"use client";
-import {
-    Card,
-    CardHeader,
-    CardBody,
-    Divider,
-    TableRow,
-    TableCell,
-    TableColumn,
-    TableHeader,
-    Table,
-    TableBody,
-    Modal,
-    ModalContent,
-    ModalHeader,
-    ModalBody,
-    ModalFooter,
-    Button,
-    useDisclosure,
-    Spinner // Thêm Spinner
-} from "@heroui/react";
-import NextLink from "next/link";
-import { useEffect, useState } from "react";
-import { useSession, signIn } from "next-auth/react";
-// import LoadingSpinner from "@/components/LoadingSpinner"; // Xóa import này
-import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import Link from 'next/link';
+import LoginButton from '@/components/login-button';
+import PaginationControls from '@/components/pagination-controls';
+import AttributeActions from '@/components/attribute-actions';
+import WebSocketNotifications from '@/components/websocket-notifications';
 
 interface Attributes {
     id: number;
@@ -39,254 +19,147 @@ interface ApiResponse {
     };
 }
 
-export default function Page() {
-    const { data: session, status } = useSession();
-    const [AttributesData, setAttributesData] = useState<Attributes[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string | null>(null);
-    const [currentPage, setCurrentPage] = useState<number>(0);
-    const [itemsPerPage] = useState<number>(5);
-    const [totalPages, setTotalPages] = useState<number>(1);
-    const [AttributesToDelete, setAttributesToDelete] = useState<{ id: number, name: string } | null>(null);
-    const [notification, setNotification] = useState<string | null>(null);
-    const { isOpen, onOpen, onClose } = useDisclosure();
-    const [stompClient, setStompClient] = useState<Client | null>(null);
+export default async function AttributesPage({
+    searchParams,
+}: {
+    searchParams: { page?: string; size?: string };
+}) {
+    // Get session on the server
+    const session = await getServerSession(authOptions);
 
-    const initializeStompClient = () => {
-        const socket = new SockJS('http://localhost:8080/ws');
-        const client = new Client({
-            webSocketFactory: () => socket,
-            reconnectDelay: 5000, // Tự động reconnect sau 5s nếu mất kết nối
-            onConnect: () => {
-                console.log('Kết nối STOMP đã được thiết lập');
-                client.subscribe('/topic/attributes', (message) => {
-                    const data = JSON.parse(message.body);
-                    console.log('Nhận thông báo từ server:', data);
-                    setNotification(`Hành động: ${data.action} - Attributes: ${data.entity.attributeName}`);
+    if (!session) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen">
+                <h1 className="text-4xl font-bold mb-6 text-gray-800 dark:text-white">
+                    Attributes Management
+                </h1>
+                <p className="mb-6 text-gray-600 dark:text-gray-300">
+                    You need to be logged in to view this page.
+                </p>
+                <LoginButton />
+            </div>
+        );
+    }
 
-                    if (data.action === 'add') {
-                        setAttributesData((prev) => [...prev, data.entity]);
-                    } else if (data.action === 'update') {
-                        setAttributesData((prev) =>
-                            prev.map((b) => (b.id === data.entity.id ? data.entity : b))
-                        );
-                    } else if (data.action === 'delete') {
-                        setAttributesData((prev) => prev.filter((b) => b.id !== data.entity.id));
-                    }
-                });
-            },
-            onStompError: (frame) => {
-                console.error('Lỗi STOMP:', frame);
-                setError('Lỗi kết nối STOMP. Vui lòng thử lại.');
-            },
-        });
+    // Parse pagination params
+    const currentPage = parseInt(searchParams.page || '0', 10);
+    const itemsPerPage = parseInt(searchParams.size || '5', 10);
 
-        client.activate();
-        setStompClient(client);
-    };
+    // Fetch data from API
+    let attributesData: Attributes[] = [];
+    let totalPages = 1;
+    let error: string | null = null;
 
-    const fetchAttributesData = async () => {
-        try {
-            setLoading(true);
-            const response = await fetch(`http://localhost:8080/api/attributes?page=${currentPage}&size=${itemsPerPage}`);
-            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-            const apiResponse: ApiResponse = await response.json();
-            setAttributesData(apiResponse.data.content);
-            setTotalPages(apiResponse.data.totalPages);
-        } catch (err) {
-            setError('Không thể tải dữ liệu. Vui lòng thử lại sau.');
-            console.error('Lỗi khi tải dữ liệu:', err);
-        } finally {
-            setLoading(false);
+    try {
+        const token = session.accessToken;
+        if (!token) {
+            throw new Error('No authentication token available');
         }
-    };
 
-    useEffect(() => {
-        fetchAttributesData();
-        initializeStompClient();
-        if (notification) {
-            const timer = setTimeout(() => {
-                setNotification(null);
-            }, 3000);
-
-            return () => clearTimeout(timer);
-        }
-        return () => {
-            if (stompClient) {
-                stompClient.deactivate();
-            }
-        };
-    }, [currentPage, itemsPerPage, notification, stompClient]); // Thêm stompClient vào dependency array
-
-    const openDeleteConfirm = (attributesId: number, attributeName: string) => {
-        setAttributesToDelete({ id: attributesId, name: attributeName });
-        onOpen();
-    };
-
-    const handleDeleteAttributes = async () => {
-        if (!AttributesToDelete) return;
-
-        try {
-            // Kiểm tra xem người dùng đã đăng nhập chưa
-            if (status !== 'authenticated' || !session) {
-                // Chuyển hướng đến trang đăng nhập nếu chưa đăng nhập
-                signIn();
-                return;
-            }
-
-            // Lấy token từ session
-            const token = session.accessToken;
-            
-            if (!token) {
-                throw new Error('Không có token xác thực. Vui lòng đăng nhập lại.');
-            }
-
-            const response = await fetch(`http://localhost:8080/api/attributes/${AttributesToDelete.id}`, {
-                method: 'DELETE',
+        const response = await fetch(
+            `http://localhost:8080/api/attributes?page=${currentPage}&size=${itemsPerPage}`,
+            {
                 headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => null);
-                throw new Error(errorData?.message || `HTTP error! Status: ${response.status}`);
+                    Authorization: `Bearer ${token}`,
+                },
             }
+        );
 
-            onClose();
-            setAttributesToDelete(null);
-            await fetchAttributesData();
-        } catch (err) {
-            console.error('Lỗi khi xóa attributes:', err);
-            setError(err instanceof Error ? err.message : 'Không thể xóa attributes. Vui lòng thử lại sau.');
-            onClose();
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP error! Status: ${response.status} - ${errorText}`);
         }
-    };
+
+        const apiResponse: ApiResponse = await response.json();
+        attributesData = apiResponse.data.content;
+        totalPages = apiResponse.data.totalPages;
+    } catch (err) {
+        error = err instanceof Error ? err.message : 'Failed to fetch data';
+    }
 
     return (
-        <Card className="xl">
-            <CardHeader className="flex gap-3">
-                <div className="flex flex-col">
-                    <p className="text-4xl font-bold">Quản lý Attributes</p>
-                </div>
-            </CardHeader>
-            <Divider />
-            <CardHeader>
-                <NextLink href={"/admin/product_management/attributes/create"} className="inline-block w-fit cursor-pointer transition-all bg-blue-500 text-white px-6 py-2 rounded-lg border-blue-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]">
+        <div>
+            {/* Render header */}
+            <header className="flex justify-between items-center mb-6">
+                <h1 className="text-4xl font-bold">Quản lý Attributes</h1>
+                <Link
+                    href="/admin/product_management/attributes/create"
+                    className="inline-block w-fit cursor-pointer transition-all bg-blue-500 text-white px-6 py-2 rounded-lg border-blue-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]"
+                >
                     Thêm mới
-                </NextLink>
-            </CardHeader>
-            <CardBody>
-                {notification && (
-                    <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
-                        <span className="block sm:inline">{notification}</span>
-                        <button
-                            className="absolute top-0 right-0 px-2 py-1"
-                            onClick={() => setNotification(null)}
-                        >
-                            ×
-                        </button>
-                    </div>
-                )}
+                </Link>
+            </header>
 
-                {loading ? (
-                    // <LoadingSpinner /> // Thay thế dòng này
-                    <div className="flex justify-center py-10">
-                        <Spinner label="Đang tải thuộc tính..." />
-                    </div>
-                ) : error ? (
-                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
-                        <span className="block sm:inline">{error}</span>
-                    </div>
+            {/* Render notification */}
+            {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+                    <span className="block sm:inline">{error}</span>
+                </div>
+            )}
+
+            {/* Render table */}
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Attributes Id
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Attributes Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Data Type
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Actions
+                    </th>
+                </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {attributesData.length > 0 ? (
+                    attributesData.map((attribute) => (
+                        <tr key={attribute.id}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                                {attribute.id}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                                {attribute.attributeName}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                                {attribute.dataType}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                                <div className="flex space-x-2">
+                                    <Link
+                                        href={`/admin/product_management/attributes/update/${attribute.id}`}
+                                        className="inline-block px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors"
+                                    >
+                                        Sửa
+                                    </Link>
+                                    <AttributeActions attributeId={attribute.id} attributeName={attribute.attributeName} />
+                                </div>
+                            </td>
+                        </tr>
+                    ))
                 ) : (
-                    <Table aria-label="Attributes table">
-                        <TableHeader>
-                            <TableColumn>Attributes Id</TableColumn>
-                            <TableColumn>Attributes Name</TableColumn>
-                            <TableColumn>Data Type</TableColumn>
-                            <TableColumn>Actions</TableColumn>
-                        </TableHeader>
-                        <TableBody items={AttributesData} emptyContent={"Không có dữ liệu thuộc tính."}>
-                            {(attributes) => (
-                                <TableRow key={attributes.id}>
-                                    <TableCell>{attributes.id}</TableCell>
-                                    <TableCell>{attributes.attributeName}</TableCell>
-                                    <TableCell>{attributes.dataType}</TableCell>
-                                    <TableCell>
-                                        <div className="flex space-x-2">
-                                            {/* Sử dụng Button của Hero UI */}
-                                            <Button as={NextLink} href={`/admin/product_management/attributes/update/${attributes.id}`} color="warning" size="sm" variant="flat">
-                                                Sửa
-                                            </Button>
-                                            <Button
-                                                color="danger"
-                                                size="sm"
-                                                variant="flat"
-                                                onPress={() => openDeleteConfirm(attributes.id, attributes.attributeName)}
-                                            >
-                                                Xóa
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
+                    <tr>
+                        <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-300">
+                            Không có dữ liệu thuộc tính.
+                        </td>
+                    </tr>
                 )}
+                </tbody>
+            </table>
 
-                {/* Pagination - Sử dụng Button của Hero UI */}
-                {!loading && !error && AttributesData.length > 0 && (
-                    <div className="flex justify-center items-center mt-4 gap-2">
-                        <Button
-                            onClick={() => setCurrentPage(currentPage - 1)}
-                            isDisabled={currentPage === 0}
-                            size="sm"
-                            variant="flat"
-                        >
-                            Trước
-                        </Button>
-                        <span className="text-sm">Trang {currentPage + 1}/{totalPages}</span>
-                        <Button
-                            onClick={() => setCurrentPage(currentPage + 1)}
-                            isDisabled={currentPage >= totalPages - 1} // Sửa điều kiện disable
-                            size="sm"
-                            variant="flat"
-                        >
-                            Sau
-                        </Button>
-                    </div>
-                )}
+            {/* Pagination */}
+            <PaginationControls 
+                currentPage={currentPage} 
+                totalPages={totalPages} 
+                basePath="/admin/product_management/attributes"
+            />
 
-                <Modal isOpen={isOpen} onClose={onClose}>
-                    <ModalContent>
-                        <ModalHeader className="flex flex-col gap-1">
-                            Xác nhận xóa
-                        </ModalHeader>
-                        <ModalBody>
-                            {AttributesToDelete && (
-                                <p>
-                                    Bạn có chắc chắn muốn xóa attributes "{AttributesToDelete.name}"?
-                                    <br />
-                                    Hành động này không thể hoàn tác.
-                                </p>
-                            )}
-                        </ModalBody>
-                        <ModalFooter>
-                            <Button color="danger" variant="light" onPress={onClose}>
-                                Hủy
-                            </Button>
-                            <Button
-                                color="danger"
-                                onPress={handleDeleteAttributes}
-                                className="bg-red-500 text-white"
-                            >
-                                Xóa
-                            </Button>
-                        </ModalFooter>
-                    </ModalContent>
-                </Modal>
-            </CardBody>
-        </Card>
+            {/* WebSocket notifications */}
+            <WebSocketNotifications />
+        </div>
     );
 }
