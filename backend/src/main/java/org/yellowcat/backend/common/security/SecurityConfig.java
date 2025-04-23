@@ -24,100 +24,111 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable)
-            .cors(cors -> cors.configure(http))
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-            .authorizeHttpRequests(authorize -> authorize
-
-               // Thêm WebSocket endpoint
-               .requestMatchers("/ws/**") // Cho phép tất cả request tới /ws/**
-                    .permitAll()
-
-
-                // Cho phép truy cập không cần xác thực cho các endpoint công khai
-                .requestMatchers(
-                        "/demo/all",
-                        "/api/public/**",
-                        "/api/users/**",
-                        "/api/vnpay/**",
-                        "/api/examples/**")
-                .permitAll()
-
-
-                // Thêm các đường dẫn Swagger UI và API docs
-                .requestMatchers(
-                        "/swagger-ui.html",
-                        "/swagger-ui/**",
-                        "/api-docs/**",
-                        "/v3/api-docs/**")
-                .permitAll().
-
-                // Product public API
-                requestMatchers(HttpMethod.GET,
-                        "/api/products",
-                        "/api/products/{id}").permitAll().
-                // Product private API
-                requestMatchers(
-                        "/api/products/**")
-                .hasAnyAuthority("Admin_Web").
-
-                // Customers public API
-                // Attributes public API
-                requestMatchers(HttpMethod.GET,
-                        "/api/attributes",
-                        "/api/attributes/{id}"
-                ).permitAll().
-
-                // Attributes private API
-                requestMatchers(
-                        "/api/attributes/**")
-                    .hasAnyAuthority("Admin_Web").
-
-                // Categories public API
-                requestMatchers(HttpMethod.GET,
-                        "/api/categories",
-                        "/api/categories/{id}"
-                ).permitAll().
-
-                // Categories private API
-                requestMatchers(
-                        "/api/categories/**")
-                    .hasAnyAuthority("Admin_Web").
-
-                // Brands public API
-                requestMatchers(HttpMethod.GET,
-                        "/api/brands",
-                        "/api/brands/{id}"
-                ).permitAll().
-
-                // Brands private API
-                requestMatchers(
-                        "/api/brands/**")
-                    .hasAnyAuthority("Admin_Web").
-
-               // Phân quyền dựa trên authority (client role) thay vì role
-                    requestMatchers(
-                            "/api/user/**")
-
-                            .hasAnyAuthority("Staff_Web","Admin_Web")
-
-                .requestMatchers(
-
-                        "/api/admin/**"
-
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configure(http))
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                    .hasAnyAuthority("Admin_Web")
+                .authorizeHttpRequests(authorize -> authorize
 
-                // Yêu cầu xác thực cho tất cả các yêu cầu khác
-                .anyRequest().authenticated()
-            )
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt
-                    .jwtAuthenticationConverter(jwtAuthenticationConverter())
+                        // Thêm WebSocket endpoint
+                        .requestMatchers("/ws/**") // Cho phép tất cả request tới /ws/**
+                        .permitAll()
+
+
+                        // Cho phép truy cập không cần xác thực cho các endpoint công khai
+                        .requestMatchers(
+                                "/demo/all",
+                                "/api/public/**",
+                                "/api/users/**",
+                                "/api/vnpay/**",
+                                "/api/examples/**")
+                        .permitAll()
+
+
+                        // Thêm các đường dẫn Swagger UI và API docs
+                        .requestMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/api-docs/**",
+                                "/v3/api-docs/**")
+                        .permitAll().
+
+                        // Product public API
+                                requestMatchers(HttpMethod.GET,
+                                "/api/products",
+                                "/api/products/{id}").permitAll().
+                        // Product private API
+                                requestMatchers(
+                                "/api/products/**")
+                        .hasAnyAuthority("Admin_Web").
+
+                        // Customers public API
+                        // Attributes public API
+                                requestMatchers(HttpMethod.GET,
+                                "/api/attributes",
+                                "/api/attributes/{id}"
+                        ).permitAll().
+
+                        // Attributes private API
+                                requestMatchers(
+                                "/api/attributes/**")
+                        .hasAnyAuthority("Admin_Web").
+
+                        // Categories public API
+                                requestMatchers(HttpMethod.GET,
+                                "/api/categories",
+                                "/api/categories/{id}"
+                        ).permitAll().
+
+                        // Categories private API
+                                requestMatchers(
+                                "/api/categories/**")
+                        .hasAnyAuthority("Admin_Web").
+
+                        // Promotion public API
+                                requestMatchers(HttpMethod.GET,
+                                "/api/promotions",
+                                "/api/promotions/{id}"
+                        ).permitAll().
+
+                        // Promotion private API
+                                requestMatchers(
+                                "/api/promotions/**")
+                        .hasAnyAuthority("Admin_Web").
+
+                        // Brands public API
+                                requestMatchers(HttpMethod.GET,
+                                "/api/brands",
+                                "/api/brands/{id}"
+                        ).permitAll().
+
+                        // Brands private API
+                                requestMatchers(
+                                "/api/brands/**")
+                        .hasAnyAuthority("Admin_Web").
+
+                        // Phân quyền dựa trên authority (client role) thay vì role
+                                requestMatchers(
+                                "/api/user/**")
+
+                        .hasAnyAuthority("Staff_Web", "Admin_Web")
+
+                        .requestMatchers(
+
+                                "/api/admin/**"
+
+                        )
+                        .hasAnyAuthority("Admin_Web")
+
+                        // Yêu cầu xác thực cho tất cả các yêu cầu khác
+                        .anyRequest().authenticated()
                 )
-            );
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwt -> jwt
+                                .jwtAuthenticationConverter(jwtAuthenticationConverter())
+                        )
+                );
 
         return http.build();
     }
