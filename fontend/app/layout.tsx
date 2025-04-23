@@ -23,9 +23,9 @@ export default function RootLayout({
         <Providers>
           <Navbar />
           {children}
-          <div>
-            <LoadingAnimation/>
-          </div>
+          {/*<div>*/}
+          {/*  <LoadingAnimation/>*/}
+          {/*</div>*/}
         </Providers>
       </body>
     </html>

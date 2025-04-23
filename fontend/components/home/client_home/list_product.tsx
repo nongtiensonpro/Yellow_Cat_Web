@@ -108,23 +108,31 @@ const ProductList = () => {
             )}
             <div className="content">
               <Link href={`/products/${product.productId}`}>
-                <span className="title">
+                <span className="title inline">
                   {product.productName}
                 </span>
               </Link>
               <p className="price">{formatPrice(product.minPrice)}</p>
-              <p className="desc">
-                Category: {product.categoryName} | Brand: {product.brandName}
-              </p>
+              <div className="desc">
+                <div className="brand-info">
+                  <div className="brand-logo">
+                    <CldImage
+                      width={30}
+                      height={30}
+                      src={product.logoPublicId}
+                      alt={`${product.brandName} logo`}
+                      className="object-contain"
+                    />
+                  </div>
+                  <span> {product.brandName} <div className="category-info">{product.categoryName}</div></span>
+                </div>
+              </div>
               <div className="stats">
                 <span className="stock">Stock: {product.totalStock || 'N/A'}</span>
                 <span className="purchases">Sold: {product.purchases}</span>
               </div>
-              <Link className="action" href={`/products/${product.productId}`}>
+              <Link className="title text-right" href={`/products/${product.productId}`}>
                 View Details
-                <span aria-hidden="true">
-                  →
-                </span>
               </Link>
             </div>
           </div>
@@ -208,6 +216,28 @@ const StyledWrapper = styled.div`
         line-height: 1.25rem;
     }
 
+    .category-info {
+        margin-bottom: 0.5rem;
+    }
+
+    .brand-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .brand-logo {
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border-radius: 50%;
+        background-color: #f9fafb;
+        border: 1px solid #e5e7eb;
+    }
+
     .stats {
         display: flex;
         justify-content: space-between;
@@ -236,6 +266,14 @@ const StyledWrapper = styled.div`
 
     .action:hover span {
         transform: translateX(4px);
+    }
+    .text-right:hover{
+        text-decoration: underline;
+        text-decoration-color: black;
+    }
+    .title:hover{
+        text-decoration: underline;
+        text-decoration-color: black;
     }
 `;
 

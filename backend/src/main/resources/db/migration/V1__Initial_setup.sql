@@ -185,10 +185,10 @@ INSERT INTO Categories (category_name) VALUES
 -- Dữ liệu mẫu cho bảng Brands
 -- Thêm các thương hiệu thể thao phổ biến
 INSERT INTO Brands (brand_name, logo_public_id, brand_info) VALUES
-                                                                ('Nike', 'YellowCatWeb/lx6hupwnexokbxg83yqa', 'Nike là một tập đoàn đa quốc gia của Mỹ hoạt động trong lĩnh vực thiết kế, phát triển, sản xuất, quảng bá cũng như kinh doanh các mặt hàng giày dép, quần áo, phụ kiện, trang thiết bị và dịch vụ liên quan đến thể thao.'),
-                                                                ('Adidas', 'YellowCatWeb/lx6hupwnexokbxg83yqa', 'Adidas AG là một tập đoàn đa quốc gia đến từ Đức, chuyên thiết kế và sản xuất giày dép, quần áo, phụ kiện thể thao. Adidas là nhà sản xuất đồ thể thao lớn nhất châu Âu và lớn thứ hai trên thế giới.'),
-                                                                ('Under Armour', 'YellowCatWeb/lx6hupwnexokbxg83yqa', 'Under Armour, Inc. là một công ty sản xuất trang phục thể thao và phụ kiện của Mỹ. Công ty cung cấp các sản phẩm trang phục thể thao, giày dép và phụ kiện.'),
-                                                                ('Puma', 'YellowCatWeb/lx6hupwnexokbxg83yqa', 'Puma SE là một công ty đa quốc gia của Đức chuyên thiết kế và sản xuất giày dép, trang phục và phụ kiện thể thao và thông thường.');
+                                                                ('Nike', 'YellowCatWeb/t0hqgdma141foprsckjf', 'Nike là một tập đoàn đa quốc gia của Mỹ hoạt động trong lĩnh vực thiết kế, phát triển, sản xuất, quảng bá cũng như kinh doanh các mặt hàng giày dép, quần áo, phụ kiện, trang thiết bị và dịch vụ liên quan đến thể thao.'),
+                                                                ('Adidas', 'YellowCatWeb/ajstsr8nluev6ich5uwg', 'Adidas AG là một tập đoàn đa quốc gia đến từ Đức, chuyên thiết kế và sản xuất giày dép, quần áo, phụ kiện thể thao. Adidas là nhà sản xuất đồ thể thao lớn nhất châu Âu và lớn thứ hai trên thế giới.'),
+                                                                ('Under Armour', 'YellowCatWeb/vcjjtizyqhvlfdggw7sd', 'Under Armour, Inc. là một công ty sản xuất trang phục thể thao và phụ kiện của Mỹ. Công ty cung cấp các sản phẩm trang phục thể thao, giày dép và phụ kiện.'),
+                                                                ('Puma', 'YellowCatWeb/n54kyijbuhmmbtzlkh2h', 'Puma SE là một công ty đa quốc gia của Đức chuyên thiết kế và sản xuất giày dép, trang phục và phụ kiện thể thao và thông thường.');
 
 -- Lấy brand_id vừa được tạo (Giả sử là 1, 2, 3, 4 tương ứng)
 -- SELECT brand_id, brand_name FROM Brands; -- (Để tham khảo)
@@ -279,23 +279,23 @@ INSERT INTO Product_Attributes (product_id, attribute_value_id) VALUES
 -- Sử dụng ID sản phẩm giả định
 INSERT INTO Product_Variants (product_id, sku, price, stock_level, image_url, weight) VALUES
 -- Biến thể cho Áo Thun Nike Dri-FIT Nam (product_id = 1)
-(1, 'NK-DRFT-BLK-M', 650000.00, 50, 'YellowCatWeb/lx6hupwnexokbxg83yqa', 0.15), -- Đen, M
-(1, 'NK-DRFT-BLK-L', 650000.00, 45, 'YellowCatWeb/lx6hupwnexokbxg83yqa', 0.16), -- Đen, L
-(1, 'NK-DRFT-WHT-M', 650000.00, 60, 'YellowCatWeb/lx6hupwnexokbxg83yqa', 0.15), -- Trắng, M
-(1, 'NK-DRFT-NVY-XL', 660000.00, 30, 'YellowCatWeb/lx6hupwnexokbxg83yqa', 0.17), -- Xanh Navy, XL (Giá có thể khác)
+(1, 'NK-DRFT-BLK-M', 650000.00, 50, 'YellowCatWeb/pgxvi4r9a57ihacrp3qp', 0.15), -- Đen, M
+(1, 'NK-DRFT-BLK-L', 650000.00, 45, 'YellowCatWeb/bqp7i3vkiaemrxhbajqg', 0.16), -- Đen, L
+(1, 'NK-DRFT-WHT-M', 650000.00, 60, 'YellowCatWeb/oeizy65rlyssqaxk4dd5', 0.15), -- Trắng, M
+(1, 'NK-DRFT-NVY-XL', 660000.00, 30, 'YellowCatWeb/suusyqsdrdezjmbddvc6', 0.17), -- Xanh Navy, XL (Giá có thể khác)
 
 -- Biến thể cho Áo Polo Adidas Nam (product_id = 2)
-(2, 'AD-POLO-GRY-S', 750000.00, 40, 'YellowCatWeb/lx6hupwnexokbxg83yqa', 0.20), -- Xám, S
-(2, 'AD-POLO-GRY-M', 750000.00, 55, 'YellowCatWeb/lx6hupwnexokbxg83yqa', 0.21), -- Xám, M
-(2, 'AD-POLO-BLK-L', 750000.00, 50, 'YellowCatWeb/lx6hupwnexokbxg83yqa', 0.22), -- Đen, L
+(2, 'AD-POLO-GRY-S', 750000.00, 40, 'YellowCatWeb/j1vnoj7f49at9yehncyi', 0.20), -- Xám, S
+(2, 'AD-POLO-GRY-M', 750000.00, 55, 'YellowCatWeb/itkpjrgy37wyfckabtvw', 0.21), -- Xám, M
+(2, 'AD-POLO-BLK-L', 750000.00, 50, 'YellowCatWeb/mw98tiyee321bi8glyha', 0.22), -- Đen, L
 
 -- Biến thể cho Áo Ba Lỗ UA Nam (product_id = 3)
-(3, 'UA-TANK-BLK-M', 550000.00, 70, 'YellowCatWeb/lx6hupwnexokbxg83yqa', 0.12), -- Đen, M
-(3, 'UA-TANK-RED-L', 550000.00, 40, 'YellowCatWeb/lx6hupwnexokbxg83yqa', 0.13), -- Đỏ, L
+(3, 'UA-TANK-BLK-M', 550000.00, 70, 'YellowCatWeb/f2cwhili0pewnamriufr', 0.12), -- Đen, M
+(3, 'UA-TANK-RED-L', 550000.00, 40, 'YellowCatWeb/d8oye50xusx1trfmhzyj', 0.13), -- Đỏ, L
 
 -- Biến thể cho Áo Khoác Gió Nike Nam (product_id = 5)
-(5, 'NK-WJ-BLU-M', 1200000.00, 25, 'YellowCatWeb/lx6hupwnexokbxg83yqa', 0.25), -- Xanh Dương, M
-(5, 'NK-WJ-BLK-L', 1200000.00, 35, 'YellowCatWeb/lx6hupwnexokbxg83yqa', 0.26); -- Đen, L
+(5, 'NK-WJ-BLU-M', 1200000.00, 25, 'YellowCatWeb/dnzemklps9lopz0fygin', 0.25), -- Xanh Dương, M
+(5, 'NK-WJ-BLK-L', 1200000.00, 35, 'YellowCatWeb/chv7rjtb2ablpueyhefq', 0.26); -- Đen, L
 
 -- Lấy variant_id vừa được tạo (Giả sử là 1 đến 11 tương ứng)
 -- SELECT variant_id, sku FROM Product_Variants; -- (Để tham khảo)
