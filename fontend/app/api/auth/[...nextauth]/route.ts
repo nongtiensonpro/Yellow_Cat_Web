@@ -74,7 +74,8 @@ if (!ENV.keycloakClientId || !ENV.keycloakClientSecret || !ENV.keycloakIssuer) {
     throw new Error("Thiếu các biến môi trường cần thiết cho Keycloak Provider trong NextAuth.");
 }
 
-export const authOptions: NextAuthOptions = {
+// Define authOptions but don't export it directly
+const authOptions: NextAuthOptions = {
     providers: [
         KeycloakProvider({
             clientId: ENV.keycloakClientId,
@@ -154,7 +155,9 @@ export const authOptions: NextAuthOptions = {
 
                     const tokens = await response.json();
 
-                    if (!response.ok) throw tokens;
+                    if (!response.ok) {
+                        console.error("Error refreshing token:", tokens);
+                    }
 
                     customToken.accessToken = tokens.access_token;
                     // Chỉ cập nhật refresh token nếu Keycloak trả về refresh token mới
@@ -199,7 +202,8 @@ export const authOptions: NextAuthOptions = {
             customSession.user.name = customToken.name || "";
 
             customSession.accessToken = customToken.accessToken;
-
+            customSession.refreshToken = customToken.refreshToken;
+            customSession.idToken = customToken.idToken;
             customSession.error = customToken.error;
             customSession.expiresAt = customToken.expiresAt;
 
@@ -212,9 +216,9 @@ export const authOptions: NextAuthOptions = {
         error: '/auth/error',
         signOut: '/auth/signout',
     },
-    debug: process.env.NODE_ENV === 'development',
+    debug: false,
 };
 
 const handler = NextAuth(authOptions);
 
-export {handler as GET, handler as POST};
+export {  handler as POST }
