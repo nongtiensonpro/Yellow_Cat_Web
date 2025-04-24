@@ -2,7 +2,7 @@
 
 import { Card, CardHeader, CardBody, Divider, Button, addToast, Spinner } from "@heroui/react";
 import { Input } from "@heroui/input";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CardFooter } from "@heroui/card";
 import { useSession } from "next-auth/react";
@@ -29,7 +29,7 @@ const createAttributes = async (data: Attributes, token: string | undefined) => 
         });
 
         if (!response.ok) {
-            let errorBody = "Lỗi không xác định từ máy chủ.";
+            let errorBody ;
             try {
                 const errorData = await response.json();
                 errorBody = errorData.message || errorData.error || JSON.stringify(errorData);
@@ -37,7 +37,6 @@ const createAttributes = async (data: Attributes, token: string | undefined) => 
                 errorBody = response.statusText;
             }
             console.error("Lỗi API:", response.status, errorBody);
-            throw new Error(`Không thể tạo Attributes: ${errorBody} (Status: ${response.status})`);
         }
 
         return await response.json();
@@ -50,7 +49,7 @@ const createAttributes = async (data: Attributes, token: string | undefined) => 
 export default function CreateAttributesPage() {
     const router = useRouter();
     const { data: session, status } = useSession();
-    const [resource, setResource] = useState<any>(null);
+    const [ setResource] = useState<any>(null);
     const [formError, setFormError] = useState<string | null>(null);
     const [attributeName, setattributeName] = useState("");
     const [dataType, setdataType] = useState("");
@@ -60,10 +59,10 @@ export default function CreateAttributesPage() {
     useEffect(() => {
         if (status === 'unauthenticated') {
             console.warn("Người dùng chưa đăng nhập.");
-            addToast({ 
-                title: "Cần đăng nhập", 
-                description: "Vui lòng đăng nhập để tiếp tục.", 
-                color: "danger" 
+            addToast({
+                title: "Cần đăng nhập",
+                description: "Vui lòng đăng nhập để tiếp tục.",
+                color: "danger"
             });
             router.push('/login');
         }
@@ -90,10 +89,10 @@ export default function CreateAttributesPage() {
         }
 
         if (!session?.accessToken) {
-            addToast({ 
-                title: "Lỗi xác thực", 
-                description: "Phiên đăng nhập hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.", 
-                color: "danger" 
+            addToast({
+                title: "Lỗi xác thực",
+                description: "Phiên đăng nhập hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.",
+                color: "danger"
             });
             router.push('/login');
             return;
@@ -102,14 +101,13 @@ export default function CreateAttributesPage() {
         setIsSubmitting(true);
 
         try {
-            const response = await createAttributes(
+            await createAttributes(
                 {
                     attributeName: attributeName.trim(),
                     dataType: dataType.trim(),
                 },
                 session.accessToken
             );
-
             addToast({
                 title: "Thành công",
                 description: "Thêm Attributes thành công!",
