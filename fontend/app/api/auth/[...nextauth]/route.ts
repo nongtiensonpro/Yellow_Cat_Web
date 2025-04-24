@@ -157,6 +157,10 @@ const authOptions: NextAuthOptions = {
 
                     if (!response.ok) {
                         console.error("Error refreshing token:", tokens);
+                        throw {
+                            error: tokens.error || "RefreshAccessTokenError",
+                            error_description: tokens.error_description || "Failed to refresh access token"
+                        };
                     }
 
                     customToken.accessToken = tokens.access_token;
@@ -221,4 +225,4 @@ const authOptions: NextAuthOptions = {
 
 const handler = NextAuth(authOptions);
 
-export {  handler as POST }
+export {  handler as GET,handler as POST }
