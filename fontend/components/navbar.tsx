@@ -137,7 +137,10 @@ export const Navbar = () => {
                                 Admin Dashboard
                             </DropdownItem>
                         ) : null}
-                        <DropdownItem key="user_info" href="/user_info">
+                        <DropdownItem 
+                            key="user_info" 
+                            onClick={() => router.push('/user_info')}
+                        >
                             User Profile
                         </DropdownItem>
                         <DropdownItem
