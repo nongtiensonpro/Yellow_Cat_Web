@@ -3,10 +3,14 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "node --max-old-space-size=512 node_modules/next/dist/bin/next dev --turbopack",
-    "build": "next build",
-    "start": "node --max-old-space-size=512 node_modules/.bin/next start",
-    "lint": "eslint . --ext .ts,.tsx -c .eslintrc.json --fix"
+    "dev": "node node_modules/next/dist/bin/next dev --turbopack",
+    "build": "rimraf .next && cross-env GENERATE_SOURCEMAP=false next build",
+    "start": "next start",
+    "lint": "eslint . --ext .ts,.tsx -c .eslintrc.json --fix",
+    "analyze": "cross-env ANALYZE=true next build",
+    "analyze-windows": "cross-env ANALYZE=true next build",
+    "clean": "rimraf .next && rimraf out",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
@@ -44,6 +48,7 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^15.3.1",
     "@next/eslint-plugin-next": "15.0.4",
     "@react-types/shared": "3.25.0",
     "@types/jsonwebtoken": "^9.0.9",
@@ -54,6 +59,8 @@
     "@typescript-eslint/eslint-plugin": "8.11.0",
     "@typescript-eslint/parser": "8.11.0",
     "autoprefixer": "10.4.19",
+    "compression-webpack-plugin": "^11.1.0",
+    "cross-env": "^7.0.3",
     "eslint": "^8.57.0",
     "eslint-config-next": "15.0.4",
     "eslint-config-prettier": "9.1.0",
@@ -66,6 +73,7 @@
     "eslint-plugin-unused-imports": "4.1.4",
     "postcss": "8.4.49",
     "prettier": "3.3.3",
+    "rimraf": "^6.0.1",
     "tailwind-variants": "0.3.0",
     "tailwindcss": "3.4.16",
     "typescript": "5.6.3"

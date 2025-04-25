@@ -35,6 +35,33 @@ async function fetchData(page: number, size: number): Promise<ApiResponse> {
   return response.json();
 }
 
+// Assuming this is your about page structure
+import { Suspense } from 'react';
+
+// Create a component that fetches data
+async function DemoData() {
+  try {
+    // Use a longer revalidation period or make it explicitly dynamic
+    const res = await fetch('http://localhost:8080/demo/all?page=0&size=5', {
+      next: { revalidate: 3600 }, // Revalidate every hour instead of every request
+    });
+    
+    const data = await res.json();
+    
+    return (
+      <div>
+        {/* Render your data here */}
+        <pre>{JSON.stringify(data, null, 2)}</pre>
+      </div>
+    );
+  } catch (error) {
+    return <div>Failed to load data</div>;
+  }
+}
+
+// Use a fallback for the data component
+export const dynamic = 'force-dynamic';
+
 export default async function AboutPage() {
   const page = 0;
   const size = 5;
@@ -52,48 +79,48 @@ export default async function AboutPage() {
   }
 
   return (
-      <section className="mb-12">
-        <h1 className="text-4xl font-bold text-center mb-6 text-gray-800 dark:text-white">
-          Dữ Liệu API Demo
-        </h1>
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
+    <section className="mb-12">
+      <h1 className="text-4xl font-bold text-center mb-6 text-gray-800 dark:text-white">
+        Dữ Liệu API Demo
+      </h1>
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Họ Tên</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Tuổi</th>
               </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {demoData.length > 0 ? (
-                  demoData.map((item) => (
-                      <tr key={item.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{item.id}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{item.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{item.age}</td>
-                      </tr>
-                  ))
-              ) : (
-                  <tr>
-                    <td colSpan={3} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-300">
-                      Không có dữ liệu
-                    </td>
+                demoData.map((item) => (
+                  <tr key={item.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{item.id}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{item.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{item.age}</td>
                   </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={3} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-300">
+                    Không có dữ liệu
+                  </td>
+                </tr>
               )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-              <div className="flex justify-center mt-6">
-                <nav className="inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                </nav>
-              </div>
-          )}
+            </tbody>
+          </table>
         </div>
-      </section>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center mt-6">
+            <nav className="inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+            </nav>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
