@@ -9,6 +9,8 @@ export default function PaymentResultPage() {
     const [result, setResult] = useState<any>(null);
 
     useEffect(() => {
+        if (!searchParams) return;
+        
         const responseCode = searchParams.get('vnp_ResponseCode');
         const amount = searchParams.get('vnp_Amount');
         const orderInfo = searchParams.get('vnp_OrderInfo');
