@@ -95,12 +95,12 @@ const updateCategory = async (id: string, data: CategoryFormData, token: string)
 export default function UpdateCategoryPage() {
     const router = useRouter();
     const params = useParams();
-    const categoryId = params.categoriesId as string | undefined;
+    const categoryId = params?.categoriesId as string | undefined;
     const [categoryData, setCategoryData] = useState<CategoryFormData>({ name: '' });
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    
+
     // Sử dụng NextAuth session để lấy token
     const { data: session, status } = useSession();
     const authToken = session?.accessToken;

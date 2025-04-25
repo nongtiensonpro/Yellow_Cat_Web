@@ -44,7 +44,7 @@ interface ApiResponse {
 export default function ProductDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const productId = params.productId;
+  const productId = params?.productId as string | undefined;
 
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(true);

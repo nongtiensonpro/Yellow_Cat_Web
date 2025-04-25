@@ -87,7 +87,7 @@ const updateAttribute = async (id: string | string[] | undefined, data: Attribut
 export default function UpdateAttributePage() {
     const router = useRouter();
     const params = useParams();
-    const AttributeId = params.attributesId;
+    const AttributeId = params?.attributesId as string | undefined;
     const { data: session, status } = useSession();
     const [AttributeData, setAttributeData] = useState<Attribute>({
         id: '',

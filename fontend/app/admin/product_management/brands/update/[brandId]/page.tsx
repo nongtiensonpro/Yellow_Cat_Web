@@ -92,7 +92,7 @@ const updateBrand = async (id: string | string[] | undefined, data: Omit<Brand, 
 export default function UpdateBrandPage() {
     const router = useRouter();
     const params = useParams();
-    const brandId = params.brandId;
+    const brandId = params?.brandId as string | undefined;
     const { data: session, status } = useSession();
     const [brandData, setBrandData] = useState<Omit<Brand, 'id' | 'createdAt' | 'updatedAt' | 'productIds'>>({
         brandName: '',
