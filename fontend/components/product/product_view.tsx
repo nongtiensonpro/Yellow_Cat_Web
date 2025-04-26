@@ -141,7 +141,7 @@ export default function Page() {
                         onChange={e => setSearchTerm(e.target.value)}
                         className="max-w-md"
                     />
-                    <Button color="primary" startContent={<Plus size={16} />}>Thêm sản phẩm</Button>
+                    <Button color="primary" as={Link} href={`/admin/product_management/add_product`} startContent={<Plus size={16} />}>Thêm sản phẩm</Button>
                 </div>
                 {loading ? (
                     <div className="my-6 text-lg text-center text-blue-500">Đang tải dữ liệu...</div>
