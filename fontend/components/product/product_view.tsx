@@ -201,12 +201,12 @@ export default function Page() {
                                         <TableCell>
                                             <div className="flex gap-2">
                                                 <Tooltip content="Xem chi tiết">
-                                                    <Button isIconOnly size="sm" variant="light" as={Link} href={`/admin/products/${product.productId}`}>
+                                                    <Button isIconOnly size="sm" variant="light" as={Link} href={`/products/${product.productId}`}>
                                                         <Eye size={16} />
                                                     </Button>
                                                 </Tooltip>
                                                 <Tooltip content="Chỉnh sửa">
-                                                    <Button isIconOnly size="sm" variant="light" as={Link} href={`/admin/products/edit/${product.productId}`}>
+                                                    <Button isIconOnly size="sm" variant="light" as={Link} href={`/admin/product_management/update_product/${product.productId}`}>
                                                         <Edit size={16} />
                                                     </Button>
                                                 </Tooltip>

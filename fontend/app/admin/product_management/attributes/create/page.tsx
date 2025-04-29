@@ -49,13 +49,11 @@ const createAttributes = async (data: Attributes, token: string | undefined) => 
 export default function CreateAttributesPage() {
     const router = useRouter();
     const { data: session, status } = useSession();
-    const [ setResource] = useState<any>(null);
     const [formError, setFormError] = useState<string | null>(null);
-    const [attributeName, setattributeName] = useState("");
-    const [dataType, setdataType] = useState("");
+    const [attributeName, setAttributeName] = useState("");
+    const [dataType, setDataType] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Kiểm tra trạng thái xác thực khi component được tải
     useEffect(() => {
         if (status === 'unauthenticated') {
             console.warn("Người dùng chưa đăng nhập.");
@@ -114,9 +112,8 @@ export default function CreateAttributesPage() {
                 color: "success",
             });
 
-            setattributeName("");
-            setdataType("");
-            setResource(null);
+            setAttributeName("");
+            setDataType("");
             setFormError(null);
             setTimeout(() => {
                 router.push("/admin/product_management/attributes");
@@ -136,7 +133,6 @@ export default function CreateAttributesPage() {
         }
     };
 
-    // Hiển thị trạng thái loading khi đang xác thực
     if (status === 'loading') {
         return (
             <div className="flex justify-center items-center min-h-screen">
@@ -160,7 +156,7 @@ export default function CreateAttributesPage() {
                         placeholder="Nhập tên Attributes"
                         type="text"
                         value={attributeName}
-                        onChange={(e) => { setattributeName(e.target.value); setFormError(null); }} // Xóa lỗi khi nhập
+                        onChange={(e) => { setAttributeName(e.target.value); setFormError(null); }}
                         isRequired
                     />
 
@@ -169,7 +165,7 @@ export default function CreateAttributesPage() {
                         placeholder="Nhập thông tin chi tiết về Attributes"
                         type="text"
                         value={dataType}
-                        onChange={(e) => { setdataType(e.target.value); setFormError(null); }} // Xóa lỗi khi nhập
+                        onChange={(e) => { setDataType(e.target.value); setFormError(null); }}
                         isRequired
                     />
 
