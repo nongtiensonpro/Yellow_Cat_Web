@@ -90,7 +90,9 @@ export default function ProductDetailPage() {
     const attributes: Record<string, string> = {};
 
     attributesString.split(', ').forEach(attr => {
-      const [key, value] = attr.split(': ');
+      // Xử lý trường hợp có dấu ? trong chuỗi
+      const cleanAttr = attr.replace(' ?', '');
+      const [key, value] = cleanAttr.split(': ');
       if (key && value) {
         attributes[key] = value;
       }
@@ -268,7 +270,7 @@ export default function ProductDetailPage() {
 
                       return (
                         <Button
-                          key={color}
+                          key={`color-${color}`}
                           variant={isSelected ? "flat" : "ghost"}
                           color={isSelected ? "primary" : "default"}
                           onClick={() => variantWithColor && handleVariantSelect(variantWithColor.variantId)}
@@ -299,7 +301,7 @@ export default function ProductDetailPage() {
 
                         return (
                           <Button
-                            key={size}
+                            key={`size-${parseVariantAttributes(selectedVariant.variantAttributes)['Màu sắc']}-${size}`}
                             variant={isSelected ? "flat" : "ghost"}
                             color={isSelected ? "primary" : "default"}
                             onClick={() => variantWithSize && handleVariantSelect(variantWithSize.variantId)}
