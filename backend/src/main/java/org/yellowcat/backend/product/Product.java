@@ -12,6 +12,7 @@ import org.yellowcat.backend.product.brand.Brand;
 import org.yellowcat.backend.product.category.Category;
 
 import java.time.Instant;
+import java.util.List;
 
 @Getter
 @Setter
@@ -57,4 +58,10 @@ public class Product {
     @ColumnDefault("true")
     @Column(name = "is_active")
     private Boolean isActive;
+
+    @OneToMany(mappedBy = "product")
+    private List<ProductVariant> variants;
+
+    @OneToMany(mappedBy = "product")
+    private List<ProductAttribute> productAttributes;
 }
