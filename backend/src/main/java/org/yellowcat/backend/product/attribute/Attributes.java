@@ -3,9 +3,9 @@ package org.yellowcat.backend.product.attribute;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.Getter;
-import lombok.Setter;
-import org.hibernate.annotations.ColumnDefault;
+import org.yellowcat.backend.product.AttributeValue;
+
+import java.util.List;
 
 
 @Entity
@@ -26,6 +26,9 @@ public class Attributes {
     @Column(name = "data_type", nullable = false, length = 50)
     private String dataType;
 
+    @OneToMany(mappedBy = "attribute")
+    private List<AttributeValue> values;
+
     public Attributes() {
     }
 
@@ -33,6 +36,21 @@ public class Attributes {
         this.id = id;
         this.attributeName = attributeName;
         this.dataType = dataType;
+    }
+
+    public Attributes(Integer id, String attributeName, String dataType, List<AttributeValue> values) {
+        this.id = id;
+        this.attributeName = attributeName;
+        this.dataType = dataType;
+        this.values = values;
+    }
+
+    public List<AttributeValue> getValues() {
+        return values;
+    }
+
+    public void setValues(List<AttributeValue> values) {
+        this.values = values;
     }
 
     public Integer getId() {
