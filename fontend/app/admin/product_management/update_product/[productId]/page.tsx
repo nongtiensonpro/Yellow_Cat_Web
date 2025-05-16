@@ -35,6 +35,7 @@ interface ProductDetail {
   variants: ProductVariant[];
   activePromotions: any | null;
   thumbnail: string | null;
+  productAttributes: { attributeId: number; value: string }[];
 }
 
 interface ApiResponse {
@@ -109,6 +110,7 @@ export default function UpdateProductPage() {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletedVariantIds, setDeletedVariantIds] = useState<number[]>([]);
+  const [productAttributes, setProductAttributes] = useState<{[key: string]: string}>({});
 
   // Lấy token từ session
   const authToken = session?.accessToken;
@@ -131,6 +133,8 @@ export default function UpdateProductPage() {
       setLoading(true);
       setFormError(null);
 
+      console.log("Product ID from params:", productId);
+
       // Lấy dữ liệu sản phẩm
       const fetchProductData = async () => {
         try {
@@ -148,6 +152,18 @@ export default function UpdateProductPage() {
             setCategoryId(data.data.categoryId.toString());
             setIsActive(data.data.isActive);
             setThumbnailUrl(data.data.thumbnail);
+
+            // Parse thuộc tính sản phẩm
+            if (data.data.productAttributes && data.data.productAttributes.length > 0) {
+              const productAttrs: {[key: string]: string} = {};
+              data.data.productAttributes[0].attributes.forEach(attr => {
+                const attribute = attributes.find(a => a.id === attr.attributeId);
+                if (attribute) {
+                  productAttrs[attribute.attributeName] = attr.value;
+                }
+              });
+              setProductAttributes(productAttrs);
+            }
 
             // Chuyển đổi biến thể từ API sang định dạng form
             const variantInputs: VariantInput[] = data.data.variants.map(variant => {
@@ -273,6 +289,14 @@ export default function UpdateProductPage() {
     }
   };
 
+  // Thêm hàm xử lý thay đổi thuộc tính sản phẩm
+  const handleProductAttributeChange = (attrName: string, value: string) => {
+    setProductAttributes(prev => ({
+      ...prev,
+      [attrName]: value
+    }));
+  };
+
   // Validate form
   const validateForm = () => {
     console.log("Bắt đầu validate form");
@@ -375,34 +399,38 @@ export default function UpdateProductPage() {
           const attribute = attributes.find(a => a.attributeName === attrName);
           return {
             attributeId: attribute ? attribute.id : null,
-            value
+            value: value
           };
         }).filter(attr => attr.attributeId !== null);
 
-        const variant = {
-          ...(v.variantId ? { variantId: v.variantId } : {}), // Chỉ gửi variantId nếu có
+        return {
           sku: v.sku,
           price: Number(v.price),
           stockLevel: Number(v.stockLevel),
-          weight: Number(v.weight || 0),
           imageUrl: v.imageUrl,
           attributes: attributeEntries
         };
-        
-        console.log("Variant payload:", JSON.stringify(variant, null, 2));
-        return variant;
       });
 
+      // Chuẩn bị dữ liệu gửi đi theo đúng format API yêu cầu
       const payload = {
         productId: Number(productId),
         productName: productName.trim(),
         description: description.trim(),
         brandId: Number(brandId),
         categoryId: Number(categoryId),
-        isActive: isActive,
-        thumbnail: thumbnailUrl,
-        variants: variantPayload,
-        deletedVariantIds: deletedVariantIds
+        productAttributes: [
+          {
+            attributes: Object.entries(productAttributes).map(([attrName, value]) => {
+              const attribute = attributes.find(a => a.attributeName === attrName);
+              return {
+                attributeId: attribute ? attribute.id : null,
+                value: value
+              };
+            }).filter(attr => attr.attributeId !== null)
+          }
+        ],
+        variants: variantPayload
       };
 
       console.log("Dữ liệu gửi đi:", JSON.stringify(payload, null, 2));
@@ -712,6 +740,26 @@ export default function UpdateProductPage() {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Thêm phần thuộc tính sản phẩm */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Thuộc tính sản phẩm</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {attributes.map(attr => (
+                <div key={attr.id}>
+                  <label className="block text-sm font-medium text-gray-700">
+                    {attr.attributeName}
+                  </label>
+                  <input
+                    type="text"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    value={productAttributes[attr.attributeName] || ''}
+                    onChange={e => handleProductAttributeChange(attr.attributeName, e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Hiển thị thông báo lỗi */}
