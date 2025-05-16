@@ -1,4 +1,4 @@
-package org.yellowcat.backend.product;
+package org.yellowcat.backend.product.variant;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;

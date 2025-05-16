@@ -1,4 +1,4 @@
-package org.yellowcat.backend.product;
+package org.yellowcat.backend.product.variant;
 
 
 import jakarta.persistence.*;
@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.yellowcat.backend.product.attributevalue.AttributeValue;
+import org.yellowcat.backend.product.productvariant.ProductVariant;
 
 @Entity
 @Table(name = "variant_attributes")

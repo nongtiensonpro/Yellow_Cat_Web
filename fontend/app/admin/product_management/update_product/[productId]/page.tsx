@@ -106,6 +106,7 @@ export default function UpdateProductPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletedVariantIds, setDeletedVariantIds] = useState<number[]>([]);
 
@@ -115,10 +116,10 @@ export default function UpdateProductPage() {
   // Kiểm tra trạng thái xác thực
   useEffect(() => {
     if (status === 'unauthenticated') {
-      addToast({ 
-        title: "Cần đăng nhập", 
-        description: "Vui lòng đăng nhập để tiếp tục.", 
-        color: "danger" 
+      addToast({
+        title: "Cần đăng nhập",
+        description: "Vui lòng đăng nhập để tiếp tục.",
+        color: "danger"
       });
       router.push('/login');
     }
@@ -138,7 +139,7 @@ export default function UpdateProductPage() {
             throw new Error(`HTTP error! Status: ${response.status}`);
           }
           const data: ApiResponse = await response.json();
-          
+
           if (data.status === 200 && data.data) {
             setProductData(data.data);
             setProductName(data.data.productName);
@@ -168,10 +169,10 @@ export default function UpdateProductPage() {
         } catch (err: any) {
           console.error('Lỗi khi tải dữ liệu sản phẩm:', err);
           setFormError(err.message || 'Đã xảy ra lỗi khi tải dữ liệu sản phẩm');
-          addToast({ 
-            title: "Lỗi", 
-            description: "Không thể tải thông tin sản phẩm", 
-            color: "danger" 
+          addToast({
+            title: "Lỗi",
+            description: "Không thể tải thông tin sản phẩm",
+            color: "danger"
           });
         }
       };
@@ -184,11 +185,11 @@ export default function UpdateProductPage() {
             fetch("http://localhost:8080/api/categories?page=0&size=100"),
             fetch("http://localhost:8080/api/attributes?page=0&size=100"),
           ]);
-          
+
           const brandData = await brandRes.json();
           const catData = await catRes.json();
           const attrData = await attrRes.json();
-          
+
           setBrands(brandData.data.content || []);
           setCategories(catData.data.content || []);
           setAttributes(attrData.data.content || []);
@@ -206,10 +207,10 @@ export default function UpdateProductPage() {
     } else {
       if (!productId) {
         setFormError("Không tìm thấy ID sản phẩm");
-        addToast({ 
-          title: "Lỗi", 
-          description: "Không tìm thấy ID sản phẩm", 
-          color: "danger" 
+        addToast({
+          title: "Lỗi",
+          description: "Không tìm thấy ID sản phẩm",
+          color: "danger"
         });
       }
       if (!authToken && status !== 'loading') {
@@ -223,13 +224,13 @@ export default function UpdateProductPage() {
 
   // Thêm biến thể mới
   const addVariant = () => {
-    setVariants([...variants, { 
-      sku: "", 
-      price: "", 
-      stockLevel: "", 
+    setVariants([...variants, {
+      sku: "",
+      price: "",
+      stockLevel: "",
       imageUrl: "",
       weight: "0",
-      attributes: {} 
+      attributes: {}
     }]);
   };
 
@@ -250,9 +251,9 @@ export default function UpdateProductPage() {
 
   // Xử lý thay đổi thuộc tính của biến thể
   const handleVariantAttributeChange = (idx: number, attrName: string, value: string) => {
-    setVariants(variants.map((v, i) => i === idx ? { 
-      ...v, 
-      attributes: { ...v.attributes, [attrName]: value } 
+    setVariants(variants.map((v, i) => i === idx ? {
+      ...v,
+      attributes: { ...v.attributes, [attrName]: value }
     } : v));
   };
 
@@ -274,48 +275,88 @@ export default function UpdateProductPage() {
 
   // Validate form
   const validateForm = () => {
+    console.log("Bắt đầu validate form");
+    const errors: string[] = [];
+    
+    console.log("Dữ liệu form:", {
+      productName,
+      brandId,
+      categoryId,
+      thumbnailUrl,
+      variantsCount: variants.length
+    });
+
     if (!productName.trim()) {
-      addToast({ title: "Thiếu thông tin", description: "Vui lòng nhập tên sản phẩm", color: "warning" });
-      return false;
+      console.log("Lỗi: Thiếu tên sản phẩm");
+      errors.push("Vui lòng nhập tên sản phẩm");
     }
     if (!brandId) {
-      addToast({ title: "Thiếu thông tin", description: "Vui lòng chọn thương hiệu", color: "warning" });
-      return false;
+      console.log("Lỗi: Thiếu thương hiệu");
+      errors.push("Vui lòng chọn thương hiệu");
     }
     if (!categoryId) {
-      addToast({ title: "Thiếu thông tin", description: "Vui lòng chọn danh mục", color: "warning" });
-      return false;
+      console.log("Lỗi: Thiếu danh mục");
+      errors.push("Vui lòng chọn danh mục");
     }
     if (!thumbnailUrl) {
-      addToast({ title: "Thiếu thông tin", description: "Vui lòng upload ảnh đại diện sản phẩm", color: "warning" });
-      return false;
+      console.log("Lỗi: Thiếu ảnh đại diện");
+      errors.push("Vui lòng upload ảnh đại diện sản phẩm");
     }
     if (variants.length === 0) {
-      addToast({ title: "Thiếu thông tin", description: "Vui lòng thêm ít nhất một biến thể sản phẩm", color: "warning" });
-      return false;
+      console.log("Lỗi: Không có biến thể");
+      errors.push("Vui lòng thêm ít nhất một biến thể sản phẩm");
     }
-    
+
     // Kiểm tra từng biến thể
     for (let i = 0; i < variants.length; i++) {
       const v = variants[i];
+      console.log(`Kiểm tra biến thể #${i + 1}:`, v);
+
       if (!v.sku || !v.price || !v.stockLevel || !v.imageUrl) {
-        addToast({ 
-          title: "Thiếu thông tin", 
-          description: `Vui lòng nhập đầy đủ thông tin cho biến thể #${i + 1}`, 
-          color: "warning" 
-        });
-        return false;
+        console.log(`Lỗi: Biến thể #${i + 1} thiếu thông tin`);
+        errors.push(`Vui lòng nhập đầy đủ thông tin cho biến thể #${i + 1}`);
+      }
+
+      // Kiểm tra giá trị số
+      if (isNaN(Number(v.price)) || Number(v.price) <= 0) {
+        console.log(`Lỗi: Giá biến thể #${i + 1} không hợp lệ`);
+        errors.push(`Giá của biến thể #${i + 1} phải lớn hơn 0`);
+      }
+
+      if (isNaN(Number(v.stockLevel)) || Number(v.stockLevel) < 0) {
+        console.log(`Lỗi: Số lượng tồn kho biến thể #${i + 1} không hợp lệ`);
+        errors.push(`Số lượng tồn kho của biến thể #${i + 1} không được âm`);
+      }
+
+      if (isNaN(Number(v.weight)) || Number(v.weight) < 0) {
+        console.log(`Lỗi: Trọng lượng biến thể #${i + 1} không hợp lệ`);
+        errors.push(`Trọng lượng của biến thể #${i + 1} không được âm`);
       }
     }
+
+    setValidationErrors(errors);
     
+    if (errors.length > 0) {
+      setFormError(errors[0]); // Hiển thị lỗi đầu tiên
+      return false;
+    }
+
+    console.log("Form validation thành công");
     setFormError(null);
+    setValidationErrors([]);
     return true;
   };
 
   // Submit form
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log("Bắt đầu submit form");
     e.preventDefault();
+    
     if (!validateForm() || isSubmitting || !authToken) {
+      console.log("Form validation failed:", {
+        isSubmitting,
+        hasAuthToken: !!authToken
+      });
       if (!authToken) {
         addToast({ title: "Lỗi", description: "Phiên đăng nhập hết hạn", color: "danger" });
       }
@@ -323,6 +364,7 @@ export default function UpdateProductPage() {
     }
 
     setIsSubmitting(true);
+    console.log("Bắt đầu gửi request");
 
     try {
       // Chuẩn hóa dữ liệu biến thể
@@ -337,7 +379,7 @@ export default function UpdateProductPage() {
           };
         }).filter(attr => attr.attributeId !== null);
 
-        return {
+        const variant = {
           ...(v.variantId ? { variantId: v.variantId } : {}), // Chỉ gửi variantId nếu có
           sku: v.sku,
           price: Number(v.price),
@@ -346,6 +388,9 @@ export default function UpdateProductPage() {
           imageUrl: v.imageUrl,
           attributes: attributeEntries
         };
+        
+        console.log("Variant payload:", JSON.stringify(variant, null, 2));
+        return variant;
       });
 
       const payload = {
@@ -362,7 +407,7 @@ export default function UpdateProductPage() {
 
       console.log("Dữ liệu gửi đi:", JSON.stringify(payload, null, 2));
 
-      const response = await fetch(`http://localhost:8080/api/products/${productId}`, {
+      const response = await fetch(`http://localhost:8080/api/products`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -371,25 +416,29 @@ export default function UpdateProductPage() {
         body: JSON.stringify(payload)
       });
 
+      console.log("Response status:", response.status);
+      const responseData = await response.json();
+      console.log("Response data:", responseData);
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
+        const errorData = responseData;
         throw new Error(errorData?.message || `HTTP error! Status: ${response.status}`);
       }
 
-      addToast({ 
-        title: "Thành công", 
-        description: "Cập nhật sản phẩm thành công!", 
-        color: "success" 
+      addToast({
+        title: "Thành công",
+        description: "Cập nhật sản phẩm thành công!",
+        color: "success"
       });
-      
+
       setTimeout(() => router.push("/admin/product_management"), 1500);
     } catch (err: any) {
       console.error("Lỗi khi cập nhật sản phẩm:", err);
       setFormError(err.message || "Không thể cập nhật sản phẩm. Đã xảy ra lỗi không mong muốn.");
-      addToast({ 
-        title: "Lỗi", 
-        description: err.message || "Không thể cập nhật sản phẩm", 
-        color: "danger" 
+      addToast({
+        title: "Lỗi",
+        description: err.message || "Không thể cập nhật sản phẩm",
+        color: "danger"
       });
     } finally {
       setIsSubmitting(false);
@@ -425,7 +474,12 @@ export default function UpdateProductPage() {
 
   return (
     <Card className="w-full max-w-4xl mx-auto my-10">
-      <form onSubmit={handleSubmit}>
+      <form 
+        onSubmit={(e) => {
+          console.log("Form submitted");
+          handleSubmit(e);
+        }}
+      >
         <CardHeader className="flex gap-3">
           <div className="flex flex-col">
             <p className="text-2xl font-bold">Cập nhật sản phẩm</p>
@@ -437,18 +491,18 @@ export default function UpdateProductPage() {
           {/* Thông tin cơ bản */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Thông tin cơ bản</h3>
-            
-            <Input 
-              label="Tên sản phẩm" 
-              value={productName} 
-              onChange={e => setProductName(e.target.value)} 
-              isRequired 
+
+            <Input
+              label="Tên sản phẩm"
+              value={productName}
+              onChange={e => setProductName(e.target.value)}
+              isRequired
             />
-            
-            <Textarea 
-              label="Mô tả sản phẩm" 
-              value={description} 
-              onChange={e => setDescription(e.target.value)} 
+
+            <Textarea
+              label="Mô tả sản phẩm"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -548,9 +602,9 @@ export default function UpdateProductPage() {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-medium">Biến thể sản phẩm</h3>
-              <Button 
-                color="primary" 
-                size="sm" 
+              <Button
+                color="primary"
+                size="sm"
                 onClick={addVariant}
                 startContent={<Plus size={16} />}
               >
@@ -568,9 +622,9 @@ export default function UpdateProductPage() {
                   <Card key={idx} className="p-4 border border-gray-200">
                     <div className="flex justify-between items-center mb-4">
                       <h4 className="font-medium">Biến thể #{idx + 1}</h4>
-                      <Button 
-                        color="danger" 
-                        size="sm" 
+                      <Button
+                        color="danger"
+                        size="sm"
                         variant="light"
                         isIconOnly
                         onClick={() => removeVariant(idx)}
@@ -660,17 +714,41 @@ export default function UpdateProductPage() {
             )}
           </div>
 
-          {formError && (
-            <div className="text-red-600 p-3 bg-red-100 border border-red-300 rounded-md" role="alert">
-              {formError}
+          {/* Hiển thị thông báo lỗi */}
+          {validationErrors.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">Có lỗi xảy ra</h3>
+                  <div className="mt-2 text-sm text-red-700">
+                    <ul className="list-disc pl-5 space-y-1">
+                      {validationErrors.map((error, index) => (
+                        <li key={index}>{error}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </CardBody>
         <Divider />
-        <CardFooter className="p-5 flex justify-end">
-          <Button 
-            color="success" 
-            type="submit" 
+        <CardFooter className="p-5 flex justify-end gap-3">
+          <Button
+            color="default"
+            type="button"
+            onClick={() => router.push("/admin/product_management")}
+          >
+            Quay lại
+          </Button>
+          <Button
+            color="success"
+            type="submit"
             isDisabled={isSubmitting || status !== "authenticated"}
           >
             {isSubmitting ? "Đang xử lý..." : "Lưu thay đổi"}

@@ -1,4 +1,4 @@
-package org.yellowcat.backend.product;
+package org.yellowcat.backend.product.attributevalue;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
