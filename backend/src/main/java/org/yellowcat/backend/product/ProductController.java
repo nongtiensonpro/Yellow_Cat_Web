@@ -53,15 +53,15 @@ public class ProductController {
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('Admin_Web')")
-    public ResponseEntity<String> createProduct(@RequestBody ProductWithVariantsRequestDTO productDto) {
+    public ResponseEntity<?> createProduct(@RequestBody ProductWithVariantsRequestDTO productDto) {
         productService.createProduct(productDto);
-        return ResponseEntity.ok("Product created successfully!");
+        return ResponseEntityBuilder.success("Product created successfully!");
     }
 
     @PutMapping
     @PreAuthorize("hasAnyAuthority('Admin_Web')")
-    public ResponseEntity<String> updateProduct(@RequestBody ProductWithVariantsUpdateRequestDTO productDto) {
+    public ResponseEntity<?> updateProduct(@RequestBody ProductWithVariantsUpdateRequestDTO productDto) {
         productService.updateProduct(productDto);
-        return ResponseEntity.ok("Product updated successfully!");
+        return ResponseEntityBuilder.success("Product updated successfully!");
     }
 }

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import Link from 'next/link';
-import Image from 'next/image';
 import {CldImage} from "next-cloudinary";
 
 interface Product {
