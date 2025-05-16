@@ -61,7 +61,7 @@ public class Product {
     @Column(name = "is_active")
     private Boolean isActive;
 
-    @OneToMany(mappedBy = "product")
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
     private List<ProductVariant> variants;
 
     @OneToMany(mappedBy = "product")
