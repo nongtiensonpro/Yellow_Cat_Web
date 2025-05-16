@@ -1,10 +1,12 @@
-package org.yellowcat.backend.product;
+package org.yellowcat.backend.product.productvariant;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.yellowcat.backend.product.Product;
+import org.yellowcat.backend.product.variant.VariantAttribute;
 
 import java.math.BigDecimal;
 import java.util.List;

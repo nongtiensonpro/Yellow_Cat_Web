@@ -1,7 +1,9 @@
-package org.yellowcat.backend.product;
+package org.yellowcat.backend.product.productattribute;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import org.yellowcat.backend.product.Product;
+import org.yellowcat.backend.product.attributevalue.AttributeValue;
 
 @Data
 @Entity
@@ -19,4 +21,4 @@ public class ProductAttribute {
     @ManyToOne
     @JoinColumn(name = "attribute_value_id")
     private AttributeValue attributeValue;
-} 
+}

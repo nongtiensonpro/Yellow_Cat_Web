@@ -10,6 +10,8 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.yellowcat.backend.product.brand.Brand;
 import org.yellowcat.backend.product.category.Category;
+import org.yellowcat.backend.product.productattribute.ProductAttribute;
+import org.yellowcat.backend.product.productvariant.ProductVariant;
 
 import java.time.Instant;
 import java.util.List;

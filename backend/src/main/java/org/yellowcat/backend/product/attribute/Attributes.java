@@ -3,7 +3,7 @@ package org.yellowcat.backend.product.attribute;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.yellowcat.backend.product.AttributeValue;
+import org.yellowcat.backend.product.attributevalue.AttributeValue;
 
 import java.util.List;
 
