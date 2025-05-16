@@ -99,8 +99,6 @@ export default function UpdateProductPage() {
   const [brandId, setBrandId] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [isActive, setIsActive] = useState(true);
-  const [thumbnail, setThumbnail] = useState<any>(null);
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [variants, setVariants] = useState<VariantInput[]>([]);
   const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -151,7 +149,6 @@ export default function UpdateProductPage() {
             setBrandId(data.data.brandId.toString());
             setCategoryId(data.data.categoryId.toString());
             setIsActive(data.data.isActive);
-            setThumbnailUrl(data.data.thumbnail);
 
             // Parse thuộc tính sản phẩm
             if (data.data.productAttributes && data.data.productAttributes.length > 0) {
@@ -306,7 +303,6 @@ export default function UpdateProductPage() {
       productName,
       brandId,
       categoryId,
-      thumbnailUrl,
       variantsCount: variants.length
     });
 
@@ -321,10 +317,6 @@ export default function UpdateProductPage() {
     if (!categoryId) {
       console.log("Lỗi: Thiếu danh mục");
       errors.push("Vui lòng chọn danh mục");
-    }
-    if (!thumbnailUrl) {
-      console.log("Lỗi: Thiếu ảnh đại diện");
-      errors.push("Vui lòng upload ảnh đại diện sản phẩm");
     }
     if (variants.length === 0) {
       console.log("Lỗi: Không có biến thể");
@@ -594,34 +586,6 @@ export default function UpdateProductPage() {
                 </label>
               </div>
             </div>
-
-            <div>
-              <p className="mb-2 text-sm font-medium text-gray-700">
-                Ảnh đại diện sản phẩm <span className="text-red-500">*</span>
-              </p>
-              <CldUploadButton
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition duration-200 mb-4"
-                uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "YellowCatWeb"}
-                onSuccess={(result, { widget }) => {
-                  handleThumbnailUpload(result);
-                  widget.close();
-                }}
-              >
-                {thumbnailUrl ? "Thay đổi ảnh đại diện" : "Tải lên ảnh đại diện"}
-              </CldUploadButton>
-
-              {thumbnailUrl && (
-                <div className="mt-2">
-                  <CldImage
-                    width={150}
-                    height={150}
-                    src={thumbnailUrl}
-                    alt="Ảnh đại diện sản phẩm"
-                    className="object-cover border rounded-md shadow-sm"
-                  />
-                </div>
-              )}
-            </div>
           </div>
 
           <Divider />
@@ -743,7 +707,7 @@ export default function UpdateProductPage() {
           </div>
 
           {/* Thêm phần thuộc tính sản phẩm */}
-          <div className="space-y-4">
+       {/* <div className="space-y-4">
             <h3 className="text-lg font-medium">Thuộc tính sản phẩm</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {attributes.map(attr => (
@@ -760,7 +724,7 @@ export default function UpdateProductPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
 
           {/* Hiển thị thông báo lỗi */}
           {validationErrors.length > 0 && (
