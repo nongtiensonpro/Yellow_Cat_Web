@@ -328,6 +328,7 @@ public class ProductService {
             variantAttributeRepository.deleteByVariantId(old.getId());
         }
         productVariantRepository.deleteAll(oldVariants);
+        productVariantRepository.flush();
 
         // 5. Cache AttributeValue
         Map<String, AttributeValue> attributeValueCache = new HashMap<>();
