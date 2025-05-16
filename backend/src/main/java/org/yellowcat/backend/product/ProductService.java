@@ -23,10 +23,7 @@ import org.yellowcat.backend.product.variant.VariantAttributeRepository;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class ProductService {
@@ -321,73 +318,115 @@ public class ProductService {
         product.setCategory(category);
         product = productRepository.save(product);
 
-        // 4. Xóa các thuộc tính và biến thể cũ
+        // 4. Xóa thuộc tính cũ của sản phẩm (vì mình xử lý lại từ đầu)
         productAttributeRepository.deleteByProductId(product.getId());
-        List<ProductVariant> oldVariants = productVariantRepository.findByProductId(product.getId());
-        for (ProductVariant old : oldVariants) {
-            variantAttributeRepository.deleteByVariantId(old.getId());
-        }
-        productVariantRepository.deleteAll(oldVariants);
-        productVariantRepository.flush();
 
-        // 5. Cache AttributeValue
+        // 5. Cache AttributeValue để tiết kiệm truy vấn
         Map<String, AttributeValue> attributeValueCache = new HashMap<>();
 
         // 6. Xử lý thuộc tính chung của sản phẩm
-        for (ProductWithVariantsUpdateRequestDTO.ProductAttributeDTO productAttributeDTO : productDto.getProductAttributes()) {
-            for (ProductWithVariantsUpdateRequestDTO.AttributeDTO attrDTO : productAttributeDTO.getAttributes()) {
-                String key = attrDTO.getAttributeId() + "_" + attrDTO.getValue();
-                AttributeValue value = attributeValueCache.get(key);
+        if (productDto.getProductAttributes() != null) {
+            for (ProductWithVariantsUpdateRequestDTO.ProductAttributeDTO productAttributeDTO : productDto.getProductAttributes()) {
+                for (ProductWithVariantsUpdateRequestDTO.AttributeDTO attrDTO : productAttributeDTO.getAttributes()) {
+                    String key = attrDTO.getAttributeId() + "_" + attrDTO.getValue();
+                    AttributeValue value = attributeValueCache.get(key);
 
-                if (value == null) {
-                    value = attributeValueRepository
-                            .findByAttributeIdAndValue(attrDTO.getAttributeId(), attrDTO.getValue())
-                            .orElseGet(() -> {
-                                Attributes attribute = attributesRepository.findById(attrDTO.getAttributeId())
-                                        .orElseThrow(() -> new RuntimeException("Attribute not found: " + attrDTO.getAttributeId()));
+                    if (value == null) {
+                        value = attributeValueRepository
+                                .findByAttributeIdAndValue(attrDTO.getAttributeId(), attrDTO.getValue())
+                                .orElseGet(() -> {
+                                    Attributes attribute = attributesRepository.findById(attrDTO.getAttributeId())
+                                            .orElseThrow(() -> new RuntimeException("Attribute not found: " + attrDTO.getAttributeId()));
+                                    AttributeValue newVal = new AttributeValue();
+                                    newVal.setAttribute(attribute);
+                                    newVal.setValue(attrDTO.getValue());
+                                    return attributeValueRepository.save(newVal);
+                                });
+                        attributeValueCache.put(key, value);
+                    }
+
+                    ProductAttribute productAttribute = new ProductAttribute();
+                    productAttribute.setProduct(product);
+                    productAttribute.setAttributeValue(value);
+                    productAttributeRepository.save(productAttribute);
+                }
+            }
+        }
+
+        // 7. Xử lý biến thể
+        List<ProductVariant> existingVariants = productVariantRepository.findByProductId(product.getId());
+
+        // Tạo Map để dễ lookup theo sku
+        Map<String, ProductVariant> existingVariantsMap = new HashMap<>();
+        for (ProductVariant variant : existingVariants) {
+            existingVariantsMap.put(variant.getSku(), variant);
+        }
+
+        // SKU của biến thể mới trong request
+        Set<String> newVariantSkus = new HashSet<>();
+
+        if (productDto.getVariants() != null) {
+            for (ProductWithVariantsUpdateRequestDTO.VariantDTO variantDto : productDto.getVariants()) {
+                newVariantSkus.add(variantDto.getSku());
+
+                ProductVariant variant = existingVariantsMap.get(variantDto.getSku());
+
+                if (variant == null) {
+                    // Nếu biến thể mới chưa tồn tại thì tạo mới
+                    variant = new ProductVariant();
+                    variant.setProduct(product);
+                    variant.setSku(variantDto.getSku());
+                }
+
+                // Cập nhật thông tin biến thể
+                variant.setPrice(variantDto.getPrice());
+                variant.setStockLevel(variantDto.getStockLevel());
+                variant.setImageUrl(variantDto.getImageUrl());
+
+                variant = productVariantRepository.save(variant);
+
+                // Xóa thuộc tính của biến thể này trước khi thêm lại
+                variantAttributeRepository.deleteByVariantId(variant.getId());
+
+                // Thêm lại thuộc tính biến thể
+                if (variantDto.getAttributes() != null) {
+                    for (ProductWithVariantsUpdateRequestDTO.AttributeDTO attributeDto : variantDto.getAttributes()) {
+                        String key = attributeDto.getAttributeId() + "_" + attributeDto.getValue();
+                        AttributeValue attributeValue = attributeValueCache.get(key);
+
+                        if (attributeValue == null) {
+                            attributeValue = attributeValueRepository.findByAttributeIdAndValue(
+                                    attributeDto.getAttributeId(),
+                                    attributeDto.getValue()
+                            ).orElseGet(() -> {
+                                Attributes attribute = attributesRepository.findById(attributeDto.getAttributeId())
+                                        .orElseThrow(() -> new RuntimeException("Attribute not found: " + attributeDto.getAttributeId()));
                                 AttributeValue newVal = new AttributeValue();
                                 newVal.setAttribute(attribute);
-                                newVal.setValue(attrDTO.getValue());
+                                newVal.setValue(attributeDto.getValue());
                                 return attributeValueRepository.save(newVal);
                             });
-                    attributeValueCache.put(key, value);
-                }
+                            attributeValueCache.put(key, attributeValue);
+                        }
 
-                ProductAttribute productAttribute = new ProductAttribute();
-                productAttribute.setProduct(product);
-                productAttribute.setAttributeValue(value);
-                productAttributeRepository.save(productAttribute);
+                        VariantAttribute variantAttribute = new VariantAttribute();
+                        variantAttribute.setVariant(variant);
+                        variantAttribute.setAttributeValue(attributeValue);
+                        variantAttributeRepository.save(variantAttribute);
+                    }
+                }
             }
         }
 
-        // 7. Xử lý biến thể mới
-        for (ProductWithVariantsUpdateRequestDTO.VariantDTO variantDto : productDto.getVariants()) {
-            ProductVariant variant = new ProductVariant();
-            variant.setProduct(product);
-            variant.setSku(variantDto.getSku());
-            variant.setPrice(variantDto.getPrice());
-            variant.setStockLevel(variantDto.getStockLevel());
-            variant.setImageUrl(variantDto.getImageUrl());
-
-            variant = productVariantRepository.save(variant);
-
-            for (ProductWithVariantsUpdateRequestDTO.AttributeDTO attributeDto : variantDto.getAttributes()) {
-                String key = attributeDto.getAttributeId() + "_" + attributeDto.getValue();
-                AttributeValue attributeValue = attributeValueCache.get(key);
-
-                if (attributeValue == null) {
-                    attributeValue = attributeValueRepository.findByAttributeIdAndValue(
-                            attributeDto.getAttributeId(),
-                            attributeDto.getValue()
-                    ).orElseThrow(() -> new RuntimeException("Attribute value not found for variant: " + key));
-                    attributeValueCache.put(key, attributeValue);
-                }
-
-                VariantAttribute variantAttribute = new VariantAttribute();
-                variantAttribute.setVariant(variant);
-                variantAttribute.setAttributeValue(attributeValue);
-                variantAttributeRepository.save(variantAttribute);
+        // 8. Xóa biến thể cũ không còn trong danh sách mới
+        for (ProductVariant oldVariant : existingVariants) {
+            if (!newVariantSkus.contains(oldVariant.getSku())) {
+                // Xóa thuộc tính của biến thể
+                variantAttributeRepository.deleteByVariantId(oldVariant.getId());
+                // Xóa biến thể
+                productVariantRepository.delete(oldVariant);
             }
         }
+        productVariantRepository.flush();
     }
 }
