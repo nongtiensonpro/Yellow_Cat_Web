@@ -218,6 +218,14 @@ public class ProductService {
         return productDetail;
     }
 
+    /**
+     * Creates a new product along with its variants and associated attributes.
+     *
+     * The method ensures the referenced brand and category exist, creates the product as active, processes and caches attribute values to minimize database queries, and creates product-level and variant-level attributes. SKUs for variants are auto-generated if missing, and all entities are persisted within a transactional context.
+     *
+     * @param productDto the product data including variants and attributes to be created
+     * @throws RuntimeException if the brand, category, or required attributes are not found
+     */
     @Transactional
     public void createProduct(ProductWithVariantsRequestDTO productDto) {
         // Tìm Brand & Category (có thể throw nếu không tồn tại)
@@ -304,6 +312,15 @@ public class ProductService {
         }
     }
 
+    /**
+     * Updates an existing product and its variants, including attributes and related entities.
+     *
+     * Replaces all product-level and variant-level attributes with those provided in the update request.
+     * Adds new variants, updates existing ones, and removes variants not present in the update.
+     *
+     * @param productDto the product update request containing updated product details, attributes, and variants
+     * @throws RuntimeException if the product, brand, category, or any referenced attribute does not exist
+     */
     @Transactional
     public void updateProduct(ProductWithVariantsUpdateRequestDTO productDto) {
         // 1. Tìm Product cũ
@@ -436,6 +453,14 @@ public class ProductService {
         productVariantRepository.flush();
     }
 
+    /**
+     * Generates a unique SKU string for a product by combining the product ID with a random 6-character code.
+     *
+     * The generated SKU is guaranteed to be unique among all product variants.
+     *
+     * @param productId the ID of the product for which to generate the SKU
+     * @return a unique SKU string in the format "SKU-{productId}-{random6chars}"
+     */
     private String generateUniqueSku(Integer productId) {
         String sku;
         do {
