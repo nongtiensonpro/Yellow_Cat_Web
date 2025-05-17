@@ -232,6 +232,7 @@ public class ProductService {
         product.setDescription(productDto.getDescription());
         product.setBrand(brand);
         product.setCategory(category);
+        product.setIsActive(true);
         product = productRepository.save(product);
 
         // Cache AttributeValue đã xử lý để không truy lại DB
@@ -244,7 +245,6 @@ public class ProductService {
                 AttributeValue value = attributeValueCache.get(key);
 
                 if (value == null) {
-                    // Tìm hoặc tạo AttributeValue
                     value = attributeValueRepository
                             .findByAttributeIdAndValue(attrDTO.getAttributeId(), attrDTO.getValue())
                             .orElseGet(() -> {
@@ -258,7 +258,6 @@ public class ProductService {
                     attributeValueCache.put(key, value);
                 }
 
-                // Tạo ProductAttribute
                 ProductAttribute productAttribute = new ProductAttribute();
                 productAttribute.setProduct(product);
                 productAttribute.setAttributeValue(value);
@@ -270,10 +269,17 @@ public class ProductService {
         for (ProductWithVariantsRequestDTO.VariantDTO variantDto : productDto.getVariants()) {
             ProductVariant variant = new ProductVariant();
             variant.setProduct(product);
-            variant.setSku(variantDto.getSku());
+
+            // Tự sinh SKU nếu thiếu
+            String sku = (variantDto.getSku() == null || variantDto.getSku().isBlank())
+                    ? generateUniqueSku(product.getId())
+                    : variantDto.getSku();
+            variant.setSku(sku);
+
             variant.setPrice(variantDto.getPrice());
             variant.setStockLevel(variantDto.getStockLevel());
             variant.setImageUrl(variantDto.getImageUrl());
+            variant.setWeight(variantDto.getWeight());
 
             variant = productVariantRepository.save(variant);
 
@@ -283,7 +289,6 @@ public class ProductService {
                 AttributeValue attributeValue = attributeValueCache.get(key);
 
                 if (attributeValue == null) {
-                    // Tìm AttributeValue (chỉ tìm, không tạo mới ở đây để tránh sai logic)
                     attributeValue = attributeValueRepository.findByAttributeIdAndValue(
                             attributeDto.getAttributeId(),
                             attributeDto.getValue()
@@ -382,6 +387,7 @@ public class ProductService {
                 variant.setPrice(variantDto.getPrice());
                 variant.setStockLevel(variantDto.getStockLevel());
                 variant.setImageUrl(variantDto.getImageUrl());
+                variant.setWeight(variantDto.getWeight());
 
                 variant = productVariantRepository.save(variant);
 
@@ -428,5 +434,13 @@ public class ProductService {
             }
         }
         productVariantRepository.flush();
+    }
+
+    private String generateUniqueSku(Integer productId) {
+        String sku;
+        do {
+            sku = "SKU-" + productId + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        } while (productVariantRepository.existsBySku(sku));
+        return sku;
     }
 }
