@@ -27,6 +27,14 @@ interface VariantInput {
     attributes: { [key: string]: string };
 }
 
+// Thêm interface mới cho productAttributes
+interface ProductAttribute {
+    attributes: {
+        attributeId: number;
+        value: string;
+    }[];
+}
+
 export default function AddProductPage() {
     const router = useRouter();
     const { data: session, status } = useSession();
@@ -36,13 +44,15 @@ export default function AddProductPage() {
     const [description, setDescription] = useState("");
     const [brandId, setBrandId] = useState("");
     const [categoryId, setCategoryId] = useState("");
-    const [thumbnail, setThumbnail] = useState<any>(null);
     const [variants, setVariants] = useState<VariantInput[]>([]);
     const [attributes, setAttributes] = useState<Attribute[]>([]);
     const [brands, setBrands] = useState<Brand[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Cập nhật state
+    const [productAttributes, setProductAttributes] = useState<ProductAttribute[]>([]);
 
     // Lấy dữ liệu brands, categories, attributes
     useEffect(() => {
@@ -100,10 +110,6 @@ export default function AddProductPage() {
             setFormError("Vui lòng chọn danh mục.");
             return false;
         }
-        if (!thumbnail) {
-            setFormError("Vui lòng upload ảnh đại diện sản phẩm.");
-            return false;
-        }
         if (variants.length === 0) {
             setFormError("Vui lòng thêm ít nhất một biến thể sản phẩm.");
             return false;
@@ -145,10 +151,15 @@ export default function AddProductPage() {
                 description: description.trim(),
                 brandId: Number(brandId),
                 categoryId: Number(categoryId),
-                thumbnail: thumbnail.public_id,
+                productAttributes: [{
+                    attributes: Object.entries(variants[0].attributes).map(([attrId, value]) => ({
+                        attributeId: Number(attrId),
+                        value
+                    }))
+                }],
                 variants: variantPayload
             };
-            console.error("> Sản phẩm được tạo mới: ", JSON.stringify(payload, null, 2));
+            console.log("> Sản phẩm được tạo mới: ", JSON.stringify(payload, null, 2));
             const response = await fetch("http://localhost:8080/api/products", {
                 method: "POST",
                 headers: {
@@ -211,21 +222,6 @@ export default function AddProductPage() {
                             <option value="">-- Chọn danh mục --</option>
                             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
-                    </div>
-
-                    <div>
-                        <p className="mb-2 text-sm font-medium text-gray-700">Ảnh đại diện sản phẩm <span className="text-red-500">*</span></p>
-                        <CldUploadButton
-                            uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "YellowCatWeb"}
-                            onSuccess={(result, { widget }) => { setThumbnail(result.info); widget.close(); }}
-                        >
-                            Chọn ảnh để upload
-                        </CldUploadButton>
-                        {thumbnail && (
-                            <div className="mt-2">
-                                <CldImage width={120} height={120} src={thumbnail.public_id} alt="Ảnh đại diện" className="object-cover rounded" />
-                            </div>
-                        )}
                     </div>
 
                     <Divider />
