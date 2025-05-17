@@ -68,12 +68,18 @@ public class Product {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
     private List<ProductAttribute> productAttributes;
 
+    /**
+     * Sets the creation and last update timestamps to the current instant before the entity is persisted.
+     */
     @PrePersist
     protected void onCreate() {
         createdAt = Instant.now();
         updatedAt = Instant.now();
     }
 
+    /**
+     * Updates the {@code updatedAt} timestamp to the current instant before the entity is updated.
+     */
     @PreUpdate
     protected void onUpdate() {
         updatedAt = Instant.now();
