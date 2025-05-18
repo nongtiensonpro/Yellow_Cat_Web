@@ -4,7 +4,7 @@ services:
   postgres:
     image: postgres:17.4
     environment:
-      POSTGRES_PASSWORD: changemeinprod
+      POSTGRES_PASSWORD: namcam04a
       # Thêm biến môi trường giới hạn bộ nhớ
       POSTGRES_SHARED_BUFFERS: 128MB
       POSTGRES_WORK_MEM: 4MB
@@ -40,7 +40,7 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: admin
       KC_DB: postgres
       KC_DB_USERNAME: postgres
-      KC_DB_PASSWORD: changemeinprod
+      KC_DB_PASSWORD: namcam04a
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_HOSTNAME: localhost
       KC_FEATURES: token-exchange,admin-fine-grained-authz

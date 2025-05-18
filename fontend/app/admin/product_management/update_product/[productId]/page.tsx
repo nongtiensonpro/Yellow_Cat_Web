@@ -7,6 +7,8 @@ import {useState, useEffect} from "react";
 import {useRouter, useParams} from "next/navigation";
 import {useSession} from "next-auth/react";
 import {Trash2, Plus} from "lucide-react";
+import AddAttributeModal from '../../../product_management/addattributemodel/page';
+
 
 interface ProductVariant {
     variantId: number;
@@ -109,6 +111,7 @@ export default function UpdateProductPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [deletedVariantIds, setDeletedVariantIds] = useState<number[]>([]);
     const [productAttributes, setProductAttributes] = useState<{ [key: string]: string }>({});
+    const [showModal, setShowModal] = useState(false);
 
     // Lấy token từ session
     const authToken = session?.accessToken;
@@ -286,8 +289,15 @@ const handleVariantAttributeChange = (idx: number, attrName: string, value: stri
 // Xử lý upload ảnh biến thể
 const handleVariantImageUpload = (idx: number, result: any) => {
     if (result.event === "success" && result.info) {
-        handleVariantChange(idx, 'image', result.info);
-        handleVariantChange(idx, 'imageUrl', result.info.public_id);
+        setVariants(prevVariants => {
+            const updatedVariants = [...prevVariants];
+            updatedVariants[idx] = {
+                ...updatedVariants[idx],
+                image: result.info,
+                imageUrl: result.info.public_id
+            };
+            return updatedVariants;
+        });
     }
 };
 
@@ -389,24 +399,26 @@ const handleSubmit = async (e: React.FormEvent) => {
 
     try {
         // Chuẩn hóa dữ liệu biến thể
+        // Chuẩn hóa dữ liệu biến thể
         const variantPayload = variants.map(v => {
-            // Chuyển đổi thuộc tính từ object sang mảng
-            const attributeEntries = Object.entries(v.attributes).map(([attrName, value]) => {
-                // Tìm ID của thuộc tính dựa trên tên
-                const attribute = attributes.find(a => a.attributeName === attrName);
-                return {
-                    attributeId: attribute ? attribute.id : null,
-                    value: value
-                };
-            }).filter(attr => attr.attributeId !== null);
-
-            return {
-                sku: v.sku,
-                price: Number(v.price),
-                stockLevel: Number(v.stockLevel),
-                imageUrl: v.imageUrl,
-                attributes: attributeEntries
-            };
+        // Chuyển đổi thuộc tính từ object sang mảng
+        const attributeEntries = Object.entries(v.attributes).map(([attrName, value]) => {
+        // Tìm ID của thuộc tính dựa trên tên
+        const attribute = attributes.find(a => a.attributeName === attrName);
+        return {
+        attributeId: attribute ? attribute.id : null,
+        value: value
+        };
+        }).filter(attr => attr.attributeId !== null);
+        
+        return {
+        sku: v.sku,
+        price: Number(v.price),
+        stockLevel: Number(v.stockLevel),
+        imageUrl: v.imageUrl,
+        weight: Number(v.weight), // Thêm trường weight
+        attributes: attributeEntries
+        };
         });
 
         // Chuẩn bị dữ liệu gửi đi theo đúng format API yêu cầu
@@ -416,18 +428,15 @@ const handleSubmit = async (e: React.FormEvent) => {
             description: description.trim(),
             brandId: Number(brandId),
             categoryId: Number(categoryId),
-            productAttributes: [
-                {
-                    attributes: Object.entries(productAttributes).map(([attrName, value]) => {
-                        const attribute = attributes.find(a => a.attributeName === attrName);
-                        return {
-                            attributeId: attribute ? attribute.id : null,
-                            value: value
-                        };
-                    }).filter(attr => attr.attributeId !== null)
-                }
-            ],
-            variants: variantPayload
+            productAttributes: Object.entries(productAttributes).map(([attrName, value]) => {
+                const attribute = attributes.find(a => a.attributeName === attrName);
+                return {
+                    attributeId: attribute ? attribute.id : null,
+                    value: value
+                };
+            }).filter(attr => attr.attributeId !== null),
+            variants: variantPayload,
+            deletedVariantIds: deletedVariantIds // Thêm danh sách variant đã xóa
         };
 
         console.log("Dữ liệu gửi đi:", JSON.stringify(payload, null, 2));
@@ -660,23 +669,55 @@ return (
                                     </div>
 
                                     <div className="mb-4">
-                                        <p className="mb-2 text-sm font-medium text-gray-700">Thuộc tính</p>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {attributes.map(attr => (
-                                                <div key={attr.id}>
-                                                    <label className="block text-sm font-medium text-gray-700">
-                                                        {attr.attributeName}
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                                        value={variant.attributes[attr.attributeName] || ''}
-                                                        onChange={e => handleVariantAttributeChange(idx, attr.attributeName, e.target.value)}
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
+  <div className="flex items-center justify-between mb-2">
+    <p className="text-sm font-medium text-gray-700">Thuộc tính</p>
+    <button
+      type="button"
+      onClick={() => setShowModal(true)}
+      className="text-sm text-blue-600 hover:underline"
+    >
+      + Thêm thuộc tính
+    </button>
+  </div>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {attributes.map(attr => (
+      <div key={attr.id}>
+        <label className="block text-sm font-medium text-gray-700">
+          {attr.attributeName}
+        </label>
+        <input
+          type="text"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          value={variant.attributes[attr.attributeName] || ''}
+          onChange={e =>
+            handleVariantAttributeChange(idx, attr.attributeName, e.target.value)
+          }
+        />
+      </div>
+    ))}
+  </div>
+</div>
+
+{/* Modal thêm thuộc tính */}
+{showModal && (
+  <AddAttributeModal
+    onClose={() => setShowModal(false)}
+    onSubmit={(name, type, values) => {
+      setAttributes(prev => [
+        ...prev,
+        {
+          id: Date.now(),
+          attributeName: name,
+          dataType: type,
+          values,
+        },
+      ]);
+      setShowModal(false);
+    }}
+  />
+)}
+
 
                                     <div>
                                         <p className="mb-2 text-sm font-medium text-gray-700">
