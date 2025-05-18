@@ -531,6 +531,27 @@
       },
       "notBefore": 0,
       "groups": []
+    },
+    {
+      "id": "9ef60cb8-506e-4b0e-8f3f-d70e64ce3043",
+      "username": "service-account-yellowcatcompanyweb",
+      "emailVerified": false,
+      "createdTimestamp": 1745575550994,
+      "enabled": true,
+      "totp": false,
+      "serviceAccountClientId": "YellowCatCompanyWeb",
+      "disableableCredentialTypes": [],
+      "requiredActions": [],
+      "realmRoles": [
+        "default-roles-yellow cat company"
+      ],
+      "clientRoles": {
+        "YellowCatCompanyWeb": [
+          "uma_protection"
+        ]
+      },
+      "notBefore": 0,
+      "groups": []
     }
   ],
   "scopeMappings": [
@@ -1010,7 +1031,7 @@
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
-      "serviceAccountsEnabled": false,
+      "serviceAccountsEnabled": true,
       "publicClient": false,
       "frontchannelLogout": true,
       "protocol": "openid-connect",
@@ -1040,6 +1061,7 @@
       "fullScopeAllowed": true,
       "nodeReRegistrationTimeout": -1,
       "defaultClientScopes": [
+        "service_account",
         "web-origins",
         "acr",
         "roles",
@@ -1792,6 +1814,29 @@
   "adminEventsEnabled": false,
   "adminEventsDetailsEnabled": false,
   "identityProviders": [
+    {
+      "alias": "facebook",
+      "displayName": "",
+      "internalId": "8dcfc304-fd0c-45b6-86a7-f82e8518ce93",
+      "providerId": "facebook",
+      "enabled": true,
+      "updateProfileFirstLoginMode": "on",
+      "trustEmail": false,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "authenticateByDefault": false,
+      "linkOnly": false,
+      "hideOnLogin": false,
+      "config": {
+        "acceptsPromptNoneForwardFromClient": "false",
+        "clientId": "595304642829553",
+        "disableUserInfo": "false",
+        "filteredByClaim": "false",
+        "syncMode": "LEGACY",
+        "clientSecret": "**********",
+        "caseSensitiveOriginalUsername": "false"
+      }
+    },
     {
       "alias": "google",
       "displayName": "",
