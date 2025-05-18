@@ -24,6 +24,7 @@ interface VariantInput {
     price: string;
     stockLevel: string;
     image: any;
+    weight: string;
     attributes: { [key: string]: string };
 }
 
@@ -78,7 +79,7 @@ export default function AddProductPage() {
 
     // Thêm biến thể mới
     const addVariant = () => {
-        setVariants([...variants, { sku: "", price: "", stockLevel: "", image: null, attributes: {} }]);
+        setVariants([...variants, { sku: "", price: "", stockLevel: "", image: null, weight: "", attributes: {} }]);
     };
 
     // Xóa biến thể
@@ -115,7 +116,7 @@ export default function AddProductPage() {
             return false;
         }
         for (const v of variants) {
-            if (!v.sku || !v.price || !v.stockLevel || !v.image) {
+            if (!v.sku || !v.price || !v.stockLevel || !v.image || !v.weight) {
                 setFormError("Vui lòng nhập đầy đủ thông tin cho mỗi biến thể.");
                 return false;
             }
@@ -140,6 +141,7 @@ export default function AddProductPage() {
                 price: Number(v.price),
                 stockLevel: Number(v.stockLevel),
                 imageUrl: v.image.public_id,
+                weight: Number(v.weight),
                 attributes: Object.entries(v.attributes).map(([attrId, value]) => ({
                     attributeId: Number(attrId),
                     value
@@ -236,6 +238,7 @@ export default function AddProductPage() {
                                     <Input label="SKU" value={variant.sku} onChange={e => handleVariantChange(idx, "sku", e.target.value)} isRequired />
                                     <Input label="Giá" type="number" value={variant.price} onChange={e => handleVariantChange(idx, "price", e.target.value)} isRequired />
                                     <Input label="Tồn kho" type="number" value={variant.stockLevel} onChange={e => handleVariantChange(idx, "stockLevel", e.target.value)} isRequired />
+                                    <Input label="Weight" type="number" value={variant.weight} onChange={e => handleVariantChange(idx, "weight", e.target.value)} isRequired />
                                 </div>
                                 <div className="flex gap-2 mb-2">
                                     {attributes.map(attr => (

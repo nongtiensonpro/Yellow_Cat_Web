@@ -323,7 +323,7 @@ public class ProductService {
         product.setCategory(category);
         product = productRepository.save(product);
 
-        // 4. Xóa thuộc tính cũ của sản phẩm (vì mình xử lý lại từ đầu)
+        // 4. Xóa thuộc tính cũ của sản phẩm
         productAttributeRepository.deleteByProductId(product.getId());
 
         // 5. Cache AttributeValue để tiết kiệm truy vấn
