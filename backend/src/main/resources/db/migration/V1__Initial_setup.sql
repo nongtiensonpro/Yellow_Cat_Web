@@ -173,17 +173,14 @@ CREATE TABLE Product_Promotions
 
 
 -- Dữ liệu mẫu cho bảng Categories
--- Thêm danh mục "Áo thể thao nam"
+-- Thêm danh mục "Giày thể thao nam"
 INSERT INTO Categories (category_name)
-VALUES ('Áo thể thao nam');
-
--- Lấy category_id vừa được tạo (Giả sử là 1)
--- SELECT category_id FROM Categories WHERE category_name = 'Áo thể thao nam'; -- (Để tham khảo)
+VALUES ('Giày thể thao nam'); -- category_id sẽ là 1 nếu bảng trống
 
 ----------------------------------------------------------------------
 
 -- Dữ liệu mẫu cho bảng Brands
--- Thêm các thương hiệu thể thao phổ biến
+-- Thêm các thương hiệu thể thao phổ biến (Giữ nguyên như cũ)
 INSERT INTO Brands (brand_name, logo_public_id, brand_info)
 VALUES ('Nike', 'YellowCatWeb/t0hqgdma141foprsckjf',
         'Nike là một tập đoàn đa quốc gia của Mỹ hoạt động trong lĩnh vực thiết kế, phát triển, sản xuất, quảng bá cũng như kinh doanh các mặt hàng giày dép, quần áo, phụ kiện, trang thiết bị và dịch vụ liên quan đến thể thao.'),
@@ -193,23 +190,18 @@ VALUES ('Nike', 'YellowCatWeb/t0hqgdma141foprsckjf',
         'Under Armour, Inc. là một công ty sản xuất trang phục thể thao và phụ kiện của Mỹ. Công ty cung cấp các sản phẩm trang phục thể thao, giày dép và phụ kiện.'),
        ('Puma', 'YellowCatWeb/n54kyijbuhmmbtzlkh2h',
         'Puma SE là một công ty đa quốc gia của Đức chuyên thiết kế và sản xuất giày dép, trang phục và phụ kiện thể thao và thông thường.');
-
--- Lấy brand_id vừa được tạo (Giả sử là 1, 2, 3, 4 tương ứng)
--- SELECT brand_id, brand_name FROM Brands; -- (Để tham khảo)
+-- brand_ids sẽ là 1, 2, 3, 4 nếu bảng trống
 
 ----------------------------------------------------------------------
 
 -- Dữ liệu mẫu cho bảng Attributes
--- Thêm các thuộc tính cơ bản cho áo thể thao
+-- Thêm các thuộc tính cơ bản cho giày thể thao
 INSERT INTO Attributes (attribute_name, data_type)
-VALUES ('Màu sắc', 'VARCHAR'),   -- Thuộc tính màu sắc
-       ('Kích cỡ', 'VARCHAR'),   -- Thuộc tính kích cỡ
-       ('Chất liệu', 'VARCHAR'), -- Thuộc tính chất liệu
-       ('image', 'VARCHAR');
--- Thuộc tính hình ảnh
-
--- Lấy attribute_id vừa được tạo (Giả sử là 1, 2, 3 tương ứng)
--- SELECT attribute_id, attribute_name FROM Attributes; -- (Để tham khảo)
+VALUES ('Màu sắc', 'VARCHAR'),   -- attribute_id = 1
+       ('Kích cỡ', 'VARCHAR'),   -- attribute_id = 2 (Kích cỡ giày dạng số)
+       ('Chất liệu', 'VARCHAR'), -- attribute_id = 3 (Chất liệu giày)
+       ('Kiểu dáng', 'VARCHAR'), -- attribute_id = 4 (Ví dụ: Chạy bộ, Tập luyện, Thời trang)
+       ('image', 'VARCHAR');    -- attribute_id = 5 (Hình ảnh)
 
 ----------------------------------------------------------------------
 
@@ -218,186 +210,149 @@ VALUES ('Màu sắc', 'VARCHAR'),   -- Thuộc tính màu sắc
 
 -- Giá trị cho Màu sắc (attribute_id = 1)
 INSERT INTO Attribute_Values (attribute_id, value)
-VALUES (1, 'Đen'),
-       (1, 'Trắng'),
-       (1, 'Xám'),
-       (1, 'Xanh Navy'),
-       (1, 'Đỏ'),
-       (1, 'Xanh Dương');
+VALUES (1, 'Đen'),        -- Giả định attribute_value_id = 1
+       (1, 'Trắng'),      -- Giả định attribute_value_id = 2
+       (1, 'Xám'),        -- Giả định attribute_value_id = 3
+       (1, 'Xanh Navy'),  -- Giả định attribute_value_id = 4
+       (1, 'Đỏ'),         -- Giả định attribute_value_id = 5
+       (1, 'Xanh Dương'); -- Giả định attribute_value_id = 6
 
 -- Giá trị cho Kích cỡ (attribute_id = 2)
 INSERT INTO Attribute_Values (attribute_id, value)
-VALUES (2, 'S'),
-       (2, 'M'),
-       (2, 'L'),
-       (2, 'XL'),
-       (2, 'XXL');
+VALUES (2, '39'),         -- Giả định attribute_value_id = 7
+       (2, '40'),         -- Giả định attribute_value_id = 8
+       (2, '41'),         -- Giả định attribute_value_id = 9
+       (2, '42'),         -- Giả định attribute_value_id = 10
+       (2, '43'),         -- Giả định attribute_value_id = 11
+       (2, '44');         -- Giả định attribute_value_id = 12
 
 -- Giá trị cho Chất liệu (attribute_id = 3)
 INSERT INTO Attribute_Values (attribute_id, value)
-VALUES (3, 'Polyester'),
-       (3, 'Cotton'),
-       (3, 'Spandex'),
-       (3, 'Nylon'),
-       (3, 'Cotton Blend');
+VALUES (3, 'Vải lưới (Mesh)'),       -- Giả định attribute_value_id = 13
+       (3, 'Da tổng hợp'),          -- Giả định attribute_value_id = 14
+       (3, 'Cao su (Rubber)'),      -- Giả định attribute_value_id = 15
+       (3, 'Boost Foam'),           -- Giả định attribute_value_id = 16
+       (3, 'React Foam'),           -- Giả định attribute_value_id = 17
+       (3, 'Da thật');              -- Giả định attribute_value_id = 18
 
--- Giá trị cho hình ảnh (attribute_id = 4)
+-- Giá trị cho Kiểu dáng (attribute_id = 4)
 INSERT INTO Attribute_Values (attribute_id, value)
-VALUES (4, 'image 1'),
-       (4, 'image 2'),
-       (4, 'image 3'),
-       (4, 'image 4'),
-       (4, 'image 5');
--- (Pha trộn Cotton)
+VALUES (4, 'Chạy bộ'),              -- Giả định attribute_value_id = 19
+       (4, 'Tập luyện'),            -- Giả định attribute_value_id = 20
+       (4, 'Thời trang'),           -- Giả định attribute_value_id = 21
+       (4, 'Bóng rổ');              -- Giả định attribute_value_id = 22
 
--- Lấy attribute_value_id vừa được tạo (Sẽ có nhiều ID)
--- SELECT attribute_value_id, value FROM Attribute_Values WHERE attribute_id = 1; -- (Để tham khảo, ví dụ cho Màu sắc)
+-- Giá trị cho image (attribute_id = 5)
+INSERT INTO Attribute_Values (attribute_id, value)
+VALUES (5, 'YellowCatWeb/shoe_image_placeholder_1'), -- Giả định attribute_value_id = 23
+       (5, 'YellowCatWeb/shoe_image_placeholder_2'), -- Giả định attribute_value_id = 24
+       (5, 'YellowCatWeb/shoe_image_placeholder_3'), -- Giả định attribute_value_id = 25
+       (5, 'YellowCatWeb/shoe_image_placeholder_4'), -- Giả định attribute_value_id = 26
+       (5, 'YellowCatWeb/shoe_image_placeholder_5'); -- Giả định attribute_value_id = 27
 
--- Ghi chú: Bạn cần biết các ID cụ thể được tạo ra ở bước này để sử dụng trong các bảng Product_Attributes và Variant_Attributes.
--- Ví dụ giả sử:
--- Màu sắc: Đen (1), Trắng (2), Xám (3), Xanh Navy (4), Đỏ (5), Xanh Dương (6)
--- Kích cỡ: S (7), M (8), L (9), XL (10), XXL (11)
--- Chất liệu: Polyester (12), Cotton (13), Spandex (14), Nylon (15), Cotton Blend (16)
--- *** LƯU Ý: CÁC ID NÀY LÀ GIẢ ĐỊNH. BẠN CẦN DÙNG ID THỰC TẾ MÀ DATABASE TẠO RA. ***
+-- *** LƯU Ý: CÁC ID TRÊN (attribute_value_id) LÀ GIẢ ĐỊNH DỰA TRÊN THỨ TỰ INSERT VÀO BẢNG TRỐNG. ***
+-- Màu sắc IDs: Đen (1), Trắng (2), Xám (3), Xanh Navy (4), Đỏ (5), Xanh Dương (6)
+-- Kích cỡ IDs: 39 (7), 40 (8), 41 (9), 42 (10), 43 (11), 44 (12)
+-- Chất liệu IDs: Vải lưới (13), Da tổng hợp (14), Cao su (15), Boost Foam (16), React Foam (17), Da thật (18)
+-- Kiểu dáng IDs: Chạy bộ (19), Tập luyện (20), Thời trang (21), Bóng rổ (22)
+-- Image IDs: placeholder_1 (23) ... placeholder_5 (27)
 
 ----------------------------------------------------------------------
 
 -- Dữ liệu mẫu cho bảng Products
--- Thêm các sản phẩm áo thể thao nam cụ thể
+-- category_id = 1 (Giày thể thao nam)
+-- brand_id: Nike=1, Adidas=2, Under Armour=3, Puma=4
 INSERT INTO Products (product_name, category_id, brand_id, description, purchases, is_active)
-VALUES ('Áo Thun Thể Thao Nike Dri-FIT Nam', 1, 1,
-        'Áo thun tập luyện nam Nike với công nghệ Dri-FIT giúp thấm hút mồ hôi, giữ cho cơ thể luôn khô ráo và thoải mái trong suốt quá trình vận động.',
-        150, TRUE),
-       ('Áo Polo Thể Thao Adidas Nam', 1, 2,
-        'Áo polo thể thao nam Adidas thiết kế thanh lịch, chất liệu thoáng khí, phù hợp cho cả hoạt động thể thao và mặc hàng ngày.',
-        120, TRUE),
-       ('Áo Ba Lỗ Tập Gym Under Armour Nam', 1, 3,
-        'Áo ba lỗ Under Armour chuyên dụng cho tập gym, thiết kế ôm vừa vặn, chất liệu co giãn tốt và nhanh khô.', 95,
-        TRUE),
-       ('Áo Thun Chạy Bộ Puma Nam', 1, 4,
-        'Áo thun chạy bộ Puma với công nghệ dryCELL giúp hút ẩm hiệu quả, trọng lượng nhẹ, mang lại cảm giác thoải mái tối đa khi chạy.',
-        80, FALSE), -- Ví dụ sản phẩm không còn kinh doanh
-       ('Áo Khoác Gió Thể Thao Nike Nam', 1, 1,
-        'Áo khoác gió mỏng nhẹ Nike, chống thấm nước nhẹ, thích hợp cho các hoạt động ngoài trời hoặc khởi động.', 200,
-        TRUE);
-
--- Lấy product_id vừa được tạo (Giả sử là 1, 2, 3, 4, 5 tương ứng)
--- SELECT product_id, product_name FROM Products; -- (Để tham khảo)
+VALUES ('Giày Chạy Bộ Nike Revolution 6 Nam', 1, 1, 'Giày chạy bộ Nike Revolution 6 mang lại sự thoải mái và đệm êm ái cho mỗi bước chạy, thiết kế với ít nhất 20% vật liệu tái chế theo trọng lượng.', 180, TRUE), -- product_id = 1 (giả định)
+       ('Giày Tập Luyện Adidas Duramo SL Nam', 1, 2, 'Giày Adidas Duramo SL đa năng, phù hợp cho chạy bộ, tập gym hoặc mang hàng ngày, với lớp đệm Lightmotion siêu nhẹ.', 220, TRUE), -- product_id = 2 (giả định)
+       ('Giày Bóng Rổ Under Armour Curry Flow 9 Nam', 1, 3, 'Giày bóng rổ Under Armour Curry Flow 9, công nghệ UA Flow cho độ bám sân tuyệt vời và cảm giác nhẹ như không.', 150, TRUE), -- product_id = 3 (giả định)
+       ('Giày Thời Trang Puma Suede Classic XXI Nam', 1, 4, 'Đôi giày Puma Suede Classic XXI mang tính biểu tượng, phong cách đường phố cổ điển với chất liệu da lộn cao cấp và form dáng được cải tiến.', 100, TRUE), -- product_id = 4 (giả định)
+       ('Giày Chạy Bộ Nike Air Zoom Pegasus 40 Nam', 1, 1, 'Nike Air Zoom Pegasus 40, tiếp nối di sản với cảm giác đàn hồi quen thuộc, hoàn hảo cho những quãng đường dài và mọi kiểu chạy.', 250, FALSE); -- product_id = 5 (giả định), ví dụ không còn kinh doanh
 
 ----------------------------------------------------------------------
 
 -- Dữ liệu mẫu cho bảng Product_Attributes
--- Liên kết sản phẩm với các thuộc tính chung (ví dụ: chất liệu chính)
--- Sử dụng ID giả định từ Attribute_Values
+-- Liên kết sản phẩm với các thuộc tính chung (chất liệu chính, kiểu dáng)
+-- Sử dụng product_id và attribute_value_id giả định ở trên
 INSERT INTO Product_Attributes (product_id, attribute_value_id)
-VALUES (1, 12), -- Áo Nike Dri-FIT -> Polyester (12)
-       (2, 16), -- Áo Polo Adidas -> Cotton Blend (16)
-       (3, 12), -- Áo Ba Lỗ UA -> Polyester (12) (Có thể có Spandex nhưng Polyester là chính)
-       (3, 14), -- Áo Ba Lỗ UA -> Có Spandex (14)
-       (4, 12), -- Áo Chạy Bộ Puma -> Polyester (12)
-       (5, 15);
--- Áo Khoác Gió Nike -> Nylon (15)
+VALUES
+-- Nike Revolution 6 (product_id=1): Vải lưới (13), Chạy bộ (19)
+(1, 13), (1, 19),
+-- Adidas Duramo SL (product_id=2): Vải lưới (13), Tập luyện (20)
+(2, 13), (2, 20),
+-- UA Curry Flow 9 (product_id=3): Vải lưới (13), Da tổng hợp (14), Bóng rổ (22)
+(3, 13), (3, 14), (3, 22),
+-- Puma Suede Classic XXI (product_id=4): Da thật (18), Thời trang (21)
+(4, 18), (4, 21),
+-- Nike Pegasus 40 (product_id=5): Vải lưới (13), React Foam (17), Chạy bộ (19)
+(5, 13), (5, 17), (5, 19);
 
 ----------------------------------------------------------------------
 
 -- Dữ liệu mẫu cho bảng Product_Variants
--- Thêm các biến thể cụ thể cho từng sản phẩm (theo màu sắc, kích cỡ)
--- Sử dụng ID sản phẩm giả định
+-- Thêm các biến thể cụ thể cho từng sản phẩm giày
+-- Sử dụng product_id giả định
 INSERT INTO Product_Variants (product_id, sku, price, stock_level, image_url, weight)
 VALUES
--- Biến thể cho Áo Thun Nike Dri-FIT Nam (product_id = 1)
-(1, 'NK-DRFT-BLK-M', 650000.00, 50, 'YellowCatWeb/pgxvi4r9a57ihacrp3qp', 0.15),  -- Đen, M
-(1, 'NK-DRFT-BLK-L', 650000.00, 45, 'YellowCatWeb/bqp7i3vkiaemrxhbajqg', 0.16),  -- Đen, L
-(1, 'NK-DRFT-WHT-M', 650000.00, 60, 'YellowCatWeb/oeizy65rlyssqaxk4dd5', 0.15),  -- Trắng, M
-(1, 'NK-DRFT-NVY-XL', 660000.00, 30, 'YellowCatWeb/suusyqsdrdezjmbddvc6', 0.17), -- Xanh Navy, XL (Giá có thể khác)
+-- Biến thể cho Nike Revolution 6 Nam (product_id = 1)
+(1, 'NK-REV6-BLK-40', 1800000.00, 50, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.28),  -- Đen, 40 (variant_id = 1 giả định)
+(1, 'NK-REV6-BLK-41', 1800000.00, 45, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.29),  -- Đen, 41 (variant_id = 2 giả định)
+(1, 'NK-REV6-GRY-42', 1850000.00, 60, 'YellowCatWeb/tvgilikvrp7jltim1esa', 0.30),  -- Xám, 42 (variant_id = 3 giả định)
 
--- Biến thể cho Áo Polo Adidas Nam (product_id = 2)
-(2, 'AD-POLO-GRY-S', 750000.00, 40, 'YellowCatWeb/j1vnoj7f49at9yehncyi', 0.20),  -- Xám, S
-(2, 'AD-POLO-GRY-M', 750000.00, 55, 'YellowCatWeb/itkpjrgy37wyfckabtvw', 0.21),  -- Xám, M
-(2, 'AD-POLO-BLK-L', 750000.00, 50, 'YellowCatWeb/mw98tiyee321bi8glyha', 0.22),  -- Đen, L
+-- Biến thể cho Adidas Duramo SL Nam (product_id = 2)
+(2, 'AD-DURSL-WHT-41', 1650000.00, 55, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 0.27), -- Trắng, 41 (variant_id = 4 giả định)
+(2, 'AD-DURSL-WHT-42', 1650000.00, 65, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 0.28), -- Trắng, 42 (variant_id = 5 giả định)
+(2, 'AD-DURSL-NVY-43', 1650000.00, 40, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 0.29), -- Xanh Navy, 43 (variant_id = 6 giả định)
 
--- Biến thể cho Áo Ba Lỗ UA Nam (product_id = 3)
-(3, 'UA-TANK-BLK-M', 550000.00, 70, 'YellowCatWeb/f2cwhili0pewnamriufr', 0.12),  -- Đen, M
-(3, 'UA-TANK-RED-L', 550000.00, 40, 'YellowCatWeb/d8oye50xusx1trfmhzyj', 0.13),  -- Đỏ, L
+-- Biến thể cho UA Curry Flow 9 Nam (product_id = 3)
+(3, 'UA-CUR9-BLU-42', 3500000.00, 30, 'YellowCatWeb/ejzjv3cxkyyjtokkgh1t', 0.32),   -- Xanh Dương, 42 (variant_id = 7 giả định)
+(3, 'UA-CUR9-RED-43', 3550000.00, 25, 'YellowCatWeb/bqttubnjqa5qzb64kjnm', 0.33),   -- Đỏ, 43 (variant_id = 8 giả định)
 
--- Biến thể cho Áo Khoác Gió Nike Nam (product_id = 5)
-(5, 'NK-WJ-BLU-M', 1200000.00, 25, 'YellowCatWeb/dnzemklps9lopz0fygin', 0.25),   -- Xanh Dương, M
-(5, 'NK-WJ-BLK-L', 1200000.00, 35, 'YellowCatWeb/chv7rjtb2ablpueyhefq', 0.26);
--- Đen, L
+-- Biến thể cho Puma Suede Classic XXI Nam (product_id = 4)
+(4, 'PU-SUED-BLK-40', 2200000.00, 35, 'YellowCatWeb/sx6bwsntnuwyfwx89tqt', 0.35), -- Đen, 40 (variant_id = 9 giả định)
+(4, 'PU-SUED-RED-41', 2200000.00, 30, 'YellowCatWeb/lq1yqclrqebutga5pmrk', 0.36), -- Đỏ, 41 (variant_id = 10 giả định)
 
--- Lấy variant_id vừa được tạo (Giả sử là 1 đến 11 tương ứng)
--- SELECT variant_id, sku FROM Product_Variants; -- (Để tham khảo)
+-- Biến thể cho Nike Air Zoom Pegasus 40 Nam (product_id = 5)
+(5, 'NK-PEG40-BLK-41', 3200000.00, 50, 'YellowCatWeb/byshsl4qboscrdnmuoix', 0.26),  -- Đen, 41 (variant_id = 11 giả định)
+(5, 'NK-PEG40-WHT-42', 3200000.00, 55, 'YellowCatWeb/acs7ki8v43lrjorsfnwb', 0.27);  -- Trắng, 42 (variant_id = 12 giả định)
 
 ----------------------------------------------------------------------
 
 -- Dữ liệu mẫu cho bảng Variant_Attributes
 -- Liên kết mỗi biến thể với các giá trị thuộc tính cụ thể (Màu sắc, Kích cỡ)
--- Sử dụng ID biến thể và ID giá trị thuộc tính giả định
+-- Sử dụng variant_id và attribute_value_id giả định:
+-- Màu sắc IDs: Đen (1), Trắng (2), Xám (3), Xanh Navy (4), Đỏ (5), Xanh Dương (6)
+-- Kích cỡ IDs: 39 (7), 40 (8), 41 (9), 42 (10), 43 (11), 44 (12)
+-- Image attribute_value_ids (ví dụ: 23-27) có thể được thêm vào đây nếu mỗi variant có hình ảnh riêng biệt và được map trong Attribute_Values.
+-- Hiện tại, image_url được đặt ở Product_Variants.
 
--- Biến thể 1: NK-DRFT-BLK-M (variant_id = 1)
-INSERT INTO Variant_Attributes (variant_id, attribute_value_id)
-VALUES (1, 1), -- Màu sắc: Đen (1)
-       (1, 8);
--- Kích cỡ: M (8)
+-- Variant 1: NK-REV6-BLK-40 (variant_id=1) -> Màu Đen (1), Kích cỡ 40 (8)
+INSERT INTO Variant_Attributes (variant_id, attribute_value_id) VALUES (1, 1), (1, 8);
+-- Variant 2: NK-REV6-BLK-41 (variant_id=2) -> Màu Đen (1), Kích cỡ 41 (9)
+INSERT INTO Variant_Attributes (variant_id, attribute_value_id) VALUES (2, 1), (2, 9);
+-- Variant 3: NK-REV6-GRY-42 (variant_id=3) -> Màu Xám (3), Kích cỡ 42 (10)
+INSERT INTO Variant_Attributes (variant_id, attribute_value_id) VALUES (3, 3), (3, 10);
 
--- Biến thể 2: NK-DRFT-BLK-L (variant_id = 2)
-INSERT INTO Variant_Attributes (variant_id, attribute_value_id)
-VALUES (2, 1), -- Màu sắc: Đen (1)
-       (2, 9);
--- Kích cỡ: L (9)
+-- Variant 4: AD-DURSL-WHT-41 (variant_id=4) -> Màu Trắng (2), Kích cỡ 41 (9)
+INSERT INTO Variant_Attributes (variant_id, attribute_value_id) VALUES (4, 2), (4, 9);
+-- Variant 5: AD-DURSL-WHT-42 (variant_id=5) -> Màu Trắng (2), Kích cỡ 42 (10)
+INSERT INTO Variant_Attributes (variant_id, attribute_value_id) VALUES (5, 2), (5, 10);
+-- Variant 6: AD-DURSL-NVY-43 (variant_id=6) -> Màu Xanh Navy (4), Kích cỡ 43 (11)
+INSERT INTO Variant_Attributes (variant_id, attribute_value_id) VALUES (6, 4), (6, 11);
 
--- Biến thể 3: NK-DRFT-WHT-M (variant_id = 3)
-INSERT INTO Variant_Attributes (variant_id, attribute_value_id)
-VALUES (3, 2), -- Màu sắc: Trắng (2)
-       (3, 8);
--- Kích cỡ: M (8)
+-- Variant 7: UA-CUR9-BLU-42 (variant_id=7) -> Màu Xanh Dương (6), Kích cỡ 42 (10)
+INSERT INTO Variant_Attributes (variant_id, attribute_value_id) VALUES (7, 6), (7, 10);
+-- Variant 8: UA-CUR9-RED-43 (variant_id=8) -> Màu Đỏ (5), Kích cỡ 43 (11)
+INSERT INTO Variant_Attributes (variant_id, attribute_value_id) VALUES (8, 5), (8, 11);
 
--- Biến thể 4: NK-DRFT-NVY-XL (variant_id = 4)
-INSERT INTO Variant_Attributes (variant_id, attribute_value_id)
-VALUES (4, 4), -- Màu sắc: Xanh Navy (4)
-       (4, 10);
--- Kích cỡ: XL (10)
+-- Variant 9: PU-SUED-BLK-40 (variant_id=9) -> Màu Đen (1), Kích cỡ 40 (8)
+INSERT INTO Variant_Attributes (variant_id, attribute_value_id) VALUES (9, 1), (9, 8);
+-- Variant 10: PU-SUED-RED-41 (variant_id=10) -> Màu Đỏ (5), Kích cỡ 41 (9)
+INSERT INTO Variant_Attributes (variant_id, attribute_value_id) VALUES (10, 5), (10, 9);
 
--- Biến thể 5: AD-POLO-GRY-S (variant_id = 5)
-INSERT INTO Variant_Attributes (variant_id, attribute_value_id)
-VALUES (5, 3), -- Màu sắc: Xám (3)
-       (5, 7);
--- Kích cỡ: S (7)
-
--- Biến thể 6: AD-POLO-GRY-M (variant_id = 6)
-INSERT INTO Variant_Attributes (variant_id, attribute_value_id)
-VALUES (6, 3), -- Màu sắc: Xám (3)
-       (6, 8);
--- Kích cỡ: M (8)
-
--- Biến thể 7: AD-POLO-BLK-L (variant_id = 7)
-INSERT INTO Variant_Attributes (variant_id, attribute_value_id)
-VALUES (7, 1), -- Màu sắc: Đen (1)
-       (7, 9);
--- Kích cỡ: L (9)
-
--- Biến thể 8: UA-TANK-BLK-M (variant_id = 8)
-INSERT INTO Variant_Attributes (variant_id, attribute_value_id)
-VALUES (8, 1), -- Màu sắc: Đen (1)
-       (8, 8);
--- Kích cỡ: M (8)
-
--- Biến thể 9: UA-TANK-RED-L (variant_id = 9)
-INSERT INTO Variant_Attributes (variant_id, attribute_value_id)
-VALUES (9, 5), -- Màu sắc: Đỏ (5)
-       (9, 9);
--- Kích cỡ: L (9)
-
--- Biến thể 10: NK-WJ-BLU-M (variant_id = 10)
-INSERT INTO Variant_Attributes (variant_id, attribute_value_id)
-VALUES (10, 6), -- Màu sắc: Xanh Dương (6)
-       (10, 8);
--- Kích cỡ: M (8)
-
--- Biến thể 11: NK-WJ-BLK-L (variant_id = 11)
-INSERT INTO Variant_Attributes (variant_id, attribute_value_id)
-VALUES (11, 1), -- Màu sắc: Đen (1)
-       (11, 9);
--- Kích cỡ: L (9)
+-- Variant 11: NK-PEG40-BLK-41 (variant_id=11) -> Màu Đen (1), Kích cỡ 41 (9)
+INSERT INTO Variant_Attributes (variant_id, attribute_value_id) VALUES (11, 1), (11, 9);
+-- Variant 12: NK-PEG40-WHT-42 (variant_id=12) -> Màu Trắng (2), Kích cỡ 42 (10)
+INSERT INTO Variant_Attributes (variant_id, attribute_value_id) VALUES (12, 2), (12, 10);
 
 ----------------------------------------------------------------------

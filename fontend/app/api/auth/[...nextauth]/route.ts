@@ -41,6 +41,7 @@ interface CustomToken {
     name?: string;
     error?: string;
     sub?: string;
+    decodedToken?: any;
 
     [key: string]: any;
 }
@@ -60,6 +61,8 @@ interface CustomSession extends NextAuthSession {
     idToken?: string;
     error?: string;
     expiresAt?: number;
+    decodedToken?: DecodedToken;
+    resource_access?: ResourceAccess;
 }
 
 const ENV = {
@@ -109,19 +112,31 @@ const authOptions: NextAuthOptions = {
 
                 // Giải mã lấy roles
                 let decoded: DecodedToken | undefined;
-                if (account.id_token) {
-                    decoded = jwtDecode<DecodedToken>(account.id_token);
-                } else if (account.access_token) {
-                    decoded = jwtDecode<DecodedToken>(account.access_token);
-                }
+                try {
+                    if (account.id_token) {
+                        decoded = jwtDecode<DecodedToken>(account.id_token);
+                    } else if (account.access_token) {
+                        decoded = jwtDecode<DecodedToken>(account.access_token);
+                    }
 
-                if (decoded) {
-                    customToken.roles =
-                        decoded.realm_access?.roles ??
-                        decoded.resource_access?.[ENV.keycloakClientId!]?.roles ??
-                        [];
-                    customToken.email = decoded.email ?? customToken.email;
-                    customToken.name = decoded.name ?? customToken.name;
+                    if (decoded) {
+                        // Lưu toàn bộ token đã giải mã vào decodedToken
+                        customToken.decodedToken = decoded;
+                        
+                        customToken.roles =
+                            decoded.realm_access?.roles ??
+                            decoded.resource_access?.[ENV.keycloakClientId!]?.roles ??
+                            [];
+                        customToken.email = decoded.email ?? customToken.email;
+                        customToken.name = decoded.name ?? customToken.name;
+                        
+                        // Lưu resource_access để tiện xác thực quyền client-specific roles
+                        if (decoded.resource_access) {
+                            customToken.resource_access = decoded.resource_access;
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error decoding JWT:", error);
                 }
             }
             if (profile) {
@@ -164,12 +179,25 @@ const authOptions: NextAuthOptions = {
                     customToken.refreshToken = tokens.refresh_token ?? customToken.refreshToken;
                     customToken.idToken = tokens.id_token; // Cập nhật idToken
                     customToken.expiresAt = Math.floor(Date.now() / 1000) + tokens.expires_in;
-                    const refreshed: DecodedToken = jwtDecode(tokens.access_token);
-                    customToken.roles =
-                        refreshed.realm_access?.roles ??
-                        refreshed.resource_access?.[ENV.keycloakClientId!]?.roles ??
-                        customToken.roles ??
-                        [];
+                    
+                    try {
+                        const refreshed: DecodedToken = jwtDecode(tokens.access_token);
+                        // Lưu token đã giải mã
+                        customToken.decodedToken = refreshed;
+                        
+                        customToken.roles =
+                            refreshed.realm_access?.roles ??
+                            refreshed.resource_access?.[ENV.keycloakClientId!]?.roles ??
+                            customToken.roles ??
+                            [];
+                            
+                        // Lưu resource_access của token mới
+                        if (refreshed.resource_access) {
+                            customToken.resource_access = refreshed.resource_access;
+                        }
+                    } catch (decodeError) {
+                        console.error("Error decoding refreshed token:", decodeError);
+                    }
                 } catch (error: any) {
                     console.error("Lỗi khi refresh token:", error);
                     // Nếu lỗi là 'invalid_grant', hủy phiên làm việc
@@ -206,6 +234,8 @@ const authOptions: NextAuthOptions = {
             customSession.idToken = customToken.idToken;
             customSession.error = customToken.error;
             customSession.expiresAt = customToken.expiresAt;
+            customSession.decodedToken = customToken.decodedToken;
+            customSession.resource_access = customToken.resource_access;
 
             return customSession;
         }
