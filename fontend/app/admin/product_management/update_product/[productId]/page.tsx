@@ -405,6 +405,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 price: Number(v.price),
                 stockLevel: Number(v.stockLevel),
                 imageUrl: v.imageUrl,
+                weight: Number(v.weight),
                 attributes: attributeEntries
             };
         });
