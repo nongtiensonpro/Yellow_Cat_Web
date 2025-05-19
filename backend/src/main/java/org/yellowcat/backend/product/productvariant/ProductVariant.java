@@ -33,6 +33,9 @@ public class ProductVariant {
     @Column(name = "image_url")
     private String imageUrl;
 
+    @Column(name = "weight")
+    private Double weight;
+
     @ManyToOne
     @JoinColumn(name = "product_id")
     private Product product;

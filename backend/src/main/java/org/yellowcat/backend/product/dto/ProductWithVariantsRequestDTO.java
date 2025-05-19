@@ -25,6 +25,7 @@ public class ProductWithVariantsRequestDTO {
         private BigDecimal price;
         private Integer stockLevel;
         private String imageUrl;
+        private Double weight;
         private List<AttributeDTO> attributes;
     }
 
