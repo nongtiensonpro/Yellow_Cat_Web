@@ -1,15 +1,14 @@
 version: "3.8"
-
 services:
   postgres:
-    image: postgres:17.4
+    image: postgres:17.5
     environment:
       POSTGRES_PASSWORD: changemeinprod
-      # Thêm biến môi trường giới hạn bộ nhớ
-      POSTGRES_SHARED_BUFFERS: 128MB
-      POSTGRES_WORK_MEM: 4MB
-      POSTGRES_MAINTENANCE_WORK_MEM: 32MB
-      POSTGRES_EFFECTIVE_CACHE_SIZE: 256MB
+      # Các tham số PostgreSQL được tối ưu nhưng không giới hạn cứng
+      POSTGRES_SHARED_BUFFERS: 512MB
+      POSTGRES_WORK_MEM: 16MB
+      POSTGRES_MAINTENANCE_WORK_MEM: 128MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 1GB
     ports:
       - "5432:5432"
     volumes:
@@ -19,18 +18,13 @@ services:
       - local
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-        reservations:
-          memory: 128M
+    restart: always
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.1.2
+    image: quay.io/keycloak/keycloak:26.2.4
     command: start-dev
     restart: always
     ports:
@@ -44,20 +38,19 @@ services:
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_HOSTNAME: localhost
       KC_FEATURES: token-exchange,admin-fine-grained-authz
-      # Thêm cấu hình JVM
-      JAVA_OPTS: "-Xms64m -Xmx256m -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=128m -XX:+UseG1GC"
+      # Cấu hình JVM tối ưu không giới hạn heap size cứng
+      JAVA_OPTS: >-
+        -XX:+UseG1GC 
+        -XX:MaxGCPauseMillis=100 
+        -XX:+ParallelRefProcEnabled 
+        -XX:+HeapDumpOnOutOfMemoryError 
+        -XX:HeapDumpPath=/opt/keycloak/data/heapdump
     depends_on:
       - postgres
     networks:
       - local
     volumes:
       - keycloak_data:/opt/keycloak/data
-    deploy:
-      resources:
-        limits:
-          memory: 384M
-        reservations:
-          memory: 128M
 
 volumes:
   postgres_data:

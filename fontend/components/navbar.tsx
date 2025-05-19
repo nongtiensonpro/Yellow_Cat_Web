@@ -26,10 +26,12 @@ export const Navbar = () => {
     const { data: session, status } = useSession();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isTokenValid, setIsTokenValid] = useState(true);
+    const [isAdmin, setIsAdmin] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
         if (session) {
+            // Kiểm tra token lỗi hoặc hết hạn
             const customSession = session as any;
             const hasError = customSession.error === "RefreshAccessTokenError";
             const isExpired = customSession.expiresAt &&
@@ -37,12 +39,53 @@ export const Navbar = () => {
 
             if (hasError || isExpired) {
                 setIsTokenValid(false);
+                setIsAdmin(false);
                 handleLogout();
             } else {
                 setIsTokenValid(true);
+                // Kiểm tra quyền admin
+                checkAdminPermission(customSession);
             }
         }
     }, [session]);
+
+    // Hàm mới để kiểm tra quyền admin
+    const checkAdminPermission = (sessionData: any) => {
+        try {
+            let hasAdminRole = false;
+
+            // Debug
+            console.log("Session structure for admin check:", {
+                hasSession: Boolean(sessionData),
+                hasAccessToken: Boolean(sessionData?.accessToken),
+                hasUser: Boolean(sessionData?.user),
+                hasUserRoles: Boolean(sessionData?.user?.roles),
+                hasResourceAccess: Boolean(sessionData?.resource_access),
+                hasDecodedToken: Boolean(sessionData?.decodedToken),
+                userRoles: sessionData?.user?.roles || [],
+                sessionKeys: Object.keys(sessionData || {})
+            });
+
+            // Kiểm tra từng nguồn thông tin có thể
+            if (sessionData?.resource_access?.YellowCatCompanyWeb?.roles?.includes("Admin_Web")) {
+                hasAdminRole = true;
+            }
+            else if (sessionData?.decodedToken?.resource_access?.YellowCatCompanyWeb?.roles?.includes("Admin_Web")) {
+                hasAdminRole = true;
+            }
+            else if (sessionData?.user?.roles?.includes("Admin_Web")) {
+                hasAdminRole = true;
+            }
+            else if (sessionData?.decodedToken?.realm_access?.roles?.includes("Admin_Web")) {
+                hasAdminRole = true;
+            }
+
+            setIsAdmin(hasAdminRole);
+        } catch (error) {
+            console.error("Error checking admin permissions:", error);
+            setIsAdmin(false);
+        }
+    };
 
     const handleLogout = async () => {
         try {
@@ -70,26 +113,6 @@ export const Navbar = () => {
     const handleLogin = () => {
         signIn("keycloak", { callbackUrl: window.location.href });
     };
-    const hasAdminRole = () => {
-        if (!session || !isTokenValid) return false;
-
-        try {
-            const accessToken = (session as any).accessToken;
-            if (accessToken) {
-                const decodedToken = (session as any).decodedToken;
-                if (decodedToken?.resource_access?.YellowCatCompanyWeb?.roles) {
-                    return decodedToken.resource_access.YellowCatCompanyWeb.roles.includes("Admin_Web");
-                }
-
-                return (session as any).resource_access?.YellowCatCompanyWeb?.roles?.includes("Admin_Web");
-            }
-
-            return false;
-        } catch (error) {
-            console.error("Error checking admin role:", error);
-            return false;
-        }
-    };
 
     const renderAuthSection = () => {
         if (status === "loading") {
@@ -107,12 +130,8 @@ export const Navbar = () => {
         }
 
         if (session && isTokenValid) {
-            const isAdmin = hasAdminRole();
-
-            // console.log("Session structure:", {
-            //     hasAdminRole: isAdmin,
-            //     resourceAccess: (session as any).resource_access,
-            // });
+            // Sử dụng state isAdmin thay vì gọi hàm hasAdminRole()
+            // const isAdmin = hasAdminRole();
 
             return (
                 <Dropdown placement="bottom-end">
@@ -137,8 +156,8 @@ export const Navbar = () => {
                                 Admin Dashboard
                             </DropdownItem>
                         ) : null}
-                        <DropdownItem 
-                            key="user_info" 
+                        <DropdownItem
+                            key="user_info"
                             onClick={() => router.push('/user_info')}
                         >
                             User Profile
@@ -166,39 +185,13 @@ export const Navbar = () => {
         }
     };
 
-    const extractRolesFromToken = () => {
-        if (!session || !isTokenValid) return false;
-
-        try {
-            const token = (session as any).accessToken;
-            if (!token) return false;
-
-            if ((session as any).resource_access?.YellowCatCompanyWeb?.roles) {
-                return (session as any).resource_access.YellowCatCompanyWeb.roles.includes("Admin_Web");
-            }
-
-            try {
-                const tokenData = JSON.parse(atob(token.split('.')[1]));
-                return tokenData.resource_access?.YellowCatCompanyWeb?.roles?.includes("Admin_Web");
-            } catch (e) {
-                console.error("Failed to parse token data:", e);
-                return false;
-            }
-        } catch (error) {
-            console.error("Error extracting roles:", error);
-            return false;
-        }
-    };
-
-    const isAdminUser = extractRolesFromToken();
-
     return (
         <HeroUINavbar maxWidth="2xl" position="sticky" isMenuOpen={isMenuOpen} onMenuOpenChange={setIsMenuOpen}>
             <NavbarContent className="basis-1/5 sm:basis-full" justify="start">
                 <NavbarBrand as="li" className="gap-3 max-w-fit">
                     <NextLink className="flex justify-start items-center gap-1" href="/">
 
-                        <p className="font-bold text-inherit">Yellow Cat Company</p>
+                        <p className="font-bold text-inherit">SneakerPeak</p>
                     </NextLink>
                 </NavbarBrand>
                 <ul className="hidden lg:flex gap-4 justify-start ml-2">
@@ -210,7 +203,7 @@ export const Navbar = () => {
                         </NavbarItem>
                     ))}
                     {/* Admin menu items */}
-                    {isAdminUser &&
+                    {isAdmin &&
                         siteConfig.navMenuItemsAdmin.map((item) => (
                             <NavbarItem key={item.href}>
                                 <NextLink className={clsx("data-[active=true]:text-primary data-[active=true]:font-medium")} href={item.href}>
@@ -250,7 +243,7 @@ export const Navbar = () => {
                         </NavbarMenuItem>
                     ))}
                     {/* Add admin menu items to mobile menu too */}
-                    {isAdminUser &&
+                    {isAdmin &&
                         siteConfig.navMenuItemsAdmin.map((item, index) => (
                             <NavbarMenuItem key={`admin-${item}-${index}`}>
                                 <Link
