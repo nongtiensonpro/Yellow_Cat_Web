@@ -122,14 +122,14 @@ const authOptions: NextAuthOptions = {
                     if (decoded) {
                         // Lưu toàn bộ token đã giải mã vào decodedToken
                         customToken.decodedToken = decoded;
-                        
+
                         customToken.roles =
                             decoded.realm_access?.roles ??
                             decoded.resource_access?.[ENV.keycloakClientId!]?.roles ??
                             [];
                         customToken.email = decoded.email ?? customToken.email;
                         customToken.name = decoded.name ?? customToken.name;
-                        
+
                         // Lưu resource_access để tiện xác thực quyền client-specific roles
                         if (decoded.resource_access) {
                             customToken.resource_access = decoded.resource_access;
@@ -172,25 +172,33 @@ const authOptions: NextAuthOptions = {
 
                     if (!response.ok) {
                         console.error("Error refreshing token:", tokens);
+                        return {
+                            ...customToken,
+                            error: "RefreshAccessTokenError",
+                            accessToken: undefined,
+                            refreshToken: undefined,
+                            expiresAt: 0
+                        } as JWT;
                     }
+
 
                     customToken.accessToken = tokens.access_token;
                     // Chỉ cập nhật refresh token nếu Keycloak trả về refresh token mới
                     customToken.refreshToken = tokens.refresh_token ?? customToken.refreshToken;
                     customToken.idToken = tokens.id_token; // Cập nhật idToken
                     customToken.expiresAt = Math.floor(Date.now() / 1000) + tokens.expires_in;
-                    
+
                     try {
                         const refreshed: DecodedToken = jwtDecode(tokens.access_token);
                         // Lưu token đã giải mã
                         customToken.decodedToken = refreshed;
-                        
+
                         customToken.roles =
                             refreshed.realm_access?.roles ??
                             refreshed.resource_access?.[ENV.keycloakClientId!]?.roles ??
                             customToken.roles ??
                             [];
-                            
+
                         // Lưu resource_access của token mới
                         if (refreshed.resource_access) {
                             customToken.resource_access = refreshed.resource_access;
