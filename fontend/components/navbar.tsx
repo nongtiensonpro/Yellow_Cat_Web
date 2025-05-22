@@ -20,7 +20,25 @@ import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/d
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { jwtDecode } from 'jwt-decode';
 
+interface DecodedToken {
+    sub?: string;
+    preferred_username?: string;
+    email?: string;
+    given_name?: string;
+    family_name?: string;
+    realm_access?: {
+        roles: string[];
+    };
+    resource_access?: {
+        [clientId: string]: {
+            roles: string[];
+        };
+    };
+    exp?: number;
+    [key: string]: any;
+}
 
 export const Navbar = () => {
     const { data: session, status } = useSession();
@@ -30,62 +48,80 @@ export const Navbar = () => {
     const router = useRouter();
 
     useEffect(() => {
-        if (session) {
-            // Kiểm tra token lỗi hoặc hết hạn
-            const customSession = session as any;
-            const hasError = customSession.error === "RefreshAccessTokenError";
-            const isExpired = customSession.expiresAt &&
-                customSession.expiresAt < Math.floor(Date.now() / 1000);
+        const checkTokenAndAdminStatus = () => {
+            if (status === 'loading') {
+                return;
+            }
 
-            if (hasError || isExpired) {
+            if (status === 'unauthenticated' || !session) {
+                setIsTokenValid(true);
+                setIsAdmin(false);
+                return;
+            }
+
+            try {
+                const accessToken = session.accessToken as string;
+                if (!accessToken) {
+                    console.warn("Không tìm thấy access token");
+                    setIsTokenValid(false);
+                    setIsAdmin(false);
+                    return;
+                }
+
+                // Decode token để lấy thông tin roles ngay lập tức
+                const tokenData = jwtDecode<DecodedToken>(accessToken);
+
+                // Kiểm tra token có hết hạn không
+                const currentTime = Math.floor(Date.now() / 1000);
+                if (tokenData.exp && tokenData.exp < currentTime) {
+                    console.warn("Access token đã hết hạn");
+                    setIsTokenValid(false);
+                    setIsAdmin(false);
+                    handleLogout();
+                    return;
+                }
+
+                setIsTokenValid(true);
+
+                // Kiểm tra quyền admin từ decoded token
+                let hasAdminRole = false;
+
+                // Kiểm tra client roles từ resource_access
+                const clientRoles = tokenData.resource_access?.["YellowCatCompanyWeb"]?.roles || [];
+                if (clientRoles.includes("Admin_Web")) {
+                    hasAdminRole = true;
+                }
+
+                // Kiểm tra realm roles nếu cần
+                const realmRoles = tokenData.realm_access?.roles || [];
+                if (realmRoles.includes("Admin_Web")) {
+                    hasAdminRole = true;
+                }
+
+                console.log("Admin role check result:", {
+                    hasAdminRole,
+                    clientRoles,
+                    realmRoles,
+                    tokenExp: tokenData.exp,
+                    currentTime
+                });
+
+                setIsAdmin(hasAdminRole);
+
+            } catch (error) {
+                console.error("Lỗi khi decode access token:", error);
                 setIsTokenValid(false);
                 setIsAdmin(false);
-                handleLogout();
-            } else {
-                setIsTokenValid(true);
-                // Kiểm tra quyền admin
-                checkAdminPermission(customSession);
-            }
-        }
-    }, [session]);
 
-    // Hàm mới để kiểm tra quyền admin
-    const checkAdminPermission = (sessionData: any) => {
-        try {
-            let hasAdminRole = false;
+                // Nếu có lỗi với token, có thể cần logout
+                if (error instanceof Error && error.message.includes('Invalid token')) {
+                    handleLogout();
+                }
+            }
+        };
 
-            // Debug
-            console.log("Session structure for admin check:", {
-                hasSession: Boolean(sessionData),
-                hasAccessToken: Boolean(sessionData?.accessToken),
-                hasUser: Boolean(sessionData?.user),
-                hasUserRoles: Boolean(sessionData?.user?.roles),
-                hasResourceAccess: Boolean(sessionData?.resource_access),
-                hasDecodedToken: Boolean(sessionData?.decodedToken),
-                userRoles: sessionData?.user?.roles || [],
-                sessionKeys: Object.keys(sessionData || {})
-            });
-
-            // Kiểm tra từng nguồn thông tin có thể
-            if (sessionData?.resource_access?.YellowCatCompanyWeb?.roles?.includes("Admin_Web")) {
-                hasAdminRole = true;
-            }
-            else if (sessionData?.decodedToken?.resource_access?.YellowCatCompanyWeb?.roles?.includes("Admin_Web")) {
-                hasAdminRole = true;
-            }
-            else if (sessionData?.user?.roles?.includes("Admin_Web")) {
-                hasAdminRole = true;
-            }
-            else if (sessionData?.decodedToken?.realm_access?.roles?.includes("Admin_Web")) {
-                hasAdminRole = true;
-            }
-
-            setIsAdmin(hasAdminRole);
-        } catch (error) {
-            console.error("Error checking admin permissions:", error);
-            setIsAdmin(false);
-        }
-    };
+        checkTokenAndAdminStatus();
+    }, [session, status]);
 
     const handleLogout = async () => {
         try {
@@ -118,7 +154,8 @@ export const Navbar = () => {
         if (status === "loading") {
             return <Button isLoading className="bg-primary-500/20 text-primary">Loading...</Button>;
         }
-        if (!isTokenValid) {
+
+        if (!isTokenValid || status === 'unauthenticated' || !session) {
             return (
                 <Button
                     onClick={handleLogin}
@@ -129,60 +166,46 @@ export const Navbar = () => {
             );
         }
 
-        if (session && isTokenValid) {
-            // Sử dụng state isAdmin thay vì gọi hàm hasAdminRole()
-            // const isAdmin = hasAdminRole();
-
-            return (
-                <Dropdown placement="bottom-end">
-                    <DropdownTrigger>
-                        <Avatar
-                            isBordered
-                            as="button"
-                            className="transition-transform"
-                            color="secondary"
-                            name={session.user?.name || session.user?.email || "User"}
-                            size="sm"
-                            src={session.user?.image || undefined}
-                        />
-                    </DropdownTrigger>
-                    <DropdownMenu aria-label="Profile Actions" variant="flat">
-                        <DropdownItem key="profile" className="h-14 gap-2">
-                            <p className="font-semibold">Signed in as</p>
-                            <p className="font-semibold">{session.user?.email}</p>
+        return (
+            <Dropdown placement="bottom-end">
+                <DropdownTrigger>
+                    <Avatar
+                        isBordered
+                        as="button"
+                        className="transition-transform"
+                        color="secondary"
+                        name={session.user?.name || session.user?.email || "User"}
+                        size="sm"
+                        src={session.user?.image || undefined}
+                    />
+                </DropdownTrigger>
+                <DropdownMenu aria-label="Profile Actions" variant="flat">
+                    <DropdownItem key="profile" className="h-14 gap-2">
+                        <p className="font-semibold">Signed in as</p>
+                        <p className="font-semibold">{session.user?.email}</p>
+                    </DropdownItem>
+                    {isAdmin ? (
+                        <DropdownItem key="admin_dashboard" href="/admin">
+                            Admin Dashboard
                         </DropdownItem>
-                        {isAdmin ? (
-                            <DropdownItem key="admin_dashboard" href="/admin">
-                                Admin Dashboard
-                            </DropdownItem>
-                        ) : null}
-                        <DropdownItem
-                            key="user_info"
-                            onClick={() => router.push('/user_info')}
-                        >
-                            User Profile
-                        </DropdownItem>
-                        <DropdownItem
-                            key="logout"
-                            className="text-danger"
-                            color="danger"
-                            onClick={handleLogout}
-                        >
-                            Log Out
-                        </DropdownItem>
-                    </DropdownMenu>
-                </Dropdown>
-            );
-        } else {
-            return (
-                <Button
-                    onClick={handleLogin}
-                    className="bg-primary-500/20 text-primary"
-                >
-                    Login
-                </Button>
-            );
-        }
+                    ) : null}
+                    <DropdownItem
+                        key="user_info"
+                        onClick={() => router.push('/user_info')}
+                    >
+                        User Profile
+                    </DropdownItem>
+                    <DropdownItem
+                        key="logout"
+                        className="text-danger"
+                        color="danger"
+                        onClick={handleLogout}
+                    >
+                        Log Out
+                    </DropdownItem>
+                </DropdownMenu>
+            </Dropdown>
+        );
     };
 
     return (
@@ -190,19 +213,18 @@ export const Navbar = () => {
             <NavbarContent className="basis-1/5 sm:basis-full" justify="start">
                 <NavbarBrand as="li" className="gap-3 max-w-fit">
                     <NextLink className="flex justify-start items-center gap-1" href="/">
-
                         <p className="font-bold text-inherit">SneakerPeak</p>
                     </NextLink>
                 </NavbarBrand>
                 <ul className="hidden lg:flex gap-4 justify-start ml-2">
-                    {siteConfig.navItems.map((item) => (
+                    {siteConfig.navItems.map((item: { href: string; label: string }) => (
                         <NavbarItem key={item.href}>
                             <NextLink className={clsx("data-[active=true]:text-primary data-[active=true]:font-medium")} href={item.href}>
                                 {item.label}
                             </NextLink>
                         </NavbarItem>
                     ))}
-                    {/* Admin menu items */}
+                    {/* Admin menu items - sẽ hiển thị ngay khi có quyền */}
                     {isAdmin &&
                         siteConfig.navMenuItemsAdmin.map((item) => (
                             <NavbarItem key={item.href}>
