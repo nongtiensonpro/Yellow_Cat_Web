@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.yellowcat.backend.product.dto.ProductListItemDTO;
 
 import java.util.List;
 
@@ -72,8 +73,8 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                     "    b.brand_name, " +
                     "    b.brand_info, " +
                     "    b.logo_public_id, " +
-                    "    (SELECT MIN(pv_price.price) FROM Product_Variants pv_price WHERE pv_price.product_id = p.product_id) AS min_price, " +
-                    "    (SELECT SUM(pv_stock.stock_level) FROM Product_Variants pv_stock WHERE pv_stock.product_id = p.product_id) AS total_stock, " +
+                    "    (SELECT MIN(pv_price.price) FROM Product_Variants pv_price WHERE pv_price.product_id = p.product_id) AS min_price, " + // Để JPA/Hibernate tự chuyển đổi sang Double
+                    "    (SELECT SUM(pv_stock.stock_level) FROM Product_Variants pv_stock WHERE pv_stock.product_id = p.product_id) AS total_stock, " + // Để JPA/Hibernate tự chuyển đổi sang Long
                     "    (SELECT pv_img.image_url FROM Product_Variants pv_img " +
                     "     WHERE pv_img.product_id = p.product_id AND pv_img.image_url IS NOT NULL " +
                     "     LIMIT 1) AS thumbnail, " +
@@ -96,7 +97,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
             countQuery =
                     "SELECT COUNT(DISTINCT p.product_id) " +
                             "FROM Products p")
-    List<Object[]> findAllProductsPaginated(@Param("pageSize") int pageSize, @Param("offset") int offset);
+    List<ProductListItemDTO> findAllProductsPaginated(@Param("pageSize") int pageSize, @Param("offset") int offset);
 
     @Query(nativeQuery = true, value = "SELECT COUNT(DISTINCT product_id) FROM Products")
     long countTotalProducts();
