@@ -36,7 +36,6 @@ public class ProductService {
     private final VariantAttributeRepository variantAttributeRepository;
     private final AttributesRepository attributesRepository;
     private final ProductAttributeRepository productAttributeRepository;
-    ;
     private final ProductMapper productMapper;
 
     ProductService(ProductRepository productRepository,
@@ -122,18 +121,15 @@ public class ProductService {
 
             // Only process variant if it exists
             if (variantId != null) {
-                // Check if we've already seen this variant
-                if (!variantMap.containsKey(variantId)) {
-                    VariantDTO variant = new VariantDTO();
+                VariantDTO variant = variantMap.get(variantId);
+
+                if (variant == null) {
+                    variant = new VariantDTO();
                     variant.setVariantId(variantId);
                     variant.setSku((String) row[index++]);
                     variant.setPrice((BigDecimal) row[index++]);
                     variant.setStockLevel((Integer) row[index++]);
-                    variant.setImageUrl((String) row[index++]);
-                    // Lấy giá trị weight dưới dạng BigDecimal và chuyển đổi sang Double
-                    BigDecimal weightBigDecimal = (BigDecimal) row[index++];
-                    variant.setWeight(weightBigDecimal != null ? weightBigDecimal.doubleValue() : null);
-                    variant.setVariantAttributes((String) row[index++]);
+                                        variant.setImageUrl((String) row[index++]);                    variant.setWeight((Double) row[index++]);                    variant.setVariantAttributes((String) row[index++]);                    index++; // Skip active promotions field
 
                     variantMap.put(variantId, variant);
                     productDetail.getVariants().add(variant);
@@ -141,15 +137,7 @@ public class ProductService {
                     // Skip variant fields if already processed
                     index += 7; // Tăng index lên 7 để bỏ qua các trường variant đã xử lý (bao gồm cả weight mới)
                 }
-            } else {
-                // Skip variant fields if no variant
-                index += 7; // Tăng index lên 7 để bỏ qua các trường variant (bao gồm cả weight)
             }
-
-            // Set active promotions (should be the same for all rows)
-            // Cần kiểm tra index này có đúng không sau khi thay đổi ở trên
-            String activePromotions = (String) row[index];
-            productDetail.setActivePromotions(activePromotions);
         }
 
         return productDetail;
@@ -229,7 +217,14 @@ public class ProductService {
                     attributeValue = attributeValueRepository.findByAttributeIdAndValue(
                             attributeDto.getAttributeId(),
                             attributeDto.getValue()
-                    ).orElseThrow(() -> new RuntimeException("Attribute value not found for variant: " + key));
+                    ).orElseGet(() -> {
+                        Attributes attribute = attributesRepository.findById(attributeDto.getAttributeId())
+                                .orElseThrow(() -> new RuntimeException("Attribute not found: " + attributeDto.getAttributeId()));
+                        AttributeValue newVal = new AttributeValue();
+                        newVal.setAttribute(attribute);
+                        newVal.setValue(attributeDto.getValue());
+                        return attributeValueRepository.save(newVal);
+                    });
                     attributeValueCache.put(key, attributeValue);
                 }
 

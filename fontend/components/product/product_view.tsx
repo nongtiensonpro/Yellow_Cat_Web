@@ -19,7 +19,6 @@ import {
 import { useEffect, useState } from "react";
 import { Eye, Edit, Trash2, Plus, Tag } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 
 interface Product {
     productId: number;
@@ -191,10 +190,10 @@ export default function Page() {
                                         <TableCell>{product.purchases}</TableCell>
                                         <TableCell>
                                             <Chip
-                                                color={product.active ? "success" : "danger"}
+                                                color={product.active ?  "danger":"success"}
                                                 variant="flat"
                                             >
-                                                {product.active ? "Đang bán" : "Ngừng bán"}
+                                                {product.active ?   "Ngừng bán":"Đang bán"}
                                             </Chip>
                                         </TableCell>
                                         <TableCell>{formatDate(product.updatedAt)}</TableCell>
