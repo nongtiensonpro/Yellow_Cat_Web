@@ -129,7 +129,22 @@ public class ProductService {
                     variant.setSku((String) row[index++]);
                     variant.setPrice((BigDecimal) row[index++]);
                     variant.setStockLevel((Integer) row[index++]);
-                                        variant.setImageUrl((String) row[index++]);                    variant.setWeight((Double) row[index++]);                    variant.setVariantAttributes((String) row[index++]);                    index++; // Skip active promotions field
+                    variant.setImageUrl((String) row[index++]);                    
+                    // Fix the type casting issue - convert BigDecimal to Double
+                    Object weightObj = row[index++];
+                    if (weightObj != null) {
+                        if (weightObj instanceof BigDecimal) {
+                            variant.setWeight(((BigDecimal) weightObj).doubleValue());
+                        } else if (weightObj instanceof Double) {
+                            variant.setWeight((Double) weightObj);
+                        } else {
+                            // Handle other potential types or set default
+                            variant.setWeight(null);
+                        }
+                    } else {
+                        variant.setWeight(null);
+                    }
+                    variant.setVariantAttributes((String) row[index++]);
 
                     variantMap.put(variantId, variant);
                     productDetail.getVariants().add(variant);

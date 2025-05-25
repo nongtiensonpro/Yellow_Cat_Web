@@ -187,7 +187,7 @@ export default function Page() {
                                                 <span className="text-gray-400">N/A</span>
                                             )}
                                         </TableCell>
-                                        <TableCell>{product.purchases}</TableCell>
+                                        <TableCell>{product.purchases!=null?product.purchases:"-"}</TableCell>
                                         <TableCell>
                                             <Chip
                                                 color={product.active ?  "danger":"success"}
