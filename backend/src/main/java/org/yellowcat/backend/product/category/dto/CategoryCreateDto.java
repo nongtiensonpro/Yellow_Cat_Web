@@ -16,4 +16,5 @@ import java.io.Serializable;
 public class CategoryCreateDto implements Serializable {
     @NotNull
     String name;
+    String description;
 }
