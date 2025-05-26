@@ -21,6 +21,8 @@ public class CategoryRequestDto {
     @Size(max = 255)
     private String name;
 
+    private String description;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

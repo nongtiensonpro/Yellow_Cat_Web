@@ -232,13 +232,12 @@ CREATE TABLE PromotionApplicables
     UNIQUE (promotion_id, applicable_item_id, applicable_type)
 );
 
-
-
 -- Dữ liệu mẫu cho bảng Categories
--- Thêm danh mục "Giày thể thao nam"
-INSERT INTO Categories (category_name)
-VALUES ('Giày thể thao nam');
--- category_id sẽ là 1 nếu bảng trống
+INSERT INTO Categories (category_name, description, created_at, updated_at)
+VALUES ('Giày Nike', 'Giày Nike', NOW(), NOW()),
+       ('Giày Adidas', 'Giày Adidas', NOW(), NOW()),
+       ('Giày Puma', 'Giày Puma', NOW(), NOW()),
+       ('Giày Reebok', 'Giày Reebok', NOW(), NOW());
 
 ----------------------------------------------------------------------
 

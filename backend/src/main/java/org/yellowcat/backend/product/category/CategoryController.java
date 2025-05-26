@@ -4,14 +4,12 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.yellowcat.backend.product.category.dto.CategoryCreateDto;
 import org.yellowcat.backend.product.category.dto.CategoryRequestDto;
-import org.yellowcat.backend.product.category.dto.CategoryResponseDto;
+import org.yellowcat.backend.product.category.dto.CategoryResponse;
 import org.yellowcat.backend.common.config_api.response.PageResponse;
 import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
 
@@ -26,9 +24,8 @@ public class CategoryController {
     public ResponseEntity<?> getAllCategories(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<CategoryResponseDto> categories = categoryService.getAllCategories(pageable);
-        PageResponse<CategoryResponseDto> pageResponse = new PageResponse<>(categories);
+        Page<CategoryResponse> categories = categoryService.getAllCategories(page, size);
+        PageResponse<CategoryResponse> pageResponse = new PageResponse<>(categories);
         return ResponseEntityBuilder.success(pageResponse);
     }
 
@@ -39,14 +36,14 @@ public class CategoryController {
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('Admin_Web')")
-    public ResponseEntity<?> addCategory(@RequestBody CategoryCreateDto categoryCreateDto) {
-        return ResponseEntityBuilder.success(categoryService.addCategory(categoryCreateDto));
+    public ResponseEntity<?> addCategory(@RequestBody CategoryCreateDto request) {
+        return ResponseEntityBuilder.success(categoryService.addCategory(request));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('Admin_Web')")
-    public ResponseEntity<CategoryResponseDto> updateCategory(@PathVariable Integer id, @RequestBody CategoryRequestDto categoryRequestDto) {
-        return ResponseEntity.ok(categoryService.updateCategory(id, categoryRequestDto));
+    public ResponseEntity<CategoryResponse> updateCategory(@PathVariable Integer id, @RequestBody CategoryRequestDto request) {
+        return ResponseEntity.ok(categoryService.updateCategory(id, request));
     }
 
     @DeleteMapping("/{id}")

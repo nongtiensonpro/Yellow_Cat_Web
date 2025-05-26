@@ -19,35 +19,36 @@ import {
     useDisclosure
 } from "@heroui/react";
 import NextLink from "next/link";
-import { useEffect, useState } from "react";
+import {useEffect, useState} from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { Client } from '@stomp/stompjs';
+import {Client} from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import { useSession } from "next-auth/react";
+import {useSession} from "next-auth/react";
 
-interface Brands {
+interface Categories {
     id: number;
     name: string;
+    description: string;
 }
 
 interface ApiResponse {
     data: {
-        content: Brands[];
+        content: Categories[];
         totalPages: number;
     };
 }
 
 export default function Page() {
-    const { data: session, status } = useSession();
-    const [categoriesData, setcategoriesData] = useState<Brands[]>([]);
+    const {data: session, status} = useSession();
+    const [categoriesData, setcategoriesData] = useState<Categories[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState<number>(0);
-    const [itemsPerPage] = useState<number>(5);
+    const [itemsPerPage] = useState<number>(3);
     const [totalPages, setTotalPages] = useState<number>(1);
     const [brandToDelete, setBrandToDelete] = useState<{ id: number, name: string } | null>(null);
     const [notification, setNotification] = useState<string | null>(null);
-    const { isOpen, onOpen, onClose } = useDisclosure();
+    const {isOpen, onOpen, onClose} = useDisclosure();
     const [stompClient, setStompClient] = useState<Client | null>(null);
 
     const initializeStompClient = () => {
@@ -117,7 +118,7 @@ export default function Page() {
     }, [currentPage, itemsPerPage, notification]);
 
     const openDeleteConfirm = (brandId: number, brandName: string) => {
-        setBrandToDelete({ id: brandId, name: brandName });
+        setBrandToDelete({id: brandId, name: brandName});
         onOpen();
     };
 
@@ -133,7 +134,7 @@ export default function Page() {
 
             // Lấy token từ session NextAuth
             const token = session.accessToken;
-            
+
             if (!token) {
                 setError("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
                 return;
@@ -170,15 +171,17 @@ export default function Page() {
                     <p className="text-4xl font-bold">Quản lý Category</p>
                 </div>
             </CardHeader>
-            <Divider />
+            <Divider/>
             <CardHeader>
-                <NextLink href={"/admin/product_management/categories/create"} className="inline-block w-fit cursor-pointer transition-all bg-blue-500 text-white px-6 py-2 rounded-lg border-blue-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]">
+                <NextLink href={"/admin/product_management/categories/create"}
+                          className="inline-block w-fit cursor-pointer transition-all bg-blue-500 text-white px-6 py-2 rounded-lg border-blue-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]">
                     Thêm mới
                 </NextLink>
             </CardHeader>
             <CardBody>
                 {notification && (
-                    <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
+                    <div
+                        className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
                         <span className="block sm:inline">{notification}</span>
                         <button
                             className="absolute top-0 right-0 px-2 py-1"
@@ -190,7 +193,7 @@ export default function Page() {
                 )}
 
                 {loading ? (
-                    <LoadingSpinner />
+                    <LoadingSpinner/>
                 ) : error ? (
                     <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
                         <span className="block sm:inline">{error}</span>
@@ -200,6 +203,7 @@ export default function Page() {
                         <TableHeader>
                             <TableColumn>Categories Id</TableColumn>
                             <TableColumn>Categories Name</TableColumn>
+                            <TableColumn>Description</TableColumn>
                             <TableColumn>Actions</TableColumn>
                         </TableHeader>
                         <TableBody>
@@ -208,10 +212,13 @@ export default function Page() {
                                     <TableRow key={categories.id}>
                                         <TableCell>{categories.id}</TableCell>
                                         <TableCell>{categories.name}</TableCell>
+                                        <TableCell>{categories.description}</TableCell>
                                         <TableCell>
                                             <div className="flex space-x-2">
-                                                <NextLink href={`/admin/product_management/categories/update/${categories.id}`}>
-                                                    <button className="inline-block w-fit cursor-pointer transition-all bg-yellow-500 text-white px-6 py-2 rounded-lg border-yellow-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]">
+                                                <NextLink
+                                                    href={`/admin/product_management/categories/update/${categories.id}`}>
+                                                    <button
+                                                        className="inline-block w-fit cursor-pointer transition-all bg-yellow-500 text-white px-6 py-2 rounded-lg border-yellow-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]">
                                                         Sửa
                                                     </button>
                                                 </NextLink>
@@ -265,7 +272,7 @@ export default function Page() {
                             {brandToDelete && (
                                 <p>
                                     Bạn có chắc chắn muốn xóa brand "{brandToDelete.name}"?
-                                    <br />
+                                    <br/>
                                     Hành động này không thể hoàn tác.
                                 </p>
                             )}
