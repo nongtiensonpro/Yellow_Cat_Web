@@ -1,23 +1,25 @@
 "use client";
 
-import { Card, CardHeader, CardBody, CardFooter, Divider, Button, Spinner } from "@heroui/react";
-import { Input } from "@heroui/input";
-import { useState, useEffect, useCallback } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { addToast } from "@heroui/react";
-import { useSession } from "next-auth/react";
+import {Card, CardHeader, CardBody, CardFooter, Divider, Button, Spinner} from "@heroui/react";
+import {Input} from "@heroui/input";
+import {useState, useEffect, useCallback} from "react";
+import {useRouter, useParams} from "next/navigation";
+import {addToast} from "@heroui/react";
+import {useSession} from "next-auth/react";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api';
 
 export interface Category {
     id: number | string;
     name: string;
+    description: string;
     createdAt: string;
     updatedAt: string;
 }
 
 interface CategoryFormData {
     name: string;
+    description?: string;
 }
 
 interface ApiResponse<T> {
@@ -96,13 +98,13 @@ export default function UpdateCategoryPage() {
     const router = useRouter();
     const params = useParams();
     const categoryId = params?.categoriesId as string | undefined;
-    const [categoryData, setCategoryData] = useState<CategoryFormData>({ name: '' });
+    const [categoryData, setCategoryData] = useState<CategoryFormData>({name: ''});
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     // Sử dụng NextAuth session để lấy token
-    const { data: session, status } = useSession();
+    const {data: session, status} = useSession();
     const authToken = session?.accessToken;
     const isAuthenticated = status === "authenticated" && !!authToken;
     const isAuthLoading = status === "loading";
@@ -121,14 +123,15 @@ export default function UpdateCategoryPage() {
                     }
                     setCategoryData({
                         name: fetchedCategory.name || '',
+                        description: fetchedCategory.description || '',
                     });
-                    console.log('Category data loaded into state:', { name: fetchedCategory.name });
+                    console.log('Category data loaded into state:', {name: fetchedCategory.name});
                 })
                 .catch(err => {
                     console.error("Error in fetch useEffect:", err);
                     const errorMsg = err.message || "Không thể tải dữ liệu Category.";
                     setError(errorMsg);
-                    addToast({ title: "Lỗi Tải Dữ Liệu", description: errorMsg, color: "danger" });
+                    addToast({title: "Lỗi Tải Dữ Liệu", description: errorMsg, color: "danger"});
                 })
                 .finally(() => {
                     setIsLoading(false);
@@ -138,12 +141,12 @@ export default function UpdateCategoryPage() {
             if (!categoryId) {
                 console.error("Category ID is missing from URL parameters.");
                 setError("Không tìm thấy ID của Category trong đường dẫn.");
-                addToast({ title: "Lỗi", description: "ID Category không hợp lệ.", color: "danger" });
+                addToast({title: "Lỗi", description: "ID Category không hợp lệ.", color: "danger"});
             }
             if (!authToken && !isAuthLoading) {
                 console.log("Auth token is not available.");
                 setError("Người dùng chưa được xác thực.");
-                addToast({ title: "Lỗi Xác Thực", description: "Vui lòng đăng nhập.", color: "danger" });
+                addToast({title: "Lỗi Xác Thực", description: "Vui lòng đăng nhập.", color: "danger"});
                 // Chuyển hướng đến trang đăng nhập nếu không có token
                 router.push("/auth/signin?callbackUrl=" + encodeURIComponent(window.location.href));
             }
@@ -154,14 +157,20 @@ export default function UpdateCategoryPage() {
     }, [categoryId, authToken, isAuthLoading, router]);
 
     const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setCategoryData(prev => ({ ...prev, [name]: value }));
+        const {name, value} = e.target;
+        setCategoryData(prev => ({...prev, [name]: value}));
+        if (error) setError(null);
+    }, [error]);
+
+    const handleTextareaChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const {name, value} = e.target;
+        setCategoryData(prev => ({...prev, [name]: value}));
         if (error) setError(null);
     }, [error]);
 
     const validateForm = useCallback((): boolean => {
         if (!categoryData.name.trim()) {
-            addToast({ title: "Thiếu thông tin", description: "Vui lòng nhập tên Category.", color: "warning" });
+            addToast({title: "Thiếu thông tin", description: "Vui lòng nhập tên Category.", color: "warning"});
             return false;
         }
         return true;
@@ -172,11 +181,11 @@ export default function UpdateCategoryPage() {
         setError(null);
         if (!validateForm() || isSubmitting || !authToken || !categoryId) {
             if (!authToken) {
-                addToast({ title: "Lỗi", description: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.", color: "danger" });
+                addToast({title: "Lỗi", description: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.", color: "danger"});
                 router.push("/auth/signin?callbackUrl=" + encodeURIComponent(window.location.href));
             }
             if (!categoryId) {
-                addToast({ title: "Lỗi", description: "Không xác định được Category cần cập nhật.", color: "danger" });
+                addToast({title: "Lỗi", description: "Không xác định được Category cần cập nhật.", color: "danger"});
             }
             return;
         }
@@ -184,6 +193,7 @@ export default function UpdateCategoryPage() {
         setIsSubmitting(true); // Bắt đầu trạng thái submitting
         const dataToUpdate: CategoryFormData = {
             name: categoryData.name.trim(),
+            description: categoryData.description ? categoryData.description.trim() : '',
         };
 
         try {
@@ -217,7 +227,7 @@ export default function UpdateCategoryPage() {
     if (isAuthLoading || isLoading) {
         return (
             <div className="flex justify-center items-center min-h-screen">
-                <Spinner label="Đang tải dữ liệu Category..." size="lg" />
+                <Spinner label="Đang tải dữ liệu Category..." size="lg"/>
             </div>
         );
     }
@@ -229,7 +239,7 @@ export default function UpdateCategoryPage() {
                 <CardHeader>
                     <p className="text-lg font-semibold text-red-600">Lỗi Tải Dữ Liệu</p>
                 </CardHeader>
-                <Divider />
+                <Divider/>
                 <CardBody>
                     <p className="text-red-600 p-3 bg-red-100 border border-red-300 rounded-md" role="alert">
                         {error}. Không thể hiển thị form cập nhật. Vui lòng kiểm tra lại đường dẫn hoặc thử lại sau.
@@ -250,7 +260,7 @@ export default function UpdateCategoryPage() {
                         </p>
                     </div>
                 </CardHeader>
-                <Divider />
+                <Divider/>
                 <CardBody className="space-y-6 p-5">
                     <Input
                         label="Tên Category"
@@ -261,14 +271,29 @@ export default function UpdateCategoryPage() {
                         onChange={handleInputChange}
                         isRequired
                     />
-
+                    <div className="flex flex-col gap-1">
+                        <label htmlFor="description" className="text-sm font-medium text-gray-700">
+                            Mô tả
+                        </label>
+                        <textarea
+                            id="description"
+                            placeholder="Nhập description Categories"
+                            name="description"
+                            value={categoryData.description || ''}
+                            onChange={handleTextareaChange}
+                            required
+                            rows={4}
+                            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                    </div>
                     {error && !isLoading && (
-                        <p className="text-red-600 text-sm p-3 bg-red-100 border border-red-300 rounded-md" role="alert">
+                        <p className="text-red-600 text-sm p-3 bg-red-100 border border-red-300 rounded-md"
+                           role="alert">
                             {error}
                         </p>
                     )}
                 </CardBody>
-                <Divider />
+                <Divider/>
                 <CardFooter className="p-5 flex justify-end space-x-3">
                     <Button
                         color="success"

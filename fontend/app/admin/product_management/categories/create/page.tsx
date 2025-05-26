@@ -1,16 +1,17 @@
 "use client";
 
-import { Card, CardHeader, CardBody, Divider, Button, addToast } from "@heroui/react";
-import { Input } from "@heroui/input";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { CardFooter } from "@heroui/card";
-import { useSession } from "next-auth/react";
+import {Card, CardHeader, CardBody, Divider, Button, addToast} from "@heroui/react";
+import {Input} from "@heroui/input";
+import {useState, useEffect} from "react";
+import {useRouter} from "next/navigation";
+import {CardFooter} from "@heroui/card";
+import {useSession} from "next-auth/react";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api';
 
 export interface Categories {
     name: string;
+    description: string;
 }
 
 const createCategory = async (data: Categories, token: string) => {
@@ -52,10 +53,11 @@ export default function CreateCategoryPage() {
     const router = useRouter();
     const [formError, setFormError] = useState<string | null>(null);
     const [categoryName, setCategoryName] = useState("");
+    const [description, setDescription] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+
     // Sử dụng NextAuth session để lấy token
-    const { data: session, status } = useSession();
+    const {data: session, status} = useSession();
     const authToken = session?.accessToken;
     const isAuthenticated = status === "authenticated" && !!authToken;
     const isAuthLoading = status === "loading";
@@ -64,10 +66,10 @@ export default function CreateCategoryPage() {
     useEffect(() => {
         if (status === "unauthenticated") {
             console.warn("Người dùng chưa đăng nhập khi vào trang tạo Category.");
-            addToast({ 
-                title: "Yêu cầu đăng nhập", 
-                description: "Vui lòng đăng nhập để tiếp tục.", 
-                color: "warning" 
+            addToast({
+                title: "Yêu cầu đăng nhập",
+                description: "Vui lòng đăng nhập để tiếp tục.",
+                color: "warning"
             });
             router.push("/auth/signin?callbackUrl=" + encodeURIComponent(window.location.href));
         }
@@ -75,7 +77,7 @@ export default function CreateCategoryPage() {
 
     const validateForm = (): boolean => {
         if (!categoryName.trim()) {
-            addToast({ title: "Thiếu thông tin", description: "Vui lòng nhập tên Categories.", color: "warning" });
+            addToast({title: "Thiếu thông tin", description: "Vui lòng nhập tên Categories.", color: "warning"});
             return false;
         }
         return true;
@@ -90,10 +92,10 @@ export default function CreateCategoryPage() {
         }
 
         if (!authToken) {
-            addToast({ 
-                title: "Lỗi xác thực", 
-                description: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.", 
-                color: "danger" 
+            addToast({
+                title: "Lỗi xác thực",
+                description: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.",
+                color: "danger"
             });
             router.push("/auth/signin?callbackUrl=" + encodeURIComponent(window.location.href));
             return;
@@ -104,7 +106,8 @@ export default function CreateCategoryPage() {
         try {
             const response = await createCategory(
                 {
-                    name: categoryName.trim()
+                    name: categoryName.trim(),
+                    description: description.trim()
                 },
                 authToken
             );
@@ -141,7 +144,8 @@ export default function CreateCategoryPage() {
             <Card className="w-full max-w-2xl mx-auto">
                 <CardBody className="flex justify-center items-center p-10">
                     <div className="text-center">
-                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-4"></div>
+                        <div
+                            className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-4"></div>
                         <p>Đang kiểm tra thông tin xác thực...</p>
                     </div>
                 </CardBody>
@@ -157,25 +161,45 @@ export default function CreateCategoryPage() {
                         <p className="text-lg font-semibold">Thêm mới Categories</p>
                     </div>
                 </CardHeader>
-                <Divider />
+                <Divider/>
                 <CardBody className="space-y-6 p-5">
                     <Input
                         label="Tên Category"
                         placeholder="Nhập tên Categories"
                         type="text"
                         value={categoryName}
-                        onChange={(e) => { setCategoryName(e.target.value); setFormError(null); }} // Xóa lỗi khi nhập
+                        onChange={(e) => {
+                            setCategoryName(e.target.value);
+                            setFormError(null);
+                        }} // Xóa lỗi khi nhập
                         isRequired
                     />
-
+                    <div className="flex flex-col gap-1">
+                        <label htmlFor="description" className="text-sm font-medium text-gray-700">
+                            Mô tả
+                        </label>
+                        <textarea
+                            id="description"
+                            placeholder="Nhập description Categories"
+                            value={description}
+                            onChange={(e) => {
+                                setDescription(e.target.value);
+                                setFormError(null);
+                            }}
+                            required
+                            rows={4}
+                            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                    </div>
                     {formError && (
-                        <p className="text-red-600 text-sm p-3 bg-red-100 border border-red-300 rounded-md" role="alert">
+                        <p className="text-red-600 text-sm p-3 bg-red-100 border border-red-300 rounded-md"
+                           role="alert">
                             {formError}
                         </p>
                     )}
 
                 </CardBody>
-                <Divider />
+                <Divider/>
                 <CardFooter className="p-5 flex justify-end">
                     <Button
                         color="success"
