@@ -42,8 +42,8 @@ public class CategoryController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('Admin_Web')")
-    public ResponseEntity<CategoryResponse> updateCategory(@RequestBody CategoryRequestDto request) {
-        return ResponseEntity.ok(categoryService.updateCategory(request));
+    public ResponseEntity<CategoryResponse> updateCategory(@PathVariable Integer id, @RequestBody CategoryRequestDto request) {
+        return ResponseEntity.ok(categoryService.updateCategory(id, request));
     }
 
     @DeleteMapping("/{id}")

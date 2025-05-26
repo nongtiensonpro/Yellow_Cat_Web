@@ -52,8 +52,8 @@ public class CategoryService {
         return categoryMapper.categoryToCategoryDto(savedCategory);
     }
 
-    public CategoryResponse updateCategory(CategoryRequestDto request) {
-        Category category = categoryRepository.findById(request.getId())
+    public CategoryResponse updateCategory(Integer id, CategoryRequestDto request) {
+        Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Category not found with id: " + request.getId()));
 
         categoryMapper.updateCategory(category, request);
