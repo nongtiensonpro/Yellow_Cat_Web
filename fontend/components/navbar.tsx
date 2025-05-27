@@ -1,3 +1,5 @@
+
+
 "use client";
 
 import {
@@ -21,6 +23,7 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from 'jwt-decode';
+import Image from 'next/image'; // Import Next.js Image component
 
 interface DecodedToken {
     sub?: string;
@@ -213,8 +216,34 @@ export const Navbar = () => {
             <NavbarContent className="basis-1/5 sm:basis-full" justify="start">
                 <NavbarBrand as="li" className="gap-3 max-w-fit">
                     <NextLink className="flex justify-start items-center gap-1" href="/">
-                        <p className="font-bold text-inherit">SneakerPeak</p>
+                        {/* Replace the text with your logo */}
+                        <Image
+                            src="/images/logogiay.jpg" // Path to your logo in the public directory
+                            alt="SneakerPeak Logo"
+                            width={60} // Adjust width as needed
+                            height={60} // Adjust height as needed
+                        />
+                        <p className="font-bold text-inherit">
+                            Sneaker<br />Peak
+                        </p>
                     </NextLink>
+                    <NextLink className="flex justify-content center" href="/">
+                        <p className="font-bold text-inherit">Trang chủ</p>
+                    </NextLink>
+                    <NextLink className="flex justify-content center" href="/products"> {/* Thêm Sản phẩm */}
+                        <p className="font-bold text-inherit">Sản phẩm</p>
+                    </NextLink>
+                    <NextLink className="flex justify-content center" href="/about">
+                        <p className="font-bold text-inherit">Giới thiệu</p>
+                    </NextLink>
+                    <NextLink className="flex justify-content center" href="/contact">
+                        <p className="font-bold text-inherit">Liên hệ</p>
+                    </NextLink>
+                    <NextLink className="flex justify-content center" href="/search"> {/* Thêm Tra cứu */}
+                        <p className="font-bold text-inherit">Tra cứu</p>
+                    </NextLink>
+
+
                 </NavbarBrand>
                 <ul className="hidden lg:flex gap-4 justify-start ml-2">
                     {siteConfig.navItems.map((item: { href: string; label: string }) => (
@@ -224,7 +253,7 @@ export const Navbar = () => {
                             </NextLink>
                         </NavbarItem>
                     ))}
-                    {/* Admin menu items - sẽ hiển thị ngay khi có quyền */}
+                    {/* Admin menu items - will display when authorized */}
                     {isAdmin &&
                         siteConfig.navMenuItemsAdmin.map((item) => (
                             <NavbarItem key={item.href}>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import Link from 'next/link';
 import {CldImage} from "next-cloudinary";
+import Image from "next/image";
 
 interface Product {
   productId: number;
@@ -88,6 +89,16 @@ const ProductList = () => {
 
   return (
       <StyledWrapper>
+        {/*<h2 className="section-title">Our Products</h2>*/}
+        <div className="full-width-banner-wrapper"> {/* Add this wrapper */}
+          <Image
+              src="/images/banner.png"
+              alt="SneakerPeak Logo"
+              layout="responsive" // Best practice for Next.js Image
+              width={800}
+              height={500}
+          />
+        </div>
         <h2 className="section-title">Our Products</h2>
         <div className="product-grid">
           {products.map((product) => (
