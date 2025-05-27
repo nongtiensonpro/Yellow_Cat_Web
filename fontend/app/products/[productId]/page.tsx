@@ -316,24 +316,33 @@ export default function ProductDetailPage() {
               </div>
 
               {/* Add to Cart Button */}
-              <div className="pt-4">
+              {/* Add to Cart Button */}
+              <div className="pt-4 flex gap-4"> {/* Added flex and gap for side-by-side */}
                 <Button
-                  color="success"
-                  size="lg"
-                  className="w-full"
-                  disabled={!selectedVariant || selectedVariant.stockLevel <= 0}
+                    // Removed color="success"
+                    size="lg"
+                    className="flex-1 bg-white border border-gray-300 text-gray-800" // Styled to match image 2 for "Add to Cart"
+                    disabled={!selectedVariant || selectedVariant.stockLevel <= 0}
                 >
                   Thêm vào giỏ hàng
                 </Button>
+                <Button
+                    // Removed color="danger"
+                    size="lg"
+                    className="flex-1 bg-black text-white" // Styled to match image 2 for "Buy Now"
+                    disabled={!selectedVariant || selectedVariant.stockLevel <= 0}
+                >
+                  Mua ngay
+                </Button>
                 {selectedVariant && selectedVariant.stockLevel <= 5 && selectedVariant.stockLevel > 0 && (
-                  <p className="text-sm text-orange-500 mt-2">
-                    Chỉ còn {selectedVariant.stockLevel} sản phẩm, mua ngay kẻo hết!
-                  </p>
+                    <p className="text-sm text-orange-500 mt-2">
+                      Chỉ còn {selectedVariant.stockLevel} sản phẩm, mua ngay kẻo hết!
+                    </p>
                 )}
                 {selectedVariant && selectedVariant.stockLevel <= 0 && (
-                  <p className="text-sm text-red-500 mt-2">
-                    Sản phẩm đã hết hàng!
-                  </p>
+                    <p className="text-sm text-red-500 mt-2">
+                      Sản phẩm đã hết hàng!
+                    </p>
                 )}
               </div>
 
