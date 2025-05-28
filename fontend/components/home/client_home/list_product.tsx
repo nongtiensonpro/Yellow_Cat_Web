@@ -2,6 +2,7 @@ import React, {useEffect, useState} from 'react';
 import styled from 'styled-components';
 import Link from 'next/link';
 import {CldImage} from "next-cloudinary";
+import Image from "next/image";
 
 interface Product {
     productId: number;
@@ -75,7 +76,6 @@ const ProductList = () => {
         if (price === null) return 'Liên hệ';
         return new Intl.NumberFormat('vi-VN', {style: 'currency', currency: 'VND'}).format(price);
     };
-
     return (
         <StyledWrapper>
             <h2 className="section-title">Our Products</h2>
