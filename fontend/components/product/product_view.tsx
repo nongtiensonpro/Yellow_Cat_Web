@@ -16,8 +16,8 @@ import {
     Tooltip,
     Badge,
 } from "@heroui/react";
-import { useEffect, useState } from "react";
-import { Eye, Edit, Trash2, Plus, Tag } from "lucide-react";
+import {useEffect, useState} from "react";
+import {Eye, Edit, Trash2, Plus, Tag} from "lucide-react";
 import Link from "next/link";
 
 interface Product {
@@ -27,6 +27,7 @@ interface Product {
     purchases: number;
     createdAt: string;
     updatedAt: string;
+    isActive: boolean;
     categoryId: number;
     categoryName: string;
     brandId: number;
@@ -36,8 +37,6 @@ interface Product {
     minPrice: number | null;
     totalStock: number | null;
     thumbnail: string | null;
-    activePromotions: string | null;
-    active: boolean;
 }
 
 interface ApiResponse {
@@ -68,7 +67,7 @@ export default function Page() {
     const fetchProductsData = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`http://localhost:8080/api/products?page=${currentPage}&size=${itemsPerPage}`);
+            const response = await fetch(`http://localhost:8080/api/products/management?page=${currentPage}&size=${itemsPerPage}`);
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
             const apiResponse: ApiResponse = await response.json();
 
@@ -107,7 +106,7 @@ export default function Page() {
     // Format giá tiền
     const formatPrice = (price: number | null) => {
         if (price === null) return 'Chưa có giá';
-        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+        return new Intl.NumberFormat('vi-VN', {style: 'currency', currency: 'VND'}).format(price);
     };
 
     // Format ngày tháng
@@ -127,10 +126,11 @@ export default function Page() {
             <CardHeader className="flex gap-3">
                 <div className="flex flex-col">
                     <p className="text-4xl font-bold">Quản lý sản phẩm</p>
-                    <span className="text-grey-500 text-sm">Danh sách sản phẩm chi tiết ({totalElements} sản phẩm)</span>
+                    <span
+                        className="text-grey-500 text-sm">Danh sách sản phẩm chi tiết ({totalElements} sản phẩm)</span>
                 </div>
             </CardHeader>
-            <Divider />
+            <Divider/>
             <CardBody>
                 <div className="mb-4 flex justify-between items-center gap-2">
                     <Input
@@ -140,7 +140,8 @@ export default function Page() {
                         onChange={e => setSearchTerm(e.target.value)}
                         className="max-w-md"
                     />
-                    <Button color="primary" as={Link} href={`/admin/product_management/add_product`} startContent={<Plus size={16} />}>Thêm sản phẩm</Button>
+                    <Button color="primary" as={Link} href={`/admin/product_management/add_product`}
+                            startContent={<Plus size={16}/>}>Thêm sản phẩm</Button>
                 </div>
                 {loading ? (
                     <div className="my-6 text-lg text-center text-blue-500">Đang tải dữ liệu...</div>
@@ -180,47 +181,43 @@ export default function Page() {
                                         <TableCell>{formatPrice(product.minPrice)}</TableCell>
                                         <TableCell>
                                             {product.totalStock !== null ? (
-                                                <Badge color={product.totalStock > 50 ? "success" : product.totalStock > 10 ? "warning" : "danger"}>
+                                                <Badge
+                                                    color={product.totalStock > 50 ? "success" : product.totalStock > 10 ? "warning" : "danger"}>
                                                     {product.totalStock}
                                                 </Badge>
                                             ) : (
                                                 <span className="text-gray-400">N/A</span>
                                             )}
                                         </TableCell>
-                                        <TableCell>{product.purchases!=null?product.purchases:"-"}</TableCell>
+                                        <TableCell>{product.purchases != null ? product.purchases : "-"}</TableCell>
                                         <TableCell>
                                             <Chip
-                                                color={product.active ?  "danger":"success"}
+                                                color={product.isActive ? "success" : "danger"}
                                                 variant="flat"
                                             >
-                                                {product.active ?   "Ngừng bán":"Đang bán"}
+                                                {product.isActive ? "Đang bán" : "Ngừng bán"}
                                             </Chip>
                                         </TableCell>
                                         <TableCell>{formatDate(product.updatedAt)}</TableCell>
                                         <TableCell>
                                             <div className="flex gap-2">
                                                 <Tooltip content="Xem chi tiết">
-                                                    <Button isIconOnly size="sm" variant="light" as={Link} href={`/products/${product.productId}`}>
-                                                        <Eye size={16} />
+                                                    <Button isIconOnly size="sm" variant="light" as={Link}
+                                                            href={`/products/${product.productId}`}>
+                                                        <Eye size={16}/>
                                                     </Button>
                                                 </Tooltip>
                                                 <Tooltip content="Chỉnh sửa">
-                                                    <Button isIconOnly size="sm" variant="light" as={Link} href={`/admin/product_management/update_product/${product.productId}`}>
-                                                        <Edit size={16} />
+                                                    <Button isIconOnly size="sm" variant="light" as={Link}
+                                                            href={`/admin/product_management/update_product/${product.productId}`}>
+                                                        <Edit size={16}/>
                                                     </Button>
                                                 </Tooltip>
                                                 <Tooltip content="Xóa">
                                                     <Button isIconOnly size="sm" variant="light" color="danger">
-                                                        <Trash2 size={16} />
+                                                        <Trash2 size={16}/>
                                                     </Button>
                                                 </Tooltip>
-                                                {product.activePromotions && (
-                                                    <Tooltip content="Có khuyến mãi">
-                                                        <Button isIconOnly size="sm" variant="light" color="warning">
-                                                            <Tag size={16} />
-                                                        </Button>
-                                                    </Tooltip>
-                                                )}
                                             </div>
                                         </TableCell>
                                     </TableRow>

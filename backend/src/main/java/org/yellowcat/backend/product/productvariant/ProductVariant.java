@@ -6,10 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.yellowcat.backend.product.Product;
-import org.yellowcat.backend.product.variant.VariantAttribute;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 @Entity
 @Table(name = "product_variants")
@@ -25,10 +23,19 @@ public class ProductVariant {
 
     private String sku;
 
+    private String color;
+
+    private String size;
+
     private BigDecimal price;
 
-    @Column(name = "stock_level")
-    private int stockLevel;
+    @Column(name = "sale_price")
+    private BigDecimal salePrice;
+
+    @Column(name = "quantity_in_stock")
+    private Integer stockLevel;
+
+    private Integer sold;
 
     @Column(name = "image_url")
     private String imageUrl;
@@ -40,6 +47,13 @@ public class ProductVariant {
     @JoinColumn(name = "product_id")
     private Product product;
 
-    @OneToMany(mappedBy = "variant")
-    private List<VariantAttribute> attributes;
+    @PrePersist
+    protected void onCreate() {
+        if (salePrice == null) {
+            salePrice = BigDecimal.ZERO;
+        }
+        if (sold == null) {
+            sold = 0;
+        }
+    }
 }
