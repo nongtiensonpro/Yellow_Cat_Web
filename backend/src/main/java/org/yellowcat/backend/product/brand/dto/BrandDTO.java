@@ -25,7 +25,7 @@ public class BrandDTO {
         this.createdAt = brand.getCreatedAt();
         this.updatedAt = brand.getUpdatedAt();
         this.productIds = brand.getProducts().stream()
-                .map(Product::getId)
+                .map(Product::getProductId)
                 .collect(Collectors.toSet());
     }
 

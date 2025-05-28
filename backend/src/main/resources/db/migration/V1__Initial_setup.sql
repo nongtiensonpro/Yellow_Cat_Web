@@ -47,8 +47,8 @@ CREATE TABLE Brands
 (
     brand_id          SERIAL PRIMARY KEY,
     brand_name        VARCHAR(255) UNIQUE NOT NULL,
-    logo_url          VARCHAR(255),
-    description       TEXT,
+    logo_public_id    VARCHAR(255),
+    brand_info        TEXT,
     country_of_origin VARCHAR(100),
     created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -65,7 +65,8 @@ CREATE TABLE Products
     material        VARCHAR(255),
     target_audience VARCHAR(50),
     is_featured     BOOLEAN   DEFAULT FALSE,
-    is_published    BOOLEAN   DEFAULT TRUE,
+    purchases       INT       default 0,
+    is_active       BOOLEAN   DEFAULT TRUE,
     thumbnail       VARCHAR(255) NOT NULL,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -74,7 +75,7 @@ CREATE TABLE Products
 );
 
 -- Bảng Biến thể sản phẩm
-CREATE TABLE ProductVariants
+CREATE TABLE product_variants
 (
     variant_id        SERIAL PRIMARY KEY,
     product_id        INT            NOT NULL,
@@ -86,6 +87,7 @@ CREATE TABLE ProductVariants
     quantity_in_stock INT            NOT NULL DEFAULT 0,
     sold              INT            NOT NULL DEFAULT 0,
     image_url         VARCHAR(255)   NOT NULL,
+    weight            FLOAT,
     created_at        TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
     updated_at        TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (product_id, color, size),
@@ -152,7 +154,7 @@ CREATE TABLE OrderItems
     price_at_purchase NUMERIC(12, 2) NOT NULL,
     total_price       NUMERIC(14, 2) NOT NULL,
     FOREIGN KEY (order_id) REFERENCES Orders (order_id) ON DELETE CASCADE,
-    FOREIGN KEY (variant_id) REFERENCES ProductVariants (variant_id)
+    FOREIGN KEY (variant_id) REFERENCES product_variants (variant_id)
 );
 
 -- Bảng Giao dịch thanh toán
@@ -241,97 +243,128 @@ VALUES ('Giày Nike', 'Giày Nike', NOW(), NOW()),
 
 
 -- 1. Dữ liệu cho bảng Categories
-INSERT INTO Categories (category_name, description, image_url) VALUES
-                                                                   ('Giày thể thao nam', 'Bộ sưu tập giày thể thao dành cho nam giới', 'https://example.com/categories/men-sports-shoes.jpg'),
-                                                                   ('Giày chạy bộ', 'Giày chuyên dụng cho việc chạy bộ và tập luyện', 'https://example.com/categories/running-shoes.jpg'),
-                                                                   ('Giày bóng rổ', 'Giày chuyên dụng cho môn bóng rổ', 'https://example.com/categories/basketball-shoes.jpg'),
-                                                                   ('Giày thời trang', 'Giày thể thao phong cách đường phố', 'https://example.com/categories/fashion-shoes.jpg');
+INSERT INTO Categories (category_name, description, image_url)
+VALUES ('Giày thể thao nam', 'Bộ sưu tập giày thể thao dành cho nam giới',
+        'https://example.com/categories/men-sports-shoes.jpg'),
+       ('Giày chạy bộ', 'Giày chuyên dụng cho việc chạy bộ và tập luyện',
+        'https://example.com/categories/running-shoes.jpg'),
+       ('Giày bóng rổ', 'Giày chuyên dụng cho môn bóng rổ', 'https://example.com/categories/basketball-shoes.jpg'),
+       ('Giày thời trang', 'Giày thể thao phong cách đường phố', 'https://example.com/categories/fashion-shoes.jpg');
 
 -- 2. Dữ liệu cho bảng Brands
-INSERT INTO Brands (brand_name, logo_url, description, country_of_origin) VALUES
-                                                                              ('Nike', 'YellowCatWeb/t0hqgdma141foprsckjf', 'Nike là một tập đoàn đa quốc gia của Mỹ hoạt động trong lĩnh vực thiết kế, phát triển, sản xuất, quảng bá cũng như kinh doanh các mặt hàng giày dép, quần áo, phụ kiện, trang thiết bị và dịch vụ liên quan đến thể thao.', 'United States'),
-                                                                              ('Adidas', 'YellowCatWeb/ajstsr8nluev6ich5uwg', 'Adidas AG là một tập đoàn đa quốc gia đến từ Đức, chuyên thiết kế và sản xuất giày dép, quần áo, phụ kiện thể thao. Adidas là nhà sản xuất đồ thể thao lớn nhất châu Âu và lớn thứ hai trên thế giới.', 'Germany'),
-                                                                              ('Under Armour', 'YellowCatWeb/vcjjtizyqhvlfdggw7sd', 'Under Armour, Inc. là một công ty sản xuất trang phục thể thao và phụ kiện của Mỹ. Công ty cung cấp các sản phẩm trang phục thể thao, giày dép và phụ kiện.', 'United States'),
-                                                                              ('Puma', 'YellowCatWeb/n54kyijbuhmmbtzlkh2h', 'Puma SE là một công ty đa quốc gia của Đức chuyên thiết kế và sản xuất giày dép, trang phục và phụ kiện thể thao và thông thường.', 'Germany');
+INSERT INTO Brands (brand_name, logo_public_id, brand_info, country_of_origin)
+VALUES ('Nike', 'YellowCatWeb/t0hqgdma141foprsckjf',
+        'Nike là một tập đoàn đa quốc gia của Mỹ hoạt động trong lĩnh vực thiết kế, phát triển, sản xuất, quảng bá cũng như kinh doanh các mặt hàng giày dép, quần áo, phụ kiện, trang thiết bị và dịch vụ liên quan đến thể thao.',
+        'United States'),
+       ('Adidas', 'YellowCatWeb/ajstsr8nluev6ich5uwg',
+        'Adidas AG là một tập đoàn đa quốc gia đến từ Đức, chuyên thiết kế và sản xuất giày dép, quần áo, phụ kiện thể thao. Adidas là nhà sản xuất đồ thể thao lớn nhất châu Âu và lớn thứ hai trên thế giới.',
+        'Germany'),
+       ('Under Armour', 'YellowCatWeb/vcjjtizyqhvlfdggw7sd',
+        'Under Armour, Inc. là một công ty sản xuất trang phục thể thao và phụ kiện của Mỹ. Công ty cung cấp các sản phẩm trang phục thể thao, giày dép và phụ kiện.',
+        'United States'),
+       ('Puma', 'YellowCatWeb/n54kyijbuhmmbtzlkh2h',
+        'Puma SE là một công ty đa quốc gia của Đức chuyên thiết kế và sản xuất giày dép, trang phục và phụ kiện thể thao và thông thường.',
+        'Germany');
 
 -- 3. Dữ liệu cho bảng Products
-INSERT INTO Products (product_name, description, category_id, brand_id, material, target_audience, is_featured, is_published, thumbnail) VALUES
-                                                                                                                                             ('Nike Revolution 6 Nam', 'Giày chạy bộ Nike Revolution 6 mang lại sự thoải mái và đệm êm ái cho mỗi bước chạy, thiết kế với ít nhất 20% vật liệu tái chế theo trọng lượng.', 1, 1, 'Vải lưới, Cao su', 'Nam', TRUE, TRUE, 'YellowCatWeb/hiitwcruaqxpuaxthlbs'),
-                                                                                                                                             ('Adidas Duramo SL Nam', 'Giày Adidas Duramo SL đa năng, phù hợp cho chạy bộ, tập gym hoặc mang hàng ngày, với lớp đệm Lightmotion siêu nhẹ.', 1, 2, 'Vải lưới, EVA', 'Nam', TRUE, TRUE, 'YellowCatWeb/o7sariwjck0tzocfsfsi'),
-                                                                                                                                             ('Under Armour Curry Flow 9', 'Giày bóng rổ Under Armour Curry Flow 9, công nghệ UA Flow cho độ bám sân tuyệt vời và cảm giác nhẹ như không.', 3, 3, 'Vải kỹ thuật, UA Flow', 'Nam', TRUE, TRUE, 'YellowCatWeb/ejzjv3cxkyyjtokkgh1t'),
-                                                                                                                                             ('Puma Suede Classic XXI', 'Đôi giày Puma Suede Classic XXI mang tính biểu tượng, phong cách đường phố cổ điển với chất liệu da lộn cao cấp và form dáng được cải tiến.', 4, 4, 'Da lộn, Cao su', 'Nam', FALSE, TRUE, 'YellowCatWeb/sx6bwsntnuwyfwx89tqt'),
-                                                                                                                                             ('Nike Air Zoom Pegasus 40', 'Nike Air Zoom Pegasus 40, tiếp nối di sản với cảm giác đàn hồi quen thuộc, hoàn hảo cho những quãng đường dài và mọi kiểu chạy.', 2, 1, 'Vải lưới, React Foam', 'Nam', TRUE, TRUE, 'YellowCatWeb/byshsl4qboscrdnmuoix');
+INSERT INTO Products (product_name, description, category_id, brand_id, material, target_audience, is_featured,
+                      is_active, thumbnail)
+VALUES ('Nike Revolution 6 Nam',
+        'Giày chạy bộ Nike Revolution 6 mang lại sự thoải mái và đệm êm ái cho mỗi bước chạy, thiết kế với ít nhất 20% vật liệu tái chế theo trọng lượng.',
+        1, 1, 'Vải lưới, Cao su', 'Nam', TRUE, TRUE, 'YellowCatWeb/hiitwcruaqxpuaxthlbs'),
+       ('Adidas Duramo SL Nam',
+        'Giày Adidas Duramo SL đa năng, phù hợp cho chạy bộ, tập gym hoặc mang hàng ngày, với lớp đệm Lightmotion siêu nhẹ.',
+        1, 2, 'Vải lưới, EVA', 'Nam', TRUE, TRUE, 'YellowCatWeb/o7sariwjck0tzocfsfsi'),
+       ('Under Armour Curry Flow 9',
+        'Giày bóng rổ Under Armour Curry Flow 9, công nghệ UA Flow cho độ bám sân tuyệt vời và cảm giác nhẹ như không.',
+        3, 3, 'Vải kỹ thuật, UA Flow', 'Nam', TRUE, TRUE, 'YellowCatWeb/ejzjv3cxkyyjtokkgh1t'),
+       ('Puma Suede Classic XXI',
+        'Đôi giày Puma Suede Classic XXI mang tính biểu tượng, phong cách đường phố cổ điển với chất liệu da lộn cao cấp và form dáng được cải tiến.',
+        4, 4, 'Da lộn, Cao su', 'Nam', FALSE, TRUE, 'YellowCatWeb/sx6bwsntnuwyfwx89tqt'),
+       ('Nike Air Zoom Pegasus 40',
+        'Nike Air Zoom Pegasus 40, tiếp nối di sản với cảm giác đàn hồi quen thuộc, hoàn hảo cho những quãng đường dài và mọi kiểu chạy.',
+        2, 1, 'Vải lưới, React Foam', 'Nam', TRUE, TRUE, 'YellowCatWeb/byshsl4qboscrdnmuoix');
 
 -- 4. Dữ liệu cho bảng ProductVariants
-INSERT INTO ProductVariants (product_id, sku, color, size, price, sale_price, quantity_in_stock, sold, image_url) VALUES
+INSERT INTO product_variants (product_id, sku, color, size, price, sale_price, quantity_in_stock, sold, image_url,
+                              weight)
+VALUES
 -- Nike Revolution 6
-(1, 'NK-REV6-BLK-40', 'Đen', '40', 1800000.00, 1620000.00, 50, 25, 'YellowCatWeb/hiitwcruaqxpuaxthlbs'),
-(1, 'NK-REV6-BLK-41', 'Đen', '41', 1800000.00, 1620000.00, 45, 30, 'YellowCatWeb/hiitwcruaqxpuaxthlbs'),
-(1, 'NK-REV6-WHT-40', 'Trắng', '40', 1800000.00, NULL, 35, 15, 'YellowCatWeb/nike-rev6-white'),
-(1, 'NK-REV6-WHT-42', 'Trắng', '42', 1800000.00, NULL, 40, 20, 'YellowCatWeb/nike-rev6-white'),
+(1, 'NK-REV6-BLK-40', 'Đen', '40', 1800000.00, 1620000.00, 50, 25, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.1),
+(1, 'NK-REV6-BLK-41', 'Đen', '41', 1800000.00, 1620000.00, 45, 30, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.2),
+(1, 'NK-REV6-WHT-40', 'Trắng', '40', 1800000.00, NULL, 35, 15, 'YellowCatWeb/nike-rev6-white', 0.3),
+(1, 'NK-REV6-WHT-42', 'Trắng', '42', 1800000.00, NULL, 40, 20, 'YellowCatWeb/nike-rev6-white', 0.4),
 
 -- Adidas Duramo SL
-(2, 'AD-DURSL-WHT-41', 'Trắng', '41', 1650000.00, 1485000.00, 55, 35, 'YellowCatWeb/o7sariwjck0tzocfsfsi'),
-(2, 'AD-DURSL-WHT-42', 'Trắng', '42', 1650000.00, 1485000.00, 65, 40, 'YellowCatWeb/o7sariwjck0tzocfsfsi'),
-(2, 'AD-DURSL-NVY-43', 'Xanh Navy', '43', 1650000.00, NULL, 40, 25, 'YellowCatWeb/adidas-duramo-navy'),
-(2, 'AD-DURSL-BLK-41', 'Đen', '41', 1650000.00, NULL, 30, 18, 'YellowCatWeb/adidas-duramo-black'),
+(2, 'AD-DURSL-WHT-41', 'Trắng', '41', 1650000.00, 1485000.00, 55, 35, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 0.1),
+(2, 'AD-DURSL-WHT-42', 'Trắng', '42', 1650000.00, 1485000.00, 65, 40, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 0.2),
+(2, 'AD-DURSL-NVY-43', 'Xanh Navy', '43', 1650000.00, NULL, 40, 25, 'YellowCatWeb/adidas-duramo-navy', 0.3),
+(2, 'AD-DURSL-BLK-41', 'Đen', '41', 1650000.00, NULL, 30, 18, 'YellowCatWeb/adidas-duramo-black', 0.4),
 
 -- Under Armour Curry Flow 9
-(3, 'UA-CUR9-BLU-42', 'Xanh Dương', '42', 3500000.00, 3150000.00, 30, 12, 'YellowCatWeb/ejzjv3cxkyyjtokkgh1t'),
-(3, 'UA-CUR9-RED-43', 'Đỏ', '43', 3550000.00, NULL, 25, 8, 'YellowCatWeb/bqttubnjqa5qzb64kjnm'),
-(3, 'UA-CUR9-BLK-41', 'Đen', '41', 3500000.00, NULL, 20, 10, 'YellowCatWeb/ua-curry-black'),
+(3, 'UA-CUR9-BLU-42', 'Xanh Dương', '42', 3500000.00, 3150000.00, 30, 12, 'YellowCatWeb/ejzjv3cxkyyjtokkgh1t', 0.2),
+(3, 'UA-CUR9-GRY-44', 'Xám', '44', 3500000.00, NULL, 22, 5, 'YellowCatWeb/ua-curry-grey', 0.3),
+(3, 'UA-CUR9-RED-43', 'Đỏ', '43', 3550000.00, NULL, 25, 8, 'YellowCatWeb/bqttubnjqa5qzb64kjnm', 0.4),
+(3, 'UA-CUR9-BLK-41', 'Đen', '41', 3500000.00, NULL, 20, 10, 'YellowCatWeb/ua-curry-black', 0.1),
 
 -- Puma Suede Classic XXI
-(4, 'PU-SUED-BLK-40', 'Đen', '40', 2200000.00, 1980000.00, 35, 22, 'YellowCatWeb/sx6bwsntnuwyfwx89tqt'),
-(4, 'PU-SUED-RED-41', 'Đỏ', '41', 2200000.00, NULL, 30, 15, 'YellowCatWeb/lq1yqclrqebutga5pmrk'),
-(4, 'PU-SUED-GRY-42', 'Xám', '42', 2200000.00, NULL, 28, 12, 'YellowCatWeb/puma-suede-grey'),
+(4, 'PU-SUED-BLK-40', 'Đen', '40', 2200000.00, 1980000.00, 35, 22, 'YellowCatWeb/sx6bwsntnuwyfwx89tqt', 0.2),
+(4, 'PU-SUED-RED-41', 'Đỏ', '41', 2200000.00, NULL, 30, 15, 'YellowCatWeb/lq1yqclrqebutga5pmrk', 0.3),
+(4, 'PU-SUED-GRY-42', 'Xám', '42', 2200000.00, NULL, 28, 12, 'YellowCatWeb/puma-suede-grey', 0.2),
 
 -- Nike Air Zoom Pegasus 40
-(5, 'NK-PEG40-BLK-41', 'Đen', '41', 3200000.00, 2880000.00, 50, 30, 'YellowCatWeb/byshsl4qboscrdnmuoix'),
-(5, 'NK-PEG40-WHT-42', 'Trắng', '42', 3200000.00, NULL, 55, 25, 'YellowCatWeb/acs7ki8v43lrjorsfnwb'),
-(5, 'NK-PEG40-GRY-43', 'Xám', '43', 3200000.00, NULL, 40, 18, 'YellowCatWeb/nike-pegasus-grey');
+(5, 'NK-PEG40-BLK-41', 'Đen', '41', 3200000.00, 2880000.00, 50, 30, 'YellowCatWeb/byshsl4qboscrdnmuoix', 0.3),
+(5, 'NK-PEG40-WHT-42', 'Trắng', '42', 3200000.00, NULL, 55, 25, 'YellowCatWeb/acs7ki8v43lrjorsfnwb', 0.3),
+(5, 'NK-PEG40-GRY-43', 'Xám', '43', 3200000.00, NULL, 40, 18, 'YellowCatWeb/nike-pegasus-grey', 0.1);
 
 -- 5. Dữ liệu cho bảng AppUsers
-INSERT INTO AppUsers (keycloak_user_id, email, full_name, phone_number, avatar_url) VALUES
-                                                                                        ('kc-user-001', 'nguyen.van.a@email.com', 'Nguyễn Văn A', '0901234567', 'https://example.com/avatars/user1.jpg'),
-                                                                                        ('kc-user-002', 'tran.thi.b@email.com', 'Trần Thị B', '0902345678', 'https://example.com/avatars/user2.jpg'),
-                                                                                        ('kc-user-003', 'le.van.c@email.com', 'Lê Văn C', '0903456789', 'https://example.com/avatars/user3.jpg'),
-                                                                                        ('kc-user-004', 'pham.thi.d@email.com', 'Phạm Thị D', '0904567890', 'https://example.com/avatars/user4.jpg'),
-                                                                                        ('kc-user-005', 'hoang.van.e@email.com', 'Hoàng Văn E', '0905678901', 'https://example.com/avatars/user5.jpg');
+INSERT INTO AppUsers (keycloak_user_id, email, full_name, phone_number, avatar_url)
+VALUES ('kc-user-001', 'nguyen.van.a@email.com', 'Nguyễn Văn A', '0901234567', 'https://example.com/avatars/user1.jpg'),
+       ('kc-user-002', 'tran.thi.b@email.com', 'Trần Thị B', '0902345678', 'https://example.com/avatars/user2.jpg'),
+       ('kc-user-003', 'le.van.c@email.com', 'Lê Văn C', '0903456789', 'https://example.com/avatars/user3.jpg'),
+       ('kc-user-004', 'pham.thi.d@email.com', 'Phạm Thị D', '0904567890', 'https://example.com/avatars/user4.jpg'),
+       ('kc-user-005', 'hoang.van.e@email.com', 'Hoàng Văn E', '0905678901', 'https://example.com/avatars/user5.jpg');
 
 -- 6. Dữ liệu cho bảng Addresses
-INSERT INTO Addresses (app_user_id, recipient_name, phone_number, street_address, ward_commune, district, city_province, is_default, address_type) VALUES
-                                                                                                                                                       (1, 'Nguyễn Văn A', '0901234567', '123 Đường Lê Lợi', 'Phường Bến Nghé', 'Quận 1', 'TP. Hồ Chí Minh', TRUE, 'home'),
-                                                                                                                                                       (1, 'Nguyễn Văn A', '0901234567', '456 Đường Nguyễn Huệ', 'Phường Bến Nghé', 'Quận 1', 'TP. Hồ Chí Minh', FALSE, 'office'),
-                                                                                                                                                       (2, 'Trần Thị B', '0902345678', '789 Đường Trần Hưng Đạo', 'Phường Cầu Kho', 'Quận 1', 'TP. Hồ Chí Minh', TRUE, 'home'),
-                                                                                                                                                       (3, 'Lê Văn C', '0903456789', '321 Đường Điện Biên Phủ', 'Phường Đa Kao', 'Quận 1', 'TP. Hồ Chí Minh', TRUE, 'home'),
-                                                                                                                                                       (4, 'Phạm Thị D', '0904567890', '654 Đường Võ Văn Tần', 'Phường 6', 'Quận 3', 'TP. Hồ Chí Minh', TRUE, 'home');
+INSERT INTO Addresses (app_user_id, recipient_name, phone_number, street_address, ward_commune, district, city_province,
+                       is_default, address_type)
+VALUES (1, 'Nguyễn Văn A', '0901234567', '123 Đường Lê Lợi', 'Phường Bến Nghé', 'Quận 1', 'TP. Hồ Chí Minh', TRUE,
+        'home'),
+       (1, 'Nguyễn Văn A', '0901234567', '456 Đường Nguyễn Huệ', 'Phường Bến Nghé', 'Quận 1', 'TP. Hồ Chí Minh', FALSE,
+        'office'),
+       (2, 'Trần Thị B', '0902345678', '789 Đường Trần Hưng Đạo', 'Phường Cầu Kho', 'Quận 1', 'TP. Hồ Chí Minh', TRUE,
+        'home'),
+       (3, 'Lê Văn C', '0903456789', '321 Đường Điện Biên Phủ', 'Phường Đa Kao', 'Quận 1', 'TP. Hồ Chí Minh', TRUE,
+        'home'),
+       (4, 'Phạm Thị D', '0904567890', '654 Đường Võ Văn Tần', 'Phường 6', 'Quận 3', 'TP. Hồ Chí Minh', TRUE, 'home');
 
 -- 7. Dữ liệu cho bảng ShippingMethods
-INSERT INTO ShippingMethods (method_name, description, base_cost, is_active) VALUES
-                                                                                 ('Giao hàng tiêu chuẩn', 'Giao hàng trong 3-5 ngày làm việc', 30000.00, TRUE),
-                                                                                 ('Giao hàng nhanh', 'Giao hàng trong 1-2 ngày làm việc', 50000.00, TRUE),
-                                                                                 ('Giao hàng hỏa tốc', 'Giao hàng trong ngày', 100000.00, TRUE),
-                                                                                 ('Giao hàng miễn phí', 'Miễn phí giao hàng cho đơn hàng trên 1 triệu', 0.00, TRUE);
+INSERT INTO ShippingMethods (method_name, description, base_cost, is_active)
+VALUES ('Giao hàng tiêu chuẩn', 'Giao hàng trong 3-5 ngày làm việc', 30000.00, TRUE),
+       ('Giao hàng nhanh', 'Giao hàng trong 1-2 ngày làm việc', 50000.00, TRUE),
+       ('Giao hàng hỏa tốc', 'Giao hàng trong ngày', 100000.00, TRUE),
+       ('Giao hàng miễn phí', 'Miễn phí giao hàng cho đơn hàng trên 1 triệu', 0.00, TRUE);
 
 -- 8. Dữ liệu cho bảng Orders
-INSERT INTO Orders (order_code, app_user_id, shipping_address_id, sub_total_amount, shipping_fee, discount_amount, final_amount, order_status, shipping_method_id, customer_notes) VALUES
-                                                                                                                                                                                       ('ORD-2024-001', 1, 1, 3600000.00, 30000.00, 180000.00, 3450000.00, 'Delivered', 1, 'Giao hàng giờ hành chính'),
-                                                                                                                                                                                       ('ORD-2024-002', 2, 3, 1650000.00, 50000.00, 0.00, 1700000.00, 'Processing', 2, NULL),
-                                                                                                                                                                                       ('ORD-2024-003', 3, 4, 3500000.00, 0.00, 350000.00, 3150000.00, 'Shipped', 4, 'Liên hệ trước khi giao'),
-                                                                                                                                                                                       ('ORD-2024-004', 1, 2, 2200000.00, 30000.00, 0.00, 2230000.00, 'Pending', 1, NULL),
-                                                                                                                                                                                       ('ORD-2024-005', 4, 5, 5400000.00, 0.00, 540000.00, 4860000.00, 'Confirmed', 4, 'Giao hàng cuối tuần');
+INSERT INTO Orders (order_code, app_user_id, shipping_address_id, sub_total_amount, shipping_fee, discount_amount,
+                    final_amount, order_status, shipping_method_id, customer_notes)
+VALUES ('ORD-2024-001', 1, 1, 3600000.00, 30000.00, 180000.00, 3450000.00, 'Delivered', 1, 'Giao hàng giờ hành chính'),
+       ('ORD-2024-002', 2, 3, 1650000.00, 50000.00, 0.00, 1700000.00, 'Processing', 2, NULL),
+       ('ORD-2024-003', 3, 4, 3500000.00, 0.00, 350000.00, 3150000.00, 'Shipped', 4, 'Liên hệ trước khi giao'),
+       ('ORD-2024-004', 1, 2, 2200000.00, 30000.00, 0.00, 2230000.00, 'Pending', 1, NULL),
+       ('ORD-2024-005', 4, 5, 5400000.00, 0.00, 540000.00, 4860000.00, 'Confirmed', 4, 'Giao hàng cuối tuần');
 
 -- 9. Dữ liệu cho bảng OrderItems
-INSERT INTO OrderItems (order_id, variant_id, quantity, price_at_purchase, total_price) VALUES
+INSERT INTO OrderItems (order_id, variant_id, quantity, price_at_purchase, total_price)
+VALUES
 -- Order 1: 2 đôi Nike Revolution 6
 (1, 1, 1, 1620000.00, 1620000.00),
 (1, 2, 1, 1620000.00, 1620000.00),
-(1, 3, 1, 1800000.00, 1800000.00), -- Không sale
+(1, 3, 1, 1800000.00, 1800000.00),  -- Không sale
 
 -- Order 2: 1 đôi Adidas Duramo SL
 (2, 5, 1, 1485000.00, 1485000.00),
-(2, 8, 1, 1650000.00, 1650000.00), -- Không sale
+(2, 8, 1, 1650000.00, 1650000.00),  -- Không sale
 
 -- Order 3: 1 đôi Under Armour Curry Flow 9
 (3, 9, 1, 3150000.00, 3150000.00),
@@ -343,47 +376,58 @@ INSERT INTO OrderItems (order_id, variant_id, quantity, price_at_purchase, total
 
 -- Order 5: 2 đôi Nike Pegasus 40
 (5, 14, 1, 2880000.00, 2880000.00),
-(5, 15, 1, 3200000.00, 3200000.00); -- Không sale
+(5, 15, 1, 3200000.00, 3200000.00);
+-- Không sale
 
 -- 10. Dữ liệu cho bảng Payments
-INSERT INTO Payments (order_id, payment_method, transaction_id, amount, payment_status, payment_date) VALUES
-                                                                                                          (1, 'VNPay', 'VNP-20240101-001', 3450000.00, 'Completed', '2024-01-01 10:30:00'),
-                                                                                                          (2, 'MoMo', 'MOMO-20240102-002', 1700000.00, 'Pending', '2024-01-02 14:15:00'),
-                                                                                                          (3, 'ZaloPay', 'ZALO-20240103-003', 3150000.00, 'Completed', '2024-01-03 09:20:00'),
-                                                                                                          (4, 'COD', NULL, 2230000.00, 'Pending', '2024-01-04 16:45:00'),
-                                                                                                          (5, 'VNPay', 'VNP-20240105-005', 4860000.00, 'Completed', '2024-01-05 11:10:00');
+INSERT INTO Payments (order_id, payment_method, transaction_id, amount, payment_status, payment_date)
+VALUES (1, 'VNPay', 'VNP-20240101-001', 3450000.00, 'Completed', '2024-01-01 10:30:00'),
+       (2, 'MoMo', 'MOMO-20240102-002', 1700000.00, 'Pending', '2024-01-02 14:15:00'),
+       (3, 'ZaloPay', 'ZALO-20240103-003', 3150000.00, 'Completed', '2024-01-03 09:20:00'),
+       (4, 'COD', NULL, 2230000.00, 'Pending', '2024-01-04 16:45:00'),
+       (5, 'VNPay', 'VNP-20240105-005', 4860000.00, 'Completed', '2024-01-05 11:10:00');
 
 -- 11. Dữ liệu cho bảng Shipments
-INSERT INTO Shipments (order_id, shipping_method_id, tracking_number, shipping_status, estimated_delivery_date, actual_delivery_date, shipped_date, shipping_cost, notes) VALUES
-                                                                                                                                                                              (1, 1, 'GHN-001234567', 'Delivered', '2024-01-06', '2024-01-05', '2024-01-02 08:00:00', 30000.00, 'Giao hàng thành công'),
-                                                                                                                                                                              (2, 2, 'GHTK-002345678', 'In Transit', '2024-01-05', NULL, '2024-01-03 10:30:00', 50000.00, 'Đang vận chuyển'),
-                                                                                                                                                                              (3, 4, 'BEST-003456789', 'Shipped', '2024-01-07', NULL, '2024-01-04 14:20:00', 0.00, 'Miễn phí vận chuyển'),
-                                                                                                                                                                              (4, 1, NULL, 'Preparing', '2024-01-08', NULL, NULL, 30000.00, 'Đang chuẩn bị hàng'),
-                                                                                                                                                                              (5, 4, 'SPX-005678901', 'Confirmed', '2024-01-09', NULL, NULL, 0.00, 'Chờ lấy hàng');
+INSERT INTO Shipments (order_id, shipping_method_id, tracking_number, shipping_status, estimated_delivery_date,
+                       actual_delivery_date, shipped_date, shipping_cost, notes)
+VALUES (1, 1, 'GHN-001234567', 'Delivered', '2024-01-06', '2024-01-05', '2024-01-02 08:00:00', 30000.00,
+        'Giao hàng thành công'),
+       (2, 2, 'GHTK-002345678', 'In Transit', '2024-01-05', NULL, '2024-01-03 10:30:00', 50000.00, 'Đang vận chuyển'),
+       (3, 4, 'BEST-003456789', 'Shipped', '2024-01-07', NULL, '2024-01-04 14:20:00', 0.00, 'Miễn phí vận chuyển'),
+       (4, 1, NULL, 'Preparing', '2024-01-08', NULL, NULL, 30000.00, 'Đang chuẩn bị hàng'),
+       (5, 4, 'SPX-005678901', 'Confirmed', '2024-01-09', NULL, NULL, 0.00, 'Chờ lấy hàng');
 
 -- 12. Dữ liệu cho bảng Reviews
-INSERT INTO Reviews (product_id, app_user_id, rating, comment, review_date) VALUES
-                                                                                (1, 1, 5, 'Giày rất thoải mái, đi chạy bộ rất êm. Chất lượng tốt so với giá tiền.', '2024-01-06 20:30:00'),
-                                                                                (1, 2, 4, 'Design đẹp, nhưng hơi rộng so với size thông thường.', '2024-01-07 15:45:00'),
-                                                                                (2, 3, 5, 'Adidas luôn là lựa chọn tin cậy. Giày nhẹ, phù hợp tập gym.', '2024-01-08 09:15:00'),
-                                                                                (3, 1, 4, 'Giày bóng rổ chất lượng cao, grip tốt trên sân.', '2024-01-09 18:20:00'),
-                                                                                (4, 4, 3, 'Style đẹp nhưng chất liệu không bền như mong đợi.', '2024-01-10 12:10:00');
+INSERT INTO Reviews (product_id, app_user_id, rating, comment, review_date)
+VALUES (1, 1, 5, 'Giày rất thoải mái, đi chạy bộ rất êm. Chất lượng tốt so với giá tiền.', '2024-01-06 20:30:00'),
+       (1, 2, 4, 'Design đẹp, nhưng hơi rộng so với size thông thường.', '2024-01-07 15:45:00'),
+       (2, 3, 5, 'Adidas luôn là lựa chọn tin cậy. Giày nhẹ, phù hợp tập gym.', '2024-01-08 09:15:00'),
+       (3, 1, 4, 'Giày bóng rổ chất lượng cao, grip tốt trên sân.', '2024-01-09 18:20:00'),
+       (4, 4, 3, 'Style đẹp nhưng chất liệu không bền như mong đợi.', '2024-01-10 12:10:00');
 
 -- 13. Dữ liệu cho bảng Promotions
-INSERT INTO Promotions (promo_code, promo_name, description, discount_type, discount_value, start_date, end_date, minimum_order_value, usage_limit_per_user, usage_limit_total, is_active, applicable_to) VALUES
-                                                                                                                                                                                                              ('NEWUSER10', 'Giảm giá 10% cho khách hàng mới', 'Chào mừng khách hàng mới với ưu đãi giảm 10%', 'percentage', 10.00, '2024-01-01 00:00:00', '2024-12-31 23:59:59', 500000.00, 1, 1000, TRUE, 'all_orders'),
-                                                                                                                                                                                                              ('SALE50K', 'Giảm 50K cho đơn hàng trên 1 triệu', 'Giảm giá cố định 50K', 'fixed_amount', 50000.00, '2024-01-01 00:00:00', '2024-06-30 23:59:59', 1000000.00, 5, NULL, TRUE, 'all_orders'),
-                                                                                                                                                                                                              ('SUMMER2024', 'Sale mùa hè 2024', 'Giảm 15% tất cả sản phẩm mùa hè', 'percentage', 15.00, '2024-06-01 00:00:00', '2024-08-31 23:59:59', 800000.00, 3, 5000, TRUE, 'all_orders'),
-                                                                                                                                                                                                              ('FREESHIP', 'Miễn phí vận chuyển', 'Miễn phí ship cho đơn hàng trên 500K', 'free_shipping', 0.00, '2024-01-01 00:00:00', '2024-12-31 23:59:59', 500000.00, NULL, NULL, TRUE, 'shipping'),
-                                                                                                                                                                                                              ('NIKE20', 'Giảm 20% sản phẩm Nike', 'Khuyến mãi đặc biệt cho thương hiệu Nike', 'percentage', 20.00, '2024-02-01 00:00:00', '2024-02-29 23:59:59', 1500000.00, 2, 2000, TRUE, 'brand');
+INSERT INTO Promotions (promo_code, promo_name, description, discount_type, discount_value, start_date, end_date,
+                        minimum_order_value, usage_limit_per_user, usage_limit_total, is_active, applicable_to)
+VALUES ('NEWUSER10', 'Giảm giá 10% cho khách hàng mới', 'Chào mừng khách hàng mới với ưu đãi giảm 10%', 'percentage',
+        10.00, '2024-01-01 00:00:00', '2024-12-31 23:59:59', 500000.00, 1, 1000, TRUE, 'all_orders'),
+       ('SALE50K', 'Giảm 50K cho đơn hàng trên 1 triệu', 'Giảm giá cố định 50K', 'fixed_amount', 50000.00,
+        '2024-01-01 00:00:00', '2024-06-30 23:59:59', 1000000.00, 5, NULL, TRUE, 'all_orders'),
+       ('SUMMER2024', 'Sale mùa hè 2024', 'Giảm 15% tất cả sản phẩm mùa hè', 'percentage', 15.00, '2024-06-01 00:00:00',
+        '2024-08-31 23:59:59', 800000.00, 3, 5000, TRUE, 'all_orders'),
+       ('FREESHIP', 'Miễn phí vận chuyển', 'Miễn phí ship cho đơn hàng trên 500K', 'free_shipping', 0.00,
+        '2024-01-01 00:00:00', '2024-12-31 23:59:59', 500000.00, NULL, NULL, TRUE, 'shipping'),
+       ('NIKE20', 'Giảm 20% sản phẩm Nike', 'Khuyến mãi đặc biệt cho thương hiệu Nike', 'percentage', 20.00,
+        '2024-02-01 00:00:00', '2024-02-29 23:59:59', 1500000.00, 2, 2000, TRUE, 'brand');
 
 -- 14. Dữ liệu cho bảng PromotionApplicables
-INSERT INTO PromotionApplicables (promotion_id, applicable_item_id, applicable_type) VALUES
+INSERT INTO PromotionApplicables (promotion_id, applicable_item_id, applicable_type)
+VALUES
 -- NIKE20 áp dụng cho brand Nike (brand_id = 1)
 (5, 1, 'brand'),
 -- Có thể thêm các áp dụng khác cho category, product cụ thể
 (3, 1, 'category'), -- SUMMER2024 áp dụng cho category "Giày thể thao nam"
-(3, 2, 'category'); -- SUMMER2024 áp dụng cho category "Giày chạy bộ"
+(3, 2, 'category');
+-- SUMMER2024 áp dụng cho category "Giày chạy bộ"
 
 -- 15. Dữ liệu cho bảng DemoModel (giữ nguyên như ban đầu)
 INSERT INTO DemoModel (name, age)

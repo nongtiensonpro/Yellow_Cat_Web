@@ -77,10 +77,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Pageable;
 import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
-import org.yellowcat.backend.product.dto.ProductDetailDTO;
-import org.yellowcat.backend.product.dto.ProductListItemDTO;
-import org.yellowcat.backend.product.dto.ProductWithVariantsRequestDTO;
-import org.yellowcat.backend.product.dto.ProductWithVariantsUpdateRequestDTO;
+import org.yellowcat.backend.product.dto.*;
 
 import java.util.List; // Import List
 
@@ -118,6 +115,22 @@ public class ProductController {
         }
     }
 
+    @GetMapping("/management")
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    @Operation(summary = "Get all products", description = "Returns a paginated list of products with detailed information")
+    public ResponseEntity<?> getAllProductsManagement(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        try {
+            Page<ProductListItemManagementDTO> productPage = productService.getProductManagement(page, size);
+            return ResponseEntityBuilder.success(productPage);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Error retrieving products", "Error retrieving products");
+        }
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getProductDetails(@PathVariable("id") Integer productId) {
         ProductDetailDTO productDetail = productService.getProductDetailById(productId);
@@ -127,6 +140,13 @@ public class ProductController {
         }
 
         return ResponseEntityBuilder.success(productDetail);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    public ResponseEntity<?> deleteProduct(@PathVariable("id") Integer productId) {
+        productService.deleteProduct(productId);
+        return ResponseEntityBuilder.success("Product deleted successfully!");
     }
 
     @PostMapping
