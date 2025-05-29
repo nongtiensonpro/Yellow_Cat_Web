@@ -202,8 +202,7 @@ export default function ProductDetailPage() {
     const availableSizes = selectedColor ? getSizesForColor(selectedColor) : [];
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <Card className="w-full max-w-6xl mx-auto">
+            <Card className="full">
                 <CardHeader className="flex flex-col items-start">
                     <div className="flex items-center gap-2 mb-2">
                         <Button
@@ -430,6 +429,5 @@ export default function ProductDetailPage() {
                     </div>
                 </CardBody>
             </Card>
-        </div>
     );
 }

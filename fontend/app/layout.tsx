@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "@/styles/globals.css"; // Ensure this path is correct
+import "@/styles/globals.css";
 import Providers from "./providers";
 import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer"; // <--- IMPORT FOOTER Ở ĐÂY
-
-import LoadingAnimation from "@/components/LoadingAnimation";
+import { Footer } from "@/components/footer";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,9 +23,6 @@ export default function RootLayout({
         <Providers>
           <Navbar />
           {children}
-          {/*<div>*/}
-          {/*  <LoadingAnimation/>*/}
-          {/*</div>*/}
           <Footer />
         </Providers>
       </body>

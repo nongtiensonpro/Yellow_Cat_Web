@@ -185,7 +185,7 @@ export default function Page() {
         <Card className="xl">
             <CardHeader className="flex gap-3">
                 <div className="flex flex-col">
-                    <p className="text-4xl font-bold">Quản lý Brand</p>
+                    <p className="text-4xl font-bold">Quản lý Nhãn Hàng</p>
                 </div>
             </CardHeader>
             <Divider />
