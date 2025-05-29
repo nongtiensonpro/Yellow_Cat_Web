@@ -15,10 +15,17 @@ import {
     Chip,
     Tooltip,
     Badge,
+    Modal,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalFooter,
 } from "@heroui/react";
 import {useEffect, useState} from "react";
 import {Eye, Edit, Trash2, Plus, Tag} from "lucide-react";
 import Link from "next/link";
+import { useDisclosure } from "@heroui/react";
+import { useSession, signIn } from "next-auth/react";
 
 interface Product {
     productId: number;
@@ -63,11 +70,16 @@ export default function Page() {
     const [totalPages, setTotalPages] = useState<number>(1);
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [totalElements, setTotalElements] = useState<number>(0);
+    const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+    const { isOpen, onOpen, onClose } = useDisclosure();
+    const [deleteError, setDeleteError] = useState<string | null>(null);
+    const { data: session, status } = useSession();
 
     const fetchProductsData = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`http://localhost:8080/api/products/management?page=${currentPage}&size=${itemsPerPage}`);
+            const searchQuery = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : "";
+            const response = await fetch(`http://localhost:8080/api/products/management?page=${currentPage}&size=${itemsPerPage}${searchQuery}`);
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
             const apiResponse: ApiResponse = await response.json();
 
@@ -89,19 +101,7 @@ export default function Page() {
     useEffect(() => {
         fetchProductsData();
         // eslint-disable-next-line
-    }, [currentPage, itemsPerPage]);
-
-    // Lọc sản phẩm theo searchTerm
-    const filteredProducts = products.filter((product) => {
-        const text = searchTerm.toLowerCase();
-        return (
-            product.productId.toString().includes(text) ||
-            product.productName.toLowerCase().includes(text) ||
-            product.categoryName.toLowerCase().includes(text) ||
-            product.brandName.toLowerCase().includes(text) ||
-            (product.description && product.description.toLowerCase().includes(text))
-        );
-    });
+    }, [currentPage, itemsPerPage, searchTerm]);
 
     // Format giá tiền
     const formatPrice = (price: number | null) => {
@@ -119,6 +119,49 @@ export default function Page() {
             hour: '2-digit',
             minute: '2-digit'
         }).format(date);
+    };
+
+    const openDeleteConfirm = (product: Product) => {
+        setProductToDelete(product);
+        setDeleteError(null);
+        onOpen();
+    };
+
+    const handleDeleteProduct = async () => {
+        if (!productToDelete) return;
+        try {
+            // Kiểm tra đăng nhập
+            if (status !== "authenticated" || !session) {
+                signIn();
+                return;
+            }
+            // Lấy accessToken từ session
+            const token = session.accessToken;
+            if (!token) {
+                throw new Error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
+            }
+
+            setLoading(true);
+            setDeleteError(null);
+            const response = await fetch(`http://localhost:8080/api/products/${productToDelete.productId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => null);
+                throw new Error(errorData?.message || `HTTP error! Status: ${response.status}`);
+            }
+            onClose();
+            setProductToDelete(null);
+            fetchProductsData();
+        } catch (err) {
+            setDeleteError(err instanceof Error ? err.message : 'Không thể xóa sản phẩm. Vui lòng thử lại sau.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -140,8 +183,10 @@ export default function Page() {
                         onChange={e => setSearchTerm(e.target.value)}
                         className="max-w-md"
                     />
-                    <Button color="primary" as={Link} href={`/admin/product_management/add_product`}
+                    <Button color="default" as={Link} href={`/admin/product_management/add_product`}
                             startContent={<Plus size={16}/>}>Thêm sản phẩm</Button>
+                    <Button color="default" as={Link} href={`/admin/product_management/brands`}>Quản lý nhãn hàng</Button>
+                    <Button color="default" as={Link} href={`/admin/product_management/categories`}>Quản lý danh mục</Button>
                 </div>
                 {loading ? (
                     <div className="my-6 text-lg text-center text-blue-500">Đang tải dữ liệu...</div>
@@ -162,8 +207,8 @@ export default function Page() {
                             <TableColumn>Thao tác</TableColumn>
                         </TableHeader>
                         <TableBody>
-                            {filteredProducts.length > 0 ? (
-                                filteredProducts.map((product) => (
+                            {products.length > 0 ? (
+                                products.map((product) => (
                                     <TableRow key={product.productId}>
                                         <TableCell>{product.productId}</TableCell>
                                         <TableCell>
@@ -214,7 +259,7 @@ export default function Page() {
                                                     </Button>
                                                 </Tooltip>
                                                 <Tooltip content="Xóa">
-                                                    <Button isIconOnly size="sm" variant="light" color="danger">
+                                                    <Button isIconOnly size="sm" variant="light" color="danger" onClick={() => openDeleteConfirm(product)}>
                                                         <Trash2 size={16}/>
                                                     </Button>
                                                 </Tooltip>
@@ -234,11 +279,11 @@ export default function Page() {
                 )}
                 <div className="mt-6 flex gap-2 justify-between items-center">
                     <div className="text-sm text-gray-500">
-                        Hiển thị {filteredProducts.length} / {totalElements} sản phẩm
+                        Hiển thị {products.length} / {totalElements} sản phẩm
                     </div>
                     <div className="flex gap-2 items-center">
                         <Button
-                            color="primary"
+                            color="default"
                             variant="flat"
                             onClick={() => setCurrentPage((old) => Math.max(0, old - 1))}
                             disabled={currentPage === 0 || loading}
@@ -249,7 +294,7 @@ export default function Page() {
                             Trang <b>{currentPage + 1}</b> / {totalPages}
                         </span>
                         <Button
-                            color="primary"
+                            color="default"
                             variant="flat"
                             onClick={() => setCurrentPage((old) => Math.min(totalPages - 1, old + 1))}
                             disabled={currentPage >= totalPages - 1 || loading}
@@ -258,6 +303,38 @@ export default function Page() {
                         </Button>
                     </div>
                 </div>
+                <Modal isOpen={isOpen} onClose={onClose}>
+                    <ModalContent>
+                        <ModalHeader className="flex flex-col gap-1">
+                            Xác nhận xóa
+                        </ModalHeader>
+                        <ModalBody>
+                            {productToDelete && (
+                                <p>
+                                    Bạn có chắc chắn muốn xóa sản phẩm "<b>{productToDelete.productName}</b>"?
+                                    <br />
+                                    Hành động này không thể hoàn tác.
+                                </p>
+                            )}
+                            {deleteError && (
+                                <div className="text-red-500 text-sm mt-2">{deleteError}</div>
+                            )}
+                        </ModalBody>
+                        <ModalFooter>
+                            <Button color="default" variant="light" onPress={onClose}>
+                                Hủy
+                            </Button>
+                            <Button
+                                color="danger"
+                                onPress={handleDeleteProduct}
+                                className="bg-red-500 text-white"
+                                isLoading={loading}
+                            >
+                                Xóa
+                            </Button>
+                        </ModalFooter>
+                    </ModalContent>
+                </Modal>
             </CardBody>
         </Card>
     );
