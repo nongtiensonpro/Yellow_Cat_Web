@@ -4,11 +4,12 @@ import "@/styles/globals.css";
 import Providers from "./providers";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
+import React from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Yellow Cat Web",
+  title: "Sneaker Peak",
   description: "Cat Cat Cat",
 };
 

@@ -4,8 +4,7 @@ import React from 'react';
 import { Link } from "@heroui/link"; // Assuming you want to use HeroUI's Link
 import { FaFacebook, FaYoutube, FaInstagram } from 'react-icons/fa'; // Import social icons
 import { FaTiktok } from 'react-icons/fa6'; // Assuming you might use this for TikTok if available
-import Image from 'next/image'; // Import Next.js Image component
-import { Button, Input, Card } from "@heroui/react"; // Giả sử HeroUI có các component này
+import { Button, Input } from "@heroui/react"; // Giả sử HeroUI có các component này
 
 export const Footer = () => {
     return (
