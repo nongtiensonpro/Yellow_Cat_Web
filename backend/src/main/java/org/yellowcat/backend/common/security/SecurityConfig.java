@@ -41,6 +41,8 @@ public class SecurityConfig {
                                 "/demo/all",
                                 "/api/public/**",
                                 "/api/users/**",
+                                "/api/addresses/**",
+                                "/api/users/**",
                                 "/api/vnpay/**",
                                 "/api/examples/**")
                         .permitAll()
