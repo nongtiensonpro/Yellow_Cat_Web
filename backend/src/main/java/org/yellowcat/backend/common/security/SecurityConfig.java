@@ -42,6 +42,7 @@ public class SecurityConfig {
                                 "/api/public/**",
                                 "/api/users/**",
                                 "/api/addresses/**",
+                                "/api/address/**",
                                 "/api/users/**",
                                 "/api/vnpay/**",
                                 "/api/examples/**")
