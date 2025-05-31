@@ -173,7 +173,7 @@ export default function Page() {
         <Card className="xl">
             <CardHeader className="flex gap-3">
                 <div className="flex flex-col">
-                    <p className="text-4xl font-bold">Quản lý Danh Mục</p>
+                    <p className="text-4xl font-bold">Quản lý Attribute</p>
                 </div>
             </CardHeader>
             <Divider />

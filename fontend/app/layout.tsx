@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "@/styles/globals.css";
+import "@/styles/globals.css"; // Ensure this path is correct
 import Providers from "./providers";
 import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer";
-import React from "react";
+import { Footer } from "@/components/footer"; // <--- IMPORT FOOTER Ở ĐÂY
+
+import LoadingAnimation from "@/components/LoadingAnimation";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Sneaker Peak",
+  title: "Yellow Cat Web",
   description: "Cat Cat Cat",
 };
 
@@ -24,6 +25,9 @@ export default function RootLayout({
         <Providers>
           <Navbar />
           {children}
+          {/*<div>*/}
+          {/*  <LoadingAnimation/>*/}
+          {/*</div>*/}
           <Footer />
         </Providers>
       </body>

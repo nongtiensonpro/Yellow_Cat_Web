@@ -42,7 +42,10 @@ public class SecurityConfig {
                                 "/api/public/**",
                                 "/api/users/**",
                                 "/api/vnpay/**",
+                                "/api/addresses/**",
+                                "api/admin/users/**",
                                 "/api/examples/**")
+
                         .permitAll()
 
 

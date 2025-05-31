@@ -1,43 +1,40 @@
-"use client"
-
+// components/footer.tsx
 import React from 'react';
 import { Link } from "@heroui/link"; // Assuming you want to use HeroUI's Link
 import { FaFacebook, FaYoutube, FaInstagram } from 'react-icons/fa'; // Import social icons
 import { FaTiktok } from 'react-icons/fa6'; // Assuming you might use this for TikTok if available
-import { Button, Input } from "@heroui/react"; // Giả sử HeroUI có các component này
+import Image from 'next/image'; // Import Next.js Image component
 
 export const Footer = () => {
     return (
-        <footer className="bg-[#1a1a1a] dark:bg-gray-900 text-gray-300 dark:text-gray-200">
+        <footer className="bg-[#1a1a1a] text-gray-300">
             {/* Top Section: Newsletter & Social Icons */}
-            <div className="bg-[#8b2b2b] dark:bg-red-900 py-4">
+            <div className="bg-[#8b2b2b] py-4">
                 <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between">
                     <div className="flex items-center mb-4 md:mb-0">
-                        <span className="text-white dark:text-gray-100 font-bold mr-4">ĐĂNG KÝ NHẬN TIN</span>
+                        <span className="text-white font-bold mr-4">ĐĂNG KÝ NHẬN TIN</span>
                         <div className="flex">
-                            <Input
+                            <input
                                 type="email"
                                 placeholder="Email của bạn"
-                                className="rounded-l-md text-black dark:text-white bg-white dark:bg-gray-800 border border-gray-400 dark:border-gray-600 focus:ring-red-500 text-sm"
+                                className="p-2 border border-gray-400 rounded-l-md focus:outline-none focus:ring-2 focus:ring-red-500 text-black text-sm"
                             />
-                            <Button
-                                className="rounded-r-md bg-black dark:bg-gray-700 text-white px-4 py-2 hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors duration-200 text-sm"
-                            >
+                            <button className="bg-black text-white px-4 py-2 rounded-r-md hover:bg-gray-800 transition-colors duration-200 text-sm">
                                 ĐĂNG KÝ
-                            </Button>
+                            </button>
                         </div>
                     </div>
                     <div className="flex space-x-3">
-                        <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" className="bg-black dark:bg-gray-700 p-2 rounded-sm hover:opacity-80 transition-opacity">
+                        <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" className="bg-black p-2 rounded-sm hover:opacity-80 transition-opacity">
                             <FaTiktok size={18} className="text-white" />
                         </a>
-                        <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="bg-black dark:bg-gray-700 p-2 rounded-sm hover:opacity-80 transition-opacity">
+                        <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="bg-black p-2 rounded-sm hover:opacity-80 transition-opacity">
                             <FaYoutube size={18} className="text-white" />
                         </a>
-                        <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="bg-black dark:bg-gray-700 p-2 rounded-sm hover:opacity-80 transition-opacity">
+                        <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="bg-black p-2 rounded-sm hover:opacity-80 transition-opacity">
                             <FaFacebook size={18} className="text-white" />
                         </a>
-                        <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="bg-black dark:bg-gray-700 p-2 rounded-sm hover:opacity-80 transition-opacity">
+                        <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="bg-black p-2 rounded-sm hover:opacity-80 transition-opacity">
                             <FaInstagram size={18} className="text-white" />
                         </a>
                     </div>

@@ -33,14 +33,14 @@ export const siteConfig = {
     }
   ],
   navMenuItemsAdmin:[
-    // {
-    //   label: "Quản lý tài khoản",
-    //   href: "/admin/account_management",
-    // },
-    // {
-    //   label: "Quản lý sản phẩm",
-    //   href: "/admin/product_management",
-    // }
+    {
+      label: "Quản lý tài khoản",
+      href: "/admin/account_management",
+    },
+    {
+      label: "Quản lý sản phẩm",
+      href: "/admin/product_management",
+    }
   ],
   navMenuItemsProduct:[
     {
