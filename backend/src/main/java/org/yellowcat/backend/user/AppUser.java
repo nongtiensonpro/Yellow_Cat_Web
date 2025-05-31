@@ -5,13 +5,14 @@ import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-@AllArgsConstructor
-@NoArgsConstructor
+
 @Entity
 @Table(name = "app_users")
+@AllArgsConstructor
+@NoArgsConstructor
 public class AppUser {
 
-    @Id 
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "app_user_id")
     private Integer appUserId;
