@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
-import org.yellowcat.backend.user.AppUser; // Import lớp AppUser của bạn
+import org.yellowcat.backend.user.User; // Import lớp AppUser của bạn
 import java.time.LocalDateTime;
 @Getter
 @Setter
@@ -29,7 +29,7 @@ public class Review {
 
     @ManyToOne
     @JoinColumn(name = "app_user_id", nullable = false) // Khóa ngoại trỏ đến AppUsers
-    private AppUser appUser;
+    private User appUser;
 
     @Column(name = "rating", nullable = false)
     private Short rating;

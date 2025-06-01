@@ -3,15 +3,11 @@ package org.yellowcat.backend.product.review;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import org.yellowcat.backend.product.review.Review;
-import org.yellowcat.backend.product.review.ReviewRepository;
-import org.yellowcat.backend.product.review.ReviewService;
 import org.yellowcat.backend.product.review.dto.CreateReviewDTO;
 import org.yellowcat.backend.product.review.dto.ReviewDTO;
 import org.yellowcat.backend.product.review.dto.ReviewStatsDTO;
-import org.yellowcat.backend.user.AppUser;
+import org.yellowcat.backend.user.User;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -32,7 +28,7 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
-    public void createReview(CreateReviewDTO dto, AppUser user) {
+    public void createReview(CreateReviewDTO dto, User user) {
 
     }
 

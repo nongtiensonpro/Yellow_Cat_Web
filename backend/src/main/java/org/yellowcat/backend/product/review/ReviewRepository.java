@@ -27,7 +27,7 @@ public interface ReviewRepository extends JpaRepository<Review, Integer> {
             "COALESCE(SUM(CASE WHEN r.rating = 2 THEN 1 ELSE 0 END), 0), " +
             "COALESCE(SUM(CASE WHEN r.rating = 1 THEN 1 ELSE 0 END), 0) " +
             "FROM Review r " +
-            "JOIN r.productVariant pv " + // Thêm JOIN để có alias cho ProductVariant
-            "WHERE pv.product.id = :productId") // Truy cập product từ ProductVariant (pv)
+            "JOIN r.productVariant pv " +
+            "WHERE pv.product.id = :productId")
     List<Object[]> getReviewStatsByProductId(Integer productId);
 }
