@@ -23,7 +23,8 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from 'jwt-decode';
-import Image from 'next/image'; // Import Next.js Image component
+import Image from 'next/image';
+import BadgeVisibility from "@/components/user/BadgeVisibility"
 
 interface DecodedToken {
     sub?: string;
@@ -254,19 +255,20 @@ export const Navbar = () => {
                         </NavbarItem>
                     ))}
                     {/* Admin menu items - will display when authorized */}
-                    {isAdmin &&
-                        siteConfig.navMenuItemsAdmin.map((item) => (
-                            <NavbarItem key={item.href}>
-                                <NextLink className={clsx("data-[active=true]:text-primary data-[active=true]:font-medium")} href={item.href}>
-                                    {item.label}
-                                </NextLink>
-                            </NavbarItem>
-                        ))
-                    }
+                    {/*{isAdmin &&*/}
+                    {/*    siteConfig.navMenuItemsAdmin.map((item) => (*/}
+                    {/*        <NavbarItem key={item.href}>*/}
+                    {/*            <NextLink className={clsx("data-[active=true]:text-primary data-[active=true]:font-medium")} href={item.href}>*/}
+                    {/*                {item.label}*/}
+                    {/*            </NextLink>*/}
+                    {/*        </NavbarItem>*/}
+                    {/*    ))*/}
+                    {/*}*/}
                 </ul>
             </NavbarContent>
 
             <NavbarContent className="hidden sm:flex basis-1/5 sm:basis-full" justify="end">
+                <BadgeVisibility/>
                 <NavbarItem className="hidden sm:flex gap-2">
                     <ThemeSwitch />
                 </NavbarItem>
@@ -294,19 +296,19 @@ export const Navbar = () => {
                         </NavbarMenuItem>
                     ))}
                     {/* Add admin menu items to mobile menu too */}
-                    {isAdmin &&
-                        siteConfig.navMenuItemsAdmin.map((item, index) => (
-                            <NavbarMenuItem key={`admin-${item}-${index}`}>
-                                <Link
-                                    className="text-foreground"
-                                    href={item.href}
-                                    size="lg"
-                                >
-                                    {item.label}
-                                </Link>
-                            </NavbarMenuItem>
-                        ))
-                    }
+                    {/*{isAdmin &&*/}
+                    {/*    siteConfig.navMenuItemsAdmin.map((item, index) => (*/}
+                    {/*        <NavbarMenuItem key={`admin-${item}-${index}`}>*/}
+                    {/*            <Link*/}
+                    {/*                className="text-foreground"*/}
+                    {/*                href={item.href}*/}
+                    {/*                size="lg"*/}
+                    {/*            >*/}
+                    {/*                {item.label}*/}
+                    {/*            </Link>*/}
+                    {/*        </NavbarMenuItem>*/}
+                    {/*    ))*/}
+                    {/*}*/}
                     <NavbarMenuItem>
                         {renderAuthSection()}
                     </NavbarMenuItem>

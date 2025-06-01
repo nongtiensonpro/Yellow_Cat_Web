@@ -1,6 +1,6 @@
-package org.yellowcat.backend.user.addresses.dto;
+package org.yellowcat.backend.address.dto;
 
-import org.yellowcat.backend.user.addresses.Addresses;
+import org.yellowcat.backend.address.Addresses;
 
 public record AddressesDTO(
         Integer addressId,

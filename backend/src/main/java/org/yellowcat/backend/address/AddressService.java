@@ -1,14 +1,12 @@
-package org.yellowcat.backend.user.addresses;
+package org.yellowcat.backend.address;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.yellowcat.backend.product.brand.Brand;
-import org.yellowcat.backend.product.brand.dto.BrandDTO;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserService;
-import org.yellowcat.backend.user.addresses.dto.AddressesDTO;
+import org.yellowcat.backend.address.dto.AddressesDTO;
 
 import java.util.List;
 import java.util.Optional;

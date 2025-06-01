@@ -1,4 +1,3 @@
-// app/cart/page.tsx (or pages/cart.tsx)
 'use client';
 
 import { Card, CardHeader, CardBody, Divider, Button } from "@heroui/react";
@@ -78,7 +77,7 @@ export default function CartPage() {
     }
 
     return (
-        <div className="container mx-auto my-10 p-4 max-w-4xl">
+        <div className="w-full mx-auto my-10 p-4 max-w-6xl">
             <Card className="w-full">
                 <CardHeader className="flex flex-col items-start">
                     <Button

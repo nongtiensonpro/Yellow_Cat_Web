@@ -1,4 +1,4 @@
-package org.yellowcat.backend.user.addresses;
+package org.yellowcat.backend.address;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;

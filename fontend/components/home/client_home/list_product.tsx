@@ -6,15 +6,11 @@ import {
     CardBody,
     CardHeader,
     CardFooter,
-    Image,
     Button,
     Chip,
     Skeleton,
     Divider,
     Badge,
-    Avatar,
-    Spacer,
-    useDisclosure
 } from "@heroui/react";
 import {
     ShoppingCartIcon,
@@ -103,12 +99,12 @@ const ProductList = () => {
 
     if (loading) {
         return (
-            <div className="container mx-auto px-4 py-8 max-w-7xl">
+            <div className="mx-auto w-full">
                 <div className="flex justify-between items-center mb-8">
                     <Skeleton className="w-48 h-8 rounded-lg" />
                     <Skeleton className="w-24 h-10 rounded-lg" />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {Array.from({ length: 8 }).map((_, index) => (
                         <Card key={index} className="w-full space-y-5 p-4" radius="lg">
                             <Skeleton className="rounded-lg">
@@ -269,34 +265,6 @@ const ProductList = () => {
                                     </div>
                                 </div>
                             </CardBody>
-
-                            <CardFooter className="pt-0 px-4 pb-4">
-                                <div className="flex gap-2 w-full">
-                                    <Button
-                                        as={Link}
-                                        href={`/products/${product.productId}`}
-                                        color="primary"
-                                        variant="flat"
-                                        size="sm"
-                                        startContent={<EyeIcon className="w-4 h-4" />}
-                                        className="flex-1"
-                                    >
-                                        Xem chi tiết
-                                    </Button>
-                                    <Button
-                                        color="primary"
-                                        size="sm"
-                                        startContent={<ShoppingCartIcon className="w-4 h-4" />}
-                                        className="flex-1"
-                                        onPress={() => {
-                                            // Handle add to cart logic here
-                                            console.log('Add to cart:', product.productId);
-                                        }}
-                                    >
-                                        Thêm vào giỏ
-                                    </Button>
-                                </div>
-                            </CardFooter>
                         </Card>
                     );
                 })}

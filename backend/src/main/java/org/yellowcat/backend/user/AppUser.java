@@ -1,18 +1,24 @@
 package org.yellowcat.backend.user;
 
-
-import jakarta.persistence.*; // Hoặc import javax.persistence.* nếu bạn dùng Java EE/Jakarta EE cũ hơn
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-import java.time.LocalDateTime; // Để xử lý kiểu TIMESTAMP
+import java.time.Instant;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
 @Table(name = "app_users")
+@Getter
+@Setter
 public class AppUser {
 
-    @Id
+    @jakarta.persistence.Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "app_user_id")
     private Integer appUserId;
@@ -45,4 +51,4 @@ public class AppUser {
 
     @Column(name = "updated_at")
     private Instant updatedAt;
-
+}
