@@ -33,7 +33,6 @@ export default function CartPage() {
         setLoading(false);
     }, []);
 
-    // Function to update localStorage whenever cartItems state changes
     useEffect(() => {
         if (!loading && typeof window !== 'undefined') {
             localStorage.setItem('cart', JSON.stringify(cartItems));
