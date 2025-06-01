@@ -1,18 +1,15 @@
 package org.yellowcat.backend.user;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
-import lombok.Getter;
-import lombok.Setter;
 
-import java.time.Instant;
+import jakarta.persistence.*; // Hoặc import javax.persistence.* nếu bạn dùng Java EE/Jakarta EE cũ hơn
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
-@Getter
-@Setter
+import java.time.LocalDateTime; // Để xử lý kiểu TIMESTAMP
+@AllArgsConstructor
+@NoArgsConstructor
 @Entity
-@Table(name = "appusers")
+@Table(name = "app_users")
 public class AppUser {
 
     @Id
@@ -49,27 +46,3 @@ public class AppUser {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    // Constructor mặc định cần thiết cho JPA
-    public AppUser() {}
-
-    // Constructor tùy chọn
-    public AppUser(String keycloakUserId, String email, String fullName) {
-        this.keycloakUserId = keycloakUserId;
-        this.email = email;
-        this.fullName = fullName;
-    }
-
-    // Thiết lập thời gian tạo và cập nhật khi insert
-    @PrePersist
-    protected void onCreate() {
-        Instant now = Instant.now();
-        this.createdAt = now;
-        this.updatedAt = now;
-    }
-
-    // Thiết lập thời gian cập nhật khi update
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = Instant.now();
-    }
-}

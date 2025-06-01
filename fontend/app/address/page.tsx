@@ -56,20 +56,19 @@ export default function AddressPage() {
         is_default: false,
     });
 
+    const [addresses, setAddresses] = useState<Address[]>([]); // Danh sách tất cả địa chỉ
+    const [editingAddressId, setEditingAddressId] = useState<string | null>(null); // ID của địa chỉ đang được chỉnh sửa (null nếu đang thêm mới)
 
-    const [addresses, setAddresses] = useState<Address[]>([]);
-    const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
-
-    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [addressToDeleteId, setAddressToDeleteId] = useState<string | null>(null);
+    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null); // Thông báo thành công/lỗi
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // Trạng thái hiển thị modal xác nhận xóa
+    const [addressToDeleteId, setAddressToDeleteId] = useState<string | null>(null); // ID của địa chỉ cần xóa
 
 
-    const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
-    const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
-    const [isLoadingWards, setIsLoadingWards] = useState(false);
-    const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isLoadingProvinces, setIsLoadingProvinces] = useState(false); // Đang tải tỉnh/thành phố
+    const [isLoadingDistricts, setIsLoadingDistricts] = useState(false); // Đang tải quận/huyện
+    const [isLoadingWards, setIsLoadingWards] = useState(false); // Đang tải phường/xã
+    const [isLoadingAddresses, setIsLoadingAddresses] = useState(false); // Đang tải danh sách địa chỉ
+    const [isSubmitting, setIsSubmitting] = useState(false); // Đang gửi form (thêm/cập nhật/xóa)
 
 
     const VN_API_BASE_URL = 'https://provinces.open-api.vn/api';
@@ -102,8 +101,7 @@ export default function AddressPage() {
             }
         };
         fetchProvinces();
-    }, []);
-
+    }, []); // [] đảm bảo hàm này chỉ chạy một lần khi component mount
     useEffect(() => {
         if (selectedProvinceCode) {
             const fetchDistricts = async () => {
@@ -113,13 +111,13 @@ export default function AddressPage() {
                 setWards([]); // Xóa dữ liệu phường/xã cũ
                 setSelectedWardCode(''); // Đặt lại lựa chọn phường/xã
                 try {
-
+                    // Tải quận/huyện của tỉnh đã chọn, với depth=2 để lấy cả phường/xã
                     const response = await fetch(`${VN_API_BASE_URL}/p/${selectedProvinceCode}?depth=2`);
                     if (!response.ok) {
                         throw new Error(`Lỗi HTTP! Trạng thái: ${response.status}`);
                     }
                     const data = await response.json();
-                    setDistricts(data.districts || []);
+                    setDistricts(data.districts || []); // Giả định quận/huyện nằm trong khóa 'districts'
                 } catch (e: any) {
                     showMessage('error', `Không thể tải quận/huyện: ${e.message}`);
                     console.error("Lỗi khi tải quận/huyện:", e);
@@ -129,22 +127,21 @@ export default function AddressPage() {
             };
             fetchDistricts();
         }
-    }, [selectedProvinceCode]);
-
+    }, [selectedProvinceCode]); // Chạy lại khi selectedProvinceCode thay đổi
     useEffect(() => {
         if (selectedDistrictCode) {
             const fetchWards = async () => {
                 setIsLoadingWards(true);
-                setWards([]);
-                setSelectedWardCode('');
+                setWards([]); // Xóa dữ liệu phường/xã cũ
+                setSelectedWardCode(''); // Đặt lại lựa chọn phường/xã
                 try {
-
+                    // Tải phường/xã của huyện đã chọn, với depth=2
                     const response = await fetch(`${VN_API_BASE_URL}/d/${selectedDistrictCode}?depth=2`);
                     if (!response.ok) {
                         throw new Error(`Lỗi HTTP! Trạng thái: ${response.status}`);
                     }
                     const data = await response.json();
-                    setWards(data.wards || []);
+                    setWards(data.wards || []); // Giả định phường/xã nằm trong khóa 'wards'
                 } catch (e: any) {
                     showMessage('error', `Không thể tải phường/xã: ${e.message}`);
                     console.error("Lỗi khi tải phường/xã:", e);
@@ -154,11 +151,11 @@ export default function AddressPage() {
             };
             fetchWards();
         }
-    }, [selectedDistrictCode]);
+    }, [selectedDistrictCode]); // Chạy lại khi selectedDistrictCode thay đổi
 
     useEffect(() => {
         fetchAddresses();
-    }, []);
+    }, []); // [] đảm bảo hàm này chỉ chạy một lần khi component mount
 
     const fetchAddresses = async () => {
         setIsLoadingAddresses(true);
@@ -220,23 +217,25 @@ export default function AddressPage() {
         e.preventDefault();
         setIsSubmitting(true);
 
+        // Lấy tên đầy đủ của tỉnh/huyện/xã từ mã đã chọn
         const selectedProvinceName = provinces.find(p => p.code.toString() === selectedProvinceCode)?.name || '';
         const selectedDistrictName = districts.find(d => d.code.toString() === selectedDistrictCode)?.name || '';
         const selectedWardName = wards.find(w => w.code.toString() === selectedWardCode)?.name || '';
 
+        // Tạo payload dữ liệu để gửi đến backend API
         const addressPayload = {
             ...formData, // Các trường từ form
             city_province: selectedProvinceName,
             district: selectedDistrictName,
             ward_commune: selectedWardName,
-            country: 'Việt Nam',
-
+            country: 'Việt Nam', // Quốc gia mặc định theo schema SQL
+            // app_user_id thường được backend tự động thêm vào dựa trên xác thực người dùng
         };
 
         try {
             let response;
             if (editingAddressId) {
-
+                // Nếu đang chỉnh sửa, gửi yêu cầu PUT để cập nhật
                 response = await fetch(`${BACKEND_API_BASE_URL}/${editingAddressId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -245,7 +244,7 @@ export default function AddressPage() {
                 if (!response.ok) throw new Error(`Lỗi HTTP! Trạng thái: ${response.status}`);
                 showMessage('success', 'Địa chỉ đã được cập nhật thành công!');
             } else {
-
+                // Nếu thêm mới, gửi yêu cầu POST
                 response = await fetch(BACKEND_API_BASE_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -254,8 +253,8 @@ export default function AddressPage() {
                 if (!response.ok) throw new Error(`Lỗi HTTP! Trạng thái: ${response.status}`);
                 showMessage('success', 'Địa chỉ đã được thêm thành công!');
             }
-            resetForm();
-            fetchAddresses();
+            resetForm(); // Xóa form sau khi gửi thành công
+            fetchAddresses(); // Tải lại danh sách địa chỉ để hiển thị thay đổi mới nhất
         } catch (e: any) {
             showMessage('error', `Thao tác thất bại: ${e.message}`);
             console.error("Lỗi khi gửi địa chỉ:", e);
@@ -288,13 +287,13 @@ export default function AddressPage() {
         setSelectedWardCode(ward ? ward.code.toString() : '');
     };
 
-
+    // Chuẩn bị xóa địa chỉ bằng cách hiển thị modal xác nhận
     const handleDeleteClick = (id: string) => {
         setAddressToDeleteId(id);
         setShowDeleteConfirm(true);
     };
 
-
+    // Thực hiện thao tác xóa sau khi người dùng xác nhận
     const confirmDelete = async () => {
         if (!addressToDeleteId) return; // Đảm bảo có ID để xóa
         setIsSubmitting(true);
@@ -315,6 +314,7 @@ export default function AddressPage() {
         }
     };
 
+    // Hủy thao tác xóa và ẩn modal
     const cancelDelete = () => {
         setAddressToDeleteId(null);
         setShowDeleteConfirm(false);

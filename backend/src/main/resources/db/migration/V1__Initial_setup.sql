@@ -107,6 +107,7 @@ CREATE TABLE Addresses
     city_province  VARCHAR(100) NOT NULL,
     country        VARCHAR(100) DEFAULT 'Việt Nam',
     is_default     BOOLEAN      DEFAULT FALSE,
+    is_default     BOOLEAN      DEFAULT FALSE,
     address_type   VARCHAR(50),
     created_at     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
