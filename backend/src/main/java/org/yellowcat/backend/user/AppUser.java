@@ -1,5 +1,6 @@
 package org.yellowcat.backend.user;
 
+
 import jakarta.persistence.*; // Hoặc import javax.persistence.* nếu bạn dùng Java EE/Jakarta EE cũ hơn
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
@@ -16,25 +17,32 @@ public class AppUser {
     @Column(name = "app_user_id")
     private Integer appUserId;
 
-    @Column(name = "keycloak_user_id", unique = true, nullable = false, length = 255)
+    @NotNull
+    @Size(max = 255)
+    @Column(name = "keycloak_user_id", unique = true, nullable = false)
     private String keycloakUserId;
 
-    @Column(name = "email", unique = true, nullable = false, length = 255)
+    @NotNull
+    @Email
+    @Size(max = 255)
+    @Column(name = "email", unique = true, nullable = false)
     private String email;
 
-    @Column(name = "full_name", length = 255)
+    @Size(max = 255)
+    @Column(name = "full_name")
     private String fullName;
 
-    @Column(name = "phone_number", unique = true, length = 20)
+    @Size(max = 20)
+    @Column(name = "phone_number", unique = true)
     private String phoneNumber;
 
-    @Column(name = "avatar_url", length = 255)
+    @Size(max = 255)
+    @Column(name = "avatar_url")
     private String avatarUrl;
 
-    @Column(name = "created_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-    private LocalDateTime createdAt;
+    @Column(name = "created_at", updatable = false)
+    private Instant createdAt;
 
-    @Column(name = "updated_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-    private LocalDateTime updatedAt;
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 
-}

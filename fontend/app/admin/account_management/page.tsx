@@ -220,9 +220,6 @@ export default function Page() {
 
     return (
         <div className={`min-h-screen py-8 px-4 md:px-12 transition-colors ${theme === "dark" ? "dark bg-gray-900" : "bg-gray-50"}`}>
-            <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Quản lý tài khoản</h1>
-            </div>
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div className="flex items-center gap-3">
@@ -237,7 +234,7 @@ export default function Page() {
                     </div>
                 </div>
                 <Button
-                    color="primary"
+                    color="default"
                     startContent={<RefreshCw size={16} />}
                     onClick={fetchDemoData}
                     isLoading={loading}
@@ -372,7 +369,7 @@ export default function Page() {
                                             <User
                                                 avatarProps={{
                                                     icon: getUserTypeIcon(item),
-                                                    color: item.enabled ? "primary" : "default"
+                                                    color: item.enabled ? "default" : "default"
                                                 }}
                                                 description={item.username}
                                                 name={`${item.firstName} ${item.lastName}`}

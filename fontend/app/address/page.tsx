@@ -56,7 +56,6 @@ export default function AddressPage() {
         is_default: false,
     });
 
-
     const [addresses, setAddresses] = useState<Address[]>([]); // Danh sách tất cả địa chỉ
     const [editingAddressId, setEditingAddressId] = useState<string | null>(null); // ID của địa chỉ đang được chỉnh sửa (null nếu đang thêm mới)
 
@@ -77,7 +76,6 @@ export default function AddressPage() {
 
     const BACKEND_API_BASE_URL = '/api/addresses';
 
-    // --- Hàm tiện ích để hiển thị thông báo ---
     const showMessage = (type: 'success' | 'error', text: string) => {
         setMessage({ type, text });
         // Tự động xóa thông báo sau 5 giây
@@ -104,7 +102,6 @@ export default function AddressPage() {
         };
         fetchProvinces();
     }, []); // [] đảm bảo hàm này chỉ chạy một lần khi component mount
-
     useEffect(() => {
         if (selectedProvinceCode) {
             const fetchDistricts = async () => {
@@ -131,7 +128,6 @@ export default function AddressPage() {
             fetchDistricts();
         }
     }, [selectedProvinceCode]); // Chạy lại khi selectedProvinceCode thay đổi
-
     useEffect(() => {
         if (selectedDistrictCode) {
             const fetchWards = async () => {
