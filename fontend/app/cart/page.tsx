@@ -4,19 +4,18 @@
 import { Card, CardHeader, CardBody, Divider, Button } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { CldImage } from 'next-cloudinary'; // Import CldImage for cart item images
+import { CldImage } from 'next-cloudinary';
 
-// Reuse CartItem type from ProductDetailPage
 interface CartItem {
-    id: number; // variantId
-    productId: number; // To link back to the product
+    id: number;
+    productId: number;
     productName: string;
-    name: string; // Combination of product name, color, size
+    name: string;
     price: number;
     quantity: number;
     imageUrl: string;
     sku: string;
-    stockLevel: number; // Keep track of original stock for validation
+    stockLevel: number;
 }
 
 export default function CartPage() {
@@ -24,7 +23,6 @@ export default function CartPage() {
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Load cart items from localStorage on component mount
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const storedCart = localStorage.getItem('cart');
