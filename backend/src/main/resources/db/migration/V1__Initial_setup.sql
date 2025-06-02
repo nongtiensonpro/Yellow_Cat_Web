@@ -138,6 +138,7 @@ CREATE TABLE Orders
     order_status        VARCHAR(50)        NOT NULL DEFAULT 'Pending',
     shipping_method_id  INT,
     customer_notes      TEXT,
+    is_synced_to_ghtk   BOOLEAN                     DEFAULT FALSE, -- Ghi nhận đơn đã gửi lên GHTK chưa
     updated_at          TIMESTAMP                   DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (app_user_id) REFERENCES AppUsers (app_user_id) ON DELETE SET NULL,
     FOREIGN KEY (shipping_address_id) REFERENCES Addresses (address_id),
@@ -183,6 +184,9 @@ CREATE TABLE Shipments
     shipped_date            TIMESTAMP,
     shipping_cost           NUMERIC(10, 2),
     notes                   TEXT,
+    ghtk_order_code         VARCHAR(100), -- Mã đơn hàng GHTK trả về
+    ghtk_label_url          VARCHAR(255), -- URL mã vận đơn (nếu có)
+    ghtk_tracking_url       VARCHAR(255), -- URL theo dõi đơn
     created_at              TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
     updated_at              TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES Orders (order_id) ON DELETE CASCADE,
@@ -232,6 +236,30 @@ CREATE TABLE PromotionApplicables
     applicable_type     VARCHAR(20) NOT NULL,
     FOREIGN KEY (promotion_id) REFERENCES Promotions (promotion_id) ON DELETE CASCADE,
     UNIQUE (promotion_id, applicable_item_id, applicable_type)
+);
+
+-- Bảng giỏ hàng
+CREATE TABLE carts
+(
+    cart_id     SERIAL PRIMARY KEY,
+    app_user_id INT UNIQUE NOT NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (app_user_id) REFERENCES AppUsers (app_user_id) ON DELETE CASCADE
+);
+
+-- Bảng giỏ hàng chi tiết
+CREATE TABLE cart_items
+(
+    cart_item_id SERIAL PRIMARY KEY,
+    cart_id      INT NOT NULL,
+    variant_id   INT NOT NULL,
+    quantity     INT NOT NULL CHECK (quantity > 0),
+    added_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (cart_id) REFERENCES Carts (cart_id) ON DELETE CASCADE,
+    FOREIGN KEY (variant_id) REFERENCES product_variants (variant_id) ON DELETE CASCADE,
+    UNIQUE (cart_id, variant_id)
 );
 
 -- Dữ liệu mẫu cho bảng Categories
