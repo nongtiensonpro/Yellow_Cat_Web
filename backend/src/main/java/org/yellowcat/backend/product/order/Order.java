@@ -4,12 +4,12 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import org.yellowcat.backend.product.address.Address;
+import org.yellowcat.backend.product.address.Addresses;
 import org.yellowcat.backend.product.orderItem.OrderItem;
 import org.yellowcat.backend.product.payment.Payment;
 import org.yellowcat.backend.product.shipment.Shipment;
 import org.yellowcat.backend.product.shippingMethod.ShippingMethod;
-import org.yellowcat.backend.product.userApp.User;
+import org.yellowcat.backend.user.AppUser;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -32,11 +32,11 @@ public class Order { // Tên class là Order (số ít)
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "app_user_id") // Allow NULL as per ON DELETE SET NULL
-    private User user;
+    private AppUser user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shipping_address_id", nullable = false)
-    private Address shippingAddress;
+    private Addresses shippingAddress;
 
     @Column(name = "order_date", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime orderDate;

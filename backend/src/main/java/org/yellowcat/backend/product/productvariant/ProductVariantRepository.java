@@ -8,7 +8,7 @@ import java.util.List;
 
 @Repository
 public interface ProductVariantRepository extends JpaRepository<ProductVariant, Integer> {
-    @Query("select p from ProductVariant p where p.product.id = ?1")
+    @Query("select p from ProductVariant p where p.product.productId = ?1")
     List<ProductVariant> findByProductId(Integer productId);
 
     @Query("select (count(p) > 0) from ProductVariant p where p.sku = ?1")

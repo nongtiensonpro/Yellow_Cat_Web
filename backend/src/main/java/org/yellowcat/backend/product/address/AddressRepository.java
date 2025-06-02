@@ -1,4 +1,4 @@
-package org.yellowcat.backend.address;
+package org.yellowcat.backend.product.address;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

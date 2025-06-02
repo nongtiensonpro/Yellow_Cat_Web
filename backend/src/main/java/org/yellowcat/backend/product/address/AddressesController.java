@@ -1,4 +1,4 @@
-package org.yellowcat.backend.address;
+package org.yellowcat.backend.product.address;
 
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.yellowcat.backend.common.config_api.response.ApiResponse;
 import org.yellowcat.backend.common.config_api.response.PageResponse;
 import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
-import org.yellowcat.backend.address.dto.AddressesDTO;
+import org.yellowcat.backend.product.address.dto.AddressesDTO;
 
 import java.util.List;
 

@@ -128,7 +128,7 @@ public class ProductService {
             variant.setColor(variantDto.getColor());
             variant.setSize(variantDto.getSize());
             variant.setPrice(variantDto.getPrice());
-            variant.setStockLevel(variantDto.getStockLevel());
+            variant.setQuantityInStock(variantDto.getStockLevel());
             variant.setImageUrl(variantDto.getImageUrl());
             variant.setWeight(variantDto.getWeight());
 
@@ -187,7 +187,7 @@ public class ProductService {
                 variant.setColor(variantDto.getColor());
                 variant.setSize(variantDto.getSize());
                 variant.setPrice(variantDto.getPrice());
-                variant.setStockLevel(variantDto.getStockLevel());
+                variant.setQuantityInStock(variantDto.getStockLevel());
                 variant.setImageUrl(variantDto.getImageUrl());
                 variant.setWeight(variantDto.getWeight());
 
