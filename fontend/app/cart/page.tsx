@@ -77,7 +77,7 @@ export default function CartPage() {
     }
 
     return (
-        <div className="w-full mx-auto my-10 p-4 max-w-6xl">
+        <div className={`min-h-screen py-8 px-4 md:px-36`}>
             <Card className="w-full">
                 <CardHeader className="flex flex-col items-start">
                     <Button

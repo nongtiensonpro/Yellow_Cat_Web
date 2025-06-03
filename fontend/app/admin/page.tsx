@@ -219,7 +219,7 @@ export default function AdminDashboard() {
     }
 
     return (
-        <div className={`min-h-screen py-8 px-4 md:px-12 transition-colors ${darkMode ? "dark bg-gray-900" : "bg-gray-50"}`}>
+        <div className={`min-h-screen py-8 px-4 md:px-36 transition-colors ${darkMode ? "dark bg-gray-900" : "bg-gray-50"}`}>
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Bảng điều khiển Admin</h1>
             </div>

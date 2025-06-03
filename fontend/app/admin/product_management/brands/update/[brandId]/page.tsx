@@ -104,7 +104,7 @@ export default function UpdateBrandPage() {
     const [loading, setLoading] = useState(true);
     const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+
     // Lấy token từ session của NextAuth
     const authToken = session?.accessToken;
 
@@ -265,7 +265,7 @@ export default function UpdateBrandPage() {
         );
     }
    return (
-        <Card className="w-full max-w-2xl mx-auto my-10">
+        <Card className={`min-h-screen py-8 px-4 md:px-36`}>
             <form onSubmit={handleUpdateSubmit}>
                 <CardHeader className="flex gap-3">
                     <div className="flex flex-col">

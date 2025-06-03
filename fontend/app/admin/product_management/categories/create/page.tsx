@@ -154,7 +154,7 @@ export default function CreateCategoryPage() {
     }
 
     return (
-        <Card className="w-full max-w-2xl mx-auto">
+        <Card className={`min-h-screen py-8 px-4 md:px-36`}>
             <form onSubmit={handleSubmit}>
                 <CardHeader className="flex gap-3">
                     <div className="flex flex-col">

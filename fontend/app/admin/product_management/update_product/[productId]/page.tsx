@@ -403,7 +403,7 @@ export default function UpdateProductPage() {
     }
 
     return (
-        <Card className="w-full max-w mx-auto my-10">
+        <Card className={`min-h-screen py-8 px-4 md:px-36`}>
             <form onSubmit={handleSubmit}>
                 <CardHeader className="flex gap-3">
                     <div className="flex flex-col">

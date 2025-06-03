@@ -165,7 +165,7 @@ export default function Page() {
     };
 
     return (
-        <Card className="xl">
+        <Card className={`min-h-screen py-8 px-4 md:px-36`}>
             <CardHeader className="flex gap-3">
                 <div className="flex flex-col">
                     <p className="text-4xl font-bold">Quản lý Category</p>
