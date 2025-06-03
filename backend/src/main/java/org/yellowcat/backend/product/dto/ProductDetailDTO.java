@@ -15,8 +15,8 @@ public class ProductDetailDTO {
     private Integer productId;
     private String productName;
     private String description;
-    private String material;
-    private String targetAudience;
+    private Integer materialId;
+    private Integer targetAudienceId;
     private Integer purchases;
     private Boolean isActive;
     private Integer categoryId;

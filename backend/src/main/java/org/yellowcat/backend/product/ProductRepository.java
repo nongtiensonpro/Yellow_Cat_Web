@@ -16,8 +16,8 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                 p.product_id as productId,
                 p.product_name as productName,
                 p.description AS productDescription,
-                p.material as material,
-                p.target_audience as targetAudience,
+                p.material_id as materialId,
+                p.target_audience_id as targetAudienceId,
                 p.purchases as purchases,
                 p.is_active AS isActive,
                 p.category_id as categoryId,
@@ -29,8 +29,8 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                 p.thumbnail as thumbnail,
                 pv.variant_id as variantId,
                 pv.sku as sku,
-                pv.color as color,
-                pv.size as size,
+                pv.color_id as colorId,
+                pv.size_id as sizeId,
                 pv.price as price,
                 pv.quantity_in_stock AS stockLevel,
                 pv.image_url AS variantImageUrl,
@@ -42,7 +42,15 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
             LEFT JOIN
                 Brands b ON p.brand_id = b.brand_id
             LEFT JOIN
+                materials m ON p.material_id = m.material_id
+            LEFT JOIN
+                target_audiences ta ON ta.target_audience_id = p.target_audience_id
+            LEFT JOIN
                 product_variants pv ON p.product_id = pv.product_id
+            LEFT JOIN
+                colors co ON pv.color_id = co.color_id
+            LEFT JOIN
+                sizes s ON pv.size_id = s.size_id
             WHERE
                 p.product_id = :productId
             ORDER BY

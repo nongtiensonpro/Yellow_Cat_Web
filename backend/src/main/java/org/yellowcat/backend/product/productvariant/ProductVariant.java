@@ -4,7 +4,11 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.yellowcat.backend.product.Product;
+import org.yellowcat.backend.product.color.Color;
+import org.yellowcat.backend.product.size.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -29,10 +33,15 @@ public class ProductVariant {
     @Column(nullable = false)
     private String sku;
 
-    private String color;
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    @JoinColumn(name = "color_id")
+    private Color color;
 
-    @Column(nullable = false)
-    private String size;
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    @JoinColumn(name = "size_id")
+    private Size size;
 
     @Column(precision = 12, scale = 2, nullable = false)
     private BigDecimal price;

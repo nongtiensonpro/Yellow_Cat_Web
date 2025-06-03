@@ -10,7 +10,9 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.yellowcat.backend.product.brand.Brand;
 import org.yellowcat.backend.product.category.Category;
+import org.yellowcat.backend.product.material.Material;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
+import org.yellowcat.backend.product.targetaudience.TargetAudience;
 
 import java.time.Instant;
 import java.util.List;
@@ -44,11 +46,15 @@ public class Product {
     @Column(name = "description", length = Integer.MAX_VALUE)
     private String description;
 
-    @Column(name = "material")
-    private String material;
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    @JoinColumn(name = "material_id")
+    private Material material;
 
-    @Column(name = "target_audience")
-    private String targetAudience;
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    @JoinColumn(name = "target_audience_id")
+    private TargetAudience targetAudience;
 
     @Column(name = "is_featured")
     @ColumnDefault("false")

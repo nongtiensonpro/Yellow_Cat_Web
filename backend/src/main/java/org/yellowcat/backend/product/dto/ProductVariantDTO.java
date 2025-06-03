@@ -14,8 +14,8 @@ import java.math.BigDecimal;
 public class ProductVariantDTO {
     private Integer variantId;
     private String sku;
-    private String color;
-    private String size;
+    private Integer colorId;
+    private Integer sizeId;
     private BigDecimal price;
     private Integer stockLevel;
     private String imageUrl;

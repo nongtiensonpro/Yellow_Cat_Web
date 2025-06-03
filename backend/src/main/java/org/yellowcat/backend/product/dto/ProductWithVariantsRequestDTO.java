@@ -11,16 +11,16 @@ public class ProductWithVariantsRequestDTO {
     private String description;
     private Integer brandId;
     private Integer categoryId;
-    private String material;
-    private String targetAudience;
+    private Integer materialId;
+    private Integer targetAudienceId;
     private String thumbnail;
     private List<ProductVariantDTO> variants;
 
     @Data
     public static class ProductVariantDTO {
         private String sku;
-        private String color;
-        private String size;
+        private Integer colorId;
+        private Integer sizeId;
         private BigDecimal price;
         private Integer stockLevel;
         private String imageUrl;
