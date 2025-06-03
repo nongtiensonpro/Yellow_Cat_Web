@@ -8,9 +8,17 @@ import org.yellowcat.backend.product.brand.Brand;
 import org.yellowcat.backend.product.brand.BrandRepository;
 import org.yellowcat.backend.product.category.Category;
 import org.yellowcat.backend.product.category.CategoryRepository;
+import org.yellowcat.backend.product.color.Color;
+import org.yellowcat.backend.product.color.ColorRepository;
 import org.yellowcat.backend.product.dto.*;
+import org.yellowcat.backend.product.material.Material;
+import org.yellowcat.backend.product.material.MaterialRepository;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
 import org.yellowcat.backend.product.productvariant.ProductVariantRepository;
+import org.yellowcat.backend.product.size.Size;
+import org.yellowcat.backend.product.size.SizeRepository;
+import org.yellowcat.backend.product.targetaudience.TargetAudience;
+import org.yellowcat.backend.product.targetaudience.TargetAudienceRepository;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -23,7 +31,10 @@ public class ProductService {
     private final BrandRepository brandRepository;
     private final CategoryRepository categoryRepository;
     private final ProductVariantRepository productVariantRepository;
-    private final ProductMapper productMapper;
+    private final MaterialRepository materialRepository;
+    private final TargetAudienceRepository targetAudienceRepository;
+    private final ColorRepository colorRepository;
+    private final SizeRepository sizeRepository;
 
     public Page<ProductListItemDTO> getProductsPaginated(Pageable pageable) {
         int pageSize = pageable.getPageSize();
@@ -63,8 +74,8 @@ public class ProductService {
                 productDetailDTO.setProductId((Integer) row[0]);
                 productDetailDTO.setProductName((String) row[1]);
                 productDetailDTO.setDescription((String) row[2]);
-                productDetailDTO.setMaterial((String) row[3]);
-                productDetailDTO.setTargetAudience((String) row[4]);
+                productDetailDTO.setMaterialId((Integer) row[3]);
+                productDetailDTO.setTargetAudienceId((Integer) row[4]);
                 productDetailDTO.setPurchases((Integer) row[5]);
                 productDetailDTO.setIsActive((Boolean) row[6]);
                 productDetailDTO.setCategoryId((Integer) row[7]);
@@ -80,8 +91,8 @@ public class ProductService {
                 ProductVariantDTO variantDTO = new ProductVariantDTO();
                 variantDTO.setVariantId((Integer) row[14]);
                 variantDTO.setSku((String) row[15]);
-                variantDTO.setColor((String) row[16]);
-                variantDTO.setSize((String) row[17]);
+                variantDTO.setColorId((Integer) row[16]);
+                variantDTO.setSizeId((Integer) row[17]);
                 variantDTO.setPrice((BigDecimal) row[18]); // Ensure correct type casting
                 variantDTO.setStockLevel((Integer) row[19]);
                 variantDTO.setImageUrl((String) row[20]);
@@ -102,6 +113,10 @@ public class ProductService {
                 .orElseThrow(() -> new RuntimeException("Brand not found"));
         Category category = categoryRepository.findById(productDto.getCategoryId())
                 .orElseThrow(() -> new RuntimeException("Category not found"));
+        Material material = materialRepository.findById(productDto.getMaterialId())
+                .orElseThrow(() -> new RuntimeException("Material not found"));
+        TargetAudience targetAudience = targetAudienceRepository.findById(productDto.getTargetAudienceId())
+                .orElseThrow(() -> new RuntimeException("Target Audience not found"));
 
         // Tạo sản phẩm
         Product product = new Product();
@@ -109,13 +124,18 @@ public class ProductService {
         product.setDescription(productDto.getDescription());
         product.setBrand(brand);
         product.setCategory(category);
-        product.setMaterial(productDto.getMaterial());
-        product.setTargetAudience(productDto.getTargetAudience());
+        product.setMaterial(material);
+        product.setTargetAudience(targetAudience);
         product.setThumbnail(productDto.getThumbnail());
         product = productRepository.save(product);
 
         // Xử lý các biến thể
         for (ProductWithVariantsRequestDTO.ProductVariantDTO variantDto : productDto.getVariants()) {
+            Color color = colorRepository.findById(variantDto.getColorId())
+                    .orElseThrow(() -> new RuntimeException("Color not found"));
+            Size size = sizeRepository.findById(variantDto.getSizeId())
+                    .orElseThrow(() -> new RuntimeException("Size not found"));
+
             ProductVariant variant = new ProductVariant();
             variant.setProduct(product);
 
@@ -125,8 +145,8 @@ public class ProductService {
                     : variantDto.getSku();
             variant.setSku(sku);
 
-            variant.setColor(variantDto.getColor());
-            variant.setSize(variantDto.getSize());
+            variant.setColor(color);
+            variant.setSize(size);
             variant.setPrice(variantDto.getPrice());
             variant.setQuantityInStock(variantDto.getStockLevel());
             variant.setImageUrl(variantDto.getImageUrl());
@@ -147,14 +167,18 @@ public class ProductService {
                 .orElseThrow(() -> new RuntimeException("Brand not found"));
         Category category = categoryRepository.findById(productDto.getCategoryId())
                 .orElseThrow(() -> new RuntimeException("Category not found"));
+        Material material = materialRepository.findById(productDto.getMaterialId())
+                .orElseThrow(() -> new RuntimeException("Material not found"));
+        TargetAudience targetAudience = targetAudienceRepository.findById(productDto.getTargetAudienceId())
+                .orElseThrow(() -> new RuntimeException("Target Audience not found"));
 
         // 3. Cập nhật thông tin sản phẩm
         product.setProductName(productDto.getProductName());
         product.setDescription(productDto.getDescription());
         product.setBrand(brand);
         product.setCategory(category);
-        product.setMaterial(productDto.getMaterial());
-        product.setTargetAudience(productDto.getTargetAudience());
+        product.setMaterial(material);
+        product.setTargetAudience(targetAudience);
         product.setThumbnail(productDto.getThumbnail());
         product = productRepository.save(product);
 
@@ -172,8 +196,12 @@ public class ProductService {
 
         if (productDto.getVariants() != null) {
             for (ProductWithVariantsUpdateRequestDTO.ProductVariantDTO variantDto : productDto.getVariants()) {
-                newVariantSkus.add(variantDto.getSku());
+                Color color = colorRepository.findById(variantDto.getColorId())
+                        .orElseThrow(() -> new RuntimeException("Color not found"));
+                Size size = sizeRepository.findById(variantDto.getSizeId())
+                        .orElseThrow(() -> new RuntimeException("Size not found"));
 
+                newVariantSkus.add(variantDto.getSku());
                 ProductVariant variant = existingVariantsMap.get(variantDto.getSku());
 
                 if (variant == null) {
@@ -184,8 +212,8 @@ public class ProductService {
                 }
 
                 // Cập nhật thông tin biến thể
-                variant.setColor(variantDto.getColor());
-                variant.setSize(variantDto.getSize());
+                variant.setColor(color);
+                variant.setSize(size);
                 variant.setPrice(variantDto.getPrice());
                 variant.setQuantityInStock(variantDto.getStockLevel());
                 variant.setImageUrl(variantDto.getImageUrl());
