@@ -98,9 +98,6 @@ export default function App() {
                     <CartIcon size={30}  onClick={() => router.push('/cart')}/>
                 </Badge>
             </button>
-            {/*<Switch isSelected={!isInvisible} onValueChange={() => setIsInvisible(!isInvisible)}>*/}
-            {/*    Hiện số lượng*/}
-            {/*</Switch>*/}
         </div>
     );
 }
