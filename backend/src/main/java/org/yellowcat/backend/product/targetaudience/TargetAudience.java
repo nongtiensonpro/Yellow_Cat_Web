@@ -20,7 +20,7 @@ public class TargetAudience {
     @Column(name = "target_audience_id")
     private Integer id;
 
-    @Column(name = "target_audience_name", nullable = false)
+    @Column(name = "audience_name", nullable = false)
     private String name;
 
     @Column(name = "description")
