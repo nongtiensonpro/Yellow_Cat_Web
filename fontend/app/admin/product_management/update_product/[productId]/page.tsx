@@ -14,12 +14,15 @@ import {
     ModalContent,
     ModalHeader,
     ModalBody,
+<<<<<<< Updated upstream
     ModalFooter,
     useDisclosure,
     Autocomplete,
     AutocompleteItem,
     Checkbox,
     Spinner
+=======
+>>>>>>> Stashed changes
 } from "@heroui/react";
 import {Input, Textarea} from "@heroui/input";
 import {CldUploadButton, CldImage} from "next-cloudinary";
@@ -31,6 +34,11 @@ import {Trash2, Plus} from "lucide-react";
 interface ProductVariant {
     variantId: number;
     sku: string;
+<<<<<<< Updated upstream
+=======
+    colorId: number;
+    sizeId: number;
+>>>>>>> Stashed changes
     price: number;
     stockLevel: number;
     imageUrl: string;
@@ -42,6 +50,11 @@ interface ProductDetail {
     productId: number;
     productName: string;
     description: string;
+<<<<<<< Updated upstream
+=======
+    materialId: number;
+    targetAudienceId: number;
+>>>>>>> Stashed changes
     purchases: number;
     productCreatedAt: string;
     productUpdatedAt: string;
@@ -52,6 +65,10 @@ interface ProductDetail {
     brandName: string;
     brandInfo: string;
     logoPublicId: string;
+<<<<<<< Updated upstream
+=======
+    thumbnail: string | null;
+>>>>>>> Stashed changes
     variants: ProductVariant[];
     activePromotions: any | null;
     thumbnail: string | null;
@@ -68,13 +85,17 @@ interface ApiResponse {
 interface Brand {
     id: number;
     brandName: string;
+    brandInfo : string;
+    logoPublicId: string;
 }
 
 interface Category {
     id: number;
     name: string;
+    description: string;
 }
 
+<<<<<<< Updated upstream
 interface Attribute {
     id: number;
     attributeName: string;
@@ -136,6 +157,44 @@ const parseVariantAttributes = (attributesString: string) => {
 
     return attributes;
 };
+=======
+interface Size{
+    id: number;
+    name: string;
+    description: string;
+}
+
+interface TargetAudience {
+    id: number;
+    name: string;
+    description: string;
+}
+
+interface Color{
+    id: number;
+    name: string;
+    description: string;
+}
+
+interface Material {
+    id: number;
+    name: string;
+    description: string;
+}
+
+
+interface VariantInput {
+    variantId?: number;
+    sku: string;
+    colorId: string;
+    sizeId: string;
+    price: string;
+    stockLevel: string;
+    image: any;
+    weight: string;
+}
+
+>>>>>>> Stashed changes
 
 export default function UpdateProductPage() {
     const router = useRouter();
@@ -143,10 +202,31 @@ export default function UpdateProductPage() {
     const productId = params?.productId as string | undefined;
     const {data: session, status} = useSession();
 
+<<<<<<< Updated upstream
     // State cho form sản phẩm
     const [productData, setProductData] = useState<ProductDetail | null>(null);
     const [productName, setProductName] = useState("");
     const [description, setDescription] = useState("");
+=======
+    const {isOpen: isBrandModalOpen, onOpen: onBrandModalOpen, onOpenChange: onBrandModalOpenChange} = useDisclosure();
+    const {isOpen: isCategoryModalOpen, onOpen: onCategoryModalOpen, onOpenChange: onCategoryModalOpenChange} = useDisclosure();
+
+    // Edit Brand Modal state
+    const {isOpen: isEditBrandModalOpen, onOpen: onEditBrandModalOpen, onOpenChange: onEditBrandModalOpenChange} = useDisclosure();
+    const [selectedBrandIdForEdit, setSelectedBrandIdForEdit] = useState<string | null>(null);
+
+    // Edit Category Modal state
+    const {isOpen: isEditCategoryModalOpen, onOpen: onEditCategoryModalOpen, onOpenChange: onEditCategoryModalOpenChange} = useDisclosure();
+    const [selectedCategoryIdForEdit, setSelectedCategoryIdForEdit] = useState<string | null>(null);
+
+    // State for form sản phẩm
+    const [productData, setProductData] = useState<ProductDetail | null>(null);
+    const [productName, setProductName] = useState("");
+    const [description, setDescription] = useState("");
+    const [material, setMaterial] = useState("");
+    const [targetAudience, setTargetAudience] = useState("");
+    const [thumbnail, setThumbnail] = useState<any>(null);
+>>>>>>> Stashed changes
     const [brandId, setBrandId] = useState("");
     const [categoryId, setCategoryId] = useState("");
     const [isActive, setIsActive] = useState(true);
@@ -154,6 +234,10 @@ export default function UpdateProductPage() {
     const [attributes, setAttributes] = useState<Attribute[]>([]);
     const [brands, setBrands] = useState<Brand[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
+    const [materials, setMaterials] = useState<Material[]>([]);
+    const [audiences, setAudiences] = useState<TargetAudience[]>([]);
+    const [sizes, setSizes] = useState<Size[]>([]);
+    const [colors, setColors] = useState<Color[]>([]);
     const [loading, setLoading] = useState(true);
     const [formError, setFormError] = useState<string | null>(null);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -211,10 +295,16 @@ export default function UpdateProductPage() {
                         setProductData(data.data);
                         setProductName(data.data.productName);
                         setDescription(data.data.description || '');
+<<<<<<< Updated upstream
+=======
+                        setMaterial(data.data.materialId?.toString() || '');
+                        setTargetAudience(data.data.targetAudienceId?.toString() || '');
+>>>>>>> Stashed changes
                         setBrandId(data.data.brandId.toString());
                         setCategoryId(data.data.categoryId.toString());
                         setIsActive(data.data.isActive);
 
+<<<<<<< Updated upstream
                         // Parse thuộc tính sản phẩm
                         if (data.data.productAttributes && data.data.productAttributes.length > 0) {
                             const productAttrs: { [key: string]: string } = {};
@@ -240,6 +330,18 @@ export default function UpdateProductPage() {
                                 attributes: attributes
                             };
                         });
+=======
+                        const variantInputs: VariantInput[] = data.data.variants.map(variant => ({
+                            variantId: variant.variantId,
+                            sku: variant.sku,
+                            colorId: variant.colorId.toString(),
+                            sizeId: variant.sizeId.toString(),
+                            price: variant.price.toString(),
+                            stockLevel: variant.stockLevel.toString(),
+                            image: variant.imageUrl ? {public_id: variant.imageUrl} : null,
+                            weight: variant.weight.toString()
+                        }));
+>>>>>>> Stashed changes
                         setVariants(variantInputs);
                     } else {
                         throw new Error(data.message || 'Không thể tải dữ liệu sản phẩm');
@@ -258,6 +360,7 @@ export default function UpdateProductPage() {
             // Lấy dữ liệu brands, categories, attributes
             const fetchMetadata = async () => {
                 try {
+<<<<<<< Updated upstream
                     const [brandRes, catRes, attrRes] = await Promise.all([
                         fetch("http://localhost:8080/api/brands?page=0&size=100"),
                         fetch("http://localhost:8080/api/categories?page=0&size=100"),
@@ -274,6 +377,35 @@ export default function UpdateProductPage() {
                 } catch (err) {
                     console.error('Lỗi khi tải metadata:', err);
                     setFormError("Không thể tải dữ liệu danh mục, thương hiệu hoặc thuộc tính.");
+=======
+                    const [brandRes, catRes, materialRes, audienceRes, colorRes, sizeRes] = await Promise.all([
+                        fetch("http://localhost:8080/api/brands?page=0&size=100"),
+                        fetch("http://localhost:8080/api/categories?page=0&size=100"),
+                        fetch("http://localhost:8080/api/materials?page=0&size=100"),
+                        fetch("http://localhost:8080/api/target-audiences?page=0&size=100"),
+                        fetch("http://localhost:8080/api/colors?page=0&size=100"),
+                        fetch("http://localhost:8080/api/sizes?page=0&size=100")
+                    ]);
+
+                    const [brandData, catData, materialData, audienceData, colorData, sizeData] = await Promise.all([
+                        brandRes.json(),
+                        catRes.json(),
+                        materialRes.json(),
+                        audienceRes.json(),
+                        colorRes.json(),
+                        sizeRes.json()
+                    ]);
+
+                    setBrands(brandData.data.content || []);
+                    setCategories(catData.data.content || []);
+                    setMaterials(materialData.data.content || []);
+                    setAudiences(audienceData.data.content || []);
+                    setColors(colorData.data.content || []);
+                    setSizes(sizeData.data.content || []);
+                } catch (err) {
+                    console.error('Lỗi khi tải metadata:', err);
+                    setFormError("Không thể tải dữ liệu danh mục, thương hiệu hoặc thuộc tính sản phẩm.");
+>>>>>>> Stashed changes
                 }
             };
 
@@ -323,24 +455,54 @@ export default function UpdateProductPage() {
 
     // Thêm biến thể mới
     const addVariant = () => {
+<<<<<<< Updated upstream
         setVariants([...variants, {sku: "", price: "", stockLevel: "", image: null, weight: "", attributes: {}}]);
+=======
+        setVariants([...variants, {sku: "", colorId: "", sizeId: "", price: "", stockLevel: "", image: null, weight: ""}]);
+>>>>>>> Stashed changes
     };
 
     // Xóa biến thể
     const removeVariant = (idx: number) => {
+<<<<<<< Updated upstream
         const variant = variants[idx];
         if (variant.variantId) {
             // Nếu biến thể đã tồn tại trong DB, thêm vào danh sách xóa
             setDeletedVariantIds([...deletedVariantIds, variant.variantId]);
         }
+=======
+
+>>>>>>> Stashed changes
         setVariants(variants.filter((_, i) => i !== idx));
     };
 
     // Xử lý thay đổi trường của biến thể
     const handleVariantChange = (idx: number, field: string, value: any) => {
-        setVariants(variants.map((v, i) => i === idx ? {...v, [field]: value} : v));
+        const updatedVariants = variants.map((v, i) => {
+            if (i === idx) {
+                const updatedVariant = {...v, [field]: value};
+
+                // Auto-generate SKU when color or size changes
+                if ((field === 'colorId' || field === 'sizeId') && productName) {
+                    const colorName = colors.find(c => c.id.toString() === updatedVariant.colorId)?.name || '';
+                    const sizeName = sizes.find(s => s.id.toString() === updatedVariant.sizeId)?.name || '';
+
+                    if (colorName && sizeName) {
+                        const productCode = productName.slice(0, 3).toUpperCase();
+                        const colorCode = colorName.slice(0, 3).toUpperCase();
+                        const sizeCode = sizeName.toUpperCase();
+                        updatedVariant.sku = `${productCode}-${colorCode}-${sizeCode}`;
+                    }
+                }
+
+                return updatedVariant;
+            }
+            return v;
+        });
+        setVariants(updatedVariants);
     };
 
+<<<<<<< Updated upstream
     // Xử lý thay đổi thuộc tính của biến thể
     const handleVariantAttributeChange = (idx: number, attrId: string, value: string) => {
         setVariants(variants.map((v, i) => i === idx ? {...v, attributes: {...v.attributes, [attrId]: value}} : v));
@@ -350,6 +512,17 @@ export default function UpdateProductPage() {
     const handleProductAttributeChange = (attrId: string, value: string) => {
         setProductAttributes(prev => ({...prev, [attrId]: value}));
     };
+=======
+
+    const validateForm = () => {
+        const errors: string[] = [];
+        if (!productName.trim()) errors.push("Vui lòng nhập tên sản phẩm");
+        if (!brandId) errors.push("Vui lòng chọn thương hiệu");
+        if (!categoryId) errors.push("Vui lòng chọn danh mục");
+        if (!material) errors.push("Vui lòng chọn chất liệu sản phẩm");
+        if (!targetAudience) errors.push("Vui lòng chọn đối tượng mục tiêu");
+        if (!thumbnail) errors.push("Vui lòng chọn ảnh bìa sản phẩm");
+>>>>>>> Stashed changes
 
     // Toggle product attribute selection
     const toggleProductAttribute = (attrId: number) => {
@@ -399,6 +572,16 @@ export default function UpdateProductPage() {
             setFormError("Vui lòng nhập đầy đủ thông tin thuộc tính.");
             return;
         }
+<<<<<<< Updated upstream
+=======
+        variants.forEach((v, i) => {
+            if (!v.price.trim() || !v.stockLevel.trim() || !v.image || !v.weight.trim()) {
+                errors.push(`Vui lòng nhập đầy đủ thông tin (SKU, giá, tồn kho, ảnh, trọng lượng) cho biến thể #${i + 1}`);
+            }
+            // Add validation for v.colorId and v.sizeId
+            if (!v.colorId) errors.push(`Vui lòng chọn màu cho biến thể #${i + 1}`);
+            if (!v.sizeId) errors.push(`Vui lòng chọn kích thước cho biến thể #${i + 1}`);
+>>>>>>> Stashed changes
 
         setIsCreatingAttribute(true);
         try {
@@ -548,7 +731,14 @@ export default function UpdateProductPage() {
 
             // Chuẩn hóa dữ liệu biến thể theo cấu trúc API mới
             const variantPayload = variants.map(v => ({
+<<<<<<< Updated upstream
                 sku: v.sku,
+=======
+                variantId: v.variantId || null, // Send variantId if it exists (for existing variants), else null
+                sku: v.sku.trim(),
+                colorId: parseInt(v.colorId), // Parse colorId as integer
+                sizeId: parseInt(v.sizeId),   // Parse sizeId as integer
+>>>>>>> Stashed changes
                 price: Number(v.price),
                 stockLevel: parseInt(v.stockLevel),
                 imageUrl: v.image?.public_id || v.image,
@@ -573,9 +763,15 @@ export default function UpdateProductPage() {
                 description: description.trim(),
                 brandId: parseInt(brandId),
                 categoryId: parseInt(categoryId),
+<<<<<<< Updated upstream
                 productAttributes: productAttributePayload.length > 0 ? [{
                     attributes: productAttributePayload
                 }] : [],
+=======
+                materialId: parseInt(material),
+                targetAudienceId: parseInt(targetAudience),
+                thumbnail: thumbnail?.public_id || (typeof thumbnail === 'string' ? thumbnail : null),
+>>>>>>> Stashed changes
                 variants: variantPayload
             };
 
@@ -619,7 +815,108 @@ export default function UpdateProductPage() {
         }
     };
 
+<<<<<<< Updated upstream
     // Hiển thị loading
+=======
+    const refreshBrands = async () => {
+        try {
+            const brandRes = await fetch("http://localhost:8080/api/brands?page=0&size=1000");
+            if (brandRes.ok) {
+                const brandData = await brandRes.json();
+                setBrands(brandData.data.content || []);
+            }
+        } catch (err) {
+            console.error("Error refreshing brands:", err);
+        }
+    };
+
+    const refreshCategories = async () => {
+        try {
+            const catRes = await fetch("http://localhost:8080/api/categories?page=0&size=1000");
+            if (catRes.ok) {
+                const catData = await catRes.json();
+                setCategories(catData.data.content || []);
+            }
+        } catch (err) {
+            console.error("Error refreshing categories:", err);
+        }
+    };
+
+    const refreshMateris = async () => {
+        try {
+            const matRes = await fetch("http://localhost:8080/api/materials?page=0&size=1000");
+            if (matRes.ok) {
+                const matData = await matRes.json();
+                setMaterials(matData.data.content || []);
+            }
+        }catch (err) {
+            console.error("Error refreshing materials:", err);
+        }
+    };
+
+    const refreshTargetAudiences = async () => {
+        try {
+            const targetRes = await fetch("http://localhost:8080/api/target-audiences?page=0&size=1000");
+            if (targetRes.ok) {
+                const targetData = await targetRes.json();
+                setAudiences(targetData.data.content || []);
+            }
+        } catch (err) {
+            console.error("Error refreshing target audiences:", err);
+        }
+    }
+    const refreshColors = async () => {
+        try {
+            const colorRes = await fetch("http://localhost:8080/api/colors?page=0&size=1000");
+            if (colorRes.ok) {
+                const colorData = await colorRes.json();
+                setColors(colorData.data.content || []);
+            }
+        } catch (err) {
+            console.error("Error refreshing colors:", err);
+        }
+    }
+
+    const refreshSizes = async () => {
+        try {
+            const sizeRes = await fetch("http://localhost:8080/api/sizes?page=0&size=1000");
+            if (sizeRes.ok) {
+                const sizeData = await sizeRes.json();
+                setSizes(sizeData.data.content || []);
+            }
+        } catch (err) {
+            console.error("Error refreshing sizes:", err);
+        }
+    }
+    // Function to handle edit brand modal
+    const handleEditBrand = () => {
+        if (brandId) {
+            setSelectedBrandIdForEdit(brandId);
+            onEditBrandModalOpen();
+        } else {
+            addToast({
+                title: "Lưu ý",
+                description: "Vui lòng chọn thương hiệu trước khi chỉnh sửa.",
+                color: "warning"
+            });
+        }
+    };
+
+    // Function to handle edit category modal
+    const handleEditCategory = () => {
+        if (categoryId) {
+            setSelectedCategoryIdForEdit(categoryId);
+            onEditCategoryModalOpen();
+        } else {
+            addToast({
+                title: "Lưu ý",
+                description: "Vui lòng chọn danh mục trước khi chỉnh sửa.",
+                color: "warning"
+            });
+        }
+    };
+
+>>>>>>> Stashed changes
     if (loading) {
         return (
             <div className="flex justify-center items-center min-h-screen">
@@ -663,6 +960,7 @@ export default function UpdateProductPage() {
                               onChange={e => setDescription(e.target.value)}/>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+<<<<<<< Updated upstream
                         <div>
                             <Autocomplete
                                 label="Thương hiệu"
@@ -676,6 +974,276 @@ export default function UpdateProductPage() {
                                     <AutocompleteItem key={brand.id.toString()} textValue={brand.brandName}>
                                         {brand.brandName}
                                     </AutocompleteItem>
+=======
+                        <div className="space-y-2">
+                            <div className="flex items-end gap-2">
+                                <div className="flex-1">
+                                    <Autocomplete
+                                        label="Thương hiệu"
+                                        placeholder="Chọn thương hiệu"
+                                        defaultItems={brands}
+                                        selectedKey={brandId}
+                                        onSelectionChange={(key) => setBrandId(key as string)}
+                                        isRequired
+                                    >
+                                        {(brand) => (
+                                            <AutocompleteItem key={brand.id.toString()} textValue={brand.brandName}>
+                                                <div className="grid grid-cols-3 flex flex-col">
+                                                    <CldImage
+                                                        width={1}
+                                                        height={1}
+                                                        src={brand.logoPublicId}
+                                                        alt="Ảnh đã upload"
+                                                        sizes="10vw"
+                                                        className="w-full h-full object-cover p-2"
+                                                    />
+                                                    <span className="font-medium text-center">{brand.brandName}</span>
+                                                    <span className="text-sm text-gray-500">{brand.brandInfo}</span>
+                                                </div>
+                                            </AutocompleteItem>
+                                        )}
+                                    </Autocomplete>
+                                </div>
+                                <div className="flex gap-1">
+                                    <Button
+                                        size="lg"
+                                        color="warning"
+                                        variant="bordered"
+                                        onPress={handleEditBrand}
+                                        isDisabled={!brandId}
+                                        className="min-w-unit-10 px-2"
+                                        isIconOnly
+                                    >
+                                        ✏️
+                                    </Button>
+                                    <Button
+                                        size="lg"
+                                        color="default"
+                                        variant="solid"
+                                        onPress={onBrandModalOpen}
+                                        className="min-w-unit-10 px-2"
+                                        isIconOnly
+                                    >
+                                        ➕
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex items-end gap-2">
+                                <div className="flex-1">
+                                    <Autocomplete
+                                        label="Danh mục"
+                                        placeholder="Chọn danh mục"
+                                        defaultItems={categories}
+                                        selectedKey={categoryId}
+                                        onSelectionChange={(key) => setCategoryId(key as string)}
+                                        isRequired
+                                    >
+                                        {(category) => (
+                                            <AutocompleteItem key={category.id.toString()} textValue={category.name}>
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium">{category.name}</span>
+                                                    {category.description && (
+                                                        <span className="text-sm text-gray-500">{category.description}</span>
+                                                    )}
+                                                </div>
+                                            </AutocompleteItem>
+                                        )}
+                                    </Autocomplete>
+                                </div>
+                                <div className="flex gap-1">
+                                    <Button
+                                        size="lg"
+                                        color="warning"
+                                        variant="bordered"
+                                        onPress={handleEditCategory}
+                                        isDisabled={!categoryId}
+                                        className="min-w-unit-10 px-2"
+                                        isIconOnly
+                                    >
+                                        ✏️
+                                    </Button>
+                                    <Button
+                                        size="lg"
+                                        color="default"
+                                        variant="solid"
+                                        onPress={onCategoryModalOpen}
+                                        className="min-w-unit-10 px-2"
+                                        isIconOnly
+                                    >
+                                        ➕
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Brand Modal */}
+                    <Modal
+                        isOpen={isBrandModalOpen}
+                        onOpenChange={onBrandModalOpenChange}
+                        size="3xl"
+                        scrollBehavior="inside"
+                        placement="center"
+                        className="max-w-[95vw] max-h-[90vh]"
+                    >
+                        <ModalContent>
+                            {(onClose) => (
+                                <>
+                                    <ModalHeader className="flex flex-col gap-1 px-6 py-4 border-b">
+                                        <h2 className="text-xl font-semibold">Thêm thương hiệu mới</h2>
+                                        <p className="text-sm text-gray-600">Điền thông tin để tạo thương hiệu mới</p>
+                                    </ModalHeader>
+                                    <ModalBody className="px-6 py-6">
+                                        <BrandForm
+                                            onSuccess={() => {
+                                                refreshBrands();
+                                                onClose();
+                                            }}
+                                            onCancel={onClose}
+                                        />
+                                    </ModalBody>
+                                </>
+                            )}
+                        </ModalContent>
+                    </Modal>
+
+                    {/* Category Modal */}
+                    <Modal
+                        isOpen={isCategoryModalOpen}
+                        onOpenChange={onCategoryModalOpenChange}
+                        size="3xl"
+                        scrollBehavior="inside"
+                        placement="center"
+                        className="max-w-[95vw] max-h-[90vh]"
+                    >
+                        <ModalContent>
+                            {(onClose) => (
+                                <>
+                                    <ModalHeader className="flex flex-col gap-1 px-6 py-4 border-b">
+                                        <h2 className="text-xl font-semibold">Thêm danh mục mới</h2>
+                                        <p className="text-sm text-gray-600">Điền thông tin để tạo danh mục mới</p>
+                                    </ModalHeader>
+                                    <ModalBody className="px-6 py-6">
+                                        <CategoryForm
+                                            onSuccess={() => {
+                                                refreshCategories();
+                                                onClose();
+                                            }}
+                                            onCancel={onClose}
+                                        />
+                                    </ModalBody>
+                                </>
+                            )}
+                        </ModalContent>
+                    </Modal>
+
+                    {/* Edit Brand Modal */}
+                    {selectedBrandIdForEdit && (
+                        <EditBrandModal
+                            isOpen={isEditBrandModalOpen}
+                            onOpenChange={onEditBrandModalOpenChange}
+                            brandId={selectedBrandIdForEdit}
+                            onSuccess={() => {
+                                refreshBrands();
+                                // Refresh current selection to show updated brand name
+                                const currentBrand = brands.find(b => b.id.toString() === selectedBrandIdForEdit);
+                                if (currentBrand) {
+                                    addToast({
+                                        title: "Thông báo",
+                                        description: "Dữ liệu thương hiệu đã được cập nhật!",
+                                        color: "success"
+                                    });
+                                }
+                            }}
+                        />
+                    )}
+
+                    {/* Edit Category Modal */}
+                    {selectedCategoryIdForEdit && (
+                        <EditCategoryModal
+                            isOpen={isEditCategoryModalOpen}
+                            onOpenChange={onEditCategoryModalOpenChange}
+                            categoryId={selectedCategoryIdForEdit}
+                            onSuccess={() => {
+                                refreshCategories();
+                                // Refresh current selection to show updated category name
+                                const currentCategory = categories.find(c => c.id.toString() === selectedCategoryIdForEdit);
+                                if (currentCategory) {
+                                    addToast({
+                                        title: "Thông báo",
+                                        description: "Dữ liệu danh mục đã được cập nhật!",
+                                        color: "success"
+                                    });
+                                }
+                            }}
+                        />
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Autocomplete
+                            label="Chất liệu"
+                            placeholder="Chọn chất liệu"
+                            defaultItems={materials}
+                            selectedKey={material}
+                            onSelectionChange={(key) => setMaterial(key as string)}
+                            isRequired
+                        >
+                            {(material) => (
+                                <AutocompleteItem key={material.id.toString()} textValue={material.name}>
+                                    <div className="flex flex-col">
+                                        <span className="font-medium">{material.name}</span>
+                                        {material.description && (
+                                            <span className="text-sm text-gray-500">{material.description}</span>
+                                        )}
+                                    </div>
+                                </AutocompleteItem>
+                            )}
+                        </Autocomplete>
+
+                        <Autocomplete
+                            label="Đối tượng khách hàng"
+                            placeholder="Chọn đối tượng khách hàng"
+                            defaultItems={audiences}
+                            selectedKey={targetAudience}
+                            onSelectionChange={(key) => setTargetAudience(key as string)}
+                            isRequired
+                        >
+                            {(audience) => (
+                                <AutocompleteItem key={audience.id.toString()} textValue={audience.name}>
+                                    <div className="flex flex-col">
+                                        <span className="font-medium">{audience.name}</span>
+                                        {audience.description && (
+                                            <span className="text-sm text-gray-500">{audience.description}</span>
+                                        )}
+                                    </div>
+                                </AutocompleteItem>
+                            )}
+                        </Autocomplete>
+                    </div>
+
+                    {/* Thumbnail Upload */}
+                    <div className="bg-gray-50 p-3 rounded-lg border">
+                        <h6 className="font-medium mb-3 text-gray-700">🖼️ Ảnh bìa sản phẩm</h6>
+                        <div className="flex items-center gap-4">
+                            <div className="flex-1">
+                                <CldUploadButton
+                                    uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "YellowCatWeb"}
+                                    onSuccess={(result: any, {widget}) => {
+                                        setThumbnail(result.info); // result.info contains public_id, url etc.
+                                        widget.close();
+                                    }}
+                                    className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
+                                >
+                                    {thumbnail ? "🔄 Thay đổi ảnh bìa" : "📤 Tải ảnh bìa"}
+                                </CldUploadButton>
+                                {!thumbnail && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Ảnh đại diện chính cho sản phẩm.
+                                    </p>
+>>>>>>> Stashed changes
                                 )}
                             </Autocomplete>
                         </div>
@@ -1035,6 +1603,7 @@ export default function UpdateProductPage() {
 
                                                 {/* Thông tin cơ bản */}
                                                 <div className="mb-4">
+<<<<<<< Updated upstream
                                                     <h6 className="font-medium mb-3 text-gray-700">📋 Thông tin cơ bản</h6>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                         <Input 
@@ -1072,6 +1641,75 @@ export default function UpdateProductPage() {
                                                             variant="bordered"
                                                             placeholder="0"
                                                         />
+=======
+                                                    <h6 className="font-medium mb-3 text-gray-700">📋 Thông tin cơ bản &
+                                                        Thuộc tính</h6>
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                        <Input
+                                                            label="SKU"
+                                                            value={variant.sku}
+                                                            onChange={e => handleVariantChange(idx, "sku", e.target.value)}
+                                                            variant="bordered"
+                                                            placeholder="Mã sản phẩm"
+                                                            description="Tự động tạo khi chọn màu và size"
+                                                        />
+
+                                                        <Autocomplete
+                                                            label="Màu sắc"
+                                                            placeholder="Chọn màu sắc"
+                                                            defaultItems={colors}
+                                                            selectedKey={variant.colorId}
+                                                            onSelectionChange={(key) => handleVariantChange(idx, "colorId", key as string)}
+                                                            isRequired
+                                                            variant="bordered"
+                                                        >
+                                                            {(color) => (
+                                                                <AutocompleteItem key={color.id.toString()} textValue={color.name}>
+                                                                    <div className="flex flex-col">
+                                                                        <span className="font-medium">{color.name}</span>
+                                                                        {color.description && (
+                                                                            <span className="text-sm text-gray-500">{color.description}</span>
+                                                                        )}
+                                                                    </div>
+                                                                </AutocompleteItem>
+                                                            )}
+                                                        </Autocomplete>
+
+                                                        <Autocomplete
+                                                            label="Kích thước"
+                                                            placeholder="Chọn kích thước"
+                                                            defaultItems={sizes}
+                                                            selectedKey={variant.sizeId}
+                                                            onSelectionChange={(key) => handleVariantChange(idx, "sizeId", key as string)}
+                                                            isRequired
+                                                            variant="bordered"
+                                                        >
+                                                            {(size) => (
+                                                                <AutocompleteItem key={size.id.toString()} textValue={size.name}>
+                                                                    <div className="flex flex-col">
+                                                                        <span className="font-medium">{size.name}</span>
+                                                                        {size.description && (
+                                                                            <span className="text-sm text-gray-500">{size.description}</span>
+                                                                        )}
+                                                                    </div>
+                                                                </AutocompleteItem>
+                                                            )}
+                                                        </Autocomplete>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                                                        <Input label="Giá (VNĐ)" type="number" value={variant.price}
+                                                               onChange={e => handleVariantChange(idx, "price", e.target.value)}
+                                                               isRequired variant="bordered" placeholder="0"/>
+                                                        <Input label="Số lượng tồn kho" type="number"
+                                                               value={variant.stockLevel}
+                                                               onChange={e => handleVariantChange(idx, "stockLevel", e.target.value)}
+                                                               isRequired variant="bordered" placeholder="0"/>
+                                                        <Input label="Trọng lượng (gram)" type="number"
+                                                               value={variant.weight}
+                                                               onChange={e => handleVariantChange(idx, "weight", e.target.value)}
+                                                               isRequired variant="bordered" placeholder="0"/>
+>>>>>>> Stashed changes
                                                     </div>
                                                 </div>
 
