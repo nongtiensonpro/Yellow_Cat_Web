@@ -19,12 +19,7 @@ import {
     ModalHeader,
     ModalBody,
     ModalFooter,
-    useDisclosure,
-    Autocomplete,
-    AutocompleteItem,
-    Checkbox,
-    Spinner
-    ModalFooter
+    Checkbox
 } from "@heroui/react";
 import {Input, Textarea} from "@heroui/input";
 import {CldUploadButton, CldImage} from "next-cloudinary";
@@ -86,70 +81,7 @@ interface Category {
     description: string;
 }
 
-
-interface Attribute {
-    id: number;
-    attributeName: string;
-    dataType: string;
-    values?: string[];
-}
-
-interface VariantInput {
-    variantId?: number; // For existing variants
-    sku: string;
-    color: string;      // Changed from optional
-    size: string;       // Changed from optional
-    price: string;
-    stockLevel: string;
-    image: any;         // Cloudinary result object or public_id string
-    weight: string;
-}
-
-interface ProductAttributeInput {
-    attributeId: number;
-    value: string;
-}
-
-// Interface cho attribute value trong modal
-interface AttributeValue {
-    id: string;
-    value: string;
-}
-
-// Interface cho new attribute form
-interface NewAttributeForm {
-    name: string;
-    dataType: string;
-    values: AttributeValue[];
-}
-
-const DataTypeOptions = [
-    {label: "Text", key: "TEXT", description: "Văn bản đơn giản"},
-    {label: "Number", key: "NUMBER", description: "Số nguyên hoặc thập phân"},
-    {label: "Boolean", key: "BOOLEAN", description: "True/False"},
-    {label: "Date", key: "DATE", description: "Ngày tháng"},
-    {label: "Select", key: "SELECT", description: "Lựa chọn từ danh sách"},
-    {label: "Multi Select", key: "MULTI_SELECT", description: "Nhiều lựa chọn"},
-    {label: "Color", key: "COLOR", description: "Mã màu hex"},
-    {label: "URL", key: "URL", description: "Đường dẫn website"},
-];
-
-// Hàm phân tích chuỗi thuộc tính biến thể
-const parseVariantAttributes = (attributesString: string) => {
-    const attributes: Record<string, string> = {};
-    if (!attributesString) return attributes;
-
-    attributesString.split(', ').forEach(attr => {
-        const [key, value] = attr.split(': ');
-        if (key && value) {
-            attributes[key] = value;
-        }
-    });
-
-    return attributes;
-};
-=======
-interface Size{
+interface Size {
     id: number;
     name: string;
     description: string;
@@ -161,7 +93,7 @@ interface TargetAudience {
     description: string;
 }
 
-interface Color{
+interface Color {
     id: number;
     name: string;
     description: string;
@@ -172,7 +104,6 @@ interface Material {
     name: string;
     description: string;
 }
-
 
 interface VariantInput {
     variantId?: number;
@@ -185,13 +116,11 @@ interface VariantInput {
     weight: string;
 }
 
-
 export default function UpdateProductPage() {
     const router = useRouter();
     const params = useParams();
     const productId = params?.productId as string | undefined;
     const {data: session, status} = useSession();
-
 
     const {isOpen: isBrandModalOpen, onOpen: onBrandModalOpen, onOpenChange: onBrandModalOpenChange} = useDisclosure();
     const {isOpen: isCategoryModalOpen, onOpen: onCategoryModalOpen, onOpenChange: onCategoryModalOpenChange} = useDisclosure();
@@ -211,29 +140,10 @@ export default function UpdateProductPage() {
     const [material, setMaterial] = useState("");
     const [targetAudience, setTargetAudience] = useState("");
     const [thumbnail, setThumbnail] = useState<any>(null);
-    // Separate modal states for Brand and Category
-    const {isOpen: isBrandModalOpen, onOpen: onBrandModalOpen, onOpenChange: onBrandModalOpenChange} = useDisclosure();
-    const {isOpen: isCategoryModalOpen, onOpen: onCategoryModalOpen, onOpenChange: onCategoryModalOpenChange} = useDisclosure();
-
-    // Edit Brand Modal state
-    const {isOpen: isEditBrandModalOpen, onOpen: onEditBrandModalOpen, onOpenChange: onEditBrandModalOpenChange} = useDisclosure();
-    const [selectedBrandIdForEdit, setSelectedBrandIdForEdit] = useState<string | null>(null);
-
-    // Edit Category Modal state
-    const {isOpen: isEditCategoryModalOpen, onOpen: onEditCategoryModalOpen, onOpenChange: onEditCategoryModalOpenChange} = useDisclosure();
-    const [selectedCategoryIdForEdit, setSelectedCategoryIdForEdit] = useState<string | null>(null);
-
-    // State for form sản phẩm
-    const [productData, setProductData] = useState<ProductDetail | null>(null);
-    const [productName, setProductName] = useState("");
-    const [description, setDescription] = useState("");
-    const [material, setMaterial] = useState(""); // Added for material
-    const [targetAudience, setTargetAudience] = useState(""); // Added for targetAudience
-    const [thumbnail, setThumbnail] = useState<any>(null); // Added for thumbnail (Cloudinary object or public_id)
 
     const [brandId, setBrandId] = useState("");
     const [categoryId, setCategoryId] = useState("");
-    const [isActive, setIsActive] = useState(true); // For display, not in update payload
+    const [isActive, setIsActive] = useState(true);
     const [variants, setVariants] = useState<VariantInput[]>([]);
     const [brands, setBrands] = useState<Brand[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -245,6 +155,7 @@ export default function UpdateProductPage() {
     const [formError, setFormError] = useState<string | null>(null);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [deletedVariantIds, setDeletedVariantIds] = useState<number[]>([]);
 
     const authToken = session?.accessToken;
 
@@ -281,31 +192,8 @@ export default function UpdateProductPage() {
                         setBrandId(data.data.brandId.toString());
                         setCategoryId(data.data.categoryId.toString());
                         setIsActive(data.data.isActive);
-                        // Parse thuộc tính sản phẩm
-                        if (data.data.productAttributes && data.data.productAttributes.length > 0) {
-                            const productAttrs: { [key: string]: string } = {};
-                            data.data.productAttributes.forEach((attr: { attributeId: number; value: string }) => {
-                                const attribute = attributes.find(a => a.id === attr.attributeId);
-                                if (attribute) {
-                                    productAttrs[attribute.attributeName] = attr.value;
-                                }
-                            });
-                            setProductAttributes(productAttrs);
-                        }
+                        setThumbnail(data.data.thumbnail);
 
-                        // Chuyển đổi biến thể từ API sang định dạng form
-                        const variantInputs: VariantInput[] = data.data.variants.map(variant => {
-                            const attributes = parseVariantAttributes(variant.variantAttributes);
-                            return {
-                                variantId: variant.variantId,
-                                sku: variant.sku,
-                                price: variant.price.toString(),
-                                stockLevel: variant.stockLevel.toString(),
-                                image: { public_id: variant.imageUrl },
-                                weight: variant.weight.toString(),
-                                attributes: attributes
-                            };
-                        });
                         const variantInputs: VariantInput[] = data.data.variants.map(variant => ({
                             variantId: variant.variantId,
                             sku: variant.sku,
@@ -329,25 +217,28 @@ export default function UpdateProductPage() {
 
             const fetchMetadata = async () => {
                 try {
-                    const [brandRes, catRes, attrRes] = await Promise.all([
-                        fetch("http://localhost:8080/api/brands?page=0&size=100"),
-                        fetch("http://localhost:8080/api/categories?page=0&size=100"),
+                    const [
+                        brandRes,
+                        catRes,
+                        materialRes,
+                        audienceRes,
+                        colorRes,
+                        sizeRes
+                    ] = await Promise.all([
+                        fetch("http://localhost:8080/api/brands?page=0&size=1000"),
+                        fetch("http://localhost:8080/api/categories?page=0&size=1000"),
+                        fetch("http://localhost:8080/api/materials?page=0&size=1000"),
+                        fetch("http://localhost:8080/api/target-audiences?page=0&size=1000"),
+                        fetch("http://localhost:8080/api/colors?page=0&size=1000"),
+                        fetch("http://localhost:8080/api/sizes?page=0&size=1000")
                     ]);
-                    const brandData = await brandRes.json();
-                    const catData = await catRes.json();
-                    setBrands(brandData.data.content || []);
-                    setCategories(catData.data.content || []);
-                } catch (err) {
-                    console.error('Lỗi khi tải metadata:', err);
-                    setFormError("Không thể tải dữ liệu danh mục, thương hiệu hoặc thuộc tính.");
-                    const [brandRes, catRes, materialRes, audienceRes, colorRes, sizeRes] = await Promise.all([
-                        fetch("http://localhost:8080/api/brands?page=0&size=100"),
-                        fetch("http://localhost:8080/api/categories?page=0&size=100"),
-                        fetch("http://localhost:8080/api/materials?page=0&size=100"),
-                        fetch("http://localhost:8080/api/target-audiences?page=0&size=100"),
-                        fetch("http://localhost:8080/api/colors?page=0&size=100"),
-                        fetch("http://localhost:8080/api/sizes?page=0&size=100")
-                    ]);
+
+                    if (!brandRes.ok) throw new Error(`Không thể tải thương hiệu: ${brandRes.status}`);
+                    if (!catRes.ok) throw new Error(`Không thể tải danh mục: ${catRes.status}`);
+                    if (!materialRes.ok) throw new Error(`Không thể tải chất liệu: ${materialRes.status}`);
+                    if (!audienceRes.ok) throw new Error(`Không thể tải đối tượng khách hàng: ${audienceRes.status}`);
+                    if (!colorRes.ok) throw new Error(`Không thể tải màu sắc: ${colorRes.status}`);
+                    if (!sizeRes.ok) throw new Error(`Không thể tải kích thước: ${sizeRes.status}`);
 
                     const [brandData, catData, materialData, audienceData, colorData, sizeData] = await Promise.all([
                         brandRes.json(),
@@ -358,15 +249,22 @@ export default function UpdateProductPage() {
                         sizeRes.json()
                     ]);
 
-                    setBrands(brandData.data.content || []);
-                    setCategories(catData.data.content || []);
-                    setMaterials(materialData.data.content || []);
-                    setAudiences(audienceData.data.content || []);
-                    setColors(colorData.data.content || []);
-                    setSizes(sizeData.data.content || []);
-                } catch (err) {
+                    setBrands(brandData.data?.content || []);
+                    setCategories(catData.data?.content || []);
+                    setMaterials(materialData.data?.content || []);
+                    setAudiences(audienceData.data?.content || []);
+                    setColors(colorData.data?.content || []);
+                    setSizes(sizeData.data?.content || []);
+
+                } catch (err: any) {
                     console.error('Lỗi khi tải metadata:', err);
-                    setFormError("Không thể tải dữ liệu danh mục, thương hiệu hoặc thuộc tính sản phẩm.");
+                    const errorMessage = err.message || "Không thể tải dữ liệu cần thiết (thương hiệu, danh mục, thuộc tính).";
+                    setFormError(errorMessage);
+                    addToast({
+                        title: "Lỗi tải dữ liệu",
+                        description: errorMessage + " Vui lòng thử lại.",
+                        color: "danger"
+                    });
                 }
             };
 
@@ -383,13 +281,10 @@ export default function UpdateProductPage() {
     };
 
     const removeVariant = (idx: number) => {
-
         const variant = variants[idx];
         if (variant.variantId) {
-            // Nếu biến thể đã tồn tại trong DB, thêm vào danh sách xóa
             setDeletedVariantIds([...deletedVariantIds, variant.variantId]);
         }
-
         setVariants(variants.filter((_, i) => i !== idx));
     };
 
@@ -418,149 +313,24 @@ export default function UpdateProductPage() {
         setVariants(updatedVariants);
     };
 
-    // Xử lý thay đổi thuộc tính của biến thể
-    const handleVariantAttributeChange = (idx: number, attrId: string, value: string) => {
-        setVariants(variants.map((v, i) => i === idx ? {...v, attributes: {...v.attributes, [attrId]: value}} : v));
-    };
-
-    // Xử lý thay đổi thuộc tính sản phẩm (product level)
-    const handleProductAttributeChange = (attrId: string, value: string) => {
-        setProductAttributes(prev => ({...prev, [attrId]: value}));
-    };
-
-    // Toggle product attribute selection
-    const toggleProductAttribute = (attrId: number) => {
-        setSelectedProductAttributes(prev =>
-            prev.includes(attrId)
-                ? prev.filter(id => id !== attrId)
-                : [...prev, attrId]
-        );
-    };
-
-    // Handle new attribute form changes
-    const handleNewAttributeFormChange = (field: keyof NewAttributeForm, value: any) => {
-        setNewAttributeForm(prev => ({...prev, [field]: value}));
-    };
-
-    // Add new attribute value
-    const addAttributeValue = () => {
-        const newValue: AttributeValue = {
-            id: Date.now().toString(),
-            value: ""
-        };
-        setNewAttributeForm(prev => ({
-            ...prev,
-            values: [...prev.values, newValue]
-        }));
-    };
-
-    // Remove attribute value
-    const removeAttributeValue = (valueId: string) => {
-        setNewAttributeForm(prev => ({
-            ...prev,
-            values: prev.values.filter(v => v.id !== valueId)
-        }));
-    };
-
-    // Update attribute value
-    const updateAttributeValue = (valueId: string, newValue: string) => {
-        setNewAttributeForm(prev => ({
-            ...prev,
-            values: prev.values.map(v => v.id === valueId ? {...v, value: newValue} : v)
-        }));
-    };
-
-    // Create new attribute
-    const handleCreateAttribute = async () => {
-        if (!newAttributeForm.name.trim() || !newAttributeForm.dataType) {
-            setFormError("Vui lòng nhập đầy đủ thông tin thuộc tính.");
-            return;
-        }
-
-        variants.forEach((v, i) => {
-            if (!v.price.trim() || !v.stockLevel.trim() || !v.image || !v.weight.trim()) {
-                errors.push(`Vui lòng nhập đầy đủ thông tin (SKU, giá, tồn kho, ảnh, trọng lượng) cho biến thể #${i + 1}`);
-            }
-            // Add validation for v.colorId and v.sizeId
-            if (!v.colorId) errors.push(`Vui lòng chọn màu cho biến thể #${i + 1}`);
-            if (!v.sizeId) errors.push(`Vui lòng chọn kích thước cho biến thể #${i + 1}`);
-
-        setIsCreatingAttribute(true);
-        try {
-            const token = session?.accessToken;
-            if (!token) throw new Error("Bạn cần đăng nhập.");
-
-            const payload = {
-                attributeName: newAttributeForm.name.trim(),
-                dataType: newAttributeForm.dataType,
-                values: newAttributeForm.values.map(v => v.value).filter(v => v.trim())
-            };
-
-            const response = await fetch("http://localhost:8080/api/attributes", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => null);
-                throw new Error(errorData?.message || `HTTP error! Status: ${response.status}`);
-            }
-
-            const newAttribute = await response.json();
-            setAttributes(prev => [...prev, newAttribute.data]);
-
-            // Reset form
-            setNewAttributeForm({
-                name: "",
-                dataType: "",
-                values: []
-            });
-
-            addToast({title: "Thành công", description: "Tạo thuộc tính mới thành công!", color: "success"});
-            onOpenChange(); // Close modal
-        } catch (err: any) {
-            setFormError(err.message || "Không thể tạo thuộc tính mới.");
-        } finally {
-            setIsCreatingAttribute(false);
-        }
-    };
-
-    // Reset new attribute form
-    const resetNewAttributeForm = () => {
-        setNewAttributeForm({
-            name: "",
-            dataType: "",
-            values: []
-        });
-        setFormError(null);
-    };
-
-    // Validate form
     const validateForm = () => {
         const errors: string[] = [];
         if (!productName.trim()) errors.push("Vui lòng nhập tên sản phẩm");
         if (!brandId) errors.push("Vui lòng chọn thương hiệu");
         if (!categoryId) errors.push("Vui lòng chọn danh mục");
-        // Add validation for material, targetAudience, thumbnail if they are mandatory
-        if (!material.trim()) errors.push("Vui lòng nhập chất liệu sản phẩm");
-        if (!targetAudience.trim()) errors.push("Vui lòng nhập đối tượng mục tiêu");
+        if (!material) errors.push("Vui lòng chọn chất liệu sản phẩm");
+        if (!targetAudience) errors.push("Vui lòng chọn đối tượng mục tiêu");
         if (!thumbnail) errors.push("Vui lòng chọn ảnh bìa sản phẩm");
-
 
         if (variants.length === 0) {
             errors.push("Vui lòng thêm ít nhất một biến thể sản phẩm");
         }
         variants.forEach((v, i) => {
-            if (!v.price.trim() || !v.stockLevel.trim() || !v.image || !v.weight.trim()) {
+            if (!v.sku.trim() || !v.price.trim() || !v.stockLevel.trim() || !v.image || !v.weight.trim()) {
                 errors.push(`Vui lòng nhập đầy đủ thông tin (SKU, giá, tồn kho, ảnh, trọng lượng) cho biến thể #${i + 1}`);
             }
-            // Add validation for v.color and v.size if needed
-            if (!v.color.trim()) errors.push(`Vui lòng nhập màu cho biến thể #${i + 1}`);
-            if (!v.size.trim()) errors.push(`Vui lòng nhập kích thước cho biến thể #${i + 1}`);
+            if (!v.colorId) errors.push(`Vui lòng chọn màu cho biến thể #${i + 1}`);
+            if (!v.sizeId) errors.push(`Vui lòng chọn kích thước cho biến thể #${i + 1}`);
 
             if (isNaN(Number(v.price)) || Number(v.price) <= 0) {
                 errors.push(`Giá của biến thể #${i + 1} phải lớn hơn 0`);
@@ -597,14 +367,13 @@ export default function UpdateProductPage() {
             if (!token) throw new Error("Bạn cần đăng nhập.");
 
             const variantPayload = variants.map(v => ({
-                sku: v.sku,
-                variantId: v.variantId || null, // Send variantId if it exists (for existing variants), else null
+                variantId: v.variantId || null,
                 sku: v.sku.trim(),
-                colorId: parseInt(v.colorId), // Parse colorId as integer
-                sizeId: parseInt(v.sizeId),   // Parse sizeId as integer
+                colorId: parseInt(v.colorId),
+                sizeId: parseInt(v.sizeId),
                 price: Number(v.price),
                 stockLevel: parseInt(v.stockLevel),
-                imageUrl: v.image?.public_id || (typeof v.image === 'string' ? v.image : null), // Handle image object or direct public_id string
+                imageUrl: v.image?.public_id || (typeof v.image === 'string' ? v.image : null),
                 weight: Number(v.weight),
             }));
 
@@ -614,18 +383,16 @@ export default function UpdateProductPage() {
                 description: description.trim(),
                 brandId: parseInt(brandId),
                 categoryId: parseInt(categoryId),
-                productAttributes: productAttributePayload.length > 0 ? [{
-                    attributes: productAttributePayload
-                }] : [],
                 materialId: parseInt(material),
                 targetAudienceId: parseInt(targetAudience),
+                isActive: isActive,
                 thumbnail: thumbnail?.public_id || (typeof thumbnail === 'string' ? thumbnail : null),
                 variants: variantPayload
             };
 
             console.log("Updating product with payload: ", JSON.stringify(payload, null, 2));
 
-            const response = await fetch("http://localhost:8080/api/products", { // Assuming PUT to /api/products for update
+            const response = await fetch("http://localhost:8080/api/products", {
                 method: "PUT",
                 headers: {"Content-Type": "application/json", "Authorization": `Bearer ${token}`},
                 body: JSON.stringify(payload)
@@ -672,14 +439,14 @@ export default function UpdateProductPage() {
         }
     };
 
-    const refreshMateris = async () => {
+    const refreshMaterials = async () => {
         try {
             const matRes = await fetch("http://localhost:8080/api/materials?page=0&size=1000");
             if (matRes.ok) {
                 const matData = await matRes.json();
                 setMaterials(matData.data.content || []);
             }
-        }catch (err) {
+        } catch (err) {
             console.error("Error refreshing materials:", err);
         }
     };
@@ -694,7 +461,8 @@ export default function UpdateProductPage() {
         } catch (err) {
             console.error("Error refreshing target audiences:", err);
         }
-    }
+    };
+
     const refreshColors = async () => {
         try {
             const colorRes = await fetch("http://localhost:8080/api/colors?page=0&size=1000");
@@ -705,7 +473,7 @@ export default function UpdateProductPage() {
         } catch (err) {
             console.error("Error refreshing colors:", err);
         }
-    }
+    };
 
     const refreshSizes = async () => {
         try {
@@ -717,8 +485,8 @@ export default function UpdateProductPage() {
         } catch (err) {
             console.error("Error refreshing sizes:", err);
         }
-    }
-    // Function to handle edit brand modal
+    };
+
     const handleEditBrand = () => {
         if (brandId) {
             setSelectedBrandIdForEdit(brandId);
@@ -732,7 +500,6 @@ export default function UpdateProductPage() {
         }
     };
 
-    // Function to handle edit category modal
     const handleEditCategory = () => {
         if (categoryId) {
             setSelectedCategoryIdForEdit(categoryId);
@@ -751,7 +518,6 @@ export default function UpdateProductPage() {
         </div>;
     }
     if (formError && !productData) {
-        // ... (error display remains the same)
         return (
             <Card className="w-full max-w-3xl mx-auto my-10">
                 <CardHeader><p className="text-lg font-semibold text-red-600">Lỗi tải dữ liệu</p></CardHeader>
@@ -783,121 +549,96 @@ export default function UpdateProductPage() {
                               onChange={e => setDescription(e.target.value)}/>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <Autocomplete
-                                label="Thương hiệu"
-                                placeholder="Chọn thương hiệu"
-                                defaultItems={brands}
-                                selectedKey={brandId}
-                                onSelectionChange={(key) => setBrandId(key as string)}
-                                isRequired
-                            >
-                                {(brand) => (
-                                    <AutocompleteItem key={brand.id.toString()} textValue={brand.brandName}>
-                                        {brand.brandName}
-                                    </AutocompleteItem>
-                        <div className="space-y-2">
-                            <div className="flex items-end gap-2">
-                                <div className="flex-1">
-                                    <Autocomplete
-                                        label="Thương hiệu"
-                                        placeholder="Chọn thương hiệu"
-                                        defaultItems={brands}
-                                        selectedKey={brandId}
-                                        onSelectionChange={(key) => setBrandId(key as string)}
-                                        isRequired
-                                    >
-                                        {(brand) => (
-                                            <AutocompleteItem key={brand.id.toString()} textValue={brand.brandName}>
-                                                <div className="grid grid-cols-3 flex flex-col">
-                                                    <CldImage
-                                                        width={1}
-                                                        height={1}
-                                                        src={brand.logoPublicId}
-                                                        alt="Ảnh đã upload"
-                                                        sizes="10vw"
-                                                        className="w-full h-full object-cover p-2"
-                                                    />
-                                                    <span className="font-medium text-center">{brand.brandName}</span>
-                                                    <span className="text-sm text-gray-500">{brand.brandInfo}</span>
-                                                </div>
-                                            </AutocompleteItem>
-                                        )}
-                                    </Autocomplete>
-                                </div>
-                                <div className="flex gap-1">
-                                    <Button
-                                        size="lg"
-                                        color="warning"
-                                        variant="bordered"
-                                        onPress={handleEditBrand}
-                                        isDisabled={!brandId}
-                                        className="min-w-unit-10 px-2"
-                                        isIconOnly
-                                    >
-                                        ✏️
-                                    </Button>
-                                    <Button
-                                        size="lg"
-                                        color="default"
-                                        variant="solid"
-                                        onPress={onBrandModalOpen}
-                                        className="min-w-unit-10 px-2"
-                                        isIconOnly
-                                    >
-                                        ➕
-                                    </Button>
-                                </div>
+                        <div className="flex items-end gap-2">
+                            <div className="flex-1">
+                                <Autocomplete
+                                    label="Thương hiệu"
+                                    placeholder="Chọn thương hiệu"
+                                    defaultItems={brands}
+                                    selectedKey={brandId}
+                                    onSelectionChange={(key) => setBrandId(key as string)}
+                                    isRequired
+                                >
+                                    {(brand) => (
+                                        <AutocompleteItem key={brand.id.toString()} textValue={brand.brandName}>
+                                            {brand.brandName}
+                                        </AutocompleteItem>
+                                    )}
+                                </Autocomplete>
                             </div>
-
+                            <div className="flex gap-1">
+                                <Button
+                                    size="lg"
+                                    color="warning"
+                                    variant="bordered"
+                                    onPress={handleEditBrand}
+                                    isDisabled={!brandId}
+                                    className="min-w-unit-10 px-2"
+                                    isIconOnly
+                                    aria-label="Sửa thương hiệu"
+                                >
+                                    ✏️
+                                </Button>
+                                <Button
+                                    size="lg"
+                                    color="default"
+                                    variant="solid"
+                                    onPress={onBrandModalOpen}
+                                    className="min-w-unit-10 px-2"
+                                    isIconOnly
+                                    aria-label="Thêm thương hiệu mới"
+                                >
+                                    ➕
+                                </Button>
+                            </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <div className="flex items-end gap-2">
-                                <div className="flex-1">
-                                    <Autocomplete
-                                        label="Danh mục"
-                                        placeholder="Chọn danh mục"
-                                        defaultItems={categories}
-                                        selectedKey={categoryId}
-                                        onSelectionChange={(key) => setCategoryId(key as string)}
-                                        isRequired
-                                    >
-                                        {(category) => (
-                                            <AutocompleteItem key={category.id.toString()} textValue={category.name}>
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium">{category.name}</span>
-                                                    {category.description && (
-                                                        <span className="text-sm text-gray-500">{category.description}</span>
-                                                    )}
-                                                </div>
-                                            </AutocompleteItem>
-                                        )}
-                                    </Autocomplete>
-                                </div>
-                                <div className="flex gap-1">
-                                    <Button
-                                        size="lg"
-                                        color="warning"
-                                        variant="bordered"
-                                        onPress={handleEditCategory}
-                                        isDisabled={!categoryId}
-                                        className="min-w-unit-10 px-2"
-                                        isIconOnly
-                                    >
-                                        ✏️
-                                    </Button>
-                                    <Button
-                                        size="lg"
-                                        color="default"
-                                        variant="solid"
-                                        onPress={onCategoryModalOpen}
-                                        className="min-w-unit-10 px-2"
-                                        isIconOnly
-                                    >
-                                        ➕
-                                    </Button>
-                                </div>
+                        <div className="flex items-end gap-2">
+                            <div className="flex-1">
+                                <Autocomplete
+                                    label="Danh mục"
+                                    placeholder="Chọn danh mục"
+                                    defaultItems={categories}
+                                    selectedKey={categoryId}
+                                    onSelectionChange={(key) => setCategoryId(key as string)}
+                                    isRequired
+                                >
+                                    {(category) => (
+                                        <AutocompleteItem key={category.id.toString()} textValue={category.name}>
+                                            <div className="flex flex-col">
+                                                <span className="font-medium">{category.name}</span>
+                                                {category.description && (
+                                                    <span className="text-sm text-gray-500">{category.description}</span>
+                                                )}
+                                            </div>
+                                        </AutocompleteItem>
+                                    )}
+                                </Autocomplete>
+                            </div>
+                            <div className="flex gap-1">
+                                <Button
+                                    size="lg"
+                                    color="warning"
+                                    variant="bordered"
+                                    onPress={handleEditCategory}
+                                    isDisabled={!categoryId}
+                                    className="min-w-unit-10 px-2"
+                                    isIconOnly
+                                    aria-label="Sửa danh mục"
+                                >
+                                    ✏️
+                                </Button>
+                                <Button
+                                    size="lg"
+                                    color="default"
+                                    variant="solid"
+                                    onPress={onCategoryModalOpen}
+                                    className="min-w-unit-10 px-2"
+                                    isIconOnly
+                                    aria-label="Thêm danh mục mới"
+                                >
+                                    ➕
+                                </Button>
                             </div>
                         </div>
                     </div>
@@ -970,7 +711,6 @@ export default function UpdateProductPage() {
                             brandId={selectedBrandIdForEdit}
                             onSuccess={() => {
                                 refreshBrands();
-                                // Refresh current selection to show updated brand name
                                 const currentBrand = brands.find(b => b.id.toString() === selectedBrandIdForEdit);
                                 if (currentBrand) {
                                     addToast({
@@ -991,7 +731,6 @@ export default function UpdateProductPage() {
                             categoryId={selectedCategoryIdForEdit}
                             onSuccess={() => {
                                 refreshCategories();
-                                // Refresh current selection to show updated category name
                                 const currentCategory = categories.find(c => c.id.toString() === selectedCategoryIdForEdit);
                                 if (currentCategory) {
                                     addToast({
@@ -1054,207 +793,7 @@ export default function UpdateProductPage() {
                                 <CldUploadButton
                                     uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "YellowCatWeb"}
                                     onSuccess={(result: any, {widget}) => {
-                                        setThumbnail(result.info); // result.info contains public_id, url etc.
-                                        widget.close();
-                                    }}
-                                    className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
-                                >
-                                    {thumbnail ? "🔄 Thay đổi ảnh bìa" : "📤 Tải ảnh bìa"}
-                                </CldUploadButton>
-                                {!thumbnail && (
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        Ảnh đại diện chính cho sản phẩm.
-                                    </p>
-                                )}
-                            </Autocomplete>
-                        </div>
-                        <div>
-                            <Autocomplete
-                                label="Danh mục"
-                                placeholder="Chọn danh mục"
-                                defaultItems={categories}
-                                selectedKey={categoryId}
-                                onSelectionChange={(key) => setCategoryId(key as string)}
-                                isRequired
-                            >
-                                {(category) => (
-                                    <AutocompleteItem key={category.id.toString()} textValue={category.name}>
-                                        {category.name}
-                                    </AutocompleteItem>
-                                )}
-                            </Autocomplete>
-                        </div>
-
-                        <div className="space-y-2">
-                            <div className="flex items-end gap-2">
-                                <div className="flex-1">
-                                    <Autocomplete
-                                        label="Danh mục"
-                                        placeholder="Chọn danh mục"
-                                        defaultItems={categories}
-                                        selectedKey={categoryId}
-                                        onSelectionChange={(key) => setCategoryId(key as string)}
-                                        isRequired
-                                    >
-                                        {(category) => (
-                                            <AutocompleteItem key={category.id.toString()} textValue={category.name}>
-                                                {category.name}
-                                            </AutocompleteItem>
-                                        )}
-                                    </Autocomplete>
-                                </div>
-                                <div className="flex gap-1">
-                                    <Button
-                                        size="sm"
-                                        color="warning"
-                                        variant="bordered"
-                                        onPress={handleEditCategory}
-                                        isDisabled={!categoryId}
-                                        className="min-w-unit-10 px-2"
-                                        isIconOnly
-                                    >
-                                        ✏️
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        color="default"
-                                        variant="solid"
-                                        onPress={onCategoryModalOpen}
-                                        className="min-w-unit-10 px-2"
-                                        isIconOnly
-                                    >
-                                        ➕
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Brand Modal */}
-                    <Modal
-                        isOpen={isBrandModalOpen}
-                        onOpenChange={onBrandModalOpenChange}
-                        size="3xl"
-                        scrollBehavior="inside"
-                        placement="center"
-                        className="max-w-[95vw] max-h-[90vh]"
-                    >
-                        <ModalContent>
-                            {(onClose) => (
-                                <>
-                                    <ModalHeader className="flex flex-col gap-1 px-6 py-4 border-b">
-                                        <h2 className="text-xl font-semibold">Thêm thương hiệu mới</h2>
-                                        <p className="text-sm text-gray-600">Điền thông tin để tạo thương hiệu mới</p>
-                                    </ModalHeader>
-                                    <ModalBody className="px-6 py-6">
-                                        <BrandForm
-                                            onSuccess={() => {
-                                                refreshBrands();
-                                                onClose();
-                                            }}
-                                            onCancel={onClose}
-                                        />
-                                    </ModalBody>
-                                </>
-                            )}
-                        </ModalContent>
-                    </Modal>
-
-                    {/* Category Modal */}
-                    <Modal
-                        isOpen={isCategoryModalOpen}
-                        onOpenChange={onCategoryModalOpenChange}
-                        size="3xl"
-                        scrollBehavior="inside"
-                        placement="center"
-                        className="max-w-[95vw] max-h-[90vh]"
-                    >
-                        <ModalContent>
-                            {(onClose) => (
-                                <>
-                                    <ModalHeader className="flex flex-col gap-1 px-6 py-4 border-b">
-                                        <h2 className="text-xl font-semibold">Thêm danh mục mới</h2>
-                                        <p className="text-sm text-gray-600">Điền thông tin để tạo danh mục mới</p>
-                                    </ModalHeader>
-                                    <ModalBody className="px-6 py-6">
-                                        <CategoryForm
-                                            onSuccess={() => {
-                                                refreshCategories();
-                                                onClose();
-                                            }}
-                                            onCancel={onClose}
-                                        />
-                                    </ModalBody>
-                                </>
-                            )}
-                        </ModalContent>
-                    </Modal>
-
-                    {/* Edit Brand Modal */}
-                    {selectedBrandIdForEdit && (
-                        <EditBrandModal
-                            isOpen={isEditBrandModalOpen}
-                            onOpenChange={onEditBrandModalOpenChange}
-                            brandId={selectedBrandIdForEdit}
-                            onSuccess={() => {
-                                refreshBrands();
-                                // Refresh current selection to show updated brand name
-                                const currentBrand = brands.find(b => b.id.toString() === selectedBrandIdForEdit);
-                                if (currentBrand) {
-                                    addToast({
-                                        title: "Thông báo",
-                                        description: "Dữ liệu thương hiệu đã được cập nhật!",
-                                        color: "success"
-                                    });
-                                }
-                            }}
-                        />
-                    )}
-
-                    {/* Edit Category Modal */}
-                    {selectedCategoryIdForEdit && (
-                        <EditCategoryModal
-                            isOpen={isEditCategoryModalOpen}
-                            onOpenChange={onEditCategoryModalOpenChange}
-                            categoryId={selectedCategoryIdForEdit}
-                            onSuccess={() => {
-                                refreshCategories();
-                                // Refresh current selection to show updated category name
-                                const currentCategory = categories.find(c => c.id.toString() === selectedCategoryIdForEdit);
-                                if (currentCategory) {
-                                    addToast({
-                                        title: "Thông báo",
-                                        description: "Dữ liệu danh mục đã được cập nhật!",
-                                        color: "success"
-                                    });
-                                }
-                            }}
-                        />
-                    )}
-
-                    <Input
-                        label="Chất liệu"
-                        value={material}
-                        onChange={e => setMaterial(e.target.value)}
-                        placeholder="Ví dụ: Cotton, Polyester, Kim loại..."
-                        isRequired
-                    />
-                    <Input
-                        label="Đối tượng khách hàng"
-                        value={targetAudience}
-                        onChange={e => setTargetAudience(e.target.value)}
-                        placeholder="Ví dụ: Nam giới, Nữ giới, Trẻ em, Người lớn tuổi..."
-                    />
-
-                    {/* Thumbnail Upload */}
-                    <div className="bg-gray-50 p-3 rounded-lg border">
-                        <h6 className="font-medium mb-3 text-gray-700">🖼️ Ảnh bìa sản phẩm</h6>
-                        <div className="flex items-center gap-4">
-                            <div className="flex-1">
-                                <CldUploadButton
-                                    uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "YellowCatWeb"}
-                                    onSuccess={(result: any, {widget}) => {
-                                        setThumbnail(result.info); // result.info contains public_id, url etc.
+                                        setThumbnail(result.info);
                                         widget.close();
                                     }}
                                     className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
@@ -1284,10 +823,8 @@ export default function UpdateProductPage() {
                     <Accordion variant="splitted">
                         <AccordionItem key="2" aria-label="Biến thể sản phẩm" title="Biến thể sản phẩm">
                             <div className="space-y-4">
-                                {/* ... (Header mô tả biến thể) ... */}
                                 <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
                                     <h4 className="font-semibold text-purple-800 mb-2">Quản lý biến thể sản phẩm</h4>
-                                    {/* ... description ... */}
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <div>
@@ -1305,7 +842,6 @@ export default function UpdateProductPage() {
                                 {variants.length === 0 ? (
                                     <div
                                         className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                                        {/* ... empty state ... */}
                                         <Button type="button" color="primary" variant="ghost" onClick={addVariant}>
                                             🚀 Tạo biến thể đầu tiên
                                         </Button>
@@ -1365,84 +901,16 @@ export default function UpdateProductPage() {
                                                             variant="bordered"
                                                             placeholder="0"
                                                         />
-                                                    <h6 className="font-medium mb-3 text-gray-700">📋 Thông tin cơ bản &
-                                                        Thuộc tính</h6>
-                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                                        <Input
-                                                            label="SKU"
-                                                            value={variant.sku}
-                                                            onChange={e => handleVariantChange(idx, "sku", e.target.value)}
-                                                            variant="bordered"
-                                                            placeholder="Mã sản phẩm"
-                                                            description="Tự động tạo khi chọn màu và size"
-                                                        />
-
-                                                        <Autocomplete
-                                                            label="Màu sắc"
-                                                            placeholder="Chọn màu sắc"
-                                                            defaultItems={colors}
-                                                            selectedKey={variant.colorId}
-                                                            onSelectionChange={(key) => handleVariantChange(idx, "colorId", key as string)}
-                                                            isRequired
-                                                            variant="bordered"
-                                                        >
-                                                            {(color) => (
-                                                                <AutocompleteItem key={color.id.toString()} textValue={color.name}>
-                                                                    <div className="flex flex-col">
-                                                                        <span className="font-medium">{color.name}</span>
-                                                                        {color.description && (
-                                                                            <span className="text-sm text-gray-500">{color.description}</span>
-                                                                        )}
-                                                                    </div>
-                                                                </AutocompleteItem>
-                                                            )}
-                                                        </Autocomplete>
-
-                                                        <Autocomplete
-                                                            label="Kích thước"
-                                                            placeholder="Chọn kích thước"
-                                                            defaultItems={sizes}
-                                                            selectedKey={variant.sizeId}
-                                                            onSelectionChange={(key) => handleVariantChange(idx, "sizeId", key as string)}
-                                                            isRequired
-                                                            variant="bordered"
-                                                        >
-                                                            {(size) => (
-                                                                <AutocompleteItem key={size.id.toString()} textValue={size.name}>
-                                                                    <div className="flex flex-col">
-                                                                        <span className="font-medium">{size.name}</span>
-                                                                        {size.description && (
-                                                                            <span className="text-sm text-gray-500">{size.description}</span>
-                                                                        )}
-                                                                    </div>
-                                                                </AutocompleteItem>
-                                                            )}
-                                                        </Autocomplete>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
-                                                        <Input label="Giá (VNĐ)" type="number" value={variant.price}
-                                                               onChange={e => handleVariantChange(idx, "price", e.target.value)}
-                                                               isRequired variant="bordered" placeholder="0"/>
-                                                        <Input label="Số lượng tồn kho" type="number"
-                                                               value={variant.stockLevel}
-                                                               onChange={e => handleVariantChange(idx, "stockLevel", e.target.value)}
-                                                               isRequired variant="bordered" placeholder="0"/>
-                                                        <Input label="Trọng lượng (gram)" type="number"
-                                                               value={variant.weight}
-                                                               onChange={e => handleVariantChange(idx, "weight", e.target.value)}
-                                                               isRequired variant="bordered" placeholder="0"/>
                                                     </div>
                                                 </div>
 
                                                 <div className="bg-gray-50 p-3 rounded-lg border">
                                                     <h6 className="font-medium mb-3 text-gray-700">📸 Ảnh biến thể</h6>
-                                                    {/* ... (CldUploadButton and CldImage for variant image remain largely the same) ... */}
                                                     <div className="flex items-center gap-4">
                                                         <div className="flex-1">
                                                             <CldUploadButton
                                                                 uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "YellowCatWeb"}
-                                                                onSuccess={(result: any, {widget}) => { // Ensure 'any' or specific type for result
+                                                                onSuccess={(result: any, {widget}) => {
                                                                     handleVariantChange(idx, "image", result.info);
                                                                     widget.close();
                                                                 }}
@@ -1460,7 +928,6 @@ export default function UpdateProductPage() {
                                                                           src={variant.image.public_id || variant.image}
                                                                           alt={`Ảnh ${idx + 1}`}
                                                                           className="object-cover rounded-lg border-2"/>
-                                                                {/* ... checkmark ... */}
                                                             </div>
                                                         )}
                                                     </div>

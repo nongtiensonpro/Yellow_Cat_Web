@@ -25,7 +25,6 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import {Client} from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import {useSession, signIn} from "next-auth/react";
-import {useSession} from "next-auth/react";
 
 interface Categories {
     id: number;
@@ -239,9 +238,6 @@ export default function Page() {
                 </div>
             </CardHeader>
             <Divider />
-            <CardHeader>
-                <NextLink href={"/admin/product_management/categories/create"} className="inline-block w-fit cursor-pointer transition-all bg-blue-500 text-white px-6 py-2 rounded-lg border-blue-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]">
-            <Divider/>
             <CardHeader className="flex flex-col md:flex-row justify-between items-center">
                 <NextLink href={"/admin/product_management/categories/create"}
                           className="mb-4 md:mb-0 inline-block w-fit cursor-pointer transition-all bg-blue-500 text-white px-6 py-2 rounded-lg border-blue-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]">
@@ -283,24 +279,13 @@ export default function Page() {
                 ) : (
                     <Table aria-label="Categories table">
                         <TableHeader>
-                            <TableColumn>Categories Id</TableColumn>
-                            <TableColumn>Categories Name</TableColumn>
-                            <TableColumn>Category Id</TableColumn>
-                            <TableColumn>Category Name</TableColumn>
-                            <TableColumn>Description</TableColumn>
-                            <TableColumn>Actions</TableColumn>
+                            <TableColumn>ID</TableColumn>
+                            <TableColumn>Tên Category</TableColumn>
+                            <TableColumn>Mô tả</TableColumn>
+                            <TableColumn>Hành động</TableColumn>
                         </TableHeader>
                         <TableBody>
                             {categoriesData && categoriesData.length > 0 ? (
-                                categoriesData.map((categories) => (
-                                    <TableRow key={categories.id}>
-                                        <TableCell>{categories.id}</TableCell>
-                                        <TableCell>{categories.name}</TableCell>
-                                        <TableCell>{categories.description}</TableCell>
-                                        <TableCell>
-                                            <div className="flex space-x-2">
-                                                <NextLink href={`/admin/product_management/categories/update/${categories.id}`}>
-                                                    <button className="inline-block w-fit cursor-pointer transition-all bg-yellow-500 text-white px-6 py-2 rounded-lg border-yellow-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]">
                                 categoriesData.map((category) => (
                                     <TableRow key={category.id}>
                                         <TableCell>{category.id}</TableCell>
@@ -366,7 +351,6 @@ export default function Page() {
                         <ModalBody>
                             {categoryToDelete && (
                                 <p>
-
                                     Bạn có chắc chắn muốn xóa category "{categoryToDelete.name}"?
                                     <br/>
                                     Hành động này không thể hoàn tác.
