@@ -20,45 +20,38 @@ import {
     Input
 } from "@heroui/react";
 import NextLink from "next/link";
-import { useEffect, useState } from "react";
+import {useEffect, useState} from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { Client } from '@stomp/stompjs';
+import {Client} from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-<<<<<<< Updated upstream
-import { useSession } from "next-auth/react";
-=======
 import {useSession, signIn} from "next-auth/react";
->>>>>>> Stashed changes
+import {useSession} from "next-auth/react";
 
-interface Brands {
+interface Categories {
     id: number;
     name: string;
+    description: string;
 }
 
 interface ApiResponse {
     data: {
-        content: Brands[];
+        content: Categories[];
         totalPages: number;
     };
 }
 
 export default function Page() {
-<<<<<<< Updated upstream
-    const { data: session, status } = useSession();
-    const [categoriesData, setcategoriesData] = useState<Brands[]>([]);
-=======
     const {data: session, status} = useSession();
     const [allCategoriesData, setAllCategoriesData] = useState<Categories[]>([]);
     const [categoriesData, setCategoriesData] = useState<Categories[]>([]);
->>>>>>> Stashed changes
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState<number>(0);
-    const [itemsPerPage] = useState<number>(5);
+    const [itemsPerPage] = useState<number>(3);
     const [totalPages, setTotalPages] = useState<number>(1);
     const [categoryToDelete, setCategoryToDelete] = useState<{ id: number, name: string } | null>(null);
     const [notification, setNotification] = useState<string | null>(null);
-    const { isOpen, onOpen, onClose } = useDisclosure();
+    const {isOpen, onOpen, onClose} = useDisclosure();
     const [stompClient, setStompClient] = useState<Client | null>(null);
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [finalSearchTerm, setFinalSearchTerm] = useState<string>("");
@@ -186,14 +179,8 @@ export default function Page() {
             return () => clearTimeout(timer);
         }
     }, [notification]);
-
-<<<<<<< Updated upstream
-    const openDeleteConfirm = (brandId: number, brandName: string) => {
-        setBrandToDelete({ id: brandId, name: brandName });
-=======
     const openDeleteConfirm = (categoryId: number, categoryName: string) => {
         setCategoryToDelete({id: categoryId, name: categoryName});
->>>>>>> Stashed changes
         onOpen();
     };
 
@@ -208,7 +195,7 @@ export default function Page() {
             }
 
             const token = session.accessToken;
-            
+
             if (!token) {
                 setError("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
                 return;
@@ -245,22 +232,19 @@ export default function Page() {
     }
 
     return (
-        <Card className="xl">
+        <Card className={`min-h-screen py-8 px-4 md:px-36`}>
             <CardHeader className="flex gap-3">
                 <div className="flex flex-col">
                     <p className="text-4xl font-bold">Quản lý Category</p>
                 </div>
             </CardHeader>
-<<<<<<< Updated upstream
             <Divider />
             <CardHeader>
                 <NextLink href={"/admin/product_management/categories/create"} className="inline-block w-fit cursor-pointer transition-all bg-blue-500 text-white px-6 py-2 rounded-lg border-blue-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]">
-=======
             <Divider/>
             <CardHeader className="flex flex-col md:flex-row justify-between items-center">
                 <NextLink href={"/admin/product_management/categories/create"}
                           className="mb-4 md:mb-0 inline-block w-fit cursor-pointer transition-all bg-blue-500 text-white px-6 py-2 rounded-lg border-blue-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]">
->>>>>>> Stashed changes
                     Thêm mới
                 </NextLink>
                 <div className="w-full md:w-1/3">
@@ -278,7 +262,8 @@ export default function Page() {
             </CardHeader>
             <CardBody>
                 {notification && (
-                    <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
+                    <div
+                        className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
                         <span className="block sm:inline">{notification}</span>
                         <button
                             className="absolute top-0 right-0 px-2 py-1"
@@ -289,13 +274,8 @@ export default function Page() {
                     </div>
                 )}
 
-<<<<<<< Updated upstream
-                {loading ? (
-                    <LoadingSpinner />
-=======
                 {loading && categoriesData.length === 0 ? (
                     <LoadingSpinner/>
->>>>>>> Stashed changes
                 ) : error ? (
                     <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
                         <span className="block sm:inline">{error}</span>
@@ -303,28 +283,24 @@ export default function Page() {
                 ) : (
                     <Table aria-label="Categories table">
                         <TableHeader>
-<<<<<<< Updated upstream
                             <TableColumn>Categories Id</TableColumn>
                             <TableColumn>Categories Name</TableColumn>
-=======
                             <TableColumn>Category Id</TableColumn>
                             <TableColumn>Category Name</TableColumn>
                             <TableColumn>Description</TableColumn>
->>>>>>> Stashed changes
                             <TableColumn>Actions</TableColumn>
                         </TableHeader>
                         <TableBody>
                             {categoriesData && categoriesData.length > 0 ? (
-<<<<<<< Updated upstream
                                 categoriesData.map((categories) => (
                                     <TableRow key={categories.id}>
                                         <TableCell>{categories.id}</TableCell>
                                         <TableCell>{categories.name}</TableCell>
+                                        <TableCell>{categories.description}</TableCell>
                                         <TableCell>
                                             <div className="flex space-x-2">
                                                 <NextLink href={`/admin/product_management/categories/update/${categories.id}`}>
                                                     <button className="inline-block w-fit cursor-pointer transition-all bg-yellow-500 text-white px-6 py-2 rounded-lg border-yellow-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]">
-=======
                                 categoriesData.map((category) => (
                                     <TableRow key={category.id}>
                                         <TableCell>{category.id}</TableCell>
@@ -338,7 +314,6 @@ export default function Page() {
                                                     href={`/admin/product_management/categories/update/${category.id}`}>
                                                     <button
                                                         className="inline-block w-fit cursor-pointer transition-all bg-yellow-500 text-white px-6 py-2 rounded-lg border-yellow-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]">
->>>>>>> Stashed changes
                                                         Sửa
                                                     </button>
                                                 </NextLink>
@@ -391,13 +366,9 @@ export default function Page() {
                         <ModalBody>
                             {categoryToDelete && (
                                 <p>
-<<<<<<< Updated upstream
-                                    Bạn có chắc chắn muốn xóa brand "{brandToDelete.name}"?
-                                    <br />
-=======
+
                                     Bạn có chắc chắn muốn xóa category "{categoryToDelete.name}"?
                                     <br/>
->>>>>>> Stashed changes
                                     Hành động này không thể hoàn tác.
                                 </p>
                             )}

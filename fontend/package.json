@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@eslint/eslintrc": "^3.3.1",
     "@heroicons/react": "^2.2.0",
     "@heroui/button": "2.2.16",
     "@heroui/code": "2.2.12",
@@ -30,6 +31,7 @@
     "@react-aria/ssr": "3.9.7",
     "@react-aria/visually-hidden": "3.8.20",
     "@stomp/stompjs": "^7.1.0",
+    "@tabler/icons-react": "^3.33.0",
     "clsx": "2.1.1",
     "framer-motion": "11.13.1",
     "intl-messageformat": "^10.5.0",

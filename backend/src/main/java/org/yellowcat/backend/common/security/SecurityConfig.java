@@ -41,7 +41,11 @@ public class SecurityConfig {
                                 "/demo/all",
                                 "/api/public/**",
                                 "/api/users/**",
+                                "/api/addresses/**",
+                                "/api/address/**",
+                                "/api/users/**",
                                 "/api/vnpay/**",
+                                "/api/ghn/**",
                                 "/api/examples/**")
                         .permitAll()
 
@@ -57,7 +61,9 @@ public class SecurityConfig {
                         // Product public API
                                 requestMatchers(HttpMethod.GET,
                                 "/api/products",
-                                "/api/products/{id}").permitAll().
+                                "/api/products/{id}",
+                                "/api/product-variants"
+                        ).permitAll().
                         // Product private API
                                 requestMatchers(
                                 "/api/products/**")
@@ -79,6 +85,18 @@ public class SecurityConfig {
                                 requestMatchers(HttpMethod.GET,
                                 "/api/categories",
                                 "/api/categories/{id}"
+                        ).permitAll().
+
+                        // Attribute public API
+                                requestMatchers(HttpMethod.GET,
+                                "/api/colors",
+                                "/api/colors/{id}",
+                                "/api/sizes",
+                                "/api/sizes/{id}",
+                                "/api/materials",
+                                "/api/materials/{id}",
+                                "/api/target-audiences",
+                                "/api/target-audiences/{id}"
                         ).permitAll().
 
                         // Categories private API

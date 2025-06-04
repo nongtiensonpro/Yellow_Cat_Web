@@ -10,11 +10,11 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.yellowcat.backend.product.brand.Brand;
 import org.yellowcat.backend.product.category.Category;
-import org.yellowcat.backend.product.productattribute.ProductAttribute;
+import org.yellowcat.backend.product.material.Material;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
+import org.yellowcat.backend.product.targetaudience.TargetAudience;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -26,7 +26,7 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @ColumnDefault("nextval('products_product_id_seq')")
     @Column(name = "product_id", nullable = false)
-    private Integer id;
+    private Integer productId;
 
     @Size(max = 255)
     @NotNull
@@ -46,6 +46,20 @@ public class Product {
     @Column(name = "description", length = Integer.MAX_VALUE)
     private String description;
 
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    @JoinColumn(name = "material_id")
+    private Material material;
+
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    @JoinColumn(name = "target_audience_id")
+    private TargetAudience targetAudience;
+
+    @Column(name = "is_featured")
+    @ColumnDefault("false")
+    private Boolean isFeatured;
+
     @ColumnDefault("0")
     @Column(name = "purchases")
     private Integer purchases;
@@ -62,16 +76,25 @@ public class Product {
     @Column(name = "is_active")
     private Boolean isActive;
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
-    private List<ProductVariant> variants;
+    @Column(name = "thumbnail")
+    private String thumbnail;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
-    private List<ProductAttribute> productAttributes;
+    private List<ProductVariant> productVariants;
 
     @PrePersist
     protected void onCreate() {
         createdAt = Instant.now();
         updatedAt = Instant.now();
+        if (isFeatured == null) {
+            isFeatured = false;
+        }
+        if (isActive == null) {
+            isActive = true;
+        }
+        if (purchases == null) {
+            purchases = 0;
+        }
     }
 
     @PreUpdate

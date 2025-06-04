@@ -1,7 +1,6 @@
 package org.yellowcat.backend.product.category;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,6 +22,9 @@ public class Category {
 
     @Column(name = "category_name", nullable = false)
     private String name;
+
+    @Column(name = "description")
+    private String description;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

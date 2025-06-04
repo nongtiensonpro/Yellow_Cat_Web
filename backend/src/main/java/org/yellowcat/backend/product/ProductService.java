@@ -1,161 +1,109 @@
 package org.yellowcat.backend.product;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.yellowcat.backend.product.attribute.Attributes;
-import org.yellowcat.backend.product.attribute.AttributesRepository;
-import org.yellowcat.backend.product.attributevalue.AttributeValue;
-import org.yellowcat.backend.product.attributevalue.AttributeValueRepository;
 import org.yellowcat.backend.product.brand.Brand;
 import org.yellowcat.backend.product.brand.BrandRepository;
 import org.yellowcat.backend.product.category.Category;
 import org.yellowcat.backend.product.category.CategoryRepository;
+import org.yellowcat.backend.product.color.Color;
+import org.yellowcat.backend.product.color.ColorRepository;
 import org.yellowcat.backend.product.dto.*;
-import org.yellowcat.backend.product.productattribute.ProductAttribute;
-import org.yellowcat.backend.product.productattribute.ProductAttributeRepository;
+import org.yellowcat.backend.product.material.Material;
+import org.yellowcat.backend.product.material.MaterialRepository;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
 import org.yellowcat.backend.product.productvariant.ProductVariantRepository;
-import org.yellowcat.backend.product.variant.VariantAttribute;
-import org.yellowcat.backend.product.variant.VariantAttributeRepository;
+import org.yellowcat.backend.product.size.Size;
+import org.yellowcat.backend.product.size.SizeRepository;
+import org.yellowcat.backend.product.targetaudience.TargetAudience;
+import org.yellowcat.backend.product.targetaudience.TargetAudienceRepository;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
 import java.util.*;
 
 @Service
+@RequiredArgsConstructor
 public class ProductService {
 
     private final ProductRepository productRepository;
     private final BrandRepository brandRepository;
     private final CategoryRepository categoryRepository;
     private final ProductVariantRepository productVariantRepository;
-    private final AttributeValueRepository attributeValueRepository;
-    private final VariantAttributeRepository variantAttributeRepository;
-    private final AttributesRepository attributesRepository;
-    private final ProductAttributeRepository productAttributeRepository;
-    private final ProductMapper productMapper;
-
-    ProductService(ProductRepository productRepository,
-                   ProductMapper productMapper,
-                   BrandRepository brandRepository,
-                   CategoryRepository categoryRepository,
-                   ProductVariantRepository productVariantRepository,
-                   AttributeValueRepository attributeValueRepository,
-                   VariantAttributeRepository variantAttributeRepository,
-                   AttributesRepository attributesRepository,
-                   ProductAttributeRepository productAttributeRepository) {
-        this.productRepository = productRepository;
-        this.productMapper = productMapper;
-        this.brandRepository = brandRepository;
-        this.categoryRepository = categoryRepository;
-        this.productVariantRepository = productVariantRepository;
-        this.attributeValueRepository = attributeValueRepository;
-        this.variantAttributeRepository = variantAttributeRepository;
-        this.attributesRepository = attributesRepository;
-        this.productAttributeRepository = productAttributeRepository;
-    }
-
-    Page<ProductDto> getAllProducts(Pageable pageable) {
-        Page<Product> products = productRepository.findAll(pageable);
-        return products.map(productMapper::toDto);
-    }
+    private final MaterialRepository materialRepository;
+    private final TargetAudienceRepository targetAudienceRepository;
+    private final ColorRepository colorRepository;
+    private final SizeRepository sizeRepository;
 
     public Page<ProductListItemDTO> getProductsPaginated(Pageable pageable) {
         int pageSize = pageable.getPageSize();
         int offset = (int) pageable.getOffset();
 
-        List<ProductListItemDTO> productDTOs = productRepository.findAllProductsPaginated(pageSize, offset);
+        List<ProductListItemDTO> productDTOs = productRepository.findAllProduct(pageSize, offset);
+        long totalProducts = productRepository.countTotalProducts();
+
+        return new PageImpl<>(productDTOs, pageable, totalProducts);
+    }
+
+    public Page<ProductListItemManagementDTO> getProductManagement(int page, int size) {
+        Sort sort = Sort.by("updatedAt").descending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        int pageSize = pageable.getPageSize();
+        int offset = (int) pageable.getOffset();
+
+        List<ProductListItemManagementDTO> productDTOs = productRepository.findAllProductManagement(pageSize, offset);
         long totalProducts = productRepository.countTotalProducts();
 
         return new PageImpl<>(productDTOs, pageable, totalProducts);
     }
 
     public ProductDetailDTO getProductDetailById(Integer productId) {
-        List<Object[]> results = productRepository.findProductDetailById(productId);
-
-        if (results.isEmpty()) {
-            return null;
+        List<Object[]> results = productRepository.findProductDetailRawByProductId(productId);
+        if (results == null || results.isEmpty()) {
+            return null; // Or throw NotFoundException
         }
 
-        // Create the product detail DTO
-        ProductDetailDTO productDetail = new ProductDetailDTO();
-        Map<Integer, VariantDTO> variantMap = new HashMap<>();
+        ProductDetailDTO productDetailDTO = null;
+        List<ProductVariantDTO> variants = new ArrayList<>();
 
-        // Process each row from the query result
         for (Object[] row : results) {
-            int index = 0;
-
-            // If this is the first row, populate the product details
-            if (productDetail.getProductId() == null) {
-                productDetail.setProductId((Integer) row[index++]);
-                productDetail.setProductName((String) row[index++]);
-                productDetail.setDescription((String) row[index++]);
-                productDetail.setPurchases((Integer) row[index++]);
-
-                Timestamp createdAt = (Timestamp) row[index++];
-                productDetail.setProductCreatedAt(createdAt != null ? createdAt.toLocalDateTime() : null);
-
-                Timestamp updatedAt = (Timestamp) row[index++];
-                productDetail.setProductUpdatedAt(updatedAt != null ? updatedAt.toLocalDateTime() : null);
-
-                productDetail.setIsActive((Boolean) row[index++]);
-                productDetail.setCategoryId((Integer) row[index++]);
-                productDetail.setCategoryName((String) row[index++]);
-                productDetail.setBrandId((Integer) row[index++]);
-                productDetail.setBrandName((String) row[index++]);
-                productDetail.setBrandInfo((String) row[index++]);
-                productDetail.setLogoPublicId((String) row[index++]);
-
-                // Initialize the variants list
-                productDetail.setVariants(new ArrayList<>());
-            } else {
-                // Skip product fields if already populated
-                index = 13; // Skip to variant fields
+            if (productDetailDTO == null) {
+                productDetailDTO = new ProductDetailDTO();
+                productDetailDTO.setProductId((Integer) row[0]);
+                productDetailDTO.setProductName((String) row[1]);
+                productDetailDTO.setDescription((String) row[2]);
+                productDetailDTO.setMaterialId((Integer) row[3]);
+                productDetailDTO.setTargetAudienceId((Integer) row[4]);
+                productDetailDTO.setPurchases((Integer) row[5]);
+                productDetailDTO.setIsActive((Boolean) row[6]);
+                productDetailDTO.setCategoryId((Integer) row[7]);
+                productDetailDTO.setCategoryName((String) row[8]);
+                productDetailDTO.setBrandId((Integer) row[9]);
+                productDetailDTO.setBrandName((String) row[10]);
+                productDetailDTO.setBrandInfo((String) row[11]);
+                productDetailDTO.setLogoPublicId((String) row[12]);
+                productDetailDTO.setThumbnail((String) row[13]);
             }
 
-            // Process variant data
-            Integer variantId = (Integer) row[index++];
-
-            // Only process variant if it exists
-            if (variantId != null) {
-                VariantDTO variant = variantMap.get(variantId);
-
-                if (variant == null) {
-                    variant = new VariantDTO();
-                    variant.setVariantId(variantId);
-                    variant.setSku((String) row[index++]);
-                    variant.setPrice((BigDecimal) row[index++]);
-                    variant.setStockLevel((Integer) row[index++]);
-                    variant.setImageUrl((String) row[index++]);                    
-                    // Fix the type casting issue - convert BigDecimal to Double
-                    Object weightObj = row[index++];
-                    if (weightObj != null) {
-                        if (weightObj instanceof BigDecimal) {
-                            variant.setWeight(((BigDecimal) weightObj).doubleValue());
-                        } else if (weightObj instanceof Double) {
-                            variant.setWeight((Double) weightObj);
-                        } else {
-                            // Handle other potential types or set default
-                            variant.setWeight(null);
-                        }
-                    } else {
-                        variant.setWeight(null);
-                    }
-                    variant.setVariantAttributes((String) row[index++]);
-
-                    variantMap.put(variantId, variant);
-                    productDetail.getVariants().add(variant);
-                } else {
-                    // Skip variant fields if already processed
-                    index += 7; // Tăng index lên 7 để bỏ qua các trường variant đã xử lý (bao gồm cả weight mới)
-                }
+            if (row[14] != null) {
+                ProductVariantDTO variantDTO = new ProductVariantDTO();
+                variantDTO.setVariantId((Integer) row[14]);
+                variantDTO.setSku((String) row[15]);
+                variantDTO.setColorId((Integer) row[16]);
+                variantDTO.setSizeId((Integer) row[17]);
+                variantDTO.setPrice((BigDecimal) row[18]); // Ensure correct type casting
+                variantDTO.setStockLevel((Integer) row[19]);
+                variantDTO.setImageUrl((String) row[20]);
+                variantDTO.setWeight((Double) row[21]); // Ensure correct type casting
+                variants.add(variantDTO);
             }
         }
 
-        return productDetail;
+        productDetailDTO.setVariants(variants);
+
+        return productDetailDTO;
     }
 
     @Transactional
@@ -165,6 +113,10 @@ public class ProductService {
                 .orElseThrow(() -> new RuntimeException("Brand not found"));
         Category category = categoryRepository.findById(productDto.getCategoryId())
                 .orElseThrow(() -> new RuntimeException("Category not found"));
+        Material material = materialRepository.findById(productDto.getMaterialId())
+                .orElseThrow(() -> new RuntimeException("Material not found"));
+        TargetAudience targetAudience = targetAudienceRepository.findById(productDto.getTargetAudienceId())
+                .orElseThrow(() -> new RuntimeException("Target Audience not found"));
 
         // Tạo sản phẩm
         Product product = new Product();
@@ -172,82 +124,35 @@ public class ProductService {
         product.setDescription(productDto.getDescription());
         product.setBrand(brand);
         product.setCategory(category);
-        product.setIsActive(true);
+        product.setMaterial(material);
+        product.setTargetAudience(targetAudience);
+        product.setThumbnail(productDto.getThumbnail());
         product = productRepository.save(product);
 
-        // Cache AttributeValue đã xử lý để không truy lại DB
-        Map<String, AttributeValue> attributeValueCache = new HashMap<>();
-
-        // Xử lý các thuộc tính chung của sản phẩm
-        for (ProductWithVariantsRequestDTO.ProductAttributeDTO productAttributeDTO : productDto.getProductAttributes()) {
-            for (ProductWithVariantsRequestDTO.AttributeDTO attrDTO : productAttributeDTO.getAttributes()) {
-                String key = attrDTO.getAttributeId() + "_" + attrDTO.getValue();
-                AttributeValue value = attributeValueCache.get(key);
-
-                if (value == null) {
-                    value = attributeValueRepository
-                            .findByAttributeIdAndValue(attrDTO.getAttributeId(), attrDTO.getValue())
-                            .orElseGet(() -> {
-                                Attributes attribute = attributesRepository.findById(attrDTO.getAttributeId())
-                                        .orElseThrow(() -> new RuntimeException("Attribute not found: " + attrDTO.getAttributeId()));
-                                AttributeValue newVal = new AttributeValue();
-                                newVal.setAttribute(attribute);
-                                newVal.setValue(attrDTO.getValue());
-                                return attributeValueRepository.save(newVal);
-                            });
-                    attributeValueCache.put(key, value);
-                }
-
-                ProductAttribute productAttribute = new ProductAttribute();
-                productAttribute.setProduct(product);
-                productAttribute.setAttributeValue(value);
-                productAttributeRepository.save(productAttribute);
-            }
-        }
-
         // Xử lý các biến thể
-        for (ProductWithVariantsRequestDTO.VariantDTO variantDto : productDto.getVariants()) {
+        for (ProductWithVariantsRequestDTO.ProductVariantDTO variantDto : productDto.getVariants()) {
+            Color color = colorRepository.findById(variantDto.getColorId())
+                    .orElseThrow(() -> new RuntimeException("Color not found"));
+            Size size = sizeRepository.findById(variantDto.getSizeId())
+                    .orElseThrow(() -> new RuntimeException("Size not found"));
+
             ProductVariant variant = new ProductVariant();
             variant.setProduct(product);
 
             // Tự sinh SKU nếu thiếu
             String sku = (variantDto.getSku() == null || variantDto.getSku().isBlank())
-                    ? generateUniqueSku(product.getId())
+                    ? generateUniqueSku(product.getProductId())
                     : variantDto.getSku();
             variant.setSku(sku);
 
+            variant.setColor(color);
+            variant.setSize(size);
             variant.setPrice(variantDto.getPrice());
-            variant.setStockLevel(variantDto.getStockLevel());
+            variant.setQuantityInStock(variantDto.getStockLevel());
             variant.setImageUrl(variantDto.getImageUrl());
             variant.setWeight(variantDto.getWeight());
 
             variant = productVariantRepository.save(variant);
-
-            // Gắn thuộc tính cho từng biến thể
-            for (ProductWithVariantsRequestDTO.AttributeDTO attributeDto : variantDto.getAttributes()) {
-                String key = attributeDto.getAttributeId() + "_" + attributeDto.getValue();
-                AttributeValue attributeValue = attributeValueCache.get(key);
-
-                if (attributeValue == null) {
-                    attributeValue = attributeValueRepository.findByAttributeIdAndValue(
-                            attributeDto.getAttributeId(),
-                            attributeDto.getValue()
-                    ).orElseGet(() -> {
-                        Attributes attribute = attributesRepository.findById(attributeDto.getAttributeId())
-                                .orElseThrow(() -> new RuntimeException("Attribute not found: " + attributeDto.getAttributeId()));
-                        AttributeValue newVal = new AttributeValue();
-                        newVal.setAttribute(attribute);
-                        newVal.setValue(attributeDto.getValue());
-                        return attributeValueRepository.save(newVal);
-                    });
-                    attributeValueCache.put(key, attributeValue);
-                }
-
-                VariantAttribute variantAttribute = new VariantAttribute();
-                variantAttribute.setVariant(variant);
-                variantAttribute.setAttributeValue(attributeValue);
-                variantAttributeRepository.save(variantAttribute);
-            }
         }
     }
 
@@ -262,51 +167,23 @@ public class ProductService {
                 .orElseThrow(() -> new RuntimeException("Brand not found"));
         Category category = categoryRepository.findById(productDto.getCategoryId())
                 .orElseThrow(() -> new RuntimeException("Category not found"));
+        Material material = materialRepository.findById(productDto.getMaterialId())
+                .orElseThrow(() -> new RuntimeException("Material not found"));
+        TargetAudience targetAudience = targetAudienceRepository.findById(productDto.getTargetAudienceId())
+                .orElseThrow(() -> new RuntimeException("Target Audience not found"));
 
         // 3. Cập nhật thông tin sản phẩm
         product.setProductName(productDto.getProductName());
         product.setDescription(productDto.getDescription());
         product.setBrand(brand);
         product.setCategory(category);
+        product.setMaterial(material);
+        product.setTargetAudience(targetAudience);
+        product.setThumbnail(productDto.getThumbnail());
         product = productRepository.save(product);
 
-        // 4. Xóa thuộc tính cũ của sản phẩm
-        productAttributeRepository.deleteByProductId(product.getId());
-
-        // 5. Cache AttributeValue để tiết kiệm truy vấn
-        Map<String, AttributeValue> attributeValueCache = new HashMap<>();
-
-        // 6. Xử lý thuộc tính chung của sản phẩm
-        if (productDto.getProductAttributes() != null) {
-            for (ProductWithVariantsUpdateRequestDTO.ProductAttributeDTO productAttributeDTO : productDto.getProductAttributes()) {
-                for (ProductWithVariantsUpdateRequestDTO.AttributeDTO attrDTO : productAttributeDTO.getAttributes()) {
-                    String key = attrDTO.getAttributeId() + "_" + attrDTO.getValue();
-                    AttributeValue value = attributeValueCache.get(key);
-
-                    if (value == null) {
-                        value = attributeValueRepository
-                                .findByAttributeIdAndValue(attrDTO.getAttributeId(), attrDTO.getValue())
-                                .orElseGet(() -> {
-                                    Attributes attribute = attributesRepository.findById(attrDTO.getAttributeId())
-                                            .orElseThrow(() -> new RuntimeException("Attribute not found: " + attrDTO.getAttributeId()));
-                                    AttributeValue newVal = new AttributeValue();
-                                    newVal.setAttribute(attribute);
-                                    newVal.setValue(attrDTO.getValue());
-                                    return attributeValueRepository.save(newVal);
-                                });
-                        attributeValueCache.put(key, value);
-                    }
-
-                    ProductAttribute productAttribute = new ProductAttribute();
-                    productAttribute.setProduct(product);
-                    productAttribute.setAttributeValue(value);
-                    productAttributeRepository.save(productAttribute);
-                }
-            }
-        }
-
-        // 7. Xử lý biến thể
-        List<ProductVariant> existingVariants = productVariantRepository.findByProductId(product.getId());
+        // 4. Xử lý biến thể
+        List<ProductVariant> existingVariants = productVariantRepository.findByProductId(product.getProductId());
 
         // Tạo Map để dễ lookup theo sku
         Map<String, ProductVariant> existingVariantsMap = new HashMap<>();
@@ -318,9 +195,13 @@ public class ProductService {
         Set<String> newVariantSkus = new HashSet<>();
 
         if (productDto.getVariants() != null) {
-            for (ProductWithVariantsUpdateRequestDTO.VariantDTO variantDto : productDto.getVariants()) {
-                newVariantSkus.add(variantDto.getSku());
+            for (ProductWithVariantsUpdateRequestDTO.ProductVariantDTO variantDto : productDto.getVariants()) {
+                Color color = colorRepository.findById(variantDto.getColorId())
+                        .orElseThrow(() -> new RuntimeException("Color not found"));
+                Size size = sizeRepository.findById(variantDto.getSizeId())
+                        .orElseThrow(() -> new RuntimeException("Size not found"));
 
+                newVariantSkus.add(variantDto.getSku());
                 ProductVariant variant = existingVariantsMap.get(variantDto.getSku());
 
                 if (variant == null) {
@@ -331,57 +212,40 @@ public class ProductService {
                 }
 
                 // Cập nhật thông tin biến thể
+                variant.setColor(color);
+                variant.setSize(size);
                 variant.setPrice(variantDto.getPrice());
-                variant.setStockLevel(variantDto.getStockLevel());
+                variant.setQuantityInStock(variantDto.getStockLevel());
                 variant.setImageUrl(variantDto.getImageUrl());
                 variant.setWeight(variantDto.getWeight());
 
                 variant = productVariantRepository.save(variant);
-
-                // Xóa thuộc tính của biến thể này trước khi thêm lại
-                variantAttributeRepository.deleteByVariantId(variant.getId());
-
-                // Thêm lại thuộc tính biến thể
-                if (variantDto.getAttributes() != null) {
-                    for (ProductWithVariantsUpdateRequestDTO.AttributeDTO attributeDto : variantDto.getAttributes()) {
-                        String key = attributeDto.getAttributeId() + "_" + attributeDto.getValue();
-                        AttributeValue attributeValue = attributeValueCache.get(key);
-
-                        if (attributeValue == null) {
-                            attributeValue = attributeValueRepository.findByAttributeIdAndValue(
-                                    attributeDto.getAttributeId(),
-                                    attributeDto.getValue()
-                            ).orElseGet(() -> {
-                                Attributes attribute = attributesRepository.findById(attributeDto.getAttributeId())
-                                        .orElseThrow(() -> new RuntimeException("Attribute not found: " + attributeDto.getAttributeId()));
-                                AttributeValue newVal = new AttributeValue();
-                                newVal.setAttribute(attribute);
-                                newVal.setValue(attributeDto.getValue());
-                                return attributeValueRepository.save(newVal);
-                            });
-                            attributeValueCache.put(key, attributeValue);
-                        }
-
-                        VariantAttribute variantAttribute = new VariantAttribute();
-                        variantAttribute.setVariant(variant);
-                        variantAttribute.setAttributeValue(attributeValue);
-                        variantAttributeRepository.save(variantAttribute);
-                    }
-                }
             }
         }
 
-        // 8. Xóa biến thể cũ không còn trong danh sách mới
+        // 5 Xóa biến thể cũ không còn trong danh sách mới
         for (ProductVariant oldVariant : existingVariants) {
             if (!newVariantSkus.contains(oldVariant.getSku())) {
-                // Xóa thuộc tính của biến thể
-                variantAttributeRepository.deleteByVariantId(oldVariant.getId());
-                // Xóa biến thể
                 productVariantRepository.delete(oldVariant);
             }
         }
         productVariantRepository.flush();
     }
+
+    public void deleteProduct(Integer productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found with ID: " + productId));
+
+        if (product.getPurchases() > 0) {
+            // Chỉ đánh dấu là không còn hoạt động thay vì xóa
+            product.setIsActive(false);
+            productRepository.save(product);
+        } else {
+            // Nếu chưa được mua, có thể xóa hẳn
+            productRepository.delete(product);
+        }
+    }
+
 
     private String generateUniqueSku(Integer productId) {
         String sku;

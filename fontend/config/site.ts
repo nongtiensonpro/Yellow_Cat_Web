@@ -8,6 +8,23 @@ export const siteConfig = {
     //   label: "Demo",
     //   href: "/about",
     // }
+    // {
+    //   label: "Trang chủ",
+    //   href: "/",
+    // },
+    // {
+    //   label: "Sản phẩm",
+    //   href: "/products",
+    // },
+    // {
+    //   label: "Giới thiệu",
+    //   href: "/about", // Đảm bảo bạn có trang /about/page.tsx
+    // },
+    // {
+    //   label: "Liên hệ",
+    //   href: "/contact", // Đảm bảo bạn có trang /contact/page.tsx
+    // },
+
   ],
   navMenuItems: [
     {
@@ -16,14 +33,14 @@ export const siteConfig = {
     }
   ],
   navMenuItemsAdmin:[
-    {
-      label: "Quản lý tài khoản",
-      href: "/admin/account_management",
-    },
-    {
-      label: "Quản lý sản phẩm",
-      href: "/admin/product_management",
-    }
+    // {
+    //   label: "Quản lý tài khoản",
+    //   href: "/admin/account_management",
+    // },
+    // {
+    //   label: "Quản lý sản phẩm",
+    //   href: "/admin/product_management",
+    // }
   ],
   navMenuItemsProduct:[
     {
