@@ -10,12 +10,13 @@ import {
     Chip,
     Avatar,
 } from "@heroui/react";
-import { Users, Package, BarChart2, Moon, Sun, UserCheck, UserX, Shield, User } from "lucide-react";
+import {Users, Package, BarChart2, Moon, Sun, UserCheck, UserX, Shield, User, ActivityIcon} from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useSession } from 'next-auth/react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { jwtDecode } from 'jwt-decode';
+import {IconBasket} from "@tabler/icons-react";
 
 interface DecodedToken {
     sub?: string;
@@ -336,6 +337,23 @@ export default function AdminDashboard() {
                     <CardFooter>
                         <Button as={Link} href="/admin/order_management" color="warning" variant="flat" size="sm">
                             Quản lý đơn hàng
+                        </Button>
+                    </CardFooter>
+                </Card>
+                <Card className="shadow-lg">
+                    <CardHeader className="flex items-center gap-3">
+                        <Avatar icon={<IconBasket size={24} />} color="default" />
+                        <div>
+                            <p className="text-lg font-semibold text-gray-700 dark:text-white">Bán hàng</p>
+                            <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-300">{stats.orders}</p>
+                        </div>
+                    </CardHeader>
+                    <CardFooter>
+                        <Button className={"m-1"} as={Link} href="/staff/officesales" color="warning" variant="flat" size="sm">
+                            Bán hàng tại quầy
+                        </Button>
+                        <Button className={"m-1"} as={Link} href="/staff/page.tsx" color="warning" variant="flat" size="sm">
+                            Bán hàng online
                         </Button>
                     </CardFooter>
                 </Card>
