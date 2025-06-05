@@ -41,18 +41,6 @@ export default function ContactPage() {
                             <p>contact@sneakerpeak.com</p> {/* Giữ nguyên email của bạn */}
                         </div>
                     </div>
-
-                    {/* Phần giới thiệu ngắn về cửa hàng */}
-                    <div className="mt-8 pt-6 border-t border-gray-200"> {/* Thêm border top */}
-                        <h2 className="text-2xl font-bold mb-4 text-gray-800">VỀ SNEAKERPEAK</h2> {/* Đổi tiêu đề */}
-                        <p className="text-gray-700 leading-relaxed mb-4 text-justify">
-                            Chào mừng bạn đến với <span className="font-bold text-red-600">SneakerPeak</span> – điểm đến lý tưởng cho những đôi giày thể thao và phong cách streetwear chính hãng. Chúng tôi tự hào mang đến một không gian mua sắm đáng tin cậy, nơi bạn có thể khám phá những bộ sưu tập đa dạng từ các thương hiệu hàng đầu thế giới.
-                        </p>
-                        <h3 className="text-xl font-bold mb-2 text-gray-800">ĐAM MÊ VÀ SÁNG TẠO</h3> {/* Đổi tiêu đề */}
-                        <p className="text-gray-700 leading-relaxed text-justify">
-                            SneakerPeak luôn nỗ lực không ngừng để đổi mới, mang đến những xu hướng mới nhất và đáp ứng mọi nhu cầu của khách hàng yêu giày.
-                        </p>
-                    </div>
                 </div>
 
                 {/* Phần bản đồ Google Maps */}
