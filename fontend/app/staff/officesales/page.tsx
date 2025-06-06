@@ -1,6 +1,7 @@
 "use client"
 import ProductListSaleOffice from "@/components/sales/officesales/ProductList"
 import PurchaseOrder from "@/components/sales/officesales/PurchaseOrder"
+import ProductListSaleOfficeNew from "@/components/sales/officesales/ProductListSaleOffice"
 
 import {
     PanelGroup,
@@ -20,8 +21,9 @@ export default function Page() {
 
     return (
         <PanelGroup direction="horizontal" className="min-h-screen">
-            <Panel defaultSize={35} minSize={20} className="accent-red-200">
-                <ProductListSaleOffice />
+            <Panel defaultSize={20} minSize={20} className="p-4">
+                {/*<ProductListSaleOffice />*/}
+                <ProductListSaleOfficeNew/>
             </Panel>
 
             <PanelResizeHandle className="w-2 bg-gray-200 hover:bg-gray-400 transition-colors duration-200 cursor-col-resize flex items-center justify-center">
