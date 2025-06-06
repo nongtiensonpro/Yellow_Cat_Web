@@ -17,9 +17,7 @@ import {
     Modal,
     ModalContent,
     ModalHeader,
-    ModalBody,
-    ModalFooter,
-    Checkbox
+    ModalBody
 } from "@heroui/react";
 import {Input, Textarea} from "@heroui/input";
 import {CldUploadButton, CldImage} from "next-cloudinary";
@@ -30,8 +28,16 @@ import BrandForm from "@/components/product/BrandForm/BrandForm";
 import EditBrandModal from "@/components/product/BrandForm/EditBrandModal";
 import CategoryForm from "@/components/product/CategoryForm/CategoryForm";
 import EditCategoryModal from "@/components/product/CategoryForm/EditCategoryModal";
+import MaterialForm from "@/components/product/MaterialForm/MaterialFrom";
+import EditMaterialModal from "@/components/product/MaterialForm/EditMaterialModal";
+import TargetAudienceForm from "@/components/product/TargetAudiencesForm/AudiencesForm";
+import EditTargetAudienceModal from "@/components/product/TargetAudiencesForm/EditTargetAudience";
+import ColorForm from "@/components/product/ColorForm/ColorFrom";
+import EditColorModal from "@/components/product/ColorForm/EditColorFrom";
+import SizeForm from "@/components/product/SizeForm/SizeForm";
+import EditSizeModal from "@/components/product/SizeForm/EditSizeForm";
 
-interface ProductVariant { // From ProductDetailDTO (for displaying)
+interface ProductVariant {
     variantId: number;
     sku: string;
 
@@ -43,7 +49,7 @@ interface ProductVariant { // From ProductDetailDTO (for displaying)
     weight: number;
 }
 
-interface ProductDetail { // Matches ProductDetailDTO
+interface ProductDetail {
     productId: number;
     productName: string;
     description: string;
@@ -124,6 +130,10 @@ export default function UpdateProductPage() {
 
     const {isOpen: isBrandModalOpen, onOpen: onBrandModalOpen, onOpenChange: onBrandModalOpenChange} = useDisclosure();
     const {isOpen: isCategoryModalOpen, onOpen: onCategoryModalOpen, onOpenChange: onCategoryModalOpenChange} = useDisclosure();
+    const {isOpen: isMaterialModalOpen, onOpen: onMaterialModalOpen, onOpenChange: onMaterialModalOpenChange} = useDisclosure();
+    const {isOpen: isTargetAudienceModalOpen, onOpen: onTargetAudienceModalOpen, onOpenChange: onTargetAudienceModalOpenChange} = useDisclosure();
+    const {isOpen: isColorModalOpen, onOpen: onColorModalOpen, onOpenChange: onColorModalOpenChange} = useDisclosure();
+    const {isOpen: isSizeModalOpen, onOpen: onSizeModalOpen, onOpenChange: onSizeModalOpenChange} = useDisclosure();
 
     // Edit Brand Modal state
     const {isOpen: isEditBrandModalOpen, onOpen: onEditBrandModalOpen, onOpenChange: onEditBrandModalOpenChange} = useDisclosure();
@@ -132,6 +142,19 @@ export default function UpdateProductPage() {
     // Edit Category Modal state
     const {isOpen: isEditCategoryModalOpen, onOpen: onEditCategoryModalOpen, onOpenChange: onEditCategoryModalOpenChange} = useDisclosure();
     const [selectedCategoryIdForEdit, setSelectedCategoryIdForEdit] = useState<string | null>(null);
+
+    // Edit Modal states for Material, TargetAudience, Color, Size
+    const {isOpen: isEditMaterialModalOpen, onOpen: onEditMaterialModalOpen, onOpenChange: onEditMaterialModalOpenChange} = useDisclosure();
+    const [selectedMaterialIdForEdit, setSelectedMaterialIdForEdit] = useState<string | null>(null);
+
+    const {isOpen: isEditTargetAudienceModalOpen, onOpen: onEditTargetAudienceModalOpen, onOpenChange: onEditTargetAudienceModalOpenChange} = useDisclosure();
+    const [selectedTargetAudienceIdForEdit, setSelectedTargetAudienceIdForEdit] = useState<string | null>(null);
+
+    const {isOpen: isEditColorModalOpen, onOpen: onEditColorModalOpen, onOpenChange: onEditColorModalOpenChange} = useDisclosure();
+    const [selectedColorIdForEdit, setSelectedColorIdForEdit] = useState<string | null>(null);
+
+    const {isOpen: isEditSizeModalOpen, onOpen: onEditSizeModalOpen, onOpenChange: onEditSizeModalOpenChange} = useDisclosure();
+    const [selectedSizeIdForEdit, setSelectedSizeIdForEdit] = useState<string | null>(null);
 
     // State for form sản phẩm
     const [productData, setProductData] = useState<ProductDetail | null>(null);
@@ -513,6 +536,60 @@ export default function UpdateProductPage() {
         }
     };
 
+    const handleEditMaterial = () => {
+        if (material) {
+            setSelectedMaterialIdForEdit(material);
+            onEditMaterialModalOpen();
+        } else {
+            addToast({
+                title: "Lưu ý",
+                description: "Vui lòng chọn chất liệu trước khi chỉnh sửa.",
+                color: "warning"
+            });
+        }
+    };
+
+    const handleEditTargetAudience = () => {
+        if (targetAudience) {
+            setSelectedTargetAudienceIdForEdit(targetAudience);
+            onEditTargetAudienceModalOpen();
+        } else {
+            addToast({
+                title: "Lưu ý",
+                description: "Vui lòng chọn đối tượng khách hàng trước khi chỉnh sửa.",
+                color: "warning"
+            });
+        }
+    };
+
+    const handleEditColor = (variantIndex: number) => {
+        const variant = variants[variantIndex];
+        if (variant && variant.colorId) {
+            setSelectedColorIdForEdit(variant.colorId);
+            onEditColorModalOpen();
+        } else {
+            addToast({
+                title: "Lưu ý",
+                description: "Vui lòng chọn màu sắc cho biến thể này trước khi chỉnh sửa.",
+                color: "warning"
+            });
+        }
+    };
+
+    const handleEditSize = (variantIndex: number) => {
+        const variant = variants[variantIndex];
+        if (variant && variant.sizeId) {
+            setSelectedSizeIdForEdit(variant.sizeId);
+            onEditSizeModalOpen();
+        } else {
+            addToast({
+                title: "Lưu ý",
+                description: "Vui lòng chọn kích thước cho biến thể này trước khi chỉnh sửa.",
+                color: "warning"
+            });
+        }
+    };
+
     if (loading) {
         return <div className="flex justify-center items-center min-h-screen"><Spinner label="Đang tải..." size="lg"/>
         </div>;
@@ -744,46 +821,207 @@ export default function UpdateProductPage() {
                     )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Autocomplete
-                            label="Chất liệu"
-                            placeholder="Chọn chất liệu"
-                            defaultItems={materials}
-                            selectedKey={material}
-                            onSelectionChange={(key) => setMaterial(key as string)}
-                            isRequired
-                        >
-                            {(material) => (
-                                <AutocompleteItem key={material.id.toString()} textValue={material.name}>
-                                    <div className="flex flex-col">
-                                        <span className="font-medium">{material.name}</span>
-                                        {material.description && (
-                                            <span className="text-sm text-gray-500">{material.description}</span>
-                                        )}
-                                    </div>
-                                </AutocompleteItem>
-                            )}
-                        </Autocomplete>
+                        <div className="flex items-end gap-2">
+                            <div className="flex-1">
+                                <Autocomplete
+                                    label="Chất liệu"
+                                    placeholder="Chọn chất liệu"
+                                    defaultItems={materials}
+                                    selectedKey={material}
+                                    onSelectionChange={(key) => setMaterial(key as string)}
+                                    isRequired
+                                >
+                                    {(material) => (
+                                        <AutocompleteItem key={material.id.toString()} textValue={material.name}>
+                                            <div className="flex flex-col">
+                                                <span className="font-medium">{material.name}</span>
+                                                {material.description && (
+                                                    <span
+                                                        className="text-sm text-gray-500">{material.description}</span>
+                                                )}
+                                            </div>
+                                        </AutocompleteItem>
+                                    )}
+                                </Autocomplete>
+                            </div>
+                            <div className="flex gap-1">
+                                <Button
+                                    size="lg"
+                                    color="warning"
+                                    variant="bordered"
+                                    onPress={handleEditMaterial}
+                                    isDisabled={!material}
+                                    className="min-w-unit-10 px-2"
+                                    isIconOnly
+                                    aria-label="Sửa chất liệu"
+                                >
+                                    ✏️
+                                </Button>
+                                <Button
+                                    size="lg"
+                                    color="default"
+                                    variant="solid"
+                                    onPress={onMaterialModalOpen}
+                                    className="min-w-unit-10 px-2"
+                                    isIconOnly
+                                    aria-label="Thêm chất liệu mới"
+                                >
+                                    ➕
+                                </Button>
+                            </div>
+                        </div>
 
-                        <Autocomplete
-                            label="Đối tượng khách hàng"
-                            placeholder="Chọn đối tượng khách hàng"
-                            defaultItems={audiences}
-                            selectedKey={targetAudience}
-                            onSelectionChange={(key) => setTargetAudience(key as string)}
-                            isRequired
-                        >
-                            {(audience) => (
-                                <AutocompleteItem key={audience.id.toString()} textValue={audience.name}>
-                                    <div className="flex flex-col">
-                                        <span className="font-medium">{audience.name}</span>
-                                        {audience.description && (
-                                            <span className="text-sm text-gray-500">{audience.description}</span>
-                                        )}
-                                    </div>
-                                </AutocompleteItem>
-                            )}
-                        </Autocomplete>
+                        <div className="flex items-end gap-2">
+                            <div className="flex-1">
+                                <Autocomplete
+                                    label="Đối tượng khách hàng"
+                                    placeholder="Chọn đối tượng khách hàng"
+                                    defaultItems={audiences}
+                                    selectedKey={targetAudience}
+                                    onSelectionChange={(key) => setTargetAudience(key as string)}
+                                    isRequired
+                                >
+                                    {(audience) => (
+                                        <AutocompleteItem key={audience.id.toString()} textValue={audience.name}>
+                                            <div className="flex flex-col">
+                                                <span className="font-medium">{audience.name}</span>
+                                                {audience.description && (
+                                                    <span
+                                                        className="text-sm text-gray-500">{audience.description}</span>
+                                                )}
+                                            </div>
+                                        </AutocompleteItem>
+                                    )}
+                                </Autocomplete>
+                            </div>
+                            <div className="flex gap-1">
+                                <Button
+                                    size="lg"
+                                    color="warning"
+                                    variant="bordered"
+                                    onPress={handleEditTargetAudience}
+                                    isDisabled={!targetAudience}
+                                    className="min-w-unit-10 px-2"
+                                    isIconOnly
+                                    aria-label="Sửa đối tượng khách hàng"
+                                >
+                                    ✏️
+                                </Button>
+                                <Button
+                                    size="lg"
+                                    color="default"
+                                    variant="solid"
+                                    onPress={onTargetAudienceModalOpen}
+                                    className="min-w-unit-10 px-2"
+                                    isIconOnly
+                                    aria-label="Thêm đối tượng khách hàng mới"
+                                >
+                                    ➕
+                                </Button>
+                            </div>
+                        </div>
                     </div>
+
+                    {/* Material Modal */}
+                    <Modal
+                        isOpen={isMaterialModalOpen}
+                        onOpenChange={onMaterialModalOpenChange}
+                        size="3xl"
+                        scrollBehavior="inside"
+                        placement="center"
+                        className="max-w-[95vw] max-h-[90vh]"
+                    >
+                        <ModalContent>
+                            {(onClose) => (
+                                <>
+                                    <ModalHeader className="flex flex-col gap-1 px-6 py-4 border-b">
+                                        <h2 className="text-xl font-semibold">Thêm chất liệu mới</h2>
+                                        <p className="text-sm text-gray-600">Điền thông tin để tạo chất liệu mới</p>
+                                    </ModalHeader>
+                                    <ModalBody className="px-6 py-6">
+                                        <MaterialForm
+                                            onSuccess={() => {
+                                                refreshMaterials();
+                                                onClose();
+                                            }}
+                                            onCancel={onClose}
+                                        />
+                                    </ModalBody>
+                                </>
+                            )}
+                        </ModalContent>
+                    </Modal>
+
+                    {/* Target Audience Modal */}
+                    <Modal
+                        isOpen={isTargetAudienceModalOpen}
+                        onOpenChange={onTargetAudienceModalOpenChange}
+                        size="3xl"
+                        scrollBehavior="inside"
+                        placement="center"
+                        className="max-w-[95vw] max-h-[90vh]"
+                    >
+                        <ModalContent>
+                            {(onClose) => (
+                                <>
+                                    <ModalHeader className="flex flex-col gap-1 px-6 py-4 border-b">
+                                        <h2 className="text-xl font-semibold">Thêm đối tượng khách hàng mới</h2>
+                                        <p className="text-sm text-gray-600">Điền thông tin để tạo đối tượng khách hàng
+                                            mới</p>
+                                    </ModalHeader>
+                                    <ModalBody className="px-6 py-6">
+                                        <TargetAudienceForm
+                                            onSuccess={() => {
+                                                refreshTargetAudiences();
+                                                onClose();
+                                            }}
+                                            onCancel={onClose}
+                                        />
+                                    </ModalBody>
+                                </>
+                            )}
+                        </ModalContent>
+                    </Modal>
+
+                    {/* Edit Material Modal */}
+                    {selectedMaterialIdForEdit && (
+                        <EditMaterialModal
+                            isOpen={isEditMaterialModalOpen}
+                            onOpenChange={onEditMaterialModalOpenChange}
+                            materialId={selectedMaterialIdForEdit}
+                            onSuccess={() => {
+                                refreshMaterials();
+                                const currentMaterial = materials.find(m => m.id.toString() === selectedMaterialIdForEdit);
+                                if (currentMaterial) {
+                                    addToast({
+                                        title: "Thông báo",
+                                        description: "Dữ liệu chất liệu đã được cập nhật!",
+                                        color: "success"
+                                    });
+                                }
+                            }}
+                        />
+                    )}
+
+                    {/* Edit Target Audience Modal */}
+                    {selectedTargetAudienceIdForEdit && (
+                        <EditTargetAudienceModal
+                            isOpen={isEditTargetAudienceModalOpen}
+                            onOpenChange={onEditTargetAudienceModalOpenChange}
+                            targetAudienceId={selectedTargetAudienceIdForEdit}
+                            onSuccess={() => {
+                                refreshTargetAudiences();
+                                const currentTargetAudience = audiences.find(a => a.id.toString() === selectedTargetAudienceIdForEdit);
+                                if (currentTargetAudience) {
+                                    addToast({
+                                        title: "Thông báo",
+                                        description: "Dữ liệu đối tượng khách hàng đã được cập nhật!",
+                                        color: "success"
+                                    });
+                                }
+                            }}
+                        />
+                    )}
 
                     {/* Thumbnail Upload */}
                     <div className="bg-gray-50 p-3 rounded-lg border">
@@ -865,36 +1103,133 @@ export default function UpdateProductPage() {
 
                                                 <div className="mb-4">
                                                     <h6 className="font-medium mb-3 text-gray-700">📋 Thông tin cơ bản</h6>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                        <Input 
-                                                            label="SKU" 
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                        <Input
+                                                            label="SKU"
                                                             value={variant.sku}
                                                             onChange={e => handleVariantChange(idx, "sku", e.target.value)}
                                                             isRequired
                                                             variant="bordered"
                                                             placeholder="Mã SKU duy nhất"
+                                                            description={!variant.sku && productName && variant.colorId && variant.sizeId ? "SKU sẽ được tự động tạo." : "Nhập SKU hoặc để trống nếu tự động."}
                                                         />
-                                                        <Input 
-                                                            label="Giá (VNĐ)" 
-                                                            type="number" 
+                                                        <div className="space-y-2">
+                                                            <div className="flex items-end gap-1">
+                                                                <div className="flex-1">
+                                                                    <Autocomplete
+                                                                        label="Màu sắc"
+                                                                        placeholder="Chọn màu"
+                                                                        defaultItems={colors}
+                                                                        selectedKey={variant.colorId}
+                                                                        onSelectionChange={(key) => handleVariantChange(idx, "colorId", key as string)}
+                                                                        isRequired
+                                                                        variant="bordered"
+                                                                    >
+                                                                        {(color) => (
+                                                                            <AutocompleteItem
+                                                                                key={color.id.toString()}
+                                                                                textValue={color.name}>
+                                                                                {color.name}
+                                                                            </AutocompleteItem>
+                                                                        )}
+                                                                    </Autocomplete>
+                                                                </div>
+                                                                <div className="flex gap-1">
+                                                                    <Button
+                                                                        size="sm"
+                                                                        color="warning"
+                                                                        variant="bordered"
+                                                                        onPress={() => handleEditColor(idx)}
+                                                                        isDisabled={!variant.colorId}
+                                                                        className="min-w-8 px-1"
+                                                                        isIconOnly
+                                                                        aria-label="Sửa màu sắc"
+                                                                    >
+                                                                        ✏️
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        color="default"
+                                                                        variant="solid"
+                                                                        onPress={onColorModalOpen}
+                                                                        className="min-w-8 px-1"
+                                                                        isIconOnly
+                                                                        aria-label="Thêm màu sắc mới"
+                                                                    >
+                                                                        ➕
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="space-y-2">
+                                                            <div className="flex items-end gap-1">
+                                                                <div className="flex-1">
+                                                                    <Autocomplete
+                                                                        label="Kích thước"
+                                                                        placeholder="Chọn kích thước"
+                                                                        defaultItems={sizes}
+                                                                        selectedKey={variant.sizeId}
+                                                                        onSelectionChange={(key) => handleVariantChange(idx, "sizeId", key as string)}
+                                                                        isRequired
+                                                                        variant="bordered"
+                                                                    >
+                                                                        {(size) => (
+                                                                            <AutocompleteItem key={size.id.toString()}
+                                                                                              textValue={size.name}>
+                                                                                {size.name}
+                                                                            </AutocompleteItem>
+                                                                        )}
+                                                                    </Autocomplete>
+                                                                </div>
+                                                                <div className="flex gap-1">
+                                                                    <Button
+                                                                        size="sm"
+                                                                        color="warning"
+                                                                        variant="bordered"
+                                                                        onPress={() => handleEditSize(idx)}
+                                                                        isDisabled={!variant.sizeId}
+                                                                        className="min-w-8 px-1"
+                                                                        isIconOnly
+                                                                        aria-label="Sửa kích thước"
+                                                                    >
+                                                                        ✏️
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        color="default"
+                                                                        variant="solid"
+                                                                        onPress={onSizeModalOpen}
+                                                                        className="min-w-8 px-1"
+                                                                        isIconOnly
+                                                                        aria-label="Thêm kích thước mới"
+                                                                    >
+                                                                        ➕
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <Input
+                                                            label="Giá (VNĐ)"
+                                                            type="number"
                                                             value={variant.price}
                                                             onChange={e => handleVariantChange(idx, "price", e.target.value)}
                                                             isRequired
                                                             variant="bordered"
                                                             placeholder="0"
                                                         />
-                                                        <Input 
-                                                            label="Số lượng tồn kho" 
-                                                            type="number" 
+                                                        <Input
+                                                            label="Số lượng tồn kho"
+                                                            type="number"
                                                             value={variant.stockLevel}
                                                             onChange={e => handleVariantChange(idx, "stockLevel", e.target.value)}
                                                             isRequired
                                                             variant="bordered"
                                                             placeholder="0"
                                                         />
-                                                        <Input 
-                                                            label="Trọng lượng (gram)" 
-                                                            type="number" 
+                                                        <Input
+                                                            label="Trọng lượng (gram)"
+                                                            type="number"
                                                             value={variant.weight}
                                                             onChange={e => handleVariantChange(idx, "weight", e.target.value)}
                                                             isRequired
@@ -939,6 +1274,106 @@ export default function UpdateProductPage() {
                             </div>
                         </AccordionItem>
                     </Accordion>
+
+                    {/* Color Modal */}
+                    <Modal
+                        isOpen={isColorModalOpen}
+                        onOpenChange={onColorModalOpenChange}
+                        size="3xl"
+                        scrollBehavior="inside"
+                        placement="center"
+                        className="max-w-[95vw] max-h-[90vh]"
+                    >
+                        <ModalContent>
+                            {(onClose) => (
+                                <>
+                                    <ModalHeader className="flex flex-col gap-1 px-6 py-4 border-b">
+                                        <h2 className="text-xl font-semibold">Thêm màu sắc mới</h2>
+                                        <p className="text-sm text-gray-600">Điền thông tin để tạo màu sắc mới</p>
+                                    </ModalHeader>
+                                    <ModalBody className="px-6 py-6">
+                                        <ColorForm
+                                            onSuccess={() => {
+                                                refreshColors();
+                                                onClose();
+                                            }}
+                                            onCancel={onClose}
+                                        />
+                                    </ModalBody>
+                                </>
+                            )}
+                        </ModalContent>
+                    </Modal>
+
+                    {/* Edit Color Modal */}
+                    {selectedColorIdForEdit && (
+                        <EditColorModal
+                            isOpen={isEditColorModalOpen}
+                            onOpenChange={onEditColorModalOpenChange}
+                            colorId={selectedColorIdForEdit}
+                            onSuccess={() => {
+                                refreshColors();
+                                const currentColor = colors.find(c => c.id.toString() === selectedColorIdForEdit);
+                                if (currentColor) {
+                                    addToast({
+                                        title: "Thông báo",
+                                        description: "Dữ liệu màu sắc đã được cập nhật!",
+                                        color: "success"
+                                    });
+                                }
+                            }}
+                        />
+                    )}
+
+                    {/* Size Modal */}
+                    <Modal
+                        isOpen={isSizeModalOpen}
+                        onOpenChange={onSizeModalOpenChange}
+                        size="3xl"
+                        scrollBehavior="inside"
+                        placement="center"
+                        className="max-w-[95vw] max-h-[90vh]"
+                    >
+                        <ModalContent>
+                            {(onClose) => (
+                                <>
+                                    <ModalHeader className="flex flex-col gap-1 px-6 py-4 border-b">
+                                        <h2 className="text-xl font-semibold">Thêm kích thước mới</h2>
+                                        <p className="text-sm text-gray-600">Điền thông tin để tạo kích thước mới</p>
+                                    </ModalHeader>
+                                    <ModalBody className="px-6 py-6">
+                                        <SizeForm
+                                            onSuccess={() => {
+                                                refreshSizes();
+                                                onClose();
+                                            }}
+                                            onCancel={onClose}
+                                        />
+                                    </ModalBody>
+                                </>
+                            )}
+                        </ModalContent>
+                    </Modal>
+
+                    {/* Edit Size Modal */}
+                    {selectedSizeIdForEdit && (
+                        <EditSizeModal
+                            isOpen={isEditSizeModalOpen}
+                            onOpenChange={onEditSizeModalOpenChange}
+                            sizeId={selectedSizeIdForEdit}
+                            onSuccess={() => {
+                                refreshSizes();
+                                const currentSize = sizes.find(s => s.id.toString() === selectedSizeIdForEdit);
+                                if (currentSize) {
+                                    addToast({
+                                        title: "Thông báo",
+                                        description: "Dữ liệu kích thước đã được cập nhật!",
+                                        color: "success"
+                                    });
+                                }
+                            }}
+                        />
+                    )}
 
                     {formError && (
                         <p className="text-red-600 text-sm p-3 bg-red-100 border border-red-300 rounded-md"
