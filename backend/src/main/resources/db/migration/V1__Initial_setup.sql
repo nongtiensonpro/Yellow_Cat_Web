@@ -57,7 +57,6 @@ CREATE TABLE colors
 (
     color_id    SERIAL PRIMARY KEY,
     color_name  VARCHAR(50) UNIQUE NOT NULL,
-    hex_value   VARCHAR(7) UNIQUE  NOT NULL, -- Mã màu HEX
     description TEXT,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -324,13 +323,13 @@ VALUES ('Nam', 'Sản phẩm dành cho nam giới'),
        ('Unisex', 'Sản phẩm phù hợp cho cả nam và nữ');
 
 -- Dữ liệu cho bảng colors (Màu sắc)
-INSERT INTO colors (color_name, hex_value, description)
-VALUES ('Đen', '#000000', 'Màu đen cơ bản'),
-       ('Trắng', '#FFFFFF', 'Màu trắng tinh khiết'),
-       ('Xanh Navy', '#000080', 'Màu xanh navy đậm'),
-       ('Xanh Dương', '#0000FF', 'Màu xanh dương'),
-       ('Xám', '#808080', 'Màu xám trung tính'),
-       ('Đỏ', '#FF0000', 'Màu đỏ nổi bật');
+INSERT INTO colors (color_name, description)
+VALUES ('Đen', 'Màu đen cơ bản'),
+       ('Trắng', 'Màu trắng tinh khiết'),
+       ('Xanh Navy', 'Màu xanh navy đậm'),
+       ('Xanh Dương', 'Màu xanh dương'),
+       ('Xám', 'Màu xám trung tính'),
+       ('Đỏ', 'Màu đỏ nổi bật');
 
 -- Dữ liệu cho bảng sizes (Kích thước)
 INSERT INTO sizes (size_name, description)
