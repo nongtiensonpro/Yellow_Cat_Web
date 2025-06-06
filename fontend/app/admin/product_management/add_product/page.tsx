@@ -22,6 +22,14 @@ import BrandForm from "@/components/product/BrandForm/BrandForm";
 import EditBrandModal from "@/components/product/BrandForm/EditBrandModal";
 import CategoryForm from "@/components/product/CategoryForm/CategoryForm";
 import EditCategoryModal from "@/components/product/CategoryForm/EditCategoryModal";
+import MaterialForm from "@/components/product/MaterialForm/MaterialFrom";
+import EditMaterialModal from "@/components/product/MaterialForm/EditMaterialModal";
+import TargetAudienceForm from "@/components/product/TargetAudiencesForm/AudiencesForm";
+import EditTargetAudienceModal from "@/components/product/TargetAudiencesForm/EditTargetAudience";
+import ColorForm from "@/components/product/ColorForm/ColorFrom";
+import EditColorModal from "@/components/product/ColorForm/EditColorFrom";
+import SizeForm from "@/components/product/SizeForm/SizeForm";
+import EditSizeModal from "@/components/product/SizeForm/EditSizeForm";
 
 interface Brand {
     id: number;
@@ -72,17 +80,32 @@ export default function AddProductPage() {
     const router = useRouter();
     const {data: session} = useSession();
 
-    // Separate modal states for Brand and Category
+    // Separate modal states for Brand, Category, Material, Target Audience, Color and Size
     const {isOpen: isBrandModalOpen, onOpen: onBrandModalOpen, onOpenChange: onBrandModalOpenChange} = useDisclosure();
     const {isOpen: isCategoryModalOpen, onOpen: onCategoryModalOpen, onOpenChange: onCategoryModalOpenChange} = useDisclosure();
+    const {isOpen: isMaterialModalOpen, onOpen: onMaterialModalOpen, onOpenChange: onMaterialModalOpenChange} = useDisclosure();
+    const {isOpen: isTargetAudienceModalOpen, onOpen: onTargetAudienceModalOpen, onOpenChange: onTargetAudienceModalOpenChange} = useDisclosure();
+    const {isOpen: isColorModalOpen, onOpen: onColorModalOpen, onOpenChange: onColorModalOpenChange} = useDisclosure();
+    const {isOpen: isSizeModalOpen, onOpen: onSizeModalOpen, onOpenChange: onSizeModalOpenChange} = useDisclosure();
 
-    // Edit Brand Modal state
+    // Edit Modal states
     const {isOpen: isEditBrandModalOpen, onOpen: onEditBrandModalOpen, onOpenChange: onEditBrandModalOpenChange} = useDisclosure();
     const [selectedBrandIdForEdit, setSelectedBrandIdForEdit] = useState<string | null>(null);
 
-    // Edit Category Modal state
     const {isOpen: isEditCategoryModalOpen, onOpen: onEditCategoryModalOpen, onOpenChange: onEditCategoryModalOpenChange} = useDisclosure();
     const [selectedCategoryIdForEdit, setSelectedCategoryIdForEdit] = useState<string | null>(null);
+
+    const {isOpen: isEditMaterialModalOpen, onOpen: onEditMaterialModalOpen, onOpenChange: onEditMaterialModalOpenChange} = useDisclosure();
+    const [selectedMaterialIdForEdit, setSelectedMaterialIdForEdit] = useState<string | null>(null);
+
+    const {isOpen: isEditTargetAudienceModalOpen, onOpen: onEditTargetAudienceModalOpen, onOpenChange: onEditTargetAudienceModalOpenChange} = useDisclosure();
+    const [selectedTargetAudienceIdForEdit, setSelectedTargetAudienceIdForEdit] = useState<string | null>(null);
+
+    const {isOpen: isEditColorModalOpen, onOpen: onEditColorModalOpen, onOpenChange: onEditColorModalOpenChange} = useDisclosure();
+    const [selectedColorIdForEdit, setSelectedColorIdForEdit] = useState<string | null>(null);
+
+    const {isOpen: isEditSizeModalOpen, onOpen: onEditSizeModalOpen, onOpenChange: onEditSizeModalOpenChange} = useDisclosure();
+    const [selectedSizeIdForEdit, setSelectedSizeIdForEdit] = useState<string | null>(null);
 
     // State cho form sản phẩm
     const [productName, setProductName] = useState("");
@@ -186,6 +209,58 @@ export default function AddProductPage() {
         }
     };
 
+    // Function to refresh materials data
+    const refreshMaterials = async () => {
+        try {
+            const materialRes = await fetch("http://localhost:8080/api/materials?page=0&size=1000");
+            if (materialRes.ok) {
+                const materialData = await materialRes.json();
+                setMaterials(materialData.data.content || []);
+            }
+        } catch (err) {
+            console.error("Error refreshing materials:", err);
+        }
+    };
+
+    // Function to refresh target audiences data
+    const refreshTargetAudiences = async () => {
+        try {
+            const audienceRes = await fetch("http://localhost:8080/api/target-audiences?page=0&size=1000");
+            if (audienceRes.ok) {
+                const audienceData = await audienceRes.json();
+                setAudiences(audienceData.data.content || []);
+            }
+        } catch (err) {
+            console.error("Error refreshing target audiences:", err);
+        }
+    };
+
+    // Function to refresh colors data
+    const refreshColors = async () => {
+        try {
+            const colorRes = await fetch("http://localhost:8080/api/colors?page=0&size=1000");
+            if (colorRes.ok) {
+                const colorData = await colorRes.json();
+                setColors(colorData.data.content || []);
+            }
+        } catch (err) {
+            console.error("Error refreshing colors:", err);
+        }
+    };
+
+    // Function to refresh sizes data
+    const refreshSizes = async () => {
+        try {
+            const sizeRes = await fetch("http://localhost:8080/api/sizes?page=0&size=1000");
+            if (sizeRes.ok) {
+                const sizeData = await sizeRes.json();
+                setSizes(sizeData.data.content || []);
+            }
+        } catch (err) {
+            console.error("Error refreshing sizes:", err);
+        }
+    };
+
     // Function to handle edit brand modal
     const handleEditBrand = () => {
         if (brandId) {
@@ -209,6 +284,64 @@ export default function AddProductPage() {
             addToast({
                 title: "Lưu ý",
                 description: "Vui lòng chọn danh mục trước khi chỉnh sửa.",
+                color: "warning"
+            });
+        }
+    };
+
+    // Function to handle edit material modal
+    const handleEditMaterial = () => {
+        if (materialId) {
+            setSelectedMaterialIdForEdit(materialId);
+            onEditMaterialModalOpen();
+        } else {
+            addToast({
+                title: "Lưu ý",
+                description: "Vui lòng chọn chất liệu trước khi chỉnh sửa.",
+                color: "warning"
+            });
+        }
+    };
+
+    // Function to handle edit target audience modal
+    const handleEditTargetAudience = () => {
+        if (targetAudienceId) {
+            setSelectedTargetAudienceIdForEdit(targetAudienceId);
+            onEditTargetAudienceModalOpen();
+        } else {
+            addToast({
+                title: "Lưu ý",
+                description: "Vui lòng chọn đối tượng khách hàng trước khi chỉnh sửa.",
+                color: "warning"
+            });
+        }
+    };
+
+    // Function to handle edit color modal for specific variant
+    const handleEditColor = (variantIndex: number) => {
+        const variant = variants[variantIndex];
+        if (variant && variant.colorId) {
+            setSelectedColorIdForEdit(variant.colorId);
+            onEditColorModalOpen();
+        } else {
+            addToast({
+                title: "Lưu ý",
+                description: "Vui lòng chọn màu sắc cho biến thể này trước khi chỉnh sửa.",
+                color: "warning"
+            });
+        }
+    };
+
+    // Function to handle edit size modal for specific variant
+    const handleEditSize = (variantIndex: number) => {
+        const variant = variants[variantIndex];
+        if (variant && variant.sizeId) {
+            setSelectedSizeIdForEdit(variant.sizeId);
+            onEditSizeModalOpen();
+        } else {
+            addToast({
+                title: "Lưu ý",
+                description: "Vui lòng chọn kích thước cho biến thể này trước khi chỉnh sửa.",
                 color: "warning"
             });
         }
@@ -291,7 +424,8 @@ export default function AddProductPage() {
             setFormError("Vui lòng thêm ít nhất một biến thể sản phẩm.");
             return false;
         }
-        for (const [index, v] of variants.entries()) {
+        for (let index = 0; index < variants.length; index++) {
+            const v = variants[index];
             if (!v.sku.trim() && !((v.colorId && v.sizeId && productName))) {
                 setFormError(`Vui lòng nhập SKU hoặc chọn Màu/Kích thước để tự tạo SKU cho biến thể #${index + 1}.`);
                 return false;
@@ -600,46 +734,208 @@ export default function AddProductPage() {
                     )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Autocomplete
-                            label="Chất liệu"
-                            placeholder="Chọn chất liệu"
-                            defaultItems={materials}
-                            selectedKey={materialId}
-                            onSelectionChange={(key) => setMaterialId(key as string)}
-                            isRequired
-                        >
-                            {(item) => (
-                                <AutocompleteItem key={item.id.toString()} textValue={item.name}>
-                                    <div className="flex flex-col">
-                                        <span className="font-medium">{item.name}</span>
-                                        {item.description && (
-                                            <span className="text-sm text-gray-500">{item.description}</span>
+                        <div className="space-y-2">
+                            <div className="flex items-end gap-2">
+                                <div className="flex-1">
+                                    <Autocomplete
+                                        label="Chất liệu"
+                                        placeholder="Chọn chất liệu"
+                                        defaultItems={materials}
+                                        selectedKey={materialId}
+                                        onSelectionChange={(key) => setMaterialId(key as string)}
+                                        isRequired
+                                    >
+                                        {(item) => (
+                                            <AutocompleteItem key={item.id.toString()} textValue={item.name}>
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium">{item.name}</span>
+                                                    {item.description && (
+                                                        <span className="text-sm text-gray-500">{item.description}</span>
+                                                    )}
+                                                </div>
+                                            </AutocompleteItem>
                                         )}
-                                    </div>
-                                </AutocompleteItem>
-                            )}
-                        </Autocomplete>
+                                    </Autocomplete>
+                                </div>
+                                <div className="flex gap-1">
+                                    <Button
+                                        size="lg"
+                                        color="warning"
+                                        variant="bordered"
+                                        onPress={handleEditMaterial}
+                                        isDisabled={!materialId}
+                                        className="min-w-unit-10 px-2"
+                                        isIconOnly
+                                        aria-label="Sửa chất liệu"
+                                    >
+                                        ✏️
+                                    </Button>
+                                    <Button
+                                        size="lg"
+                                        color="default"
+                                        variant="solid"
+                                        onPress={onMaterialModalOpen}
+                                        className="min-w-unit-10 px-2"
+                                        isIconOnly
+                                        aria-label="Thêm chất liệu mới"
+                                    >
+                                        ➕
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
 
-                        <Autocomplete
-                            label="Đối tượng khách hàng"
-                            placeholder="Chọn đối tượng khách hàng"
-                            defaultItems={audiences}
-                            selectedKey={targetAudienceId}
-                            onSelectionChange={(key) => setTargetAudienceId(key as string)}
-                            isRequired
-                        >
-                            {(item) => (
-                                <AutocompleteItem key={item.id.toString()} textValue={item.name}>
-                                    <div className="flex flex-col">
-                                        <span className="font-medium">{item.name}</span>
-                                        {item.description && (
-                                            <span className="text-sm text-gray-500">{item.description}</span>
+                        <div className="space-y-2">
+                            <div className="flex items-end gap-2">
+                                <div className="flex-1">
+                                    <Autocomplete
+                                        label="Đối tượng khách hàng"
+                                        placeholder="Chọn đối tượng khách hàng"
+                                        defaultItems={audiences}
+                                        selectedKey={targetAudienceId}
+                                        onSelectionChange={(key) => setTargetAudienceId(key as string)}
+                                        isRequired
+                                    >
+                                        {(item) => (
+                                            <AutocompleteItem key={item.id.toString()} textValue={item.name}>
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium">{item.name}</span>
+                                                    {item.description && (
+                                                        <span className="text-sm text-gray-500">{item.description}</span>
+                                                    )}
+                                                </div>
+                                            </AutocompleteItem>
                                         )}
-                                    </div>
-                                </AutocompleteItem>
-                            )}
-                        </Autocomplete>
+                                    </Autocomplete>
+                                </div>
+                                <div className="flex gap-1">
+                                    <Button
+                                        size="lg"
+                                        color="warning"
+                                        variant="bordered"
+                                        onPress={handleEditTargetAudience}
+                                        isDisabled={!targetAudienceId}
+                                        className="min-w-unit-10 px-2"
+                                        isIconOnly
+                                        aria-label="Sửa đối tượng khách hàng"
+                                    >
+                                        ✏️
+                                    </Button>
+                                    <Button
+                                        size="lg"
+                                        color="default"
+                                        variant="solid"
+                                        onPress={onTargetAudienceModalOpen}
+                                        className="min-w-unit-10 px-2"
+                                        isIconOnly
+                                        aria-label="Thêm đối tượng khách hàng mới"
+                                    >
+                                        ➕
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
+                    {/* Material Modal */}
+                    <Modal
+                        isOpen={isMaterialModalOpen}
+                        onOpenChange={onMaterialModalOpenChange}
+                        size="3xl"
+                        scrollBehavior="inside"
+                        placement="center"
+                        className="max-w-[95vw] max-h-[90vh]"
+                    >
+                        <ModalContent>
+                            {(onClose) => (
+                                <>
+                                    <ModalHeader className="flex flex-col gap-1 px-6 py-4 border-b">
+                                        <h2 className="text-xl font-semibold">Thêm chất liệu mới</h2>
+                                        <p className="text-sm text-gray-600">Điền thông tin để tạo chất liệu mới</p>
+                                    </ModalHeader>
+                                    <ModalBody className="px-6 py-6">
+                                        <MaterialForm
+                                            onSuccess={() => {
+                                                refreshMaterials();
+                                                onClose();
+                                            }}
+                                            onCancel={onClose}
+                                        />
+                                    </ModalBody>
+                                </>
+                            )}
+                        </ModalContent>
+                    </Modal>
+
+                    {/* Target Audience Modal */}
+                    <Modal
+                        isOpen={isTargetAudienceModalOpen}
+                        onOpenChange={onTargetAudienceModalOpenChange}
+                        size="3xl"
+                        scrollBehavior="inside"
+                        placement="center"
+                        className="max-w-[95vw] max-h-[90vh]"
+                    >
+                        <ModalContent>
+                            {(onClose) => (
+                                <>
+                                    <ModalHeader className="flex flex-col gap-1 px-6 py-4 border-b">
+                                        <h2 className="text-xl font-semibold">Thêm đối tượng khách hàng mới</h2>
+                                        <p className="text-sm text-gray-600">Điền thông tin để tạo đối tượng khách hàng mới</p>
+                                    </ModalHeader>
+                                    <ModalBody className="px-6 py-6">
+                                        <TargetAudienceForm
+                                            onSuccess={() => {
+                                                refreshTargetAudiences();
+                                                onClose();
+                                            }}
+                                            onCancel={onClose}
+                                        />
+                                    </ModalBody>
+                                </>
+                            )}
+                        </ModalContent>
+                    </Modal>
+
+                    {/* Edit Material Modal */}
+                    {selectedMaterialIdForEdit && (
+                        <EditMaterialModal
+                            isOpen={isEditMaterialModalOpen}
+                            onOpenChange={onEditMaterialModalOpenChange}
+                            materialId={selectedMaterialIdForEdit}
+                            onSuccess={() => {
+                                refreshMaterials();
+                                const currentMaterial = materials.find(m => m.id.toString() === selectedMaterialIdForEdit);
+                                if (currentMaterial) {
+                                    addToast({
+                                        title: "Thông báo",
+                                        description: "Dữ liệu chất liệu đã được cập nhật!",
+                                        color: "success"
+                                    });
+                                }
+                            }}
+                        />
+                    )}
+
+                    {/* Edit Target Audience Modal */}
+                    {selectedTargetAudienceIdForEdit && (
+                        <EditTargetAudienceModal
+                            isOpen={isEditTargetAudienceModalOpen}
+                            onOpenChange={onEditTargetAudienceModalOpenChange}
+                            targetAudienceId={selectedTargetAudienceIdForEdit}
+                            onSuccess={() => {
+                                refreshTargetAudiences();
+                                const currentTargetAudience = audiences.find(a => a.id.toString() === selectedTargetAudienceIdForEdit);
+                                if (currentTargetAudience) {
+                                    addToast({
+                                        title: "Thông báo",
+                                        description: "Dữ liệu đối tượng khách hàng đã được cập nhật!",
+                                        color: "success"
+                                    });
+                                }
+                            }}
+                        />
+                    )}
 
                     <div>
                         <label className="text-sm font-medium text-gray-700 mb-1 block">Ảnh bìa sản phẩm
@@ -710,36 +1006,101 @@ export default function AddProductPage() {
                                                    variant="bordered" placeholder="Tự động tạo hoặc nhập"
                                                    description={!variant.sku && productName && variant.colorId && variant.sizeId ? "SKU sẽ được tự động tạo." : "Nhập SKU hoặc để trống nếu tự động."}
                                             />
-                                            <Autocomplete
-                                                label="Màu sắc"
-                                                placeholder="Chọn màu"
-                                                defaultItems={colors}
-                                                selectedKey={variant.colorId}
-                                                onSelectionChange={(key) => handleVariantChange(idx, "colorId", key as string)}
-                                                isRequired
-                                                variant="bordered"
-                                            >
-                                                {(color) => (
-                                                    <AutocompleteItem key={color.id.toString()} textValue={color.name}>
-                                                        {color.name}
-                                                    </AutocompleteItem>
-                                                )}
-                                            </Autocomplete>
-                                            <Autocomplete
-                                                label="Kích thước"
-                                                placeholder="Chọn kích thước"
-                                                defaultItems={sizes}
-                                                selectedKey={variant.sizeId}
-                                                onSelectionChange={(key) => handleVariantChange(idx, "sizeId", key as string)}
-                                                isRequired
-                                                variant="bordered"
-                                            >
-                                                {(size) => (
-                                                    <AutocompleteItem key={size.id.toString()} textValue={size.name}>
-                                                        {size.name}
-                                                    </AutocompleteItem>
-                                                )}
-                                            </Autocomplete>
+                                            
+                                            <div className="space-y-2">
+                                                <div className="flex items-end gap-1">
+                                                    <div className="flex-1">
+                                                        <Autocomplete
+                                                            label="Màu sắc"
+                                                            placeholder="Chọn màu"
+                                                            defaultItems={colors}
+                                                            selectedKey={variant.colorId}
+                                                            onSelectionChange={(key) => handleVariantChange(idx, "colorId", key as string)}
+                                                            isRequired
+                                                            variant="bordered"
+                                                        >
+                                                            {(color) => (
+                                                                <AutocompleteItem key={color.id.toString()} textValue={color.name}>
+                                                                    {color.name}
+                                                                </AutocompleteItem>
+                                                            )}
+                                                        </Autocomplete>
+                                                    </div>
+                                                    <div className="flex gap-1">
+                                                        <Button
+                                                            size="sm"
+                                                            color="warning"
+                                                            variant="bordered"
+                                                            onPress={() => handleEditColor(idx)}
+                                                            isDisabled={!variant.colorId}
+                                                            className="min-w-8 px-1"
+                                                            isIconOnly
+                                                            aria-label="Sửa màu sắc"
+                                                        >
+                                                            ✏️
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            color="default"
+                                                            variant="solid"
+                                                            onPress={onColorModalOpen}
+                                                            className="min-w-8 px-1"
+                                                            isIconOnly
+                                                            aria-label="Thêm màu sắc mới"
+                                                        >
+                                                            ➕
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="space-y-2">
+                                                <div className="flex items-end gap-1">
+                                                    <div className="flex-1">
+                                                        <Autocomplete
+                                                            label="Kích thước"
+                                                            placeholder="Chọn kích thước"
+                                                            defaultItems={sizes}
+                                                            selectedKey={variant.sizeId}
+                                                            onSelectionChange={(key) => handleVariantChange(idx, "sizeId", key as string)}
+                                                            isRequired
+                                                            variant="bordered"
+                                                        >
+                                                            {(size) => (
+                                                                <AutocompleteItem key={size.id.toString()} textValue={size.name}>
+                                                                    {size.name}
+                                                                </AutocompleteItem>
+                                                            )}
+                                                        </Autocomplete>
+                                                    </div>
+                                                    <div className="flex gap-1">
+                                                        <Button
+                                                            size="sm"
+                                                            color="warning"
+                                                            variant="bordered"
+                                                            onPress={() => handleEditSize(idx)}
+                                                            isDisabled={!variant.sizeId}
+                                                            className="min-w-8 px-1"
+                                                            isIconOnly
+                                                            aria-label="Sửa kích thước"
+                                                        >
+                                                            ✏️
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            color="default"
+                                                            variant="solid"
+                                                            onPress={onSizeModalOpen}
+                                                            className="min-w-8 px-1"
+                                                            isIconOnly
+                                                            aria-label="Thêm kích thước mới"
+                                                        >
+                                                            ➕
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
                                             <Input label="Giá (VNĐ)" type="number" value={variant.price}
                                                    onChange={e => handleVariantChange(idx, "price", e.target.value)}
                                                    isRequired variant="bordered" min="0" startContent="₫"/>
@@ -786,6 +1147,106 @@ export default function AddProductPage() {
                             </div>
                         </AccordionItem>
                     </Accordion>
+
+                    {/* Color Modal */}
+                    <Modal
+                        isOpen={isColorModalOpen}
+                        onOpenChange={onColorModalOpenChange}
+                        size="3xl"
+                        scrollBehavior="inside"
+                        placement="center"
+                        className="max-w-[95vw] max-h-[90vh]"
+                    >
+                        <ModalContent>
+                            {(onClose) => (
+                                <>
+                                    <ModalHeader className="flex flex-col gap-1 px-6 py-4 border-b">
+                                        <h2 className="text-xl font-semibold">Thêm màu sắc mới</h2>
+                                        <p className="text-sm text-gray-600">Điền thông tin để tạo màu sắc mới</p>
+                                    </ModalHeader>
+                                    <ModalBody className="px-6 py-6">
+                                        <ColorForm
+                                            onSuccess={() => {
+                                                refreshColors();
+                                                onClose();
+                                            }}
+                                            onCancel={onClose}
+                                        />
+                                    </ModalBody>
+                                </>
+                            )}
+                        </ModalContent>
+                    </Modal>
+
+                    {/* Edit Color Modal */}
+                    {selectedColorIdForEdit && (
+                        <EditColorModal
+                            isOpen={isEditColorModalOpen}
+                            onOpenChange={onEditColorModalOpenChange}
+                            colorId={selectedColorIdForEdit}
+                            onSuccess={() => {
+                                refreshColors();
+                                const currentColor = colors.find(c => c.id.toString() === selectedColorIdForEdit);
+                                if (currentColor) {
+                                    addToast({
+                                        title: "Thông báo",
+                                        description: "Dữ liệu màu sắc đã được cập nhật!",
+                                        color: "success"
+                                    });
+                                }
+                            }}
+                        />
+                    )}
+
+                    {/* Size Modal */}
+                    <Modal
+                        isOpen={isSizeModalOpen}
+                        onOpenChange={onSizeModalOpenChange}
+                        size="3xl"
+                        scrollBehavior="inside"
+                        placement="center"
+                        className="max-w-[95vw] max-h-[90vh]"
+                    >
+                        <ModalContent>
+                            {(onClose) => (
+                                <>
+                                    <ModalHeader className="flex flex-col gap-1 px-6 py-4 border-b">
+                                        <h2 className="text-xl font-semibold">Thêm kích thước mới</h2>
+                                        <p className="text-sm text-gray-600">Điền thông tin để tạo kích thước mới</p>
+                                    </ModalHeader>
+                                    <ModalBody className="px-6 py-6">
+                                        <SizeForm
+                                            onSuccess={() => {
+                                                refreshSizes();
+                                                onClose();
+                                            }}
+                                            onCancel={onClose}
+                                        />
+                                    </ModalBody>
+                                </>
+                            )}
+                        </ModalContent>
+                    </Modal>
+
+                    {/* Edit Size Modal */}
+                    {selectedSizeIdForEdit && (
+                        <EditSizeModal
+                            isOpen={isEditSizeModalOpen}
+                            onOpenChange={onEditSizeModalOpenChange}
+                            sizeId={selectedSizeIdForEdit}
+                            onSuccess={() => {
+                                refreshSizes();
+                                const currentSize = sizes.find(s => s.id.toString() === selectedSizeIdForEdit);
+                                if (currentSize) {
+                                    addToast({
+                                        title: "Thông báo",
+                                        description: "Dữ liệu kích thước đã được cập nhật!",
+                                        color: "success"
+                                    });
+                                }
+                            }}
+                        />
+                    )}
 
                     {formError && (
                         <p className="text-red-600 text-sm p-3 bg-red-100 border border-red-300 rounded-md"
