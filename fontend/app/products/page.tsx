@@ -1,31 +1,43 @@
-//
 // "use client";
-//
-// import React, { useEffect, useState } from 'react';
-// import styled from 'styled-components';
+// import React, { useEffect, useState, useMemo } from 'react';
 // import Link from 'next/link';
 // import { CldImage } from "next-cloudinary";
 // import Image from "next/image";
+// import {
+//     Card,
+//     CardBody,
+//     CardHeader,
+//     Button,
+//     Chip,
+//     Skeleton,
+//     Divider,
+//     Badge,
+//     Input,
+//     CheckboxGroup,
+//     Checkbox,
+//     Select,
+//     SelectItem,
+//     RadioGroup,
+//     Radio,
+// } from "@heroui/react";
+// import {
+//     CurrencyDollarIcon,
+//     BuildingStorefrontIcon,
+//     MagnifyingGlassIcon,
+// } from "@heroicons/react/24/outline";
+// import { useTheme } from 'next-themes';
 //
-// // --- Interfaces và Types ---
 // interface Product {
 //     productId: number;
 //     productName: string;
-//     description: string;
 //     purchases: number;
-//     createdAt: string;
-//     updatedAt: string;
-//     categoryId: number;
 //     categoryName: string;
-//     brandId: number;
 //     brandName: string;
-//     brandInfo: string;
 //     logoPublicId: string;
 //     minPrice: number | null;
 //     totalStock: number | null;
 //     thumbnail: string | null;
-//     activePromotions: string | null;
-//     isActive: boolean;
+//     sizes: number[]; // Product sizes array
 // }
 //
 // interface PageInfo {
@@ -46,77 +58,67 @@
 //     message: string;
 //     data: ApiResponseData;
 // }
-// // --- Kết thúc Interfaces và Types ---
-//
 //
 // const ProductList = () => {
 //     const [products, setProducts] = useState<Product[]>([]);
 //     const [loading, setLoading] = useState<boolean>(true);
 //     const [error, setError] = useState<string | null>(null);
-//     const [currentPage, setCurrentPage] = useState(1);
-//     const [totalPages, setTotalPages] = useState(1);
+//     const { theme, setTheme } = useTheme();
 //
-//     // --- State cho các bộ lọc ---
-//     const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+//     // State for filters
+//     const [searchTerm, setSearchTerm] = useState<string>('');
 //     const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-//     const [minPriceFilter, setMinPriceFilter] = useState<string>('');
-//     const [maxPriceFilter, setMaxPriceFilter] = useState<string>('');
-//     const [selectedCategory, setSelectedCategory] = useState<string | null>(null); // Để xử lý radio cho category
-//     // --- Kết thúc State cho các bộ lọc ---
+//     const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+//     const [priceRange, setPriceRange] = useState<string[]>([]);
 //
-//     // Dữ liệu giả định cho các bộ lọc (trong thực tế có thể lấy từ API)
-//     const brands = ["Nike", "Adidas", "Puma"];
-//     const colors = ["Trắng", "Đen"]; // Hiện tại chưa dùng đến, có thể thêm vào logic lọc sau
-//     const sizes = ["39", "40", "41", "42", "43", "44", "45"];
-//     const materials = ["Canvas", "Vải"]; // Hiện tại chưa dùng đến, có thể thêm vào logic lọc sau
-//     const categories = ["Running", "Sneaker", "Basketball"]; // Dữ liệu giả định cho category
+//     // State for sorting
+//     const [sortOption, setSortOption] = useState<string>('default');
+//
+//     // Add state for fetched filter options
+//     const [fetchedBrands, setFetchedBrands] = useState<string[]>([]);
+//
+//     // Define price ranges
+//     const PRICE_RANGES = [
+//         { key: 'under-600k', label: 'Giá dưới 600.000đ', min: 0, max: 600000 },
+//         { key: '600k-1m', label: '600.000đ - 1.000.000đ', min: 600000, max: 1000000 },
+//         { key: '1m-2m', label: '1.000.000đ - 2.000.000đ', min: 1000000, max: 2000000 },
+//         { key: 'over-2m', label: 'Giá trên 2.000.000đ', min: 2000000, max: Infinity },
+//     ];
+//
+//
+//     const SIZE_OPTIONS = ["39", "40", "41", "42", "43", "44"];
 //
 //     useEffect(() => {
-//         const fetchProducts = async (page: number) => {
-//             setLoading(true);
+//         const fetchFilterOptions = async () => {
 //             try {
-//                 const queryParams = new URLSearchParams();
-//                 queryParams.append('page', (page - 1).toString());
-//                 queryParams.append('size', '12');
-//
-//                 // Thêm tham số lọc thương hiệu
-//                 if (selectedBrands.length > 0) {
-//                     selectedBrands.forEach(brand => queryParams.append('brandName', brand));
+//                 // Fetch brands
+//                 const brandsRes = await fetch('http://localhost:8080/api/brands');
+//                 if (!brandsRes.ok) throw new Error('Failed to fetch brands');
+//                 const brandsData = await brandsRes.json();
+//                 if (brandsData.status === 200 && brandsData.data) {
+//                     setFetchedBrands(brandsData.data);
+//                 } else {
+//                     console.error('API Error fetching brands:', brandsData.message);
 //                 }
 //
-//                 // Thêm tham số lọc kích thước
-//                 if (selectedSizes.length > 0) {
-//                     selectedSizes.forEach(size => queryParams.append('size', size));
-//                 }
+//             } catch (err) {
+//                 console.error("Failed to fetch filter options:", err);
+//             }
+//         };
+//         fetchFilterOptions();
+//     }, []);
 //
-//                 // Thêm tham số lọc giá
-//                 if (minPriceFilter !== '') {
-//                     queryParams.append('minPrice', minPriceFilter);
-//                 }
-//                 if (maxPriceFilter !== '') {
-//                     queryParams.append('maxPrice', maxPriceFilter);
-//                 }
-//
-//                 // Thêm tham số lọc Category (radio button)
-//                 if (selectedCategory) {
-//                     queryParams.append('categoryName', selectedCategory);
-//                 }
-//
-//                 // Tùy chọn: Thêm tham số sắp xếp (nếu bạn muốn triển khai)
-//                 // const sortOrder = document.getElementById('sort').value;
-//                 // if (sortOrder) {
-//                 //     queryParams.append('sort', sortOrder);
-//                 // }
-//
-//                 const response = await fetch(`http://localhost:8080/api/products?${queryParams.toString()}`);
+//     useEffect(() => {
+//         const fetchProducts = async () => {
+//             try {
+//                 setLoading(true);
+//                 const response = await fetch('http://localhost:8080/api/products');
 //                 if (!response.ok) {
 //                     throw new Error('Failed to fetch products');
 //                 }
 //                 const data: ApiResponse = await response.json();
 //                 if (data.status === 200 && data.data && data.data.content) {
-//                     const activeProducts = data.data.content.filter(product => product.isActive);
-//                     setProducts(activeProducts);
-//                     setTotalPages(data.data.page.totalPages); // Cập nhật tổng số trang
+//                     setProducts(data.data.content);
 //                 } else {
 //                     throw new Error(data.message || 'Failed to fetch products');
 //                 }
@@ -127,680 +129,391 @@
 //             }
 //         };
 //
-//         fetchProducts(currentPage);
-//         // Dependencies cho useEffect
-//     }, [currentPage, selectedBrands, selectedSizes, minPriceFilter, maxPriceFilter, selectedCategory]);
+//         fetchProducts();
+//     }, []);
 //
-//     // Format giá tiền
 //     const formatPrice = (price: number | null) => {
 //         if (price === null) return 'Liên hệ';
 //         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
 //     };
 //
-//     // --- Hàm xử lý sự kiện cho các bộ lọc ---
-//     const handleCheckboxChange = (filterType: 'brand' | 'size' | 'color' | 'material', value: string, isChecked: boolean) => {
-//         setCurrentPage(1); // Reset về trang 1 khi áp dụng bộ lọc mới
-//         if (filterType === 'brand') {
-//             setSelectedBrands(prev =>
-//                 isChecked ? [...prev, value] : prev.filter(item => item !== value)
-//             );
-//         } else if (filterType === 'size') {
-//             setSelectedSizes(prev =>
-//                 isChecked ? [...prev, value] : prev.filter(item => item !== value)
-//             );
-//         }
-//         // Có thể thêm logic cho 'color' và 'material' nếu cần
+//     const getStockStatus = (stock: number | null) => {
+//         if (!stock || stock === 0) return { color: 'danger' as const, text: 'Hết hàng' };
+//         if (stock < 10) return { color: 'warning' as const, text: 'Sắp hết' };
+//         return { color: 'success' as const, text: 'Còn hàng' };
 //     };
 //
-//     const handleRadioChange = (filterType: 'category', value: string) => {
-//         setCurrentPage(1); // Reset về trang 1 khi áp dụng bộ lọc mới
-//         if (filterType === 'category') {
-//             setSelectedCategory(value);
-//         }
-//     };
+//     const displayedProducts = useMemo(() => {
+//         let currentProducts = products.filter(product => {
+//             const matchesSearchTerm = product.productName.toLowerCase().includes(searchTerm.toLowerCase());
 //
-//     const handlePriceInputChange = (type: 'min' | 'max', event: React.ChangeEvent<HTMLInputElement>) => {
-//         setCurrentPage(1); // Reset về trang 1 khi áp dụng bộ lọc mới
-//         const value = event.target.value;
-//         if (type === 'min') {
-//             setMinPriceFilter(value);
-//         } else {
-//             setMaxPriceFilter(value);
-//         }
-//     };
-//     // --- Kết thúc Hàm xử lý sự kiện cho các bộ lọc ---
+//             const matchesBrands = selectedBrands.length === 0 || selectedBrands.includes(product.brandName);
 //
-//     // Hàm render phần bộ lọc
-//     const renderFilterSection = (
-//         title: string,
-//         items: string[],
-//         type: 'checkbox' | 'radio',
-//         selectedValues: string[] | string | null, // Có thể là mảng hoặc string
-//         handler: (value: string, isChecked?: boolean) => void // Handler có thể có isChecked hoặc không
-//     ) => (
-//         <div className="filter-section">
-//             <h3 className="filter-title">{title}</h3>
-//             <div className="filter-options">
-//                 {items.map((item, index) => (
-//                     <label key={index} className="filter-option">
-//                         <input
-//                             type={type}
-//                             name={title.toLowerCase().replace(/\s/g, '-')}
-//                             value={item}
-//                             // Logic kiểm tra checked cho cả checkbox và radio
-//                             checked={
-//                                 type === 'checkbox'
-//                                     ? (selectedValues as string[]).includes(item)
-//                                     : (selectedValues as string) === item
-//                             }
-//                             onChange={(e) =>
-//                                 type === 'checkbox'
-//                                     ? handler(item, e.target.checked)
-//                                     : handler(item)
-//                             }
-//                         />
-//                         <span className="ml-2">{item}</span>
-//                     </label>
-//                 ))}
-//             </div>
-//         </div>
-//     );
+//             const matchesPriceRange = priceRange.length === 0 || priceRange.some(rangeKey => {
+//                 const range = PRICE_RANGES.find(r => r.key === rangeKey);
+//                 if (!range || product.minPrice === null) return false;
+//                 return product.minPrice >= range.min && product.minPrice <= range.max;
+//             });
 //
-//     const renderPagination = () => {
-//         const pageNumbers = [];
-//         const maxPagesToShow = 5;
-//         let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
-//         let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+//             const productSizes = product.sizes || [];
+//             const matchesSizes = selectedSizes.length === 0 ||
+//                 selectedSizes.some(size => productSizes.includes(parseInt(size)));
 //
-//         if (endPage - startPage + 1 < maxPagesToShow) {
-//             startPage = Math.max(1, endPage - maxPagesToShow + 1);
+//             return matchesSearchTerm && matchesBrands && matchesPriceRange && matchesSizes;
+//         });
+//
+//         // Apply sorting
+//         switch (sortOption) {
+//             case 'price-asc':
+//                 currentProducts.sort((a, b) => (a.minPrice ?? Infinity) - (b.minPrice ?? Infinity));
+//                 break;
+//             case 'price-desc':
+//                 currentProducts.sort((a, b) => (b.minPrice ?? -Infinity) - (a.minPrice ?? -Infinity));
+//                 break;
+//             case 'name-asc':
+//                 currentProducts.sort((a, b) => a.productName.localeCompare(b.productName));
+//                 break;
+//             case 'name-desc':
+//                 currentProducts.sort((a, b) => b.productName.localeCompare(a.productName));
+//                 break;
+//             case 'default':
+//             default:
+//                 break;
 //         }
 //
-//         if (startPage > 1) {
-//             pageNumbers.push(1);
-//             if (startPage > 2) {
-//                 pageNumbers.push('...');
-//             }
-//         }
-//
-//         for (let i = startPage; i <= endPage; i++) {
-//             pageNumbers.push(i);
-//         }
-//
-//         if (endPage < totalPages) {
-//             if (endPage < totalPages - 1) {
-//                 pageNumbers.push('...');
-//             }
-//             pageNumbers.push(totalPages);
-//         }
-//
-//         return (
-//             <div className="pagination">
-//                 <button
-//                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-//                     disabled={currentPage === 1}
-//                     className="pagination-button"
-//                 >
-//                     &lt;
-//                 </button>
-//                 {pageNumbers.map((num, index) =>
-//                     num === '...' ? (
-//                         <span key={index} className="pagination-ellipsis">...</span>
-//                     ) : (
-//                         <button
-//                             key={index}
-//                             onClick={() => setCurrentPage(num as number)}
-//                             className={`pagination-button ${currentPage === num ? 'active' : ''}`}
-//                         >
-//                             {num}
-//                         </button>
-//                     )
-//                 )}
-//                 <button
-//                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-//                     disabled={currentPage === totalPages}
-//                     className="pagination-button"
-//                 >
-//                     &gt;
-//                 </button>
-//             </div>
-//         );
-//     };
-//
+//         return currentProducts;
+//     }, [products, searchTerm, selectedBrands, priceRange, selectedSizes, sortOption]);
 //
 //     if (loading) {
 //         return (
-//             <StyledWrapper>
-//                 <div className="loading-container">
-//                     Đang tải sản phẩm...
+//             <div className="container mx-auto px-4 py-8 max-w-7xl flex flex-col md:flex-row gap-8"> {/* Changed to flex-col on small, flex-row on md+ */}
+//                 {/* Skeleton for Left Sidebar */}
+//                 <div className="w-full md:w-1/5 p-6 bg-default-50 rounded-lg shadow-md flex flex-col gap-6">
+//                     <Skeleton className="w-3/4 h-8 rounded-lg mb-4" /> {/* Search input */}
+//                     <Skeleton className="w-full h-24 rounded-lg mb-4" /> {/* Price filter */}
+//                     <Skeleton className="w-1/2 h-6 rounded-lg mb-4" /> {/* Size filter title */}
+//                     <Skeleton className="w-full h-32 rounded-lg" /> {/* Size filter checkboxes (vertical) */}
+//                     <Skeleton className="w-1/2 h-6 rounded-lg mb-4" /> {/* Brand filter title */}
+//                     <Skeleton className="w-full h-12 rounded-lg" /> {/* Brand filter select */}
 //                 </div>
-//             </StyledWrapper>
+//                 {/* Skeleton for Right Content */}
+//                 <div className="w-full md:flex-1">
+//                     {/* Skeleton for Sort dropdown */}
+//                     <div className="mb-6 flex justify-end">
+//                         <Skeleton className="w-64 h-10 rounded-lg" />
+//                     </div>
+//                     {/* Adjusted grid columns for responsiveness */}
+//                     <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+//                         {Array.from({ length: 8 }).map((_, index) => (
+//                             <Card key={index} className="w-full space-y-5 p-4" radius="lg">
+//                                 <Skeleton className="rounded-lg">
+//                                     <div className="h-40 rounded-lg bg-default-300"></div> {/* Adjusted height */}
+//                                 </Skeleton>
+//                                 <div className="space-y-3">
+//                                     <Skeleton className="w-4/5 h-4 rounded-lg" />
+//                                     <Skeleton className="w-3/5 h-4 rounded-lg" />
+//                                     <Skeleton className="w-2/5 h-4 rounded-lg" />
+//                                 </div>
+//                             </Card>
+//                         ))}
+//                     </div>
+//                 </div>
+//             </div>
 //         );
 //     }
 //
 //     if (error) {
 //         return (
-//             <StyledWrapper>
-//                 <div className="error-container">
-//                     Lỗi: {error}
-//                 </div>
-//             </StyledWrapper>
+//             <div className="container mx-auto px-4 py-8 max-w-7xl">
+//                 <Card className="max-w-md mx-auto">
+//                     <CardBody className="text-center py-8">
+//                         <div className="text-danger text-xl mb-4">⚠️</div>
+//                         <h3 className="text-lg font-semibold mb-2">Có lỗi xảy ra</h3>
+//                         <p className="text-default-500">{error}</p>
+//                         <Button
+//                             color="primary"
+//                             variant="flat"
+//                             className="mt-4"
+//                             onClick={() => window.location.reload()}
+//                         >
+//                             Thử lại
+//                         </Button>
+//                     </CardBody>
+//                 </Card>
+//             </div>
 //         );
 //     }
 //
 //     return (
-//         <StyledWrapper>
-//             <div className="full-width-banner-wrapper">
-//                 <Image
-//                     src="/images/banner2.png"
-//                     alt="SneakerPeak Logo"
-//                     layout="responsive"
-//                     width={1000}
-//                     height={550}
-//                 />
-//             </div>
-//             {/* Thêm phần tiêu đề trang và sắp xếp */}
-//             <div className="page-header">
-//                 <div className="sort-by">
-//                     <label htmlFor="sort">Sắp xếp:</label>
-//                     <select id="sort" className="sort-select">
-//                         <option value="price-asc">Giá tăng dần</option>
-//                         <option value="price-desc">Giá giảm dần</option>
-//                     </select>
-//                 </div>
-//             </div>
-//
-//             <div className="main-content">
-//                 <aside className="sidebar">
-//                     {/* Filter Thương hiệu */}
-//                     {renderFilterSection("THƯƠNG HIỆU", brands, 'checkbox', selectedBrands, (value, isChecked) => handleCheckboxChange('brand', value, isChecked!))}
-//
-//                     {/* Filter Kích thước */}
-//                     {renderFilterSection("KÍCH THƯỚC", sizes, 'checkbox', selectedSizes, (value, isChecked) => handleCheckboxChange('size', value, isChecked!))}
-//
-//                     {/* Filter Chất liệu (có thể bỏ qua hoặc thêm logic) */}
-//                     {/* {renderFilterSection("CHẤT LIỆU", materials, 'checkbox', selectedMaterials, (value, isChecked) => handleCheckboxChange('material', value, isChecked!))} */}
-//
-//                     {/* Filter Giá */}
-//                     <div className="filter-section">
-//                         <h3 className="filter-title">GIÁ</h3>
-//                         <div className="filter-options filter-price">
-//                             <input
-//                                 type="number"
-//                                 placeholder="Giá từ"
-//                                 value={minPriceFilter}
-//                                 onChange={(e) => handlePriceInputChange('min', e)}
-//                             />
-//                             <input
-//                                 type="number"
-//                                 placeholder="Giá đến"
-//                                 value={maxPriceFilter}
-//                                 onChange={(e) => handlePriceInputChange('max', e)}
-//                             />
-//                         </div>
+//         <div className="container mx-auto px-4 py-8 max-w-7xl">
+//             {/* The main flex container. Changed to flex-col on small, flex-row on md+ */}
+//             <div className="flex flex-col md:flex-row gap-8">
+//                 {/* Left Sidebar for Filters */}
+//                 <div className="w-full md:w-1/5 p-6 bg-default-50 rounded-lg shadow-md flex flex-col gap-6">
+//                     {/* Search Input */}
+//                     <div className="mb-4">
+//                         <Input
+//                             placeholder="Nhập tên giày..."
+//                             value={searchTerm}
+//                             onValueChange={setSearchTerm}
+//                             startContent={
+//                                 <MagnifyingGlassIcon className="w-5 h-5 text-default-400" />
+//                             }
+//                             isClearable
+//                             onClear={() => setSearchTerm('')}
+//                             className="w-full"
+//                         />
 //                     </div>
-//                 </aside>
 //
-//                 <div className="product-display-area">
-//                     <div className="product-grid">
-//                         {products.map((product) => (
-//                             <div className="card" key={product.productId}>
-//                                 {/* Sale and New badges */}
-//                                 <div className="badge-container">
-//                                     {(product.activePromotions && product.activePromotions.includes("ONLINE_EXCLUSIVE")) && (
-//                                         <div className="badge online-exclusive">
-//                                             <img src="/online-exclusive-badge.png" alt="Online Exclusive" />
+//                     {/* Price Range Filter */}
+//                     <div>
+//                         <h3 className="text-lg font-semibold mb-3 text-default-800">Mức giá</h3>
+//                         <CheckboxGroup
+//                             value={priceRange}
+//                             onValueChange={setPriceRange}
+//                             orientation="vertical"
+//                         >
+//                             {PRICE_RANGES.map((range) => (
+//                                 <Checkbox key={range.key} value={range.key}>
+//                                     {range.label}
+//                                 </Checkbox>
+//                             ))}
+//                         </CheckboxGroup>
+//                     </div>
+//
+//                     <Divider className="my-2" />
+//
+//                     {/* Size Filter - Vertical CheckboxGroup */}
+//                     <div>
+//                         <h3 className="text-lg font-semibold mb-3 text-default-800">Kích thước</h3>
+//                         <CheckboxGroup
+//                             value={selectedSizes}
+//                             onValueChange={setSelectedSizes}
+//                             orientation="vertical" // Changed to vertical
+//                             className="max-h-60 overflow-y-auto pr-2 custom-scrollbar"
+//                         >
+//                             {SIZE_OPTIONS.map((size) => (
+//                                 <Checkbox key={size} value={size}>
+//                                     {size}
+//                                 </Checkbox>
+//                             ))}
+//                         </CheckboxGroup>
+//                     </div>
+//
+//                     <Divider className="my-2" />
+//
+//                     {/* Brand Filter - Enhanced with Select component (remains the same as before) */}
+//                     <div>
+//                         <h3 className="text-lg font-semibold mb-3 text-default-800">Thương hiệu</h3>
+//                         {fetchedBrands.length > 0 ? (
+//                             <Select
+//                                 placeholder="Chọn thương hiệu"
+//                                 selectionMode="multiple"
+//                                 selectedKeys={new Set(selectedBrands)}
+//                                 onSelectionChange={(keys) => {
+//                                     // @ts-ignore
+//                                     setSelectedBrands(Array.from(keys));
+//                                 }}
+//                                 className="w-full"
+//                                 isMultiline={true}
+//                                 renderValue={(items) => {
+//                                     if (items.length === 0) {
+//                                         return "Chọn thương hiệu";
+//                                     }
+//                                     if (items.length === fetchedBrands.length) {
+//                                         return "Tất cả thương hiệu";
+//                                     }
+//                                     return (
+//                                         <div className="flex flex-wrap gap-1">
+//                                             {items.map((item) => (
+//                                                 <Chip key={item.key} size="sm" variant="flat">
+//                                                     {item.textValue}
+//                                                 </Chip>
+//                                             ))}
 //                                         </div>
-//                                     )}
-//                                     {(product.activePromotions && product.activePromotions.includes("NEW_ARRIVAL")) && (
-//                                         <div className="badge new-arrival">NEW</div>
-//                                     )}
-//                                     {(product.activePromotions && product.activePromotions.includes("SALE")) && (
-//                                         <div className="badge sale">SALE</div>
-//                                     )}
-//                                 </div>
-//
-//                                 <div className="image-container">
-//                                     {product.thumbnail ? (
-//                                         <CldImage
-//                                             width={400}
-//                                             height={400}
-//                                             src={product.thumbnail}
-//                                             alt={product.productName}
-//                                             className="product-image"
-//                                         />
-//                                     ) : (
-//                                         <div className="product-image placeholder" />
-//                                     )}
-//
-//                                 </div>
-//
-//                                 <div className="content">
-//                                     <span className="product-brand">{product.brandName}</span>
-//                                     <Link href={`/products/${product.productId}`} className="title-link">
-//                                         <span className="product-name">
-//                                             {product.productName}
-//                                         </span>
-//                                     </Link>
-//                                     <div className="price-info">
-//                                         {product.activePromotions && product.activePromotions.includes("SALE") && (
-//                                             <>
-//                                                 <p className="original-price">{formatPrice(product.minPrice ? product.minPrice * 1.28 : null)}</p>
-//                                                 <p className="sale-percentage">-28%</p>
-//                                             </>
-//                                         )}
-//                                         <p className="current-price">{formatPrice(product.minPrice)}</p>
-//                                     </div>
-//                                 </div>
-//                             </div>
-//                         ))}
+//                                     );
+//                                 }}
+//                             >
+//                                 {fetchedBrands.map((brand) => (
+//                                     // <SelectItem key={brand} value={brand}>
+//                                     <SelectItem key={brand} >
+//                                         {brand}
+//                                     </SelectItem>
+//                                 ))}
+//                             </Select>
+//                         ) : (
+//                             <p className="text-default-500 text-sm">Đang tải thương hiệu...</p>
+//                         )}
 //                     </div>
-//                     {renderPagination()}
+//                 </div>
+//
+//                 {/* Right Main Content for Products */}
+//                 <div className="w-full md:flex-1">
+//                     {/* Sort Section */}
+//                     <div className="mb-6 flex justify-end">
+//                         <Select
+//                             placeholder="Mặc định"
+//                             selectedKeys={[sortOption]}
+//                             onSelectionChange={(keys) => {
+//                                 // @ts-ignore
+//                                 setSortOption(Array.from(keys).join(','));
+//                             }}
+//                             className="full"
+//                         >
+//                             <SelectItem key="default">Mặc định</SelectItem>
+//                             <SelectItem key="price-asc">Giá: Thấp đến Cao</SelectItem>
+//                             <SelectItem key="price-desc">Giá: Cao đến Thấp</SelectItem>
+//                             <SelectItem key="name-asc">Tên: A-Z</SelectItem>
+//                             <SelectItem key="name-desc">Tên: Z-A</SelectItem>
+//                         </Select>
+//                     </div>
+//
+//                     {/* Products Grid - Adjusted responsive columns */}
+//                     <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+//                         {displayedProducts.map((product) => {
+//                             const stockStatus = getStockStatus(product.totalStock);
+//
+//                             return (
+//                                 <Card
+//                                     key={product.productId}
+//                                     className="group hover:scale-[1.02] transition-all duration-300 hover:shadow-lg border border-default-200"
+//                                     isPressable
+//                                 >
+//                                     <CardHeader className="pb-0 pt-2 px-4 flex-col items-start relative">
+//                                         {/* Product Image */}
+//                                         <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-default-100 flex items-center justify-center">
+//                                             {product.thumbnail ? (
+//                                                 <CldImage
+//                                                     width={300}
+//                                                     height={300}
+//                                                     src={product.thumbnail}
+//                                                     alt={product.productName}
+//                                                     className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+//                                                 />
+//                                             ) : (
+//                                                 <div className="w-full h-full flex items-center justify-center text-default-400">
+//                                                     <BuildingStorefrontIcon className="w-16 h-16" />
+//                                                 </div>
+//                                             )}
+//                                             {/* Stock Badge (top right) */}
+//                                             <Badge
+//                                                 color={stockStatus.color}
+//                                                 className="absolute top-2 right-2 px-2 py-1 text-xs font-semibold rounded-md"
+//                                                 size="sm"
+//                                             >
+//                                                 {stockStatus.text}
+//                                             </Badge>
+//                                             {/* NEW Badge (top left - generic for now) */}
+//                                             <Badge
+//                                                 color="primary"
+//                                                 className="absolute top-2 left-2 px-2 py-1 text-xs font-semibold rounded-md"
+//                                                 size="sm"
+//                                             >
+//                                                 MỚI
+//                                             </Badge>
+//                                         </div>
+//                                     </CardHeader>
+//
+//                                     <CardBody className="px-4 py-3">
+//                                         {/* Product Name */}
+//                                         <Link href={`/products/${product.productId}`}>
+//                                             <h4 className="font-semibold text-base line-clamp-2 hover:text-primary transition-colors cursor-pointer h-12">
+//                                                 {product.productName}
+//                                             </h4>
+//                                         </Link>
+//
+//                                         {/* Price */}
+//                                         <div className="flex items-center gap-1 my-2">
+//                                             <span className="text-lg font-bold text-success-600">
+//                                                 {formatPrice(product.minPrice)}
+//                                             </span>
+//                                         </div>
+//
+//                                         {/* Brand */}
+//                                         <div className="text-sm text-default-500 mb-2">
+//                                             {product.brandName}
+//                                         </div>
+//                                     </CardBody>
+//                                 </Card>
+//                             );
+//                         })}
+//                     </div>
+//
+//                     {/* Empty State */}
+//                     {displayedProducts.length === 0 && (
+//                         <Card className="max-w-md mx-auto mt-12">
+//                             <CardBody className="text-center py-12">
+//                                 <BuildingStorefrontIcon className="w-16 h-16 mx-auto text-default-300 mb-4" />
+//                                 <h3 className="text-xl font-semibold mb-2">Không có sản phẩm nào phù hợp</h3>
+//                             </CardBody>
+//                         </Card>
+//                     )}
 //                 </div>
 //             </div>
-//         </StyledWrapper>
+//             {/* Custom CSS for scrollbar (if needed, otherwise define in global.css) */}
+//             <style jsx global>{`
+//                 .custom-scrollbar::-webkit-scrollbar {
+//                     width: 8px; /* Width of the scrollbar */
+//                 }
+//                 .custom-scrollbar::-webkit-scrollbar-track {
+//                     background: #f1f1f1; /* Color of the track */
+//                     border-radius: 4px;
+//                 }
+//                 .custom-scrollbar::-webkit-scrollbar-thumb {
+//                     background: #888; /* Color of the scroll thumb */
+//                     border-radius: 4px;
+//                 }
+//                 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+//                     background: #555; /* Color on hover */
+//                 }
+//             `}</style>
+//         </div>
 //     );
 // };
 //
-// const StyledWrapper = styled.div`
-//   max-width: 1400px;
-//   margin: 0 auto;
-//   padding: 2rem 1rem;
-//   font-family: Arial, sans-serif;
-//   color: #333;
-//
-//   .full-width-banner-wrapper {
-//     margin-bottom: 2rem;
-//   }
-//
-//   .section-title {
-//     font-size: 1.5rem;
-//     font-weight: 600;
-//     margin-bottom: 1.5rem;
-//     text-align: center;
-//     display: none; /* Ẩn tiêu đề này vì đã có Page Header */
-//   }
-//
-//   .page-header {
-//       display: flex;
-//       justify-content: space-between;
-//       align-items: flex-end;
-//       margin-bottom: 2rem;
-//       padding-bottom: 1rem;
-//       border-bottom: 1px solid #e0e0e0;
-//   }
-//
-//   .page-title {
-//       font-size: 2.2rem;
-//       font-weight: 700;
-//       color: #1a1a1a;
-//       margin: 0;
-//   }
-//
-//   .sort-by {
-//       display: flex;
-//       align-items: center;
-//       gap: 0.5rem;
-//       font-size: 0.95rem;
-//       color: #555;
-//   }
-//
-//   .sort-select {
-//       padding: 0.5rem 0.75rem;
-//       border: 1px solid #ccc;
-//       border-radius: 0.25rem;
-//       background-color: #fff;
-//       cursor: pointer;
-//       font-size: 0.9rem;
-//       -webkit-appearance: none;
-//       -moz-appearance: none;
-//       appearance: none;
-//       background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-//       background-repeat: no-repeat;
-//       background-position: right 0.75rem center;
-//       background-size: 0.8rem;
-//   }
-//
-//   .main-content {
-//       display: flex;
-//       gap: 2rem;
-//   }
-//
-//   .sidebar {
-//       width: 280px;
-//       flex-shrink: 0;
-//       background-color: #f7f7f7;
-//       border-radius: 0.5rem;
-//       padding: 1.5rem;
-//       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-//   }
-//
-//   .filter-section {
-//       margin-bottom: 1.5rem;
-//       padding-bottom: 1.5rem;
-//       border-bottom: 1px solid #eee;
-//
-//       &:last-child {
-//           border-bottom: none;
-//           margin-bottom: 0;
-//           padding-bottom: 0;
-//       }
-//   }
-//
-//   .filter-title {
-//       font-size: 0.9rem;
-//       font-weight: 600;
-//       color: #333;
-//       text-transform: uppercase;
-//       margin-bottom: 1rem;
-//       letter-spacing: 0.05em;
-//   }
-//
-//   .filter-options {
-//       display: flex;
-//       flex-direction: column;
-//       gap: 0.75rem;
-//   }
-//
-//   .filter-options.filter-price {
-//       flex-direction: row;
-//       gap: 0.75rem;
-//       input {
-//           width: 50%;
-//           padding: 0.5rem;
-//           border: 1px solid #ccc;
-//           border-radius: 0.25rem;
-//           font-size: 0.9rem;
-//       }
-//   }
-//
-//   .filter-option {
-//       display: flex;
-//       align-items: center;
-//       font-size: 0.9rem;
-//       color: #555;
-//       cursor: pointer;
-//
-//       input[type="checkbox"],
-//       input[type="radio"] {
-//           margin-right: 0.5rem;
-//           accent-color: #3182ce;
-//           width: 1rem;
-//           height: 1rem;
-//       }
-//   }
-//
-//   .product-display-area {
-//       flex-grow: 1;
-//   }
-//
-//   .product-grid {
-//       display: grid;
-//       grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-//       gap: 1.5rem;
-//   }
-//
-//   .card {
-//       background-color: #fff;
-//       border-radius: 0.5rem;
-//       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
-//       transition: transform 0.2s ease, box-shadow 0.2s ease;
-//       overflow: hidden;
-//       position: relative;
-//   }
-//
-//   .card:hover {
-//       transform: translateY(-3px);
-//       box-shadow: 0 8px 15px rgba(0, 0, 0, 0.12);
-//   }
-//
-//   .badge-container {
-//       position: absolute;
-//       top: 0.75rem;
-//       left: 0.75rem;
-//       display: flex;
-//       flex-direction: column;
-//       gap: 0.4rem;
-//       z-index: 10;
-//   }
-//
-//   .badge {
-//       padding: 0.25rem 0.6rem;
-//       border-radius: 0.25rem;
-//       font-size: 0.7rem;
-//       font-weight: 700;
-//       color: #fff;
-//       display: inline-flex;
-//       align-items: center;
-//       justify-content: center;
-//   }
-//
-//   .badge.online-exclusive {
-//       background: none;
-//       padding: 0;
-//       img {
-//           width: 60px;
-//           height: auto;
-//       }
-//   }
-//
-//   .badge.new-arrival {
-//       background-color: #6a0dad;
-//   }
-//
-//   .badge.sale {
-//       background-color: #e74c3c;
-//   }
-//
-//   .image-container {
-//       position: relative;
-//       width: 100%;
-//       height: 200px;
-//       overflow: hidden;
-//       border-top-left-radius: 0.5rem;
-//       border-top-right-radius: 0.5rem;
-//   }
-//
-//   .product-image {
-//       width: 100%;
-//       height: 100%;
-//       object-fit: cover;
-//   }
-//
-//   .product-image.placeholder {
-//       background-color: #f0f0f0;
-//   }
-//
-//   .wishlist-icon {
-//       position: absolute;
-//       top: 0.75rem;
-//       right: 0.75rem;
-//       background-color: rgba(255, 255, 255, 0.8);
-//       border-radius: 50%;
-//       padding: 0.4rem;
-//       cursor: pointer;
-//       z-index: 10;
-//       display: flex;
-//       align-items: center;
-//       justify-content: center;
-//       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-//
-//       svg {
-//           width: 18px;
-//           height: 18px;
-//           color: #777;
-//       }
-//       &:hover svg {
-//           color: #e74c3c;
-//       }
-//   }
-//
-//   .content {
-//       padding: 1rem;
-//       display: flex;
-//       flex-direction: column;
-//       height: auto;
-//   }
-//
-//   .product-brand {
-//       font-size: 0.75rem;
-//       color: #777;
-//       text-transform: uppercase;
-//       margin-bottom: 0.25rem;
-//   }
-//
-//   .title-link {
-//       text-decoration: none;
-//       color: inherit;
-//   }
-//
-//   .product-name {
-//       font-size: 0.95rem;
-//       font-weight: 600;
-//       line-height: 1.3;
-//       display: block;
-//       margin-bottom: 0.5rem;
-//       color: #333;
-//       min-height: 2.6em;
-//       overflow: hidden;
-//       text-overflow: ellipsis;
-//       display: -webkit-box;
-//       -webkit-line-clamp: 2;
-//       -webkit-box-orient: vertical;
-//
-//       &:hover {
-//           text-decoration: underline;
-//           text-decoration-color: #3182ce;
-//       }
-//   }
-//
-//   .price-info {
-//       display: flex;
-//       align-items: center;
-//       gap: 0.5rem;
-//       margin-top: auto;
-//   }
-//
-//   .original-price {
-//       font-size: 0.8rem;
-//       color: #999;
-//       text-decoration: line-through;
-//   }
-//
-//   .current-price {
-//       font-weight: 700;
-//       color: #e74c3c;
-//       font-size: 1rem;
-//   }
-//
-//   .sale-percentage {
-//       background-color: #e74c3c;
-//       color: #fff;
-//       padding: 0.1rem 0.4rem;
-//       border-radius: 0.25rem;
-//       font-size: 0.7rem;
-//       font-weight: 600;
-//   }
-//
-//   .pagination {
-//       display: flex;
-//       justify-content: center;
-//       align-items: center;
-//       gap: 0.5rem;
-//       margin-top: 2rem;
-//       padding-top: 1rem;
-//       border-top: 1px solid #eee;
-//   }
-//
-//   .pagination-button {
-//       background-color: #fff;
-//       border: 1px solid #ddd;
-//       border-radius: 0.25rem;
-//       padding: 0.6rem 1rem;
-//       cursor: pointer;
-//       font-size: 0.9rem;
-//       color: #555;
-//       transition: background-color 0.2s ease, border-color 0.2s ease;
-//
-//       &:hover:not(:disabled),
-//       &.active {
-//           background-color: #3182ce;
-//           color: #fff;
-//           border-color: #3182ce;
-//       }
-//
-//       &:disabled {
-//           opacity: 0.6;
-//           cursor: not-allowed;
-//       }
-//   }
-//
-//   .pagination-ellipsis {
-//       padding: 0.6rem 0.5rem;
-//       color: #777;
-//   }
-//
-//   .loading-container, .error-container {
-//       text-align: center;
-//       font-size: 1.2rem;
-//       color: #666;
-//       margin-top: 50px;
-//       flex-grow: 1;
-//   }
-//
-//   @media (max-width: 992px) {
-//       .main-content {
-//           flex-direction: column;
-//       }
-//
-//       .sidebar {
-//           width: 100%;
-//           margin-bottom: 1.5rem;
-//       }
-//
-//       .product-grid {
-//           grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-//       }
-//   }
-//
-//   @media (max-width: 768px) {
-//       .page-header {
-//           flex-direction: column;
-//           align-items: flex-start;
-//           gap: 1rem;
-//       }
-//   }
-// `;
-//
 // export default ProductList;
 
-"use client";
 
-import React, { useEffect, useState } from 'react';
-import styled from 'styled-components';
+"use client";
+import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { CldImage } from "next-cloudinary";
-import Image from "next/image";
+import Image from "next/image"; // Import Image for local assets
+import {
+    Card,
+    CardBody,
+    CardHeader,
+    Button,
+    Chip,
+    Skeleton,
+    Divider,
+    Badge,
+    Input,
+    CheckboxGroup,
+    Checkbox,
+    Select,
+    SelectItem,
+    RadioGroup,
+    Radio,
+} from "@heroui/react";
+import {
+    CurrencyDollarIcon,
+    BuildingStorefrontIcon,
+    MagnifyingGlassIcon,
+} from "@heroicons/react/24/outline";
+import { useTheme } from 'next-themes';
 
-// --- Interfaces và Types ---
 interface Product {
     productId: number;
     productName: string;
-    description: string;
     purchases: number;
-    createdAt: string;
-    updatedAt: string;
-    categoryId: number;
     categoryName: string;
-    brandId: number;
     brandName: string;
-    brandInfo: string;
     logoPublicId: string;
     minPrice: number | null;
     totalStock: number | null;
     thumbnail: string | null;
-    activePromotions: string | null;
-    isActive: boolean;
+    sizes: number[]; // Product sizes array
 }
 
 interface PageInfo {
@@ -821,64 +534,67 @@ interface ApiResponse {
     message: string;
     data: ApiResponseData;
 }
-// --- Kết thúc Interfaces và Types ---
 
 const ProductList = () => {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
+    const { theme, setTheme } = useTheme();
 
-    // --- State cho các bộ lọc ---
-    const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+    // State for filters
+    const [searchTerm, setSearchTerm] = useState<string>('');
     const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-    const [minPriceFilter, setMinPriceFilter] = useState<string>('');
-    const [maxPriceFilter, setMaxPriceFilter] = useState<string>('');
-    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-    // --- Kết thúc State cho các bộ lọc ---
+    const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+    const [priceRange, setPriceRange] = useState<string[]>([]);
 
-    // Dữ liệu giả định cho các bộ lọc (trong thực tế có thể lấy từ API)
-    const brands = ["Nike", "Adidas", "Puma"];
-    const sizes = ["39", "40", "41", "42", "43", "44", "45"];
-    const categories = ["Running", "Sneaker", "Basketball"];
+    // State for sorting
+    const [sortOption, setSortOption] = useState<string>('default');
+
+    // Add state for fetched filter options
+    const [fetchedBrands, setFetchedBrands] = useState<string[]>([]);
+
+    // Define price ranges
+    const PRICE_RANGES = [
+        { key: 'under-600k', label: 'Giá dưới 600.000đ', min: 0, max: 600000 },
+        { key: '600k-1m', label: '600.000đ - 1.000.000đ', min: 600000, max: 1000000 },
+        { key: '1m-2m', label: '1.000.000đ - 2.000.000đ', min: 1000000, max: 2000000 },
+        { key: 'over-2m', label: 'Giá trên 2.000.000đ', min: 2000000, max: Infinity },
+    ];
+
+
+    const SIZE_OPTIONS = ["39", "40", "41", "42", "43", "44"];
 
     useEffect(() => {
-        const fetchProducts = async (page: number) => {
-            setLoading(true);
+        const fetchFilterOptions = async () => {
             try {
-                const queryParams = new URLSearchParams();
-                queryParams.append('page', (page - 1).toString());
-                queryParams.append('size', '12');
-
-                if (selectedBrands.length > 0) {
-                    selectedBrands.forEach(brand => queryParams.append('brandName', brand));
+                // Fetch brands
+                const brandsRes = await fetch('http://localhost:8080/api/brands');
+                if (!brandsRes.ok) throw new Error('Failed to fetch brands');
+                const brandsData = await brandsRes.json();
+                if (brandsData.status === 200 && brandsData.data) {
+                    setFetchedBrands(brandsData.data);
+                } else {
+                    console.error('API Error fetching brands:', brandsData.message);
                 }
 
-                if (selectedSizes.length > 0) {
-                    selectedSizes.forEach(size => queryParams.append('size', size));
-                }
+            } catch (err) {
+                console.error("Failed to fetch filter options:", err);
+            }
+        };
+        fetchFilterOptions();
+    }, []);
 
-                if (minPriceFilter !== '') {
-                    queryParams.append('minPrice', minPriceFilter);
-                }
-                if (maxPriceFilter !== '') {
-                    queryParams.append('maxPrice', maxPriceFilter);
-                }
-
-                if (selectedCategory) {
-                    queryParams.append('categoryName', selectedCategory);
-                }
-
-                const response = await fetch(`http://localhost:8080/api/products?${queryParams.toString()}`);
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch('http://localhost:8080/api/products');
                 if (!response.ok) {
                     throw new Error('Failed to fetch products');
                 }
                 const data: ApiResponse = await response.json();
                 if (data.status === 200 && data.data && data.data.content) {
-                    const activeProducts = data.data.content.filter(product => product.isActive);
-                    setProducts(activeProducts);
-                    setTotalPages(data.data.page.totalPages);
+                    setProducts(data.data.content);
                 } else {
                     throw new Error(data.message || 'Failed to fetch products');
                 }
@@ -889,820 +605,361 @@ const ProductList = () => {
             }
         };
 
-        fetchProducts(currentPage);
-    }, [currentPage, selectedBrands, selectedSizes, minPriceFilter, maxPriceFilter, selectedCategory]);
+        fetchProducts();
+    }, []);
 
     const formatPrice = (price: number | null) => {
         if (price === null) return 'Liên hệ';
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
     };
 
-    const handleCheckboxChange = (filterType: 'brand' | 'size' | 'color' | 'material', value: string, isChecked: boolean) => {
-        setCurrentPage(1);
-        if (filterType === 'brand') {
-            setSelectedBrands(prev =>
-                isChecked ? [...prev, value] : prev.filter(item => item !== value)
-            );
-        } else if (filterType === 'size') {
-            setSelectedSizes(prev =>
-                isChecked ? [...prev, value] : prev.filter(item => item !== value)
-            );
-        }
+    const getStockStatus = (stock: number | null) => {
+        if (!stock || stock === 0) return { color: 'danger' as const, text: 'Hết hàng' };
+        if (stock < 10) return { color: 'warning' as const, text: 'Sắp hết' };
+        return { color: 'success' as const, text: 'Còn hàng' };
     };
 
-    const handleRadioChange = (filterType: 'category', value: string) => {
-        setCurrentPage(1);
-        if (filterType === 'category') {
-            setSelectedCategory(value);
-        }
-    };
+    const displayedProducts = useMemo(() => {
+        let currentProducts = products.filter(product => {
+            const matchesSearchTerm = product.productName.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const handlePriceInputChange = (type: 'min' | 'max', event: React.ChangeEvent<HTMLInputElement>) => {
-        setCurrentPage(1);
-        const value = event.target.value;
-        if (type === 'min') {
-            setMinPriceFilter(value);
-        } else {
-            setMaxPriceFilter(value);
-        }
-    };
+            const matchesBrands = selectedBrands.length === 0 || selectedBrands.includes(product.brandName);
 
-    const renderFilterSection = (
-        title: string,
-        items: string[],
-        type: 'checkbox' | 'radio',
-        selectedValues: string[] | string | null,
-        handler: (value: string, isChecked?: boolean) => void
-    ) => (
-        <div className="filter-section">
-            <h3 className="filter-title">{title}</h3>
-            <div className="filter-options">
-                {items.map((item, index) => (
-                    <label key={index} className="filter-option">
-                        <input
-                            type={type}
-                            name={title.toLowerCase().replace(/\s/g, '-')}
-                            value={item}
-                            checked={
-                                type === 'checkbox'
-                                    ? (selectedValues as string[]).includes(item)
-                                    : (selectedValues as string) === item
-                            }
-                            onChange={(e) =>
-                                type === 'checkbox'
-                                    ? handler(item, e.target.checked)
-                                    : handler(item)
-                            }
-                        />
-                        <span className="ml-2">{item}</span>
-                    </label>
-                ))}
-            </div>
-        </div>
-    );
+            const matchesPriceRange = priceRange.length === 0 || priceRange.some(rangeKey => {
+                const range = PRICE_R.find(r => r.key === rangeKey);
+                if (!range || product.minPrice === null) return false;
+                return product.minPrice >= range.min && product.minPrice <= range.max;
+            });
 
-    const renderPagination = () => {
-        const pageNumbers = [];
-        const maxPagesToShow = 5;
-        let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
-        let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+            const productSizes = product.sizes || [];
+            const matchesSizes = selectedSizes.length === 0 ||
+                selectedSizes.some(size => productSizes.includes(parseInt(size)));
 
-        if (endPage - startPage + 1 < maxPagesToShow) {
-            startPage = Math.max(1, endPage - maxPagesToShow + 1);
+            return matchesSearchTerm && matchesBrands && matchesPriceRange && matchesSizes;
+        });
+
+        // Apply sorting
+        switch (sortOption) {
+            case 'price-asc':
+                currentProducts.sort((a, b) => (a.minPrice ?? Infinity) - (b.minPrice ?? Infinity));
+                break;
+            case 'price-desc':
+                currentProducts.sort((a, b) => (b.minPrice ?? -Infinity) - (a.minPrice ?? -Infinity));
+                break;
+            case 'name-asc':
+                currentProducts.sort((a, b) => a.productName.localeCompare(b.productName));
+                break;
+            case 'name-desc':
+                currentProducts.sort((a, b) => b.productName.localeCompare(a.productName));
+                break;
+            case 'default':
+            default:
+                break;
         }
 
-        if (startPage > 1) {
-            pageNumbers.push(1);
-            if (startPage > 2) {
-                pageNumbers.push('...');
-            }
-        }
-
-        for (let i = startPage; i <= endPage; i++) {
-            pageNumbers.push(i);
-        }
-
-        if (endPage < totalPages) {
-            if (endPage < totalPages - 1) {
-                pageNumbers.push('...');
-            }
-            pageNumbers.push(totalPages);
-        }
-
-        return (
-            <div className="pagination">
-                <button
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className="pagination-button"
-                >
-                    &lt;
-                </button>
-                {pageNumbers.map((num, index) =>
-                    num === '...' ? (
-                        <span key={index} className="pagination-ellipsis">...</span>
-                    ) : (
-                        <button
-                            key={index}
-                            onClick={() => setCurrentPage(num as number)}
-                            className={`pagination-button ${currentPage === num ? 'active' : ''}`}
-                        >
-                            {num}
-                        </button>
-                    )
-                )}
-                <button
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    className="pagination-button"
-                >
-                    &gt;
-                </button>
-            </div>
-        );
-    };
-
+        return currentProducts;
+    }, [products, searchTerm, selectedBrands, priceRange, selectedSizes, sortOption]);
 
     if (loading) {
         return (
-            <StyledWrapper>
-                <div className="loading-container">
-                    Đang tải sản phẩm...
+            <div className="container mx-auto px-4 py-8 max-w-7xl flex flex-col md:flex-row gap-8">
+                {/* Skeleton for Left Sidebar */}
+                <div className="w-full md:w-1/5 p-6 bg-default-50 rounded-lg shadow-md flex flex-col gap-6">
+                    <Skeleton className="w-3/4 h-8 rounded-lg mb-4" /> {/* Search input */}
+                    <Skeleton className="w-full h-24 rounded-lg mb-4" /> {/* Price filter */}
+                    <Skeleton className="w-1/2 h-6 rounded-lg mb-4" /> {/* Size filter title */}
+                    <Skeleton className="w-full h-32 rounded-lg" /> {/* Size filter checkboxes (vertical) */}
+                    <Skeleton className="w-1/2 h-6 rounded-lg mb-4" /> {/* Brand filter title */}
+                    <Skeleton className="w-full h-12 rounded-lg" /> {/* Brand filter select */}
                 </div>
-            </StyledWrapper>
+                {/* Skeleton for Right Content */}
+                <div className="w-full md:flex-1">
+                    {/* Skeleton for Banner */}
+                    <Skeleton className="w-full h-48 rounded-lg mb-8" /> {/* Added banner skeleton */}
+                    {/* Skeleton for Sort dropdown */}
+                    <div className="mb-6 flex justify-end">
+                        <Skeleton className="w-64 h-10 rounded-lg" />
+                    </div>
+                    {/* Adjusted grid columns for responsiveness */}
+                    <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {Array.from({ length: 8 }).map((_, index) => (
+                            <Card key={index} className="w-full space-y-5 p-4" radius="lg">
+                                <Skeleton className="rounded-lg">
+                                    <div className="h-40 rounded-lg bg-default-300"></div> {/* Adjusted height */}
+                                </Skeleton>
+                                <div className="space-y-3">
+                                    <Skeleton className="w-4/5 h-4 rounded-lg" />
+                                    <Skeleton className="w-3/5 h-4 rounded-lg" />
+                                    <Skeleton className="w-2/5 h-4 rounded-lg" />
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            </div>
         );
     }
 
     if (error) {
         return (
-            <StyledWrapper>
-                <div className="error-container">
-                    Lỗi: {error}
-                </div>
-            </StyledWrapper>
+            <div className="container mx-auto px-4 py-8 max-w-7xl">
+                <Card className="max-w-md mx-auto">
+                    <CardBody className="text-center py-8">
+                        <div className="text-danger text-xl mb-4">⚠️</div>
+                        <h3 className="text-lg font-semibold mb-2">Có lỗi xảy ra</h3>
+                        <p className="text-default-500">{error}</p>
+                        <Button
+                            color="primary"
+                            variant="flat"
+                            className="mt-4"
+                            onClick={() => window.location.reload()}
+                        >
+                            Thử lại
+                        </Button>
+                    </CardBody>
+                </Card>
+            </div>
         );
     }
 
     return (
-        <StyledWrapper>
-            <div className="full-width-banner-wrapper">
-                <Image
-                    src="/images/banner2.png"
-                    alt="Product List Banner"
-                    layout="responsive"
-                    width={1600} // Tăng kích thước width để đảm bảo chất lượng hình ảnh
-                    height={400} // Điều chỉnh height để phù hợp với banner
-                    objectFit="cover" // Đảm bảo hình ảnh cover toàn bộ không gian
-                />
-            </div>
-
-            <div className="page-header">
-                <h1 className="page-title">TẤT CẢ SẢN PHẨM</h1> {/* Đặt tiêu đề chính của trang */}
-                <div className="sort-by">
-                    <label htmlFor="sort">Sắp xếp theo:</label>
-                    <select id="sort" className="sort-select">
-                        <option value="default">Mặc định</option>
-                        <option value="price-asc">Giá tăng dần</option>
-                        <option value="price-desc">Giá giảm dần</option>
-                        <option value="name-asc">Tên A-Z</option>
-                        <option value="name-desc">Tên Z-A</option>
-                    </select>
-                </div>
-            </div>
-
-            <div className="main-content">
-                <aside className="sidebar">
-                    {/* Filter Thương hiệu */}
-                    {renderFilterSection("THƯƠNG HIỆU", brands, 'checkbox', selectedBrands, (value, isChecked) => handleCheckboxChange('brand', value, isChecked!))}
-
-                    {/* Filter Kích thước */}
-                    {renderFilterSection("KÍCH THƯỚC", sizes, 'checkbox', selectedSizes, (value, isChecked) => handleCheckboxChange('size', value, isChecked!))}
-
-                    {/* Filter Danh mục (sử dụng radio button) */}
-                    {renderFilterSection("DANH MỤC", categories, 'radio', selectedCategory, (value) => handleRadioChange('category', value))}
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
+            {/*<div className="w-1/2 mx-auto mb-8 rounded-lg overflow-hidden shadow-md">*/}
+            {/*    <Image*/}
+            {/*        src="/images/img_2.png"*/}
+            {/*        alt="Product Banner"*/}
+            {/*        width={800} // hoặc 600 tùy bạn*/}
+            {/*        height={400} // giữ tỷ lệ chuẩn banner nếu cần*/}
+            {/*        layout="responsive"*/}
+            {/*        objectFit="cover"*/}
+            {/*        className="rounded-lg"*/}
+            {/*    />*/}
+            {/*</div>*/}
 
 
-                    {/* Filter Giá */}
-                    <div className="filter-section">
-                        <h3 className="filter-title">GIÁ</h3>
-                        <div className="filter-options filter-price">
-                            <input
-                                type="number"
-                                placeholder="Giá từ"
-                                value={minPriceFilter}
-                                onChange={(e) => handlePriceInputChange('min', e)}
-                            />
-                            <input
-                                type="number"
-                                placeholder="Giá đến"
-                                value={maxPriceFilter}
-                                onChange={(e) => handlePriceInputChange('max', e)}
-                            />
-                            <button className="apply-price-filter-button">Áp dụng</button>
-                        </div>
+            {/* The main flex container. Changed to flex-col on small, flex-row on md+ */}
+            <div className="flex flex-col md:flex-row gap-8">
+                {/* Left Sidebar for Filters */}
+                <div className="w-full md:w-1/5 p-6 bg-default-50 rounded-lg shadow-md flex flex-col gap-6">
+                    {/* Search Input */}
+                    <div className="mb-4">
+                        <Input
+                            placeholder="Nhập tên giày..."
+                            value={searchTerm}
+                            onValueChange={setSearchTerm}
+                            startContent={
+                                <MagnifyingGlassIcon className="w-5 h-5 text-default-400" />
+                            }
+                            isClearable
+                            onClear={() => setSearchTerm('')}
+                            className="w-full"
+                        />
                     </div>
-                </aside>
 
-                <div className="product-display-area">
-                    <div className="product-grid">
-                        {products.map((product) => (
-                            <div className="card" key={product.productId}>
-                                {/* Sale and New badges */}
-                                <div className="badge-container">
-                                    {(product.activePromotions && product.activePromotions.includes("ONLINE_EXCLUSIVE")) && (
-                                        <div className="badge online-exclusive">
-                                            <img src="/online-exclusive-badge.png" alt="Online Exclusive" />
+                    {/* Price Range Filter */}
+                    <div>
+                        <h3 className="text-lg font-semibold mb-3 text-default-800">Mức giá</h3>
+                        <CheckboxGroup
+                            value={priceRange}
+                            onValueChange={setPriceRange}
+                            orientation="vertical"
+                        >
+                            {PRICE_RANGES.map((range) => (
+                                <Checkbox key={range.key} value={range.key}>
+                                    {range.label}
+                                </Checkbox>
+                            ))}
+                        </CheckboxGroup>
+                    </div>
+
+                    <Divider className="my-2" />
+
+                    {/* Size Filter - Vertical CheckboxGroup */}
+                    <div>
+                        <h3 className="text-lg font-semibold mb-3 text-default-800">Kích thước</h3>
+                        <CheckboxGroup
+                            value={selectedSizes}
+                            onValueChange={setSelectedSizes}
+                            orientation="vertical" // Changed to vertical
+                            className="max-h-60 overflow-y-auto pr-2 custom-scrollbar"
+                        >
+                            {SIZE_OPTIONS.map((size) => (
+                                <Checkbox key={size} value={size}>
+                                    {size}
+                                </Checkbox>
+                            ))}
+                        </CheckboxGroup>
+                    </div>
+
+                    <Divider className="my-2" />
+
+                    {/* Brand Filter - Enhanced with Select component (remains the same as before) */}
+                    <div>
+                        <h3 className="text-lg font-semibold mb-3 text-default-800">Thương hiệu</h3>
+                        {fetchedBrands.length > 0 ? (
+                            <Select
+                                placeholder="Chọn thương hiệu"
+                                selectionMode="multiple"
+                                selectedKeys={new Set(selectedBrands)}
+                                onSelectionChange={(keys) => {
+                                    // @ts-ignore
+                                    setSelectedBrands(Array.from(keys));
+                                }}
+                                className="w-full"
+                                isMultiline={true}
+                                renderValue={(items) => {
+                                    if (items.length === 0) {
+                                        return "Chọn thương hiệu";
+                                    }
+                                    if (items.length === fetchedBrands.length) {
+                                        return "Tất cả thương hiệu";
+                                    }
+                                    return (
+                                        <div className="flex flex-wrap gap-1">
+                                            {items.map((item) => (
+                                                <Chip key={item.key} size="sm" variant="flat">
+                                                    {item.textValue}
+                                                </Chip>
+                                            ))}
                                         </div>
-                                    )}
-                                    {(product.activePromotions && product.activePromotions.includes("NEW_ARRIVAL")) && (
-                                        <div className="badge new-arrival">MỚI</div>
-                                    )}
-                                    {(product.activePromotions && product.activePromotions.includes("SALE")) && (
-                                        <div className="badge sale">SALE</div>
-                                    )}
-                                </div>
-
-                                <div className="image-container">
-                                    {product.thumbnail ? (
-                                        <CldImage
-                                            width={400}
-                                            height={400}
-                                            src={product.thumbnail}
-                                            alt={product.productName}
-                                            className="product-image"
-                                            objectFit="cover" // Đảm bảo ảnh hiển thị đầy đủ
-                                        />
-                                    ) : (
-                                        <div className="product-image placeholder">Không có ảnh</div>
-                                    )}
-                                </div>
-
-                                <div className="content">
-                                    <span className="product-brand">{product.brandName}</span>
-                                    <Link href={`/products/${product.productId}`} className="title-link">
-                                        <span className="product-name">
-                                            {product.productName}
-                                        </span>
-                                    </Link>
-                                    <div className="price-info">
-                                        {product.activePromotions && product.activePromotions.includes("SALE") && (
-                                            <>
-                                                <p className="original-price">{formatPrice(product.minPrice ? product.minPrice * 1.28 : null)}</p>
-                                                <p className="sale-percentage">-28%</p>
-                                            </>
-                                        )}
-                                        <p className="current-price">{formatPrice(product.minPrice)}</p>
-                                    </div>
-                                    <button className="add-to-cart-button">THÊM VÀO GIỎ</button>
-                                </div>
-                            </div>
-                        ))}
+                                    );
+                                }}
+                            >
+                                {fetchedBrands.map((brand) => (
+                                    // <SelectItem key={brand} value={brand}>
+                                    <SelectItem key={brand} >
+                                        {brand}
+                                    </SelectItem>
+                                ))}
+                            </Select>
+                        ) : (
+                            <p className="text-default-500 text-sm">Đang tải thương hiệu...</p>
+                        )}
                     </div>
-                    {products.length === 0 && !loading && (
-                        <div className="no-products-found">Không tìm thấy sản phẩm nào phù hợp với bộ lọc của bạn.</div>
+                </div>
+
+                {/* Right Main Content for Products */}
+                <div className="w-full md:flex-1">
+                    {/* Sort Section */}
+                    <div className="mb-6 flex justify-end">
+                        <Select
+                            placeholder="Mặc định"
+                            selectedKeys={[sortOption]}
+                            onSelectionChange={(keys) => {
+                                // @ts-ignore
+                                setSortOption(Array.from(keys).join(','));
+                            }}
+                            className="full"
+                        >
+                            <SelectItem key="default">Mặc định</SelectItem>
+                            <SelectItem key="price-asc">Giá: Thấp đến Cao</SelectItem>
+                            <SelectItem key="price-desc">Giá: Cao đến Thấp</SelectItem>
+                            <SelectItem key="name-asc">Tên: A-Z</SelectItem>
+                            <SelectItem key="name-desc">Tên: Z-A</SelectItem>
+                        </Select>
+                    </div>
+
+                    {/* Products Grid - Adjusted responsive columns */}
+                    <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {displayedProducts.map((product) => {
+                            const stockStatus = getStockStatus(product.totalStock);
+
+                            return (
+                                <Card
+                                    key={product.productId}
+                                    className="group hover:scale-[1.02] transition-all duration-300 hover:shadow-lg border border-default-200"
+                                    isPressable
+                                >
+                                    <CardHeader className="pb-0 pt-2 px-4 flex-col items-start relative">
+                                        {/* Product Image */}
+                                        <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-default-100 flex items-center justify-center">
+                                            {product.thumbnail ? (
+                                                <CldImage
+                                                    width={300}
+                                                    height={300}
+                                                    src={product.thumbnail}
+                                                    alt={product.productName}
+                                                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-default-400">
+                                                    <BuildingStorefrontIcon className="w-16 h-16" />
+                                                </div>
+                                            )}
+                                            {/* Stock Badge (top right) */}
+                                            <Badge
+                                                color={stockStatus.color}
+                                                className="absolute top-2 right-2 px-2 py-1 text-xs font-semibold rounded-md"
+                                                size="sm"
+                                            >
+                                                {stockStatus.text}
+                                            </Badge>
+                                            {/* NEW Badge (top left - generic for now) */}
+                                            <Badge
+                                                color="primary"
+                                                className="absolute top-2 left-2 px-2 py-1 text-xs font-semibold rounded-md"
+                                                size="sm"
+                                            >
+                                                MỚI
+                                            </Badge>
+                                        </div>
+                                    </CardHeader>
+
+                                    <CardBody className="px-4 py-3">
+                                        {/* Product Name */}
+                                        <Link href={`/products/${product.productId}`}>
+                                            <h4 className="font-semibold text-base line-clamp-2 hover:text-primary transition-colors cursor-pointer h-12">
+                                                {product.productName}
+                                            </h4>
+                                        </Link>
+
+                                        {/* Price */}
+                                        <div className="flex items-center gap-1 my-2">
+                                            <span className="text-lg font-bold text-success-600">
+                                                {formatPrice(product.minPrice)}
+                                            </span>
+                                        </div>
+
+                                        {/* Brand */}
+                                        <div className="text-sm text-default-500 mb-2">
+                                            {product.brandName}
+                                        </div>
+                                    </CardBody>
+                                </Card>
+                            );
+                        })}
+                    </div>
+
+                    {/* Empty State */}
+                    {displayedProducts.length === 0 && (
+                        <Card className="max-w-md mx-auto mt-12">
+                            <CardBody className="text-center py-12">
+                                <BuildingStorefrontIcon className="w-16 h-16 mx-auto text-default-300 mb-4" />
+                                <h3 className="text-xl font-semibold mb-2">Không có sản phẩm nào phù hợp</h3>
+                            </CardBody>
+                        </Card>
                     )}
-                    {renderPagination()}
                 </div>
             </div>
-        </StyledWrapper>
+            {/* Custom CSS for scrollbar (if needed, otherwise define in global.css) */}
+            <style jsx global>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 8px; /* Width of the scrollbar */
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: #f1f1f1; /* Color of the track */
+                    border-radius: 4px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #888; /* Color of the scroll thumb */
+                    border-radius: 4px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: #555; /* Color on hover */
+                }
+            `}</style>
+        </div>
     );
 };
-
-const StyledWrapper = styled.div`
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-  font-family: 'Inter', sans-serif; /* Sử dụng font hiện đại hơn */
-  color: #212121; /* Màu chữ chính tối hơn để đọc rõ */
-  line-height: 1.6;
-
-  .full-width-banner-wrapper {
-    margin-bottom: 3rem; /* Tăng khoảng cách dưới banner */
-    border-radius: 12px; /* Bo góc banner */
-    overflow: hidden; /* Đảm bảo hình ảnh bo góc */
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08); /* Thêm đổ bóng nhẹ */
-  }
-
-  .page-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center; /* Căn giữa theo chiều dọc */
-      margin-bottom: 2.5rem; /* Tăng khoảng cách dưới header */
-      padding-bottom: 1rem;
-      border-bottom: 1px solid #e0e0e0;
-  }
-
-  .page-title {
-      font-size: 2.5rem; /* Tăng kích thước tiêu đề */
-      font-weight: 800; /* Đậm hơn */
-      color: #1a1a1a;
-      margin: 0;
-      letter-spacing: -0.03em; /* Giảm khoảng cách chữ để trông hiện đại hơn */
-  }
-
-  .sort-by {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem; /* Tăng khoảng cách */
-      font-size: 1rem; /* Kích thước font rõ ràng hơn */
-      color: #555;
-      font-weight: 500;
-  }
-
-  .sort-select {
-      padding: 0.6rem 1rem; /* Tăng padding */
-      border: 1px solid #d0d0d0; /* Viền mềm mại hơn */
-      border-radius: 8px; /* Bo góc nhiều hơn */
-      background-color: #fcfcfc; /* Nền nhẹ nhàng */
-      cursor: pointer;
-      font-size: 0.95rem; /* Kích thước font rõ ràng hơn */
-      color: #333;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      appearance: none;
-      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-      background-repeat: no-repeat;
-      background-position: right 0.75rem center;
-      background-size: 1rem; /* Kích thước icon dropdown */
-      transition: all 0.2s ease;
-
-      &:focus {
-          outline: none;
-          border-color: #007bff; /* Highlight khi focus */
-          box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
-      }
-  }
-
-  .main-content {
-      display: flex;
-      gap: 3rem; /* Tăng khoảng cách giữa sidebar và sản phẩm */
-  }
-
-  .sidebar {
-      width: 300px; /* Tăng chiều rộng sidebar */
-      flex-shrink: 0;
-      background-color: #ffffff; /* Nền trắng để nổi bật hơn */
-      border-radius: 12px; /* Bo góc nhiều hơn */
-      padding: 2rem; /* Tăng padding */
-      box-shadow: 0 5px 20px rgba(0,0,0,0.08); /* Đổ bóng rõ ràng hơn */
-      border: 1px solid #eee; /* Thêm viền nhẹ */
-      height: fit-content; /* Sidebar chỉ cao bằng nội dung */
-      position: sticky; /* Sticky sidebar */
-      top: 2rem; /* Khoảng cách từ trên xuống khi sticky */
-  }
-
-  .filter-section {
-      margin-bottom: 2rem; /* Tăng khoảng cách giữa các phần lọc */
-      padding-bottom: 2rem;
-      border-bottom: 1px solid #f0f0f0; /* Viền nhẹ nhàng hơn */
-
-      &:last-child {
-          border-bottom: none;
-          margin-bottom: 0;
-          padding-bottom: 0;
-      }
-  }
-
-  .filter-title {
-      font-size: 1rem; /* Kích thước tiêu đề lọc rõ ràng hơn */
-      font-weight: 700; /* Đậm hơn */
-      color: #1a1a1a;
-      text-transform: uppercase;
-      margin-bottom: 1.2rem; /* Tăng khoảng cách */
-      letter-spacing: 0.08em; /* Tăng khoảng cách chữ */
-  }
-
-  .filter-options {
-      display: flex;
-      flex-direction: column;
-      gap: 0.9rem; /* Tăng khoảng cách giữa các option */
-  }
-
-  .filter-options.filter-price {
-      flex-direction: row;
-      flex-wrap: wrap; /* Cho phép xuống dòng nếu cần */
-      gap: 0.75rem;
-      input {
-          flex: 1; /* Chia đều không gian */
-          min-width: 100px; /* Đảm bảo đủ rộng */
-          padding: 0.6rem 0.8rem;
-          border: 1px solid #d0d0d0;
-          border-radius: 8px;
-          font-size: 0.95rem;
-          transition: border-color 0.2s ease, box-shadow 0.2s ease;
-
-          &:focus {
-              outline: none;
-              border-color: #007bff;
-              box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
-          }
-      }
-  }
-  .apply-price-filter-button {
-      width: 100%;
-      padding: 0.7rem 1.2rem;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 0.95rem;
-      font-weight: 600;
-      transition: background-color 0.3s ease;
-      margin-top: 0.75rem;
-
-      &:hover {
-          background-color: #0056b3;
-      }
-  }
-
-  .filter-option {
-      display: flex;
-      align-items: center;
-      font-size: 0.95rem; /* Kích thước font rõ ràng hơn */
-      color: #444; /* Màu chữ tối hơn */
-      cursor: pointer;
-      transition: color 0.2s ease;
-
-      &:hover {
-          color: #007bff; /* Highlight khi hover */
-      }
-
-      input[type="checkbox"],
-      input[type="radio"] {
-          margin-right: 0.7rem; /* Tăng khoảng cách */
-          accent-color: #007bff; /* Màu sắc chính cho checkbox/radio */
-          width: 1.1rem; /* Kích thước lớn hơn */
-          height: 1.1rem; /* Kích thước lớn hơn */
-          min-width: 1.1rem; /* Đảm bảo kích thước cố định */
-          min-height: 1.1rem; /* Đảm bảo kích thước cố định */
-          border: 1px solid #aaa; /* Viền cho checkbox/radio */
-          border-radius: 4px; /* Bo góc nhẹ cho checkbox */
-          cursor: pointer;
-          &:checked {
-              border-color: #007bff;
-          }
-      }
-       input[type="radio"] {
-            border-radius: 50%; /* Làm tròn cho radio button */
-       }
-  }
-
-  .product-display-area {
-      flex-grow: 1;
-  }
-
-  .product-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); /* Kích thước card lớn hơn một chút */
-      gap: 2rem; /* Tăng khoảng cách giữa các card */
-  }
-
-  .card {
-      background-color: #fff;
-      border-radius: 12px; /* Bo góc nhiều hơn */
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08); /* Đổ bóng mềm mại và rõ ràng hơn */
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-      overflow: hidden;
-      position: relative;
-      display: flex; /* Dùng flexbox cho nội dung card */
-      flex-direction: column;
-      height: 100%; /* Đảm bảo các card có chiều cao bằng nhau nếu trong flex/grid container */
-  }
-
-  .card:hover {
-      transform: translateY(-8px); /* Nhấc lên rõ hơn */
-      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15); /* Đổ bóng mạnh hơn khi hover */
-  }
-
-  .badge-container {
-      position: absolute;
-      top: 1rem; /* Khoảng cách từ trên xuống */
-      left: 1rem; /* Khoảng cách từ trái */
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem; /* Tăng khoảng cách giữa các badge */
-      z-index: 10;
-  }
-
-  .badge {
-      padding: 0.3rem 0.8rem; /* Tăng padding */
-      border-radius: 6px; /* Bo góc nhẹ */
-      font-size: 0.75rem; /* Kích thước font rõ ràng hơn */
-      font-weight: 700;
-      color: #fff;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      text-transform: uppercase; /* Chữ hoa cho badge */
-      letter-spacing: 0.05em;
-  }
-
-  .badge.online-exclusive {
-      background: none;
-      padding: 0;
-      img {
-          width: 70px; /* Kích thước badge lớn hơn */
-          height: auto;
-      }
-  }
-
-  .badge.new-arrival {
-      background-color: #4CAF50; /* Màu xanh lá cây hiện đại */
-  }
-
-  .badge.sale {
-      background-color: #FF5722; /* Màu cam nổi bật cho sale */
-  }
-
-  .image-container {
-      position: relative;
-      width: 100%;
-      height: 250px; /* Tăng chiều cao ảnh sản phẩm */
-      overflow: hidden;
-      border-top-left-radius: 12px;
-      border-top-right-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: #f8f8f8; /* Nền nhẹ cho ảnh */
-  }
-
-  .product-image {
-      width: 100%;
-      height: 100%;
-      object-fit: cover; /* Đảm bảo ảnh đầy đủ và không bị biến dạng */
-      transition: transform 0.3s ease; /* Thêm hiệu ứng zoom nhẹ khi hover */
-  }
-
-  .card:hover .product-image {
-      transform: scale(1.05); /* Zoom nhẹ khi hover */
-  }
-
-  .product-image.placeholder {
-      background-color: #e0e0e0;
-      color: #777;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.9rem;
-      font-style: italic;
-  }
-
-  .content {
-      padding: 1.2rem; /* Tăng padding */
-      display: flex;
-      flex-direction: column;
-      flex-grow: 1; /* Để nội dung giãn nở hết chiều cao */
-      justify-content: space-between; /* Căn giữa các phần tử */
-  }
-
-  .product-brand {
-      font-size: 0.8rem; /* Kích thước font nhỏ hơn một chút */
-      color: #777;
-      text-transform: uppercase;
-      margin-bottom: 0.4rem;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-  }
-
-  .title-link {
-      text-decoration: none;
-      color: inherit;
-  }
-
-  .product-name {
-      font-size: 1.1rem; /* Kích thước font lớn hơn */
-      font-weight: 700; /* Đậm hơn */
-      line-height: 1.4;
-      display: block;
-      margin-bottom: 0.75rem; /* Tăng khoảng cách */
-      color: #333;
-      min-height: 2.8em; /* Đảm bảo 2 dòng cho tiêu đề */
-      overflow: hidden;
-      text-overflow: ellipsis;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      transition: color 0.2s ease;
-
-      &:hover {
-          color: #007bff; /* Màu hover hiện đại */
-          text-decoration: none; /* Bỏ gạch chân mặc định */
-      }
-  }
-
-  .price-info {
-      display: flex;
-      align-items: baseline; /* Căn chỉnh giá để trông tự nhiên hơn */
-      gap: 0.6rem; /* Tăng khoảng cách */
-      margin-top: 0.75rem; /* Khoảng cách trên */
-      margin-bottom: 1rem; /* Khoảng cách dưới button */
-      flex-wrap: wrap; /* Đảm bảo giá không tràn ra ngoài */
-  }
-
-  .original-price {
-      font-size: 0.9rem; /* Kích thước rõ ràng hơn */
-      color: #999;
-      text-decoration: line-through;
-      font-weight: 500;
-  }
-
-  .current-price {
-      font-weight: 800; /* Rất đậm */
-      color: #DC3545; /* Màu đỏ đậm cho giá hiện tại */
-      font-size: 1.3rem; /* Kích thước lớn hơn cho giá hiện tại */
-  }
-
-  .sale-percentage {
-      background-color: #FF5722; /* Màu cam nổi bật */
-      color: #fff;
-      padding: 0.2rem 0.6rem;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-  }
-
-  .add-to-cart-button {
-      width: 100%;
-      padding: 0.8rem 1rem;
-      background-color: #28a745; /* Màu xanh lá cây cho nút mua */
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 1rem;
-      font-weight: 600;
-      transition: background-color 0.3s ease, transform 0.2s ease;
-
-      &:hover {
-          background-color: #218838;
-          transform: translateY(-2px);
-      }
-      &:active {
-          transform: translateY(0);
-      }
-  }
-
-  .no-products-found {
-      text-align: center;
-      font-size: 1.1rem;
-      color: #666;
-      margin-top: 3rem;
-      padding: 2rem;
-      background-color: #f0f0f0;
-      border-radius: 8px;
-  }
-
-  .pagination {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 0.6rem; /* Tăng khoảng cách */
-      margin-top: 3rem; /* Tăng khoảng cách trên */
-      padding-top: 1.5rem; /* Tăng padding trên */
-      border-top: 1px solid #eee;
-  }
-
-  .pagination-button {
-      background-color: #fff;
-      border: 1px solid #d0d0d0; /* Viền mềm mại hơn */
-      border-radius: 8px; /* Bo góc nhiều hơn */
-      padding: 0.8rem 1.2rem; /* Tăng padding */
-      cursor: pointer;
-      font-size: 1rem; /* Kích thước font rõ ràng hơn */
-      color: #444; /* Màu chữ tối hơn */
-      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-
-      &:hover:not(:disabled) {
-          background-color: #e9ecef;
-          border-color: #b3d7ff;
-          color: #007bff;
-      }
-
-      &.active {
-          background-color: #007bff;
-          color: #fff;
-          border-color: #007bff;
-      }
-
-      &:disabled {
-          opacity: 0.5; /* Giảm opacity khi disabled */
-          cursor: not-allowed;
-      }
-  }
-
-  .pagination-ellipsis {
-      padding: 0.8rem 0.5rem;
-      color: #777;
-      font-size: 1rem;
-  }
-
-  .loading-container, .error-container {
-      text-align: center;
-      font-size: 1.5rem; /* Kích thước font lớn hơn */
-      font-weight: 600;
-      color: #444;
-      margin-top: 80px; /* Tăng khoảng cách */
-      padding: 3rem;
-      background-color: #f9f9f9;
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-  }
-
-  /* Responsive Adjustments */
-  @media (max-width: 1200px) {
-    .main-content {
-      gap: 2rem;
-    }
-    .sidebar {
-      width: 250px;
-      padding: 1.5rem;
-    }
-    .product-grid {
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 1.5rem;
-    }
-    .card {
-      border-radius: 8px;
-    }
-    .image-container {
-      height: 220px;
-    }
-  }
-
-  @media (max-width: 992px) {
-      .main-content {
-          flex-direction: column;
-      }
-
-      .sidebar {
-          width: 100%;
-          margin-bottom: 2rem;
-          position: static; /* Bỏ sticky khi ở màn hình nhỏ */
-          padding: 1.5rem;
-      }
-
-      .product-grid {
-          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Nhỏ hơn nữa cho tablet */
-          gap: 1.2rem;
-      }
-      .page-title {
-        font-size: 2rem;
-      }
-  }
-
-  @media (max-width: 768px) {
-      padding: 1.5rem 0.75rem; /* Giảm padding tổng thể */
-      .page-header {
-          flex-direction: column;
-          align-items: flex-start;
-          gap: 1rem;
-          margin-bottom: 2rem;
-      }
-      .page-title {
-          font-size: 1.8rem;
-      }
-      .sort-select {
-          width: 100%; /* Kéo dài select box */
-      }
-      .product-grid {
-          grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); /* Nhỏ hơn nữa cho mobile */
-          gap: 1rem;
-      }
-      .image-container {
-        height: 180px;
-      }
-      .content {
-        padding: 0.8rem;
-      }
-      .product-name {
-        font-size: 1rem;
-      }
-      .current-price {
-        font-size: 1.1rem;
-      }
-      .add-to-cart-button {
-        padding: 0.7rem;
-        font-size: 0.9rem;
-      }
-      .badge.online-exclusive img {
-        width: 50px;
-      }
-  }
-
-  @media (max-width: 480px) {
-      .product-grid {
-          grid-template-columns: 1fr 1fr; /* 2 cột trên điện thoại nhỏ */
-          gap: 0.75rem;
-      }
-      .filter-options.filter-price {
-        input {
-            width: 100%; /* input giá full chiều rộng */
-        }
-      }
-  }
-`;
 
 export default ProductList;
