@@ -28,7 +28,7 @@ public class Payment {
     @Column(name = "payment_method", nullable = false)
     private String paymentMethod;
 
-    @Column(name = "transaction_id", unique = true)
+    @Column(name = "transaction_id")
     private String transactionId;
 
     @Column(precision = 14, scale = 2, nullable = false)
