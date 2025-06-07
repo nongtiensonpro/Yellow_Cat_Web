@@ -6,7 +6,7 @@
     "dev": "node node_modules/next/dist/bin/next dev --turbopack",
     "build": "rimraf .next && cross-env GENERATE_SOURCEMAP=false next build",
     "start": "next start",
-    "lint": "eslint . --ext .ts,.tsx -c .eslintrc.json --fix",
+    "lint": "next lint",
     "analyze": "cross-env ANALYZE=true next build",
     "analyze-windows": "cross-env ANALYZE=true next build",
     "clean": "rimraf .next && rimraf out",

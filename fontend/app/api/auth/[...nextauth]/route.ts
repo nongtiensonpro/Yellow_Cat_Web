@@ -85,7 +85,7 @@ const authOptions: NextAuthOptions = {
             clientSecret: ENV.keycloakClientSecret,
             issuer: ENV.keycloakIssuer,
             authorization: {
-                params: {scope: "openid profile email"}
+                params: {scope: "openid profile email offline_access"}
             },
         })
     ],
