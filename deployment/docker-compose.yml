@@ -4,7 +4,6 @@ services:
     image: postgres:17.5
     environment:
       POSTGRES_PASSWORD: changemeinprod
-      # Các tham số PostgreSQL được tối ưu nhưng không giới hạn cứng
       POSTGRES_SHARED_BUFFERS: 512MB
       POSTGRES_WORK_MEM: 16MB
       POSTGRES_MAINTENANCE_WORK_MEM: 128MB
@@ -38,7 +37,6 @@ services:
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_HOSTNAME: localhost
       KC_FEATURES: token-exchange,admin-fine-grained-authz
-      # Cấu hình JVM tối ưu không giới hạn heap size cứng
       JAVA_OPTS: >-
         -XX:+UseG1GC 
         -XX:MaxGCPauseMillis=100 
@@ -52,9 +50,50 @@ services:
     volumes:
       - keycloak_data:/opt/keycloak/data
 
+  frontend:
+    build:
+      context: ../fontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+      - keycloak
+    networks:
+      - local
+    restart: always
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - keycloak
+    networks:
+      - local
+    restart: always
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - frontend
+      - backend
+      - keycloak
+    networks:
+      - local
+    restart: always
+
 volumes:
   postgres_data:
   keycloak_data:
 networks:
   local:
     driver: bridge
+
