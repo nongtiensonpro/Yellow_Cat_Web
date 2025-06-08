@@ -4,6 +4,8 @@ import { Card, CardHeader, CardBody, Divider, Button, Spinner, Tabs, Tab } from 
 import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { CldImage } from 'next-cloudinary';
+import ReviewSection from '@/components/review/ReviewSection'; // Đúng đường dẫn tới file ReviewSection.tsx
+import axios from 'axios';
 
 interface BaseEntity {
     id: number;
@@ -661,6 +663,17 @@ export default function ProductDetailPage() {
                                   )}
                               </div>
                           </Tab>
+                          <Tab title="Đánh giá">
+                              {selectedVariant ? (
+                                  <ReviewSection
+                                      productId={product.productId}
+                                      productVariantId={selectedVariant.variantId}
+                                  />
+                              ) : (
+                              <p >Vui lòng chọn màu và kích cỡ để đánh giá sản phẩm.</p>
+                              )}
+                          </Tab>
+
                       </Tabs>
                   </div>
               </CardBody>

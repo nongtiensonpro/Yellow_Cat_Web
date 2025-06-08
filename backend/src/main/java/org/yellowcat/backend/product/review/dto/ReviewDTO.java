@@ -7,13 +7,14 @@ public interface ReviewDTO {
     Integer getRating();
     String getComment();
     LocalDateTime getCreatedAt();
+    String getCustomerName();
+    String getCustomerAvatar();
+    String getProductVariation();
 
-
-    default String getFormatCreatedAt(){
+    default String getFormatCreatedAt() {
         if (getCreatedAt() == null) {
             return "";
         }
-
         return getCreatedAt().format(DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm"));
     }
 }

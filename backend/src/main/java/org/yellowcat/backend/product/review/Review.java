@@ -1,44 +1,44 @@
 package org.yellowcat.backend.product.review;
 
-import jakarta.persistence.*; // Hoặc import javax.persistence.*
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
+import org.yellowcat.backend.product.Product;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
-import org.yellowcat.backend.user.AppUser; // Import lớp AppUser của bạn
+import org.yellowcat.backend.user.AppUser;
+
 import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "reviews",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"variant_id", "app_user_id"}))
 @Getter
 @Setter
-@Entity
-@AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "Reviews",
-        uniqueConstraints = {@UniqueConstraint(columnNames = {"variant_id", "app_user_id"}) // Ràng buộc UNIQUE từ SQL
-})
+@AllArgsConstructor
 public class Review {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "review_id")
     private Integer reviewId;
 
     @ManyToOne
-    @JoinColumn(name = "variant_id", nullable = false) // Khóa ngoại trỏ đến ProductVariants
+    @JoinColumn(name = "product_variant_id")
     private ProductVariant productVariant;
 
     @ManyToOne
-    @JoinColumn(name = "app_user_id", nullable = false) // Khóa ngoại trỏ đến AppUsers
+    @JoinColumn(name = "product_id")
+    private Product product;
+
+    @ManyToOne
+    @JoinColumn(name = "app_user_id")
     private AppUser appUser;
 
-    @Column(name = "rating", nullable = false)
+    @Column(nullable = false)
     private Short rating;
 
-    @Column(name = "comment")
+    @Column(length = 500)
     private String comment;
 
-    @Column(name = "review_date", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    @Column(name = "review_date")
     private LocalDateTime reviewDate;
-
-
 }

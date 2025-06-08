@@ -15,4 +15,8 @@ public interface ReviewService {
     void createReview(CreateReviewDTO dto, AppUser user);
 
     ReviewStatsDTO getReviewStatsByProductId(Integer productId);
+
+    void updateReview(CreateReviewDTO dto, AppUser user);
+
+    void deleteReview(Integer productVariantId, AppUser user);
 }

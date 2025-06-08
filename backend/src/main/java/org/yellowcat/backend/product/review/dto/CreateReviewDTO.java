@@ -1,20 +1,22 @@
 package org.yellowcat.backend.product.review.dto;
 
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
+import jakarta.validation.constraints.*;
+
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@AllArgsConstructor
-@NoArgsConstructor
 @Getter
 @Setter
 public class CreateReviewDTO {
 
-    @Size(min = 1, max = 5)
-    Integer rating;
-    @Size(max = 500, min = 1)
-    String comment;
+    @NotNull(message = "productVariantId không được để trống")
+    private Integer productVariantId;
+
+    @NotNull(message = "rating không được để trống")
+    @Min(1)
+    @Max(5)
+    private Integer rating;
+
+    @Size(max = 500, message = "comment không được dài quá 500 ký tự")
+    private String comment;
 }
