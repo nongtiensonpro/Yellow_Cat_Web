@@ -3,6 +3,10 @@ package org.yellowcat.backend.product.orderItem;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.yellowcat.backend.product.order.Order;
 import org.yellowcat.backend.product.order.OrderRepository;
@@ -24,6 +28,14 @@ public class OrderItemService {
     OrderRepository orderRepository;
     ProductVariantRepository productVariantRepository;
     OrderItemMapper orderItemMapper;
+
+    public Page<OrderItemResponse> getOrderItemsByOrderId(Integer orderId, int page, int size) {
+        Sort sort = Sort.by("priceAtPurchase").descending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<OrderItem> orderItems = orderItemRepository.findByOrder_OrderId(orderId, pageable);
+
+        return orderItems.map(orderItemMapper::toOrderItemResponse);
+    }
 
     public OrderItemResponse createOrderItem(OrderItemCreatedRequest request) {
         Order order = orderRepository.findById(request.getOrderId())
