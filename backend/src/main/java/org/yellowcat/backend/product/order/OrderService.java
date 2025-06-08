@@ -3,7 +3,11 @@ package org.yellowcat.backend.product.order;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.yellowcat.backend.product.order.dto.OrderResponse;
 import org.yellowcat.backend.product.order.dto.OrderUpdateRequest;
 import org.yellowcat.backend.product.order.dto.OrderUpdateResponse;
 import org.yellowcat.backend.product.order.mapper.OrderMapper;
@@ -24,6 +28,19 @@ public class OrderService {
     OrderItemRepository orderItemRepository;
     PaymentRepository paymentRepository;
     OrderMapper orderMapper;
+
+    public Page<OrderResponse> getOrders(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+
+        return orderRepository.findAllOrders(pageable);
+    }
+
+    public Page<OrderResponse> getOrderByStatus(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        String orderStatus = "Pending";
+
+        return orderRepository.findAllByOrderStatus(orderStatus, pageable);
+    }
 
     public OrderUpdateResponse updateOrder(OrderUpdateRequest request) {
         // Lấy danh sách OrderItem theo orderId
