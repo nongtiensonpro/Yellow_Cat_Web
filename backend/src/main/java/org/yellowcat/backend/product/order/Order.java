@@ -1,9 +1,7 @@
 package org.yellowcat.backend.product.order;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import lombok.*;
 import org.yellowcat.backend.product.address.Addresses;
 import org.yellowcat.backend.product.orderItem.OrderItem;
 import org.yellowcat.backend.product.payment.Payment;
@@ -17,9 +15,11 @@ import java.util.List;
 
 @Entity
 @Table(name = "Orders") // Tên bảng vẫn là "Orders"
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Order { // Tên class là Order (số ít)
 
     @Id
@@ -27,7 +27,7 @@ public class Order { // Tên class là Order (số ít)
     @Column(name = "order_id")
     private Integer orderId;
 
-    @Column(name = "order_code", unique = true, nullable = false)
+    @Column(name = "order_code", unique = true)
     private String orderCode;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -35,11 +35,17 @@ public class Order { // Tên class là Order (số ít)
     private AppUser user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "shipping_address_id", nullable = false)
+    @JoinColumn(name = "shipping_address_id")
     private Addresses shippingAddress;
 
     @Column(name = "order_date", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime orderDate;
+
+    @Column(name = "phone_number", length = 15)
+    private String phoneNumber;
+
+    @Column(name = "customer_name")
+    private String customerName;
 
     @Column(name = "sub_total_amount", precision = 14, scale = 2, nullable = false)
     private BigDecimal subTotalAmount;
@@ -78,7 +84,6 @@ public class Order { // Tên class là Order (số ít)
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Payment> payments;
-
 
     @PrePersist
     protected void onCreate() {

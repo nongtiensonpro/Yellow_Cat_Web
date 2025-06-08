@@ -1,20 +1,20 @@
 package org.yellowcat.backend.product.orderItem;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import lombok.*;
 import org.yellowcat.backend.product.order.Order;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
 
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "OrderItems") // Tên bảng vẫn là "OrderItems"
-@Data
+@Table(name = "order_items")
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrderItem { // Tên class là OrderItem (số ít)
+@Builder
+public class OrderItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,7 +25,7 @@ public class OrderItem { // Tên class là OrderItem (số ít)
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "variant_id", nullable = false)
     private ProductVariant variant;
 

@@ -59,6 +59,12 @@ public class SecurityConfig {
                                 "/v3/api-docs/**")
                         .permitAll().
 
+                        //Orders private API
+                                requestMatchers(
+                                "/api/orders/**",
+                                "/api/order-items/**"
+                        ).hasAnyAuthority("Admin_Web", "Staff_Web").
+
                         // Product public API
                                 requestMatchers(HttpMethod.GET,
                                 "/api/products",
