@@ -15,6 +15,8 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useSession } from 'next-auth/react';
 import LoadingSpinner from '@/components/LoadingSpinner';
+
+
 import { jwtDecode } from 'jwt-decode';
 import {IconBasket} from "@tabler/icons-react";
 
@@ -62,6 +64,7 @@ interface ProductStats {
     inactive: number;
     outOfStock: number;
 }
+
 
 export default function AdminDashboard() {
     const { data: session, status } = useSession();
