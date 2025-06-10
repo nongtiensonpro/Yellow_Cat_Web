@@ -356,6 +356,7 @@ export default function Page() {
                             }}
                         >
                             <TableHeader>
+                                <TableColumn>ID</TableColumn>
                                 <TableColumn>NGƯỜI DÙNG</TableColumn>
                                 <TableColumn>EMAIL</TableColumn>
                                 <TableColumn>VAI TRÒ</TableColumn>
@@ -365,6 +366,7 @@ export default function Page() {
                             <TableBody emptyContent="Không có dữ liệu">
                                 {currentItems.map((item) => (
                                     <TableRow key={item.id}>
+                                        <TableCell>{item.id}</TableCell>
                                         <TableCell>
                                             <User
                                                 avatarProps={{
