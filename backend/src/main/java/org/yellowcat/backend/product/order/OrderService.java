@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.yellowcat.backend.product.order.dto.OrderResponse;
 import org.yellowcat.backend.product.order.dto.OrderUpdateRequest;
 import org.yellowcat.backend.product.order.dto.OrderUpdateResponse;
@@ -42,6 +43,7 @@ public class OrderService {
         return orderRepository.findAllByOrderStatus(orderStatus, pageable);
     }
 
+    @Transactional
     public OrderUpdateResponse updateOrder(OrderUpdateRequest request) {
         // Lấy danh sách OrderItem theo orderId
         List<OrderItem> orderItems = orderItemRepository.findByOrder_OrderId(request.getOrderId());
