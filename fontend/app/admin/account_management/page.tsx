@@ -37,39 +37,60 @@ import {
     Edit,
     Eye,
     RefreshCw,
+    MapPin,
 } from "lucide-react";
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useTheme } from "next-themes";
+import { useRouter } from 'next/navigation';
 
 interface Users {
-    id: string;
+    id: number;
     username: string;
     email: string;
-    firstName: string;
-    lastName: string;
-    roles: string[];
-    realmRoles: string[];
-    clientRoles: string[];
+    name: string;
     enabled: boolean;
+    roles: string[];
+    clientRoles: string[];
 }
 
-export default function Page() {
+interface ApiResponse {
+    timestamp: string;
+    status: number;
+    message: string;
+    data: {
+        content: Users[];
+        totalPages: number;
+        totalElements: number;
+        size: number;
+        number: number;
+    };
+}
+
+interface SortDescriptor {
+    column: string;
+    direction: "ascending" | "descending";
+}
+
+export default function AccountManagement() {
     const { data: session, status } = useSession();
     const [demoData, setDemoData] = useState<Users[]>([]);
     const [filteredData, setFilteredData] = useState<Users[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    // Pagination state
-    const [currentPage, setCurrentPage] = useState<number>(1);
-    const [itemsPerPage, setItemsPerPage] = useState<number>(10);
-
-    // Filter states
-    const [searchTerm, setSearchTerm] = useState<string>('');
-    const [statusFilter, setStatusFilter] = useState<string>('all');
-    const [roleFilter, setRoleFilter] = useState<string>('all');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedRole, setSelectedRole] = useState<string>('all');
+    const [selectedStatus, setSelectedStatus] = useState<string>('all');
+    const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
+        column: "id",
+        direction: "ascending",
+    });
 
     const { theme, setTheme } = useTheme();
+    const router = useRouter();
 
     useEffect(() => {
         if (status === 'authenticated' && session) {
@@ -84,31 +105,31 @@ export default function Page() {
         let filtered = demoData;
 
         // Search filter
-        if (searchTerm) {
+        if (searchQuery) {
             filtered = filtered.filter(user =>
-                user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
+                user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                user.name.toLowerCase().includes(searchQuery.toLowerCase())
             );
         }
 
         // Status filter
-        if (statusFilter !== 'all') {
+        if (selectedStatus !== 'all') {
             filtered = filtered.filter(user =>
-                statusFilter === 'active' ? user.enabled : !user.enabled
+                selectedStatus === 'active' ? user.enabled : !user.enabled
             );
         }
 
         // Role filter
-        if (roleFilter !== 'all') {
+        if (selectedRole !== 'all') {
             filtered = filtered.filter(user =>
-                user.roles.includes(roleFilter) || user.clientRoles.includes(roleFilter)
+                user.roles.includes(selectedRole) || user.clientRoles.includes(selectedRole)
             );
         }
 
         setFilteredData(filtered);
         setCurrentPage(1); // Reset to first page when filtering
-    }, [demoData, searchTerm, statusFilter, roleFilter]);
+    }, [demoData, searchQuery, selectedStatus, selectedRole]);
 
     const login = () => {
         signIn('keycloak');
@@ -116,44 +137,40 @@ export default function Page() {
 
     const fetchDemoData = async () => {
         try {
-            setLoading(true);
+            const response = await fetch('http://localhost:8080/api/users');
+            console.log('API Response Status:', response.status);
+            
+            const apiResponse: ApiResponse = await response.json();
+            console.log('Raw API Response:', apiResponse);
 
-            const token = session?.accessToken;
+            if (apiResponse.data && Array.isArray(apiResponse.data.content)) {
+                console.log('API Content:', apiResponse.data.content);
+                
+                const formattedData = apiResponse.data.content.map(user => {
+                    console.log('Processing user:', user);
+                    return {
+                        id: user.id,
+                        username: user.username,
+                        email: user.email,
+                        name: user.name || '',
+                        enabled: user.enabled,
+                        roles: user.roles || [],
+                        clientRoles: user.clientRoles || []
+                    };
+                });
 
-            if (!token) {
-                throw new Error('Không có token xác thực');
+                console.log('Formatted Data:', formattedData);
+                setDemoData(formattedData);
+                setFilteredData(formattedData);
+                setCurrentPage(apiResponse.data.number);
+                setItemsPerPage(apiResponse.data.size);
+                setTotalPages(apiResponse.data.totalPages);
+                setTotalItems(apiResponse.data.totalElements);
+            } else {
+                console.error('Invalid API response format:', apiResponse);
             }
-
-            const response = await fetch('http://localhost:8080/api/admin/users', {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                let errorMessage = `Lỗi HTTP! Trạng thái: ${response.status}`;
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    errorMessage += ` - ${errorJson.message || errorJson.error || errorText}`;
-                } catch {
-                    errorMessage += errorText ? ` - ${errorText}` : '';
-                }
-                console.error(errorMessage);
-                throw new Error(errorMessage);
-            }
-
-            const data = await response.json();
-            setDemoData(data);
-            setError(null);
-        } catch (err) {
-            const errorMessage = err instanceof Error
-                ? `Không thể tải dữ liệu: ${err.message}`
-                : 'Không thể tải dữ liệu. Vui lòng thử lại sau.';
-            setError(errorMessage);
-            console.error('Lỗi khi tải dữ liệu:', err);
-        } finally {
-            setLoading(false);
+        } catch (error) {
+            console.error('Error fetching data:', error);
         }
     };
 
@@ -161,7 +178,6 @@ export default function Page() {
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
     const getRoleColor = (role: string) => {
         switch (role) {
@@ -178,6 +194,14 @@ export default function Page() {
             return <UserIcon size={16} className="text-yellow-500" />;
         }
         return <Users size={16} className="text-gray-500" />;
+    };
+
+    const handleManageAddress = (userId: number) => {
+        console.log('Managing address for user:', userId);
+        // Ensure we're using the correct ID format
+        const appUserId = userId;
+        console.log('Using appUserId:', appUserId);
+        router.push(`/admin/address_management?userId=${appUserId}`);
     };
 
     // Check if user is authenticated
@@ -296,14 +320,14 @@ export default function Page() {
                         <Input
                             placeholder="Tìm kiếm theo tên, email..."
                             startContent={<Search size={18} />}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                             className="md:max-w-xs"
                         />
                         <Select
                             placeholder="Trạng thái"
-                            selectedKeys={[statusFilter]}
-                            onSelectionChange={(keys) => setStatusFilter(Array.from(keys)[0] as string)}
+                            selectedKeys={[selectedStatus]}
+                            onSelectionChange={(keys) => setSelectedStatus(Array.from(keys)[0] as string)}
                             className="md:max-w-xs"
                         >
                             <SelectItem key="all">Tất cả trạng thái</SelectItem>
@@ -312,8 +336,8 @@ export default function Page() {
                         </Select>
                         <Select
                             placeholder="Vai trò"
-                            selectedKeys={[roleFilter]}
-                            onSelectionChange={(keys) => setRoleFilter(Array.from(keys)[0] as string)}
+                            selectedKeys={[selectedRole]}
+                            onSelectionChange={(keys) => setSelectedRole(Array.from(keys)[0] as string)}
                             className="md:max-w-xs"
                         >
                             <SelectItem key="all">Tất cả vai trò</SelectItem>
@@ -357,27 +381,27 @@ export default function Page() {
                         >
                             <TableHeader>
                                 <TableColumn>ID</TableColumn>
-                                <TableColumn>NGƯỜI DÙNG</TableColumn>
-                                <TableColumn>EMAIL</TableColumn>
-                                <TableColumn>VAI TRÒ</TableColumn>
-                                <TableColumn>TRẠNG THÁI</TableColumn>
-                                <TableColumn>HÀNH ĐỘNG</TableColumn>
+                                <TableColumn>Email</TableColumn>
+                                <TableColumn>Họ và tên</TableColumn>
+                                <TableColumn>Trạng thái</TableColumn>
+                                <TableColumn>Vai trò</TableColumn>
+                                <TableColumn>Hành động</TableColumn>
                             </TableHeader>
                             <TableBody emptyContent="Không có dữ liệu">
                                 {currentItems.map((item) => (
                                     <TableRow key={item.id}>
                                         <TableCell>{item.id}</TableCell>
-                                        <TableCell>
-                                            <User
-                                                avatarProps={{
-                                                    icon: getUserTypeIcon(item),
-                                                    color: item.enabled ? "default" : "default"
-                                                }}
-                                                description={item.username}
-                                                name={`${item.firstName} ${item.lastName}`}
-                                            />
-                                        </TableCell>
                                         <TableCell>{item.email}</TableCell>
+                                        <TableCell>{item.name}</TableCell>
+                                        <TableCell>
+                                            <Chip
+                                                color={item.enabled ? "success" : "danger"}
+                                                variant="flat"
+                                                startContent={item.enabled ? <UserCheck size={14} /> : <UserX size={14} />}
+                                            >
+                                                {item.enabled ? 'Hoạt động' : 'Không hoạt động'}
+                                            </Chip>
+                                        </TableCell>
                                         <TableCell>
                                             <div className="flex flex-wrap gap-1">
                                                 {(
@@ -392,7 +416,7 @@ export default function Page() {
                                                     Array.from(new Set([
                                                         ...item.roles.filter(role => role !== 'default-roles-yellow cat company'),
                                                         ...item.clientRoles
-                                                    ])).map((role, index) => (
+                                                    ])).map((role) => (
                                                         <Chip
                                                             key={role}
                                                             size="sm"
@@ -408,15 +432,6 @@ export default function Page() {
                                                     ))
                                                 )}
                                             </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Chip
-                                                color={item.enabled ? "success" : "danger"}
-                                                variant="flat"
-                                                startContent={item.enabled ? <UserCheck size={14} /> : <UserX size={14} />}
-                                            >
-                                                {item.enabled ? 'Hoạt động' : 'Không hoạt động'}
-                                            </Chip>
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-1">
@@ -438,6 +453,19 @@ export default function Page() {
                                                         onClick={() => console.log('Edit', item.id)}
                                                     >
                                                         <Edit size={16} />
+                                                    </Button>
+                                                </Tooltip>
+                                                <Tooltip content="Quản lý địa chỉ">
+                                                    <Button
+                                                        isIconOnly
+                                                        size="sm"
+                                                        variant="light"
+                                                        onClick={() => {
+                                                            console.log('User data:', item);
+                                                            handleManageAddress(item.id);
+                                                        }}
+                                                    >
+                                                        <MapPin size={16} />
                                                     </Button>
                                                 </Tooltip>
                                                 <Dropdown>

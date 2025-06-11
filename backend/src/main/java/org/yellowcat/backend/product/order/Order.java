@@ -2,7 +2,7 @@ package org.yellowcat.backend.product.order;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.yellowcat.backend.product.address.Addresses;
+import org.yellowcat.backend.address.Addresses;
 import org.yellowcat.backend.product.orderItem.OrderItem;
 import org.yellowcat.backend.product.payment.Payment;
 import org.yellowcat.backend.product.shipment.Shipment;

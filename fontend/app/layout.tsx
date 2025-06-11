@@ -5,6 +5,7 @@ import Providers from "./providers";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import React from "react";
+import { NextUIProvider } from "@nextui-org/react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,11 +22,13 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <Providers>
-          <Navbar />
-          {children}
-          <Footer />
-        </Providers>
+        <NextUIProvider>
+          <Providers>
+            <Navbar />
+            {children}
+            <Footer />
+          </Providers>
+        </NextUIProvider>
       </body>
     </html>
   );
