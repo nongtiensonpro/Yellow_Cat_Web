@@ -1,3 +1,4 @@
+
 "use client"
 
 import {
@@ -10,7 +11,7 @@ import {
     Chip,
     Avatar,
 } from "@heroui/react";
-import {Users, Package, BarChart2, Moon, Sun, UserCheck, UserX, Shield, User, ActivityIcon} from "lucide-react";
+import {Users, Package, BarChart2, Moon, Sun, UserCheck, UserX, Shield, User, ActivityIcon, Percent} from "lucide-react"; // Import Percent icon
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useSession } from 'next-auth/react';
@@ -63,6 +64,14 @@ interface ProductStats {
     active: number;
     inactive: number;
     outOfStock: number;
+}
+
+// Define a new interface for PromotionStats
+interface PromotionStats {
+    total: number;
+    active: number;
+    expired: number;
+    upcoming: number;
 }
 
 
@@ -203,6 +212,48 @@ export default function AdminDashboard() {
         };
         if (status === "authenticated") fetchProductStats();
     }, [session, status]);
+
+    // New state for promotion stats
+    const [promotionStats, setPromotionStats] = useState<PromotionStats>({
+        total: 0,
+        active: 0,
+        expired: 0,
+        upcoming: 0,
+    });
+
+    // New useEffect for fetching promotion stats
+    useEffect(() => {
+        const fetchPromotionStats = async () => {
+            try {
+                const accessToken = session?.accessToken;
+                // Assuming an API endpoint for promotions, adjust as needed
+                const response = await fetch('http://localhost:8080/api/promotions', {
+                    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+                });
+                if (!response.ok) throw new Error("Không thể lấy dữ liệu khuyến mãi");
+                const data = await response.json();
+                const promotions = data || []; // Assuming the API returns an array of promotions
+
+                const now = new Date();
+                setPromotionStats({
+                    total: promotions.length,
+                    active: promotions.filter((p: any) => new Date(p.startDate) <= now && new Date(p.endDate) >= now).length,
+                    expired: promotions.filter((p: any) => new Date(p.endDate) < now).length,
+                    upcoming: promotions.filter((p: any) => new Date(p.startDate) > now).length,
+                });
+            } catch (e) {
+                console.error("Lỗi khi lấy thống kê khuyến mãi:", e);
+                setPromotionStats({
+                    total: 0,
+                    active: 0,
+                    expired: 0,
+                    upcoming: 0,
+                });
+            }
+        };
+        if (status === "authenticated") fetchPromotionStats();
+    }, [session, status]);
+
 
     if (status === 'loading' || loading) {
         return <LoadingSpinner />;
@@ -373,6 +424,43 @@ export default function AdminDashboard() {
                     <CardFooter>
                         <Button as={Link} href="/admin/revenue" color="danger" variant="flat" size="sm">
                             Xem chi tiết
+                        </Button>
+                    </CardFooter>
+                </Card>
+                {/* New Card for Promotion Management */}
+                <Card className="shadow-lg">
+                    <CardHeader className="flex items-center gap-3">
+                        <Avatar icon={<Percent size={24} />} /> {/* Using Percent icon */}
+                        <div className="flex-1">
+                            <p className="text-lg font-semibold text-gray-700 dark:text-white">Khuyến mãi</p>
+                            <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-300">{promotionStats.total}</p>
+                        </div>
+                    </CardHeader>
+                    <CardBody className="pt-0">
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600 dark:text-gray-300">Đang hoạt động</span>
+                                <Chip size="sm" color="success" variant="flat">
+                                    {promotionStats.active}
+                                </Chip>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600 dark:text-gray-300">Đã kết thúc</span>
+                                <Chip size="sm" color="danger" variant="flat">
+                                    {promotionStats.expired}
+                                </Chip>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600 dark:text-gray-300">Sắp diễn ra</span>
+                                <Chip size="sm" color="warning" variant="flat">
+                                    {promotionStats.upcoming}
+                                </Chip>
+                            </div>
+                        </div>
+                    </CardBody>
+                    <CardFooter>
+                        <Button as={Link} href="/admin/promotion_management"  variant="flat" size="sm">
+                            Quản lý khuyến mãi
                         </Button>
                     </CardFooter>
                 </Card>
