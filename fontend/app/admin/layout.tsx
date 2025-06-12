@@ -1,14 +1,6 @@
-import { ReactNode } from "react";
 
-export const metadata = {
-    title: "Admin",
-};
+import AdminLayout from '@/components/layout/AdminLayout';
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
-    return (
-        <>
-            {/* KHÔNG có Navbar ở đây */}
-            {children}
-        </>
-    );
+export default function Layout({ children }: { children: React.ReactNode }) {
+    return <AdminLayout>{children}</AdminLayout>;
 }
