@@ -11,13 +11,12 @@ import {
     TableCell,
     Tabs,
     Tab,
-    Card,
-    CardBody,
     Button,
     Spinner,
     Pagination, useDisclosure
 } from "@heroui/react";
 import EditFromOrder from './EditFromOrder';
+import PaymentModal from './PaymentModal';
 
 interface Order {
     orderId: number;
@@ -30,14 +29,6 @@ interface Order {
     orderStatus: string;
 }
 
-interface OrderItem {
-    orderItemId: number;
-    orderId: number;
-    productVariantId: number;
-    quantity: number;
-    priceAtPurchase: number;
-    totalPrice: number;
-}
 
 const statusMap: { [key: string]: string } = {
     all: 'Tất cả',
@@ -50,6 +41,7 @@ const statusMap: { [key: string]: string } = {
 
 export default function PurchaseOrder() {
     const {isOpen, onOpen, onOpenChange} = useDisclosure();
+    const {isOpen: isPaymentOpen, onOpen: onPaymentOpen, onOpenChange: onPaymentOpenChange} = useDisclosure();
     const { data: session } = useSession();
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
@@ -61,6 +53,7 @@ export default function PurchaseOrder() {
     const [activeTab, setActiveTab] = useState<string | number>('all');
 
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const [selectedOrderForPayment, setSelectedOrderForPayment] = useState<Order | null>(null);
 
     const handleSelectionChange = (key: string | number) => {
         setActiveTab(key);
@@ -155,6 +148,7 @@ export default function PurchaseOrder() {
         setSelectedOrder(order);
         onOpen();
     };
+
 
     const deleteOrder = async (orderId: number)=>{
         if (!session?.accessToken) {
@@ -276,6 +270,14 @@ export default function PurchaseOrder() {
                     onOpenChange={onOpenChange}
                     order={selectedOrder}
                     onOrderUpdate={fetchOrders}
+                />
+            )}
+            {selectedOrderForPayment && (
+                <PaymentModal
+                    isOpen={isPaymentOpen}
+                    onOpenChange={onPaymentOpenChange}
+                    orderAmount={selectedOrderForPayment.finalAmount}
+                    orderCode={selectedOrderForPayment.orderCode}
                 />
             )}
         </div>

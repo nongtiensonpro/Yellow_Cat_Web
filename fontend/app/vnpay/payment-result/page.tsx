@@ -63,7 +63,7 @@ export default function PaymentResultPage() {
 
                     <div className="flex items-center justify-center">
                         <Link
-                            href="/"
+                            href="/staff/officesales"
                             className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white ${result.success ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
                         >
                             Quay lại trang thanh toán

@@ -2,12 +2,23 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
     Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, Spinner,
     Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Input,
+    useDisclosure
 } from "@heroui/react";
 import { OptimizedProductItem } from "./OptimizedProductItem";
 import { ProductManagement, ProductVariant, ProductWithVariants } from "./ProductListSaleOffice";
+import PaymentModal from './PaymentModal';
+
+interface Payment {
+    paymentId: number;
+    paymentMethod: string;
+    amount: number;
+    paymentStatus: string;
+    transactionId?: string;
+}
 
 interface Order {
     orderId: number;
@@ -18,6 +29,7 @@ interface Order {
     discountAmount: number;
     finalAmount: number;
     orderStatus: string;
+    payments?: Payment[];
 }
 
 interface OrderItem {
@@ -62,6 +74,9 @@ const statusMap: { [key: string]: string } = {
 
 export default function EditFromOrder({ isOpen, onOpenChange, order, onOrderUpdate }: Props) {
     const { data: session } = useSession();
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const {isOpen: isPaymentOpen, onOpen: onPaymentOpen, onOpenChange: onPaymentOpenChange} = useDisclosure();
 
     // State for editable order fields
     const [editableOrder, setEditableOrder] = useState({
@@ -322,6 +337,86 @@ export default function EditFromOrder({ isOpen, onOpenChange, order, onOrderUpda
         }
     };
 
+    // Xử lý kết quả thanh toán
+    useEffect(() => {
+        if (!isOpen || !order || !searchParams) return;
+
+        const responseCode = searchParams.get('vnp_ResponseCode');
+        const transactionNo = searchParams.get('vnp_TransactionNo');
+        const orderInfo = searchParams.get('vnp_OrderInfo');
+        const amount = searchParams.get('vnp_Amount');
+
+        if (responseCode && orderInfo?.includes(order.orderCode)) {
+            // Xử lý kết quả thanh toán
+            const handlePaymentResult = async () => {
+                if (!session?.accessToken) return;
+                try {
+                    // Tạo payment info dựa trên kết quả thanh toán
+                    const paymentInfo = {
+                        paymentMethod: 'VNPAY',
+                        transactionId: transactionNo || 'N/A',
+                        amount: amount ? parseInt(amount) / 100 : order.finalAmount,
+                        paymentStatus: responseCode === '00' ? 'COMPLETED' : 'FAILED'
+                    };
+
+                    // Cập nhật đơn hàng với thông tin thanh toán
+                    const updateOrderRes = await fetch(`http://localhost:8080/api/orders/${order.orderId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${session.accessToken}`,
+                        },
+                        body: JSON.stringify({
+                            orderId: order.orderId,
+                            customerName: editableOrder.customerName,
+                            phoneNumber: editableOrder.phoneNumber,
+                            discountAmount: editableOrder.discountAmount,
+                            payments: [paymentInfo]
+                        }),
+                    });
+
+                    if (!updateOrderRes.ok) {
+                        throw new Error(`Lỗi ${updateOrderRes.status}: Không thể cập nhật thông tin thanh toán.`);
+                    }
+
+                    // Đợi cập nhật đơn hàng hoàn thành
+                    await updateOrderRes.json();
+
+                    // Nếu thanh toán thành công, cập nhật trạng thái đơn hàng
+                    if (responseCode === '00') {
+                        const updateStatusRes = await fetch(`http://localhost:8080/api/orders/${order.orderId}/status`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${session.accessToken}`,
+                            },
+                            body: JSON.stringify({
+                                status: 'COMPLETED'
+                            }),
+                        });
+
+                        if (!updateStatusRes.ok) {
+                            throw new Error(`Lỗi ${updateStatusRes.status}: Không thể cập nhật trạng thái đơn hàng.`);
+                        }
+
+                        // Đợi cập nhật trạng thái hoàn thành
+                        await updateStatusRes.json();
+                    }
+
+                    // Refresh lại thông tin đơn hàng
+                    await onOrderUpdate();
+
+                    // Xóa các tham số URL và chuyển về trang quản lý đơn hàng
+                    router.replace('/staff/officesales');
+                } catch (err: any) {
+                    setItemsError(`Lỗi cập nhật thông tin thanh toán: ${err.message}`);
+                }
+            };
+
+            handlePaymentResult();
+        }
+    }, [isOpen, order, searchParams, session, router, onOrderUpdate, editableOrder]);
+
     return (
         <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="full" scrollBehavior="inside">
             <ModalContent>
@@ -335,9 +430,16 @@ export default function EditFromOrder({ isOpen, onOpenChange, order, onOrderUpda
                                     <div className="p-4 bg-gray-50 rounded-lg border">
                                         <div className="flex justify-between items-center mb-3">
                                             <h3 className="text-lg font-bold">Thông tin đơn hàng</h3>
-                                            <Button color="primary" size="sm" onPress={handleUpdateOrder} disabled={isUpdatingOrder}>
-                                                {isUpdatingOrder ? <Spinner color="white" size="sm" /> : "Lưu thay đổi"}
-                                            </Button>
+                                            <div className="flex gap-2">
+                                                {order.orderStatus !== 'COMPLETED' && (
+                                                    <Button color="success" size="sm" onPress={onPaymentOpen}>
+                                                        Thanh toán
+                                                    </Button>
+                                                )}
+                                                <Button color="primary" size="sm" onPress={handleUpdateOrder} disabled={isUpdatingOrder}>
+                                                    {isUpdatingOrder ? <Spinner color="white" size="sm" /> : "Lưu thay đổi"}
+                                                </Button>
+                                            </div>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                             <Input
@@ -364,6 +466,23 @@ export default function EditFromOrder({ isOpen, onOpenChange, order, onOrderUpda
                                                 <p><strong>Tạm tính:</strong> {order.subTotalAmount.toLocaleString('vi-VN')} VND</p>
                                                 <p><strong>Thành tiền:</strong> {order.finalAmount.toLocaleString('vi-VN')} VND</p>
                                                 <p><strong>Trạng thái:</strong> {statusMap[order.orderStatus.toUpperCase() as keyof typeof statusMap] || order.orderStatus}</p>
+                                                
+                                                {/* Hiển thị thông tin thanh toán */}
+                                                {order.payments && order.payments.length > 0 && (
+                                                    <div className="mt-3 pt-3 border-t">
+                                                        <p className="font-bold mb-2">Thông tin thanh toán:</p>
+                                                        {order.payments.map((payment, index) => (
+                                                            <div key={payment.paymentId || index} className="text-sm">
+                                                                <p><strong>Phương thức:</strong> {payment.paymentMethod}</p>
+                                                                <p><strong>Số tiền:</strong> {payment.amount.toLocaleString('vi-VN')} VND</p>
+                                                                <p><strong>Trạng thái:</strong> {payment.paymentStatus}</p>
+                                                                {payment.transactionId && (
+                                                                    <p><strong>Mã giao dịch:</strong> {payment.transactionId}</p>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -461,6 +580,14 @@ export default function EditFromOrder({ isOpen, onOpenChange, order, onOrderUpda
                         <ModalFooter>
                             <Button color="danger" variant="light" onPress={onClose}>Đóng</Button>
                         </ModalFooter>
+                        {order && (
+                            <PaymentModal
+                                isOpen={isPaymentOpen}
+                                onOpenChange={onPaymentOpenChange}
+                                orderAmount={order.finalAmount}
+                                orderCode={order.orderCode}
+                            />
+                        )}
                     </>
                 )}
             </ModalContent>
