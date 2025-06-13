@@ -242,11 +242,11 @@ export default function PurchaseOrder() {
     };
 
     return (
-        <div className="flex w-full flex-col gap-4">
+        <div className="flex w-full flex-col gap-4 p-4">
              <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">Quản lý Đơn hàng</h1>
                 <Button
-                    color="primary"
+                    color="default"
                     onClick={handleCreateOrder}
                     disabled={isCreating}
                 >
@@ -266,11 +266,7 @@ export default function PurchaseOrder() {
             >
                 {(item) => (
                     <Tab key={item.id} title={item.label}>
-                        <Card>
-                            <CardBody>
-                                {renderTableContent()}
-                            </CardBody>
-                        </Card>
+                        {renderTableContent()}
                     </Tab>
                 )}
             </Tabs>
