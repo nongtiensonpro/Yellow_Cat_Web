@@ -40,4 +40,14 @@ public class VNPayCreatePaymentRequest {
         return returnUrl;
     }
 
+    @Override
+    public String toString() {
+        return "VNPayCreatePaymentRequest{" +
+                "amount=" + amount +
+                ", orderInfo='" + orderInfo + '\'' +
+                ", orderType='" + orderType + '\'' +
+                ", language='" + language + '\'' +
+                ", returnUrl='" + returnUrl + '\'' +
+                '}';
+    }
 }

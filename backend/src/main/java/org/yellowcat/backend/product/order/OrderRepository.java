@@ -13,6 +13,9 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
     @Query("SELECT o FROM Order o WHERE o.orderId = :orderId")
     Order findByIdFetchAll(@Param("orderId") Integer orderId);
 
+    @Query("SELECT o FROM Order o LEFT JOIN FETCH o.payments WHERE o.orderId = :orderId")
+    Order findByIdWithPayments(@Param("orderId") Integer orderId);
+
     @Query(nativeQuery = true,
             value = "SELECT " +
                     "o.order_id AS orderId, " +
@@ -43,4 +46,19 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
                     "ORDER BY o.order_date DESC"
     )
     Page<OrderResponse> findAllByOrderStatus(String orderStatus, Pageable pageable);
+
+    @Query(nativeQuery = true,
+            value = "SELECT " +
+                    "o.order_id AS orderId, " +
+                    "o.order_code AS orderCode, " +
+                    "o.phone_number AS phoneNumber, " +
+                    "o.customer_name AS customerName, " +
+                    "o.sub_total_amount AS subTotalAmount, " +
+                    "o.discount_amount AS discountAmount, " +
+                    "o.final_amount AS finalAmount, " +
+                    "o.order_status AS orderStatus " +
+                    "FROM orders o " +
+                    "WHERE o.order_code = :orderCode " +
+                    "ORDER BY o.order_date DESC")
+    OrderResponse findOrderByOrderCode(@Param("orderCode") String orderCode);
 }

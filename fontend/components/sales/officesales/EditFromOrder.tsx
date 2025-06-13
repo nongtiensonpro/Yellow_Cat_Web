@@ -86,6 +86,12 @@ export default function EditFromOrder({ isOpen, onOpenChange, order, onOrderUpda
     });
     const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
 
+    // Thêm state cho validation errors
+    const [validationErrors, setValidationErrors] = useState({
+        customerName: '',
+        phoneNumber: '',
+    });
+
     // States for order items
     const [orderItems, setOrderItems] = useState<Omit<OrderItem, 'productName' | 'variantInfo'>[]>([]);
     const [enrichedOrderItems, setEnrichedOrderItems] = useState<OrderItem[]>([]);
@@ -226,10 +232,73 @@ export default function EditFromOrder({ isOpen, onOpenChange, order, onOrderUpda
         }
     }, [searchTerm, products]);
 
+    // Thêm function để validate thông tin khách hàng
+    const validateCustomerInfo = (): boolean => {
+        const errors = {
+            customerName: '',
+            phoneNumber: '',
+        };
+        
+        let isValid = true;
+        
+        if (!editableOrder.customerName.trim()) {
+            errors.customerName = 'Vui lòng nhập tên khách hàng';
+            isValid = false;
+        }
+        
+        if (!editableOrder.phoneNumber.trim()) {
+            errors.phoneNumber = 'Vui lòng nhập số điện thoại';
+            isValid = false;
+        } else if (!/^[0-9]{10,11}$/.test(editableOrder.phoneNumber.trim())) {
+            errors.phoneNumber = 'Số điện thoại phải có 10-11 chữ số';
+            isValid = false;
+        }
+        
+        setValidationErrors(errors);
+        return isValid;
+    };
+
+    // Thêm function để kiểm tra trạng thái thanh toán
+    const isPaid = (): boolean => {
+        if (!order) {
+            return false;
+        }
+        
+        // Kiểm tra orderStatus có phải là PAID hoặc COMPLETED không
+        return order.orderStatus.toUpperCase() === 'PAID' || 
+               order.orderStatus.toUpperCase() === 'COMPLETED';
+    };
+
+    // Cập nhật function handlePaymentOpen
+    const handlePaymentOpen = async () => {
+        // Clear validation errors trước
+        setValidationErrors({ customerName: '', phoneNumber: '' });
+        
+        // Validate thông tin khách hàng
+        if (!validateCustomerInfo()) {
+            setItemsError('Vui lòng nhập đầy đủ thông tin khách hàng trước khi thanh toán');
+            return;
+        }
+
+        // Kiểm tra trạng thái thanh toán
+        if (isPaid()) {
+            setItemsError('Đơn hàng này đã được thanh toán, không thể thanh toán lại');
+            return;
+        }
+
+        // Cập nhật thông tin khách hàng trước khi thanh toán
+        await handleUpdateOrder();
+        
+        // Mở modal thanh toán
+        onPaymentOpen();
+    };
+
     const handleUpdateOrder = async () => {
         if (!order || !session?.accessToken) return;
         setIsUpdatingOrder(true);
         setItemsError(null); // Clear other errors
+        setValidationErrors({ customerName: '', phoneNumber: '' }); // Clear validation errors
+        
         try {
             const requestBody = {
                 orderId: order.orderId,
@@ -337,86 +406,6 @@ export default function EditFromOrder({ isOpen, onOpenChange, order, onOrderUpda
         }
     };
 
-    // Xử lý kết quả thanh toán
-    useEffect(() => {
-        if (!isOpen || !order || !searchParams) return;
-
-        const responseCode = searchParams.get('vnp_ResponseCode');
-        const transactionNo = searchParams.get('vnp_TransactionNo');
-        const orderInfo = searchParams.get('vnp_OrderInfo');
-        const amount = searchParams.get('vnp_Amount');
-
-        if (responseCode && orderInfo?.includes(order.orderCode)) {
-            // Xử lý kết quả thanh toán
-            const handlePaymentResult = async () => {
-                if (!session?.accessToken) return;
-                try {
-                    // Tạo payment info dựa trên kết quả thanh toán
-                    const paymentInfo = {
-                        paymentMethod: 'VNPAY',
-                        transactionId: transactionNo || 'N/A',
-                        amount: amount ? parseInt(amount) / 100 : order.finalAmount,
-                        paymentStatus: responseCode === '00' ? 'COMPLETED' : 'FAILED'
-                    };
-
-                    // Cập nhật đơn hàng với thông tin thanh toán
-                    const updateOrderRes = await fetch(`http://localhost:8080/api/orders/${order.orderId}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${session.accessToken}`,
-                        },
-                        body: JSON.stringify({
-                            orderId: order.orderId,
-                            customerName: editableOrder.customerName,
-                            phoneNumber: editableOrder.phoneNumber,
-                            discountAmount: editableOrder.discountAmount,
-                            payments: [paymentInfo]
-                        }),
-                    });
-
-                    if (!updateOrderRes.ok) {
-                        throw new Error(`Lỗi ${updateOrderRes.status}: Không thể cập nhật thông tin thanh toán.`);
-                    }
-
-                    // Đợi cập nhật đơn hàng hoàn thành
-                    await updateOrderRes.json();
-
-                    // Nếu thanh toán thành công, cập nhật trạng thái đơn hàng
-                    if (responseCode === '00') {
-                        const updateStatusRes = await fetch(`http://localhost:8080/api/orders/${order.orderId}/status`, {
-                            method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${session.accessToken}`,
-                            },
-                            body: JSON.stringify({
-                                status: 'COMPLETED'
-                            }),
-                        });
-
-                        if (!updateStatusRes.ok) {
-                            throw new Error(`Lỗi ${updateStatusRes.status}: Không thể cập nhật trạng thái đơn hàng.`);
-                        }
-
-                        // Đợi cập nhật trạng thái hoàn thành
-                        await updateStatusRes.json();
-                    }
-
-                    // Refresh lại thông tin đơn hàng
-                    await onOrderUpdate();
-
-                    // Xóa các tham số URL và chuyển về trang quản lý đơn hàng
-                    router.replace('/staff/officesales');
-                } catch (err: any) {
-                    setItemsError(`Lỗi cập nhật thông tin thanh toán: ${err.message}`);
-                }
-            };
-
-            handlePaymentResult();
-        }
-    }, [isOpen, order, searchParams, session, router, onOrderUpdate, editableOrder]);
-
     return (
         <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="full" scrollBehavior="inside">
             <ModalContent>
@@ -431,8 +420,8 @@ export default function EditFromOrder({ isOpen, onOpenChange, order, onOrderUpda
                                         <div className="flex justify-between items-center mb-3">
                                             <h3 className="text-lg font-bold">Thông tin đơn hàng</h3>
                                             <div className="flex gap-2">
-                                                {order.orderStatus !== 'COMPLETED' && (
-                                                    <Button color="success" size="sm" onPress={onPaymentOpen}>
+                                                {order.orderStatus !== 'COMPLETED' && !isPaid() && (
+                                                    <Button color="success" size="sm" onPress={handlePaymentOpen}>
                                                         Thanh toán
                                                     </Button>
                                                 )}
@@ -442,18 +431,36 @@ export default function EditFromOrder({ isOpen, onOpenChange, order, onOrderUpda
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            <Input
-                                                label="Tên khách hàng"
-                                                value={editableOrder.customerName}
-                                                onChange={(e) => setEditableOrder(prev => ({ ...prev, customerName: e.target.value }))}
-                                                fullWidth
-                                            />
-                                            <Input
-                                                label="Số điện thoại"
-                                                value={editableOrder.phoneNumber}
-                                                onChange={(e) => setEditableOrder(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                                                fullWidth
-                                            />
+                                            <div>
+                                                <Input
+                                                    label="Tên khách hàng"
+                                                    value={editableOrder.customerName}
+                                                    onChange={(e) => {
+                                                        setEditableOrder(prev => ({ ...prev, customerName: e.target.value }));
+                                                        if (validationErrors.customerName) {
+                                                            setValidationErrors(prev => ({ ...prev, customerName: '' }));
+                                                        }
+                                                    }}
+                                                    fullWidth
+                                                    isInvalid={!!validationErrors.customerName}
+                                                    errorMessage={validationErrors.customerName}
+                                                />
+                                            </div>
+                                            <div>
+                                                <Input
+                                                    label="Số điện thoại"
+                                                    value={editableOrder.phoneNumber}
+                                                    onChange={(e) => {
+                                                        setEditableOrder(prev => ({ ...prev, phoneNumber: e.target.value }));
+                                                        if (validationErrors.phoneNumber) {
+                                                            setValidationErrors(prev => ({ ...prev, phoneNumber: '' }));
+                                                        }
+                                                    }}
+                                                    fullWidth
+                                                    isInvalid={!!validationErrors.phoneNumber}
+                                                    errorMessage={validationErrors.phoneNumber}
+                                                />
+                                            </div>
                                             <Input
                                                 label="Giảm giá"
                                                 type="number"
@@ -467,15 +474,30 @@ export default function EditFromOrder({ isOpen, onOpenChange, order, onOrderUpda
                                                 <p><strong>Thành tiền:</strong> {order.finalAmount.toLocaleString('vi-VN')} VND</p>
                                                 <p><strong>Trạng thái:</strong> {statusMap[order.orderStatus.toUpperCase() as keyof typeof statusMap] || order.orderStatus}</p>
                                                 
+                                                {/* Hiển thị trạng thái thanh toán */}
+                                                <p><strong>Thanh toán:</strong> 
+                                                    <span className={`ml-1 px-2 py-1 rounded text-xs ${isPaid() ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                                        {isPaid() ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                                                    </span>
+                                                </p>
+                                                
                                                 {/* Hiển thị thông tin thanh toán */}
                                                 {order.payments && order.payments.length > 0 && (
                                                     <div className="mt-3 pt-3 border-t">
                                                         <p className="font-bold mb-2">Thông tin thanh toán:</p>
                                                         {order.payments.map((payment, index) => (
-                                                            <div key={payment.paymentId || index} className="text-sm">
+                                                            <div key={payment.paymentId || index} className="text-sm mb-2 p-2 bg-gray-50 rounded">
                                                                 <p><strong>Phương thức:</strong> {payment.paymentMethod}</p>
                                                                 <p><strong>Số tiền:</strong> {payment.amount.toLocaleString('vi-VN')} VND</p>
-                                                                <p><strong>Trạng thái:</strong> {payment.paymentStatus}</p>
+                                                                <p><strong>Trạng thái:</strong> 
+                                                                    <span className={`ml-1 px-2 py-1 rounded text-xs ${
+                                                                        payment.paymentStatus.toUpperCase() === 'SUCCESS' || payment.paymentStatus.toUpperCase() === 'COMPLETED' 
+                                                                            ? 'bg-green-100 text-green-800' 
+                                                                            : 'bg-yellow-100 text-yellow-800'
+                                                                    }`}>
+                                                                        {payment.paymentStatus}
+                                                                    </span>
+                                                                </p>
                                                                 {payment.transactionId && (
                                                                     <p><strong>Mã giao dịch:</strong> {payment.transactionId}</p>
                                                                 )}

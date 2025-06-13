@@ -32,10 +32,9 @@ interface Order {
 
 const statusMap: { [key: string]: string } = {
     all: 'Tất cả',
-    PENDING: 'Chờ xử lý',
-    PROCESSING: 'Đang xử lý',
-    COMPLETED: 'Hoàn thành',
-    CANCELLED: 'Đã hủy',
+    Pending: 'Chờ xử lý',
+    Partial: 'Thanh toán một phần',
+    Paid: 'Đã thanh toán',
 };
 
 
@@ -68,16 +67,13 @@ export default function PurchaseOrder() {
 
         setLoading(true);
         try {
-            const baseUrl = activeTab === 'all'
-                ? 'http://localhost:8080/api/orders'
-                : 'http://localhost:8080/api/orders/status';
-
-            const url = new URL(baseUrl);
+            const url = new URL('http://localhost:8080/api/orders');
             url.searchParams.append('page', `${page - 1}`);
-            url.searchParams.append('size', '10'); // Giữ nguyên kích thước trang là 10
+            url.searchParams.append('size', '10');
 
-            // Thêm tham số status nếu không phải tab "Tất cả"
+            // Nếu không phải tab "Tất cả", thì gọi endpoint /status với parameter status
             if (activeTab !== 'all') {
+                url.pathname = '/api/orders/status';
                 url.searchParams.append('status', activeTab.toString());
             }
 
@@ -222,7 +218,7 @@ export default function PurchaseOrder() {
                             <TableCell>{order.orderCode}</TableCell>
                             <TableCell>{order.customerName!=null?order.customerName:'Không có thông tin'}</TableCell>
                             <TableCell>{order.phoneNumber!=null?order.phoneNumber:'Không có thông tin'}</TableCell>
-                            <TableCell>{statusMap[order.orderStatus.toUpperCase() as keyof typeof statusMap] || order.orderStatus}</TableCell>
+                            <TableCell>{statusMap[order.orderStatus as keyof typeof statusMap] || order.orderStatus}</TableCell>
                             <TableCell className="text-right">{order.finalAmount.toLocaleString('vi-VN')} VND</TableCell>
                             <TableCell className="flex gap-2">
                                 <Button size="sm" color="primary" variant="flat" onPress={() => handleViewDetails(order)}>Xem & Sửa</Button>

@@ -19,6 +19,6 @@ public class OrderUpdateRequest {
         String paymentMethod;
         String transactionId;
         BigDecimal amount;
-        String paymentStatus;
+        String paymentStatus; // PENDING, COMPLETED, FAILED
     }
 }
