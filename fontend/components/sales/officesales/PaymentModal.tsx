@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createPayment } from '@/app/vnpay/service/vnpayService';
+import { createPayment } from '@/app/staff/officesales/vnpay/service/vnpayService';
 import {
     Modal,
     ModalContent,
@@ -28,9 +28,9 @@ export default function PaymentModal({ isOpen, onOpenChange, orderAmount, orderC
             const response = await createPayment({
                 amount: orderAmount,
                 orderType: 'billpayment',
-                orderInfo: `Thanh toan don hang ${orderCode}`,
+                orderInfo: `${orderCode}`,
                 language: 'vn',
-                returnUrl: `${window.location.origin}/vnpay/payment-result`,
+                returnUrl: `${window.location.origin}/staff/officesales/vnpay/payment-result`,
             });
 
             if (response.url) {
