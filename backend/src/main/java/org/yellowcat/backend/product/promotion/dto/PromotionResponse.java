@@ -1,7 +1,9 @@
 package org.yellowcat.backend.product.promotion.dto;
 
-import lombok.*;
-import lombok.experimental.FieldDefaults;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
@@ -9,19 +11,10 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
 public class PromotionResponse {
-    Integer id;
-    String promoCode;
     String name;
-    String description;
-    String discountType;
-    Double discountValue;
+    Double discountPercent;
     LocalDateTime startDate;
     LocalDateTime endDate;
-    Double minimumOrderValue;
-    Integer usageLimitPerUser;
-    Integer usageLimitTotal;
     Boolean isActive;
-    String applicableTo;
 }

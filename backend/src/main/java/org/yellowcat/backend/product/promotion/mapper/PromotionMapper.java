@@ -21,5 +21,5 @@ import org.yellowcat.backend.product.promotion.dto.PromotionResponse;
 @Mapper(componentModel = "spring")
 public interface PromotionMapper {
     Promotion toPromotion(PromotionRequest request);
-    PromotionResponse toPromotionResponse(Promotion promotion); // ✅ MapStruct sẽ tự map `id`
+    PromotionResponse toPromotionResponse(Promotion promotion);
 }
