@@ -334,6 +334,121 @@ public class OrderService {
         return orderMapper.toOrderUpdateResponse(order);
     }
     
+    // Method để checkin thanh toán bằng tiền mặt tại quầy
+    @Transactional
+    public OrderUpdateResponse checkinCashPayment(String orderCode) {
+        System.out.println("🏪 checkinCashPayment called with orderCode: " + orderCode);
+        
+        // Tìm order theo orderCode
+        OrderResponse orderResponse = orderRepository.findOrderByOrderCode(orderCode);
+        if (orderResponse == null) {
+            System.out.println("❌ Order not found with orderCode: " + orderCode);
+            throw new IllegalArgumentException("Order not found with orderCode: " + orderCode);
+        }
+        
+        // Load order với payments
+        Order order = orderRepository.findByIdWithPayments(orderResponse.getOrderId());
+        if (order == null) {
+            System.out.println("❌ Order entity not found with orderCode: " + orderCode);
+            throw new IllegalArgumentException("Order not found with orderCode: " + orderCode);
+        }
+        
+        // Kiểm tra trạng thái đơn hàng hiện tại
+        if ("Paid".equalsIgnoreCase(order.getOrderStatus())) {
+            System.out.println("ℹ️ Order already fully paid: " + orderCode);
+            // Đơn hàng đã thanh toán đầy đủ, chỉ trả về thông tin hiện tại
+            return orderMapper.toOrderUpdateResponse(order);
+        }
+        
+        // Lấy danh sách payments hiện tại
+        List<Payment> existingPayments = order.getPayments() != null ? order.getPayments() : new ArrayList<>();
+        
+        // Kiểm tra xem đã có payment bằng tiền mặt chưa
+        Payment existingCashPayment = existingPayments.stream()
+                .filter(p -> "CASH".equalsIgnoreCase(p.getPaymentMethod()))
+                .findFirst()
+                .orElse(null);
+        
+        // Tính tổng số tiền đã thanh toán trước đó (loại trừ CASH để tránh double count)
+        BigDecimal totalPaidExcludeCash = existingPayments.stream()
+                .filter(p -> "COMPLETED".equalsIgnoreCase(p.getPaymentStatus()) && 
+                           !"CASH".equalsIgnoreCase(p.getPaymentMethod()))
+                .map(Payment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        // Tính số tiền còn lại cần thanh toán bằng tiền mặt
+        BigDecimal remainingAmount = order.getFinalAmount().subtract(totalPaidExcludeCash);
+        
+        if (remainingAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            System.out.println("ℹ️ No remaining amount to pay for order: " + orderCode);
+            // Không còn tiền cần thanh toán
+            return orderMapper.toOrderUpdateResponse(order);
+        }
+        
+        if (existingCashPayment == null) {
+            // Tạo payment mới cho tiền mặt
+            Payment cashPayment = new Payment();
+            cashPayment.setOrder(order);
+            cashPayment.setAmount(remainingAmount); // Thanh toán số tiền còn lại
+            cashPayment.setPaymentMethod("CASH");
+            cashPayment.setTransactionId("CASH_" + System.currentTimeMillis()); // Transaction ID đơn giản cho tiền mặt
+            cashPayment.setPaymentStatus("COMPLETED"); // Tiền mặt luôn là COMPLETED khi checkin
+            paymentRepository.save(cashPayment);
+            
+            System.out.println("💰 Created new CASH payment for order: " + orderCode + 
+                             ", amount: " + remainingAmount);
+        } else {
+            // Cập nhật payment tiền mặt đã tồn tại
+            existingCashPayment.setAmount(remainingAmount);
+            existingCashPayment.setPaymentStatus("COMPLETED");
+            existingCashPayment.setTransactionId("CASH_" + System.currentTimeMillis());
+            paymentRepository.save(existingCashPayment);
+            
+            System.out.println("💰 Updated existing CASH payment for order: " + orderCode + 
+                             ", amount: " + remainingAmount);
+        }
+        
+        // Load lại danh sách payments từ database sau khi đã thêm/cập nhật
+        List<Payment> updatedPayments = paymentRepository.findByOrder_OrderId(order.getOrderId());
+        
+        // Tính tổng số tiền đã thanh toán (COMPLETED)
+        BigDecimal totalPaid = updatedPayments.stream()
+                .filter(p -> "COMPLETED".equalsIgnoreCase(p.getPaymentStatus()))
+                .map(Payment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        // Cập nhật orderStatus
+        if (totalPaid.compareTo(order.getFinalAmount()) >= 0) {
+            order.setOrderStatus("Paid");
+        } else if (totalPaid.compareTo(BigDecimal.ZERO) > 0) {
+            order.setOrderStatus("Partial");
+        } else {
+            order.setOrderStatus("Pending");
+        }
+        
+        // Sync lại payments collection để đảm bảo consistency
+        if (order.getPayments() == null) {
+            order.setPayments(new ArrayList<>());
+        }
+        order.getPayments().clear();
+        order.getPayments().addAll(updatedPayments);
+        
+        // Log thông tin debug
+        System.out.println("=== CASH PAYMENT CHECKIN ===");
+        System.out.println("Order Code: " + orderCode);
+        System.out.println("Final Amount: " + order.getFinalAmount());
+        System.out.println("Total Paid: " + totalPaid);
+        System.out.println("Cash Payment Amount: " + remainingAmount);
+        System.out.println("New Order Status: " + order.getOrderStatus());
+        System.out.println("===========================");
+        
+        // Lưu order đã cập nhật
+        orderRepository.save(order);
+        
+        // Trả về response
+        return orderMapper.toOrderUpdateResponse(order);
+    }
+    
     // Method để debug và log thông tin thanh toán
     private void logPaymentInfo(Order order, List<Payment> payments, BigDecimal totalPaid, BigDecimal finalAmount) {
         System.out.println("=== DEBUG PAYMENT INFO ===");
