@@ -95,10 +95,12 @@ const menuItems: MenuItem[] = [
         label: "Quản lý sản phẩm",
         children: [
             { href: "/admin/product_management", icon: <Package size={18} />, label: "Sản phẩm" },
+            { href: "/admin/product_management/categories", icon: <Ruler size={18} />, label: "Danh mục" },
             { href: "/admin/product_management/materials", icon: <Box size={18} />, label: "Chất liệu" },
             { href: "/admin/product_management/brands", icon: <Tag size={18} />, label: "Thương hiệu" },
             { href: "/admin/product_management/colors", icon: <Palette size={18} />, label: "Màu sắc" },
             { href: "/admin/product_management/sizes", icon: <Ruler size={18} />, label: "Kích cỡ" },
+
             // { href: "/admin/product_management/targetaudiences", icon: <Ruler size={18} />, label: "Đối tượng" },
 
         ],
