@@ -11,7 +11,7 @@ import {
     Chip,
     Avatar,
 } from "@heroui/react";
-import {Users, Package, BarChart2, Moon, Sun, UserCheck, UserX, Shield, User, ActivityIcon, Percent} from "lucide-react"; // Import Percent icon
+import {Users, Package, BarChart2, Moon, Sun, UserCheck, UserX, Shield, User, ActivityIcon, Percent} from "lucide-react"; 
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useSession } from 'next-auth/react';
@@ -100,7 +100,6 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Lấy thống kê người dùng từ API thực tế
     useEffect(() => {
         const getUserStats = async () => {
             if (status === 'loading') {
@@ -382,24 +381,9 @@ export default function AdminDashboard() {
                 </Card>
                 <Card className="shadow-lg">
                     <CardHeader className="flex items-center gap-3">
-                        <Avatar icon={<BarChart2 size={24} />} color="warning" />
-                        <div>
-                            <p className="text-lg font-semibold text-gray-700 dark:text-white">Đơn hàng</p>
-                            <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-300">{stats.orders}</p>
-                        </div>
-                    </CardHeader>
-                    <CardFooter>
-                        <Button as={Link} href="/admin/order_management" color="warning" variant="flat" size="sm">
-                            Quản lý đơn hàng
-                        </Button>
-                    </CardFooter>
-                </Card>
-                <Card className="shadow-lg">
-                    <CardHeader className="flex items-center gap-3">
                         <Avatar icon={<IconBasket size={24} />} color="default" />
                         <div>
                             <p className="text-lg font-semibold text-gray-700 dark:text-white">Bán hàng</p>
-                            <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-300">{stats.orders}</p>
                         </div>
                     </CardHeader>
                     <CardFooter>
@@ -408,22 +392,6 @@ export default function AdminDashboard() {
                         </Button>
                         <Button className={"m-1"} as={Link} href="/staff/page.tsx" color="warning" variant="flat" size="sm">
                             Bán hàng online
-                        </Button>
-                    </CardFooter>
-                </Card>
-                <Card className="shadow-lg">
-                    <CardHeader className="flex items-center gap-3">
-                        <Avatar icon={<BarChart2 size={24} />} color="danger" />
-                        <div>
-                            <p className="text-lg font-semibold text-gray-700 dark:text-white">Doanh thu</p>
-                            <p className="text-2xl font-bold text-red-600 dark:text-red-300">
-                                {stats.revenue.toLocaleString("vi-VN")}₫
-                            </p>
-                        </div>
-                    </CardHeader>
-                    <CardFooter>
-                        <Button as={Link} href="/admin/revenue" color="danger" variant="flat" size="sm">
-                            Xem chi tiết
                         </Button>
                     </CardFooter>
                 </Card>
