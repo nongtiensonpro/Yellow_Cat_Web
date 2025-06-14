@@ -26,7 +26,7 @@
 // import SockJS from 'sockjs-client';
 // import {useSession, signIn} from "next-auth/react";
 //
-// interface Categories {
+// interface targetaudiences {
 //     id: number;
 //     name: string;
 //     description: string;
@@ -34,21 +34,21 @@
 //
 // interface ApiResponse {
 //     data: {
-//         content: Categories[];
+//         content: targetaudiences[];
 //         totalPages: number;
 //     };
 // }
 //
 // export default function Page() {
 //     const {data: session, status} = useSession();
-//     const [allCategoriesData, setAllCategoriesData] = useState<Categories[]>([]);
-//     const [categoriesData, setCategoriesData] = useState<Categories[]>([]);
+//     const [alltargetaudiencesData, setAlltargetaudiencesData] = useState<targetaudiences[]>([]);
+//     const [targetaudiencesData, settargetaudiencesData] = useState<targetaudiences[]>([]);
 //     const [loading, setLoading] = useState<boolean>(true);
 //     const [error, setError] = useState<string | null>(null);
 //     const [currentPage, setCurrentPage] = useState<number>(0);
 //     const [itemsPerPage] = useState<number>(3);
 //     const [totalPages, setTotalPages] = useState<number>(1);
-//     const [categoryToDelete, setCategoryToDelete] = useState<{ id: number, name: string } | null>(null);
+//     const [targetaudienceToDelete, settargetaudienceToDelete] = useState<{ id: number, name: string } | null>(null);
 //     const [notification, setNotification] = useState<string | null>(null);
 //     const {isOpen, onOpen, onClose} = useDisclosure();
 //     const [stompClient, setStompClient] = useState<Client | null>(null);
@@ -61,26 +61,26 @@
 //             webSocketFactory: () => socket,
 //             reconnectDelay: 5000,
 //             onConnect: () => {
-//                 console.log('Kết nối STOMP Categories đã được thiết lập');
-//                 client.subscribe('/topic/categories', (message) => {
+//                 console.log('Kết nối STOMP targetaudiences đã được thiết lập');
+//                 client.subscribe('/topic/targetaudiences', (message) => {
 //                     const data = JSON.parse(message.body);
-//                     console.log('Nhận thông báo Categories từ server:', data);
-//                     setNotification(`Hành động: ${data.action} - Category: ${data.entity.name}`);
+//                     console.log('Nhận thông báo targetaudiences từ server:', data);
+//                     setNotification(`Hành động: ${data.action} - targetaudience: ${data.entity.name}`);
 //
 //                     if (data.action === 'add') {
-//                         setAllCategoriesData((prevAll) => [data.entity, ...prevAll]);
+//                         setAlltargetaudiencesData((prevAll) => [data.entity, ...prevAll]);
 //                     } else if (data.action === 'update') {
-//                         setAllCategoriesData((prevAll) =>
+//                         setAlltargetaudiencesData((prevAll) =>
 //                             prevAll.map((c) => (c.id === data.entity.id ? data.entity : c))
 //                         );
 //                     } else if (data.action === 'delete') {
-//                         setAllCategoriesData((prevAll) => prevAll.filter((c) => c.id !== data.entity.id));
+//                         setAlltargetaudiencesData((prevAll) => prevAll.filter((c) => c.id !== data.entity.id));
 //                     }
 //                 });
 //             },
 //             onStompError: (frame) => {
-//                 console.error('Lỗi STOMP Categories:', frame);
-//                 setError('Lỗi kết nối STOMP Categories. Vui lòng thử lại.');
+//                 console.error('Lỗi STOMP targetaudiences:', frame);
+//                 setError('Lỗi kết nối STOMP targetaudiences. Vui lòng thử lại.');
 //             },
 //         });
 //
@@ -101,7 +101,7 @@
 //     useEffect(() => {
 //         return () => {
 //             if (stompClient && stompClient.active) {
-//                 console.log("Deactivating STOMP Categories client");
+//                 console.log("Deactivating STOMP targetaudiences client");
 //                 stompClient.deactivate();
 //             }
 //         };
@@ -119,40 +119,40 @@
 //     }, [searchTerm]);
 //
 //     useEffect(() => {
-//         const fetchAllCategories = async () => {
+//         const fetchAlltargetaudiences = async () => {
 //             if (status !== "authenticated") return;
 //
 //             setLoading(true);
 //             setError(null);
 //             try {
-//                 const response = await fetch(`http://localhost:8080/api/categories?page=0&size=1000`);
+//                 const response = await fetch(`http://localhost:8080/api/target-audiences?page=0&size=10`);
 //                 if (!response.ok) {
 //                     const errorData = await response.json().catch(() => ({ message: `HTTP error! Status: ${response.status}` }));
 //                     throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
 //                 }
 //                 const apiResponse: ApiResponse = await response.json();
-//                 setAllCategoriesData(apiResponse.data.content);
+//                 setAlltargetaudiencesData(apiResponse.data.content);
 //             } catch (err) {
 //                 setError(err instanceof Error ? err.message : 'Không thể tải dữ liệu. Vui lòng thử lại sau.');
-//                 console.error('Lỗi khi tải tất cả dữ liệu categories:', err);
-//                 setAllCategoriesData([]);
+//                 console.error('Lỗi khi tải tất cả dữ liệu targetaudiences:', err);
+//                 setAlltargetaudiencesData([]);
 //             } finally {
 //                 setLoading(false);
 //             }
 //         };
 //
-//         fetchAllCategories();
+//         fetchAlltargetaudiences();
 //     }, [status]);
 //
 //     useEffect(() => {
-//         if (loading && !allCategoriesData.length) return;
+//         if (loading && !alltargetaudiencesData.length) return;
 //
-//         let filtered = allCategoriesData;
+//         let filtered = alltargetaudiencesData;
 //         if (finalSearchTerm) {
 //             const searchTermLower = finalSearchTerm.toLowerCase();
-//             filtered = allCategoriesData.filter(category =>
-//                 category.name.toLowerCase().includes(searchTermLower) ||
-//                 (category.description && category.description.toLowerCase().includes(searchTermLower))
+//             filtered = alltargetaudiencesData.filter(targetaudience =>
+//                 targetaudience.name.toLowerCase().includes(searchTermLower) ||
+//                 (targetaudience.description && targetaudience.description.toLowerCase().includes(searchTermLower))
 //             );
 //         }
 //
@@ -165,10 +165,10 @@
 //         } else {
 //             const startIndex = newCurrentPage * itemsPerPage;
 //             const endIndex = startIndex + itemsPerPage;
-//             setCategoriesData(filtered.slice(startIndex, endIndex));
+//             settargetaudiencesData(filtered.slice(startIndex, endIndex));
 //         }
 //
-//     }, [allCategoriesData, finalSearchTerm, currentPage, itemsPerPage, loading, status]);
+//     }, [alltargetaudiencesData, finalSearchTerm, currentPage, itemsPerPage, loading, status]);
 //
 //     useEffect(() => {
 //         if (notification) {
@@ -178,13 +178,13 @@
 //             return () => clearTimeout(timer);
 //         }
 //     }, [notification]);
-//     const openDeleteConfirm = (categoryId: number, categoryName: string) => {
-//         setCategoryToDelete({id: categoryId, name: categoryName});
+//     const openDeleteConfirm = (targetaudienceId: number, targetaudienceName: string) => {
+//         settargetaudienceToDelete({id: targetaudienceId, name: targetaudienceName});
 //         onOpen();
 //     };
 //
-//     const handleDeleteCategory = async () => {
-//         if (!categoryToDelete) return;
+//     const handleDeletetargetaudience = async () => {
+//         if (!targetaudienceToDelete) return;
 //
 //         try {
 //             if (status !== "authenticated" || !session) {
@@ -200,7 +200,7 @@
 //                 return;
 //             }
 //
-//             const response = await fetch(`http://localhost:8080/api/categories/${categoryToDelete.id}`, {
+//             const response = await fetch(`http://localhost:8080/api/target-audiences/${targetaudienceToDelete.id}`, {
 //                 method: 'DELETE',
 //                 headers: {
 //                     'Authorization': `Bearer ${token}`,
@@ -214,15 +214,15 @@
 //             }
 //
 //             onClose();
-//             setCategoryToDelete(null);
+//             settargetaudienceToDelete(null);
 //         } catch (err) {
-//             console.error('Lỗi khi xóa category:', err);
-//             setError(err instanceof Error ? err.message : 'Không thể xóa category. Vui lòng thử lại sau.');
+//             console.error('Lỗi khi xóa targetaudience:', err);
+//             setError(err instanceof Error ? err.message : 'Không thể xóa targetaudience. Vui lòng thử lại sau.');
 //             onClose();
 //         }
 //     };
 //
-//     if (status === "loading" || (loading && allCategoriesData.length === 0)) {
+//     if (status === "loading" || (loading && alltargetaudiencesData.length === 0)) {
 //         return (
 //             <div className="flex justify-center items-center min-h-screen">
 //                 <LoadingSpinner />
@@ -234,23 +234,22 @@
 //         <Card className={`min-h-screen py-8 px-4 md:px-36`}>
 //             <CardHeader className="flex gap-3">
 //                 <div className="flex flex-col">
-//                     <p className="text-4xl font-bold">Quản lý Category</p>
+//                     <p className="text-4xl font-bold">Quản lý đối tượng</p>
 //                 </div>
 //             </CardHeader>
 //             <Divider />
 //             <CardHeader className="flex flex-col md:flex-row justify-between items-center">
-//                 <NextLink href={"/admin/product_management/categories/create"}
+//                 <NextLink href={"/admin/product_management/targetaudiences/create"}
 //                           className="mb-4 md:mb-0 inline-block w-fit cursor-pointer transition-all bg-blue-500 text-white px-6 py-2 rounded-lg border-blue-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]">
 //                     Thêm mới
 //                 </NextLink>
 //                 <div className="w-full md:w-1/3">
 //                     <Input
 //                         className={'p-3.5'}
-//                         label="Tìm kiếm Category Name hoặc Description"
 //                         type="text"
 //                         value={searchTerm}
 //                         onChange={(e) => setSearchTerm(e.target.value)}
-//                         placeholder="Nhập để tìm kiếm..."
+//                         placeholder="Tìm kiếm theo tên..."
 //                         isClearable
 //                         onClear={() => setSearchTerm("")}
 //                     />
@@ -270,33 +269,33 @@
 //                     </div>
 //                 )}
 //
-//                 {loading && categoriesData.length === 0 ? (
+//                 {loading && targetaudiencesData.length === 0 ? (
 //                     <LoadingSpinner/>
 //                 ) : error ? (
 //                     <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
 //                         <span className="block sm:inline">{error}</span>
 //                     </div>
 //                 ) : (
-//                     <Table aria-label="Categories table">
+//                     <Table aria-label="targetaudiences table">
 //                         <TableHeader>
 //                             <TableColumn>ID</TableColumn>
-//                             <TableColumn>Tên Category</TableColumn>
+//                             <TableColumn>Tên đối tượng</TableColumn>
 //                             <TableColumn>Mô tả</TableColumn>
 //                             <TableColumn>Hành động</TableColumn>
 //                         </TableHeader>
 //                         <TableBody>
-//                             {categoriesData && categoriesData.length > 0 ? (
-//                                 categoriesData.map((category) => (
-//                                     <TableRow key={category.id}>
-//                                         <TableCell>{category.id}</TableCell>
-//                                         <TableCell>{category.name}</TableCell>
+//                             {targetaudiencesData && targetaudiencesData.length > 0 ? (
+//                                 targetaudiencesData.map((targetaudience) => (
+//                                     <TableRow key={targetaudience.id}>
+//                                         <TableCell>{targetaudience.id}</TableCell>
+//                                         <TableCell>{targetaudience.name}</TableCell>
 //                                         <TableCell className="max-w-xs truncate">
-//                                             {category.description ? category.description.substring(0, 100) + (category.description.length > 100 ? '...' : '') : 'N/A'}
+//                                             {targetaudience.description ? targetaudience.description.substring(0, 100) + (targetaudience.description.length > 100 ? '...' : '') : 'N/A'}
 //                                         </TableCell>
 //                                         <TableCell>
 //                                             <div className="flex space-x-2">
 //                                                 <NextLink
-//                                                     href={`/admin/product_management/categories/update/${category.id}`}>
+//                                                     href={`/admin/product_management/targetaudiences/update/${targetaudience.id}`}>
 //                                                     <button
 //                                                         className="inline-block w-fit cursor-pointer transition-all bg-yellow-500 text-white px-6 py-2 rounded-lg border-yellow-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]">
 //                                                         Sửa
@@ -304,7 +303,7 @@
 //                                                 </NextLink>
 //                                                 <button
 //                                                     className="inline-block w-fit cursor-pointer transition-all bg-red-500 text-white px-6 py-2 rounded-lg border-red-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]"
-//                                                     onClick={() => openDeleteConfirm(category.id, category.name)}
+//                                                     onClick={() => openDeleteConfirm(targetaudience.id, targetaudience.name)}
 //                                                 >
 //                                                     Xóa
 //                                                 </button>
@@ -315,7 +314,7 @@
 //                             ) : (
 //                                 <TableRow>
 //                                     <TableCell colSpan={4} className="text-center py-4">
-//                                         {finalSearchTerm ? "Không tìm thấy category nào khớp." : "Không có dữ liệu"}
+//                                         {finalSearchTerm ? "Không tìm thấy targetaudience nào khớp." : "Không có dữ liệu"}
 //                                     </TableCell>
 //                                 </TableRow>
 //                             )}
@@ -349,9 +348,9 @@
 //                             Xác nhận xóa
 //                         </ModalHeader>
 //                         <ModalBody>
-//                             {categoryToDelete && (
+//                             {targetaudienceToDelete && (
 //                                 <p>
-//                                     Bạn có chắc chắn muốn xóa category "{categoryToDelete.name}"?
+//                                     Bạn có chắc chắn muốn xóa targetaudience "{targetaudienceToDelete.name}"?
 //                                     <br/>
 //                                     Hành động này không thể hoàn tác.
 //                                 </p>
@@ -363,7 +362,7 @@
 //                             </Button>
 //                             <Button
 //                                 color="danger"
-//                                 onPress={handleDeleteCategory}
+//                                 onPress={handleDeletetargetaudience}
 //                                 className="bg-red-500 text-white"
 //                             >
 //                                 Xóa
@@ -379,17 +378,18 @@
 
 
 "use client";
+
 import {
     Card,
     CardHeader,
     CardBody,
     Divider,
-    Table,
-    TableHeader,
-    TableColumn,
-    TableBody,
     TableRow,
     TableCell,
+    TableColumn,
+    TableHeader,
+    Table,
+    TableBody,
     Modal,
     ModalContent,
     ModalHeader,
@@ -397,148 +397,106 @@ import {
     ModalFooter,
     Button,
     useDisclosure,
-    Input,
-    addToast,
+    Input
 } from "@heroui/react";
 import { useEffect, useState, useCallback } from "react";
 import { useSession, signIn } from "next-auth/react";
+import { addToast } from "@heroui/react";
 import { PlusIcon, PencilSquareIcon, TrashIcon } from "@heroicons/react/20/solid";
 
-interface category {
+interface targetaudience {
     id: number;
     name: string;
     createdAt: string;
     updatedAt: string;
 }
 
-interface categoryFormData {
+interface targetaudienceFormData {
     name: string;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api";
-
-const validatecategoryName = (
-    name: string,
-    categories: category[],
-    mode: "add" | "edit",
-    currentId?: number
-): string | null => {
-    const trimmed = name.trim();
-    if (!trimmed) return "Tên danh mục không được để trống";
-    if (trimmed.length > 100) return "Tên danh mục không được vượt quá 100 ký tự";
-    if (/^\d+$/.test(trimmed)) return "Tên danh mục phải chứa ít nhất một ký tự chữ cái";
-
-    const isDuplicate = categories.some(
-        (m) =>
-            m.name.trim().toLowerCase() === trimmed.toLowerCase() &&
-            (mode === "add" || (mode === "edit" && m.id !== currentId))
-    );
-    if (isDuplicate) return `danh mục "${trimmed}" đã tồn tại`;
-
-    return null;
-};
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api';
 
 export default function Page() {
     const { data: session, status } = useSession();
-    const [categories, setcategories] = useState<category[]>([]);
+    const [targetaudiences, settargetaudiences] = useState<targetaudience[]>([]);
     const [currentPage, setCurrentPage] = useState(0);
-    const [modalMode, setModalMode] = useState<"add" | "edit" | "delete" | null>(null);
-    const [formData, setFormData] = useState<categoryFormData>({ name: "" });
-    const [selected, setSelected] = useState<category | null>(null);
+    const itemsPerPage = 5;
+    const [modalMode, setModalMode] = useState<'add' | 'edit' | 'delete' | null>(null);
+    const [formData, setFormData] = useState<targetaudienceFormData>({ name: '' });
+    const [selected, setSelected] = useState<targetaudience | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { isOpen, onOpen, onClose } = useDisclosure();
-    const [searchTerm, setSearchTerm] = useState("");
-    const [updateError, setUpdateError] = useState("");
-    const itemsPerPage = 5;
+    const [searchTerm, setSearchTerm] = useState('');
 
     const handleFormInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
     }, []);
 
-    const fetchcategories = useCallback(async () => {
+    const openAddModal = () => {
+        setModalMode("add");
+        setFormData({ name: '' });
+        setSelected(null);
+        onOpen();
+    };
+
+    const openEditModal = (targetaudience: targetaudience) => {
+        setModalMode("edit");
+        setFormData({ name: targetaudience.name });
+        setSelected(targetaudience);
+        onOpen();
+    };
+
+    const openDeleteModal = (targetaudience: targetaudience) => {
+        setModalMode("delete");
+        setSelected(targetaudience);
+        onOpen();
+    };
+
+    const fetchtargetaudiences = useCallback(async () => {
         if (!session?.accessToken) return;
-        const res = await fetch(`${API_BASE_URL}/categories?page=0&size=1000`, {
-            headers: { Authorization: `Bearer ${session.accessToken}` },
+        const res = await fetch(`${API_BASE_URL}/target-audiences?page=0&size=1000`, {
+            headers: { Authorization: `Bearer ${session.accessToken}` }
         });
         const json = await res.json();
-        setcategories(json.data.content || []);
+        settargetaudiences(json.data.content || []);
     }, [session]);
 
     useEffect(() => {
         if (status === "authenticated") {
-            fetchcategories();
+            fetchtargetaudiences();
         } else if (status === "unauthenticated") {
             signIn();
         }
-    }, [status, fetchcategories]);
-
-    const openAddModal = () => {
-        setModalMode("add");
-        setFormData({ name: "" });
-        setSelected(null);
-        setUpdateError("");
-        onOpen();
-    };
-
-    const openEditModal = (category: category) => {
-        setModalMode("edit");
-        setFormData({ name: category.name });
-        setSelected(category);
-        setUpdateError("");
-        onOpen();
-    };
-
-    const openDeleteModal = (category: category) => {
-        setModalMode("delete");
-        setSelected(category);
-        setUpdateError("");
-        onOpen();
-    };
+    }, [status, fetchtargetaudiences]);
 
     const handleSubmit = async () => {
-        const trimmedName = formData.name.trim();
-
-        if (!modalMode || (modalMode !== "add" && modalMode !== "edit")) {
-            addToast({ title: "Lỗi", description: "Không xác định được thao tác", color: "danger" });
-            return;
-        }
-
-        const validationError = validatecategoryName(trimmedName, categories, modalMode, selected?.id);
-        if (validationError) {
-            if (modalMode === "edit" || modalMode === "add") {
-                setUpdateError(validationError);
-            }
-            addToast({ title: "Lỗi", description: validationError, color: "danger" });
-            return;
-        }
-
         setIsSubmitting(true);
         try {
             const method = modalMode === "edit" ? "PUT" : "POST";
             const url = modalMode === "edit"
-                ? `${API_BASE_URL}/categories/${selected?.id}`
-                : `${API_BASE_URL}/categories`;
+                ? `${API_BASE_URL}/target-audiences/${selected?.id}`
+                : `${API_BASE_URL}/target-audiences`;
 
             const res = await fetch(url, {
                 method,
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${session?.accessToken}`,
+                    Authorization: `Bearer ${session?.accessToken}`
                 },
-                body: JSON.stringify({ name: trimmedName }),
+                body: JSON.stringify(formData)
             });
 
             if (!res.ok) throw new Error("Lỗi khi lưu dữ liệu");
 
             addToast({
                 title: "Thành công",
-                description: modalMode === "add" ? "Thêm danh mục thành công" : "Cập nhật danh mục thành công",
-                color: "success",
+                description: modalMode === "add" ? "Thêm đối tượng thành công" : "Cập nhật đối tượng thành công",
+                color: "success"
             });
 
-            await fetchcategories();
-            setUpdateError("");
+            await fetchtargetaudiences();
             onClose();
         } catch (err) {
             addToast({ title: "Lỗi", description: (err as Error).message, color: "danger" });
@@ -551,15 +509,17 @@ export default function Page() {
         if (!selected || !session?.accessToken) return;
         setIsSubmitting(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/categories/${selected.id}`, {
-                method: "DELETE",
-                headers: { Authorization: `Bearer ${session.accessToken}` },
+            const res = await fetch(`${API_BASE_URL}/target-audiences/${selected.id}`, {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${session.accessToken}`,
+                }
             });
 
-            if (!res.ok) throw new Error("Lỗi khi xoá danh mục");
+            if (!res.ok) throw new Error("Lỗi khi xoá đối tượng");
 
-            addToast({ title: "Thành công", description: "Xoá danh mục thành công", color: "success" });
-            await fetchcategories();
+            addToast({ title: "Thành công", description: "Xoá đối tượng thành công", color: "success" });
+            await fetchtargetaudiences();
             onClose();
         } catch (err) {
             addToast({ title: "Lỗi", description: (err as Error).message, color: "danger" });
@@ -568,20 +528,21 @@ export default function Page() {
         }
     };
 
-    const filteredcategories = categories.filter((m) =>
+    const filteredtargetaudiences = targetaudiences.filter((m) =>
         m.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    const totalPages = Math.ceil(filteredcategories.length / itemsPerPage);
-    const currentData = filteredcategories.slice(
-        currentPage * itemsPerPage,
-        (currentPage + 1) * itemsPerPage
-    );
+    const totalPages = Math.ceil(filteredtargetaudiences.length / itemsPerPage);
+    const currentData = filteredtargetaudiences.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
 
     return (
         <Card className="min-h-screen p-6 bg-gray-50 dark:bg-gray-900">
             <CardHeader className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Quản lý danh mục</h1>
-                <Button color="primary" onClick={openAddModal} startContent={<PlusIcon className="h-5 w-5" />}>
+                <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Quản lý đối tượng</h1>
+                <Button
+                    color="primary"
+                    onClick={openAddModal}
+                    startContent={<PlusIcon className="h-5 w-5" />}
+                >
                     Thêm mới
                 </Button>
             </CardHeader>
@@ -600,40 +561,30 @@ export default function Page() {
                 <Table>
                     <TableHeader>
                         <TableColumn>STT</TableColumn>
-                        <TableColumn>Tên danh mục</TableColumn>
+                        <TableColumn>Tên đối tượng</TableColumn>
                         <TableColumn>Ngày tạo</TableColumn>
                         <TableColumn>Ngày cập nhật</TableColumn>
                         <TableColumn>Hành động</TableColumn>
                     </TableHeader>
                     <TableBody>
-                        {currentData.length > 0 ? (
-                            currentData.map((m, idx) => (
-                                <TableRow key={m.id}>
-                                    <TableCell>{currentPage * itemsPerPage + idx + 1}</TableCell>
-                                    <TableCell>{m.name}</TableCell>
-                                    <TableCell>{new Date(m.createdAt).toLocaleDateString()}</TableCell>
-                                    <TableCell>{new Date(m.updatedAt).toLocaleDateString()}</TableCell>
-                                    <TableCell>
-                                        <div className="flex gap-2">
-                                            <Button isIconOnly size="sm" color="warning" onClick={() => openEditModal(m)}>
-                                                <PencilSquareIcon className="h-4 w-4" />
-                                            </Button>
-                                            <Button isIconOnly size="sm" color="danger" onClick={() => openDeleteModal(m)}>
-                                                <TrashIcon className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={5}>
-                                    <div className="text-center py-4 text-gray-600 dark:text-gray-400 italic">
-                                        Không tìm thấy danh mục nào phù hợp.
+                        {currentData.map((m, idx) => (
+                            <TableRow key={m.id}>
+                                <TableCell>{currentPage * itemsPerPage + idx + 1}</TableCell>
+                                <TableCell>{m.name}</TableCell>
+                                <TableCell>{new Date(m.createdAt).toLocaleDateString()}</TableCell>
+                                <TableCell>{new Date(m.updatedAt).toLocaleDateString()}</TableCell>
+                                <TableCell>
+                                    <div className="flex gap-2">
+                                        <Button isIconOnly size="sm" color="warning" onClick={() => openEditModal(m)}>
+                                            <PencilSquareIcon className="h-4 w-4" />
+                                        </Button>
+                                        <Button isIconOnly size="sm" color="danger" onClick={() => openDeleteModal(m)}>
+                                            <TrashIcon className="h-4 w-4" />
+                                        </Button>
                                     </div>
                                 </TableCell>
                             </TableRow>
-                        )}
+                        ))}
                     </TableBody>
                 </Table>
 
@@ -658,53 +609,45 @@ export default function Page() {
                 </div>
             </CardBody>
 
-            {(modalMode === "edit" || modalMode === "delete" || modalMode === "add") && (
-                <Modal isOpen={isOpen} onClose={onClose} placement="center">
-                    <ModalContent>
-                        <ModalHeader>
-                            {modalMode === "edit"
-                                ? "Cập nhật danh mục"
-                                : modalMode === "delete"
-                                    ? "Xác nhận xoá danh mục"
-                                    : "Thêm danh mục"}
-                        </ModalHeader>
-                        <ModalBody>
-                            {modalMode === "delete" ? (
-                                <p className="text-gray-700 dark:text-gray-300">
-                                    Bạn có chắc chắn muốn xoá danh mục <span className="font-semibold text-red-600">"{selected?.name}"</span> không?
-                                </p>
-                            ) : (
-                                <form className="space-y-4">
-                                    <Input
-                                        label="Tên danh mục"
-                                        name="name"
-                                        value={formData.name}
-                                        onChange={(e) => {
-                                            setUpdateError("");
-                                            handleFormInputChange(e);
-                                        }}
-                                        placeholder="Nhập tên danh mục"
-                                        isRequired
-                                    />
-                                    {updateError && (
-                                        <p className="text-sm text-red-600 mt-1 italic">{updateError}</p>
-                                    )}
-                                </form>
-                            )}
-                        </ModalBody>
-                        <ModalFooter>
-                            <Button variant="light" onClick={onClose}>Huỷ</Button>
-                            {modalMode === "delete" ? (
-                                <Button color="danger" onClick={handleDelete} isLoading={isSubmitting}>Xoá</Button>
-                            ) : (
-                                <Button color="primary" onClick={handleSubmit} isLoading={isSubmitting}>
-                                    {modalMode === "add" ? "Thêm mới" : "Cập nhật"}
-                                </Button>
-                            )}
-                        </ModalFooter>
-                    </ModalContent>
-                </Modal>
-            )}
+            <Modal isOpen={isOpen} onClose={onClose}>
+                <ModalContent>
+                    <ModalHeader>
+                        {modalMode === 'add' && 'Thêm đối tượng'}
+                        {modalMode === 'edit' && 'Cập nhật đối tượng'}
+                        {modalMode === 'delete' && 'Xác nhận xoá đối tượng'}
+                    </ModalHeader>
+                    <ModalBody>
+                        {modalMode === 'delete' ? (
+                            <p className="text-gray-700 dark:text-gray-300">
+                                Bạn có chắc chắn muốn xoá đối tượng <span className="font-semibold text-red-600">"{selected?.name}"</span> không?
+                            </p>
+                        ) : (
+                            <form className="space-y-4">
+                                <Input
+                                    label="Tên đối tượng"
+                                    name="name"
+                                    value={formData.name}
+                                    onChange={handleFormInputChange}
+                                    placeholder="Nhập tên đối tượng"
+                                    isRequired
+                                />
+                            </form>
+                        )}
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button variant="light" onClick={onClose}>Huỷ</Button>
+                        {modalMode === 'delete' ? (
+                            <Button color="danger" onClick={handleDelete} isLoading={isSubmitting}>
+                                Xoá
+                            </Button>
+                        ) : (
+                            <Button color="primary" onClick={handleSubmit} isLoading={isSubmitting}>
+                                {modalMode === 'add' ? "Thêm mới" : "Cập nhật"}
+                            </Button>
+                        )}
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
         </Card>
     );
 }
