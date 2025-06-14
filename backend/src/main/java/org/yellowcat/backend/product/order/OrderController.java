@@ -140,4 +140,24 @@ public class OrderController {
             return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to get order status: ", e.getMessage());
         }
     }
+
+    // Endpoint để checkin thanh toán bằng tiền mặt tại quầy
+    @PostMapping("/cash-checkin/{orderCode}")
+    @PreAuthorize("hasAnyAuthority('Admin_Web','Staff_Web')")
+    public ResponseEntity<?> checkinCashPayment(@PathVariable String orderCode) {
+        System.out.println("=== POST /api/orders/cash-checkin/" + orderCode + " called ===");
+        try {
+            OrderUpdateResponse updatedOrder = orderService.checkinCashPayment(orderCode);
+            
+            if (updatedOrder == null) {
+                return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Order not found with orderCode: ", orderCode);
+            }
+            
+            return ResponseEntityBuilder.success(updatedOrder);
+        } catch (Exception e) {
+            System.err.println("Error checking in cash payment: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "Failed to checkin cash payment: ", e.getMessage());
+        }
+    }
 }
