@@ -18,7 +18,6 @@ export async function middleware(request: any) {
                 return NextResponse.redirect(new URL("/login", request.url));
             }
 
-
             let hasAdminRole = false;
 
             if (token.roles && Array.isArray(token.roles)) {
@@ -46,9 +45,51 @@ export async function middleware(request: any) {
         }
     }
 
+    // Kiểm tra quyền truy cập vào trang nhân viên
+    if (pathname.startsWith("/staff")) {
+        try {
+            const token = await getToken({
+                req: request,
+                secret: process.env.NEXTAUTH_SECRET
+            });
+
+            // Không có token nào đẩy người dùng về trang thông báo đăng nhập
+            if (!token) {
+                return NextResponse.redirect(new URL("/login", request.url));
+            }
+
+            let hasStaffAccess = false;
+
+            // Kiểm tra trong token.roles
+            if (token.roles && Array.isArray(token.roles)) {
+                hasStaffAccess = token.roles.includes("Admin_Web") || token.roles.includes("Staff_Web");
+            }
+
+            // Nếu chưa tìm thấy quyền, kiểm tra trong accessToken
+            if (!hasStaffAccess && token.accessToken) {
+                try {
+                    const decodedAccessToken = jwtDecode<any>(token.accessToken as string);
+                    const clientRoles = decodedAccessToken?.resource_access?.["YellowCatCompanyWeb"]?.roles || [];
+                    hasStaffAccess = clientRoles.includes("Admin_Web") || clientRoles.includes("Staff_Web");
+                } catch (decodeError) {
+                    console.error("Error decoding access token:", decodeError);
+                }
+            }
+
+            // Nếu người dùng không có quyền nhân viên hoặc quản trị, chuyển hướng đến trang /unauthorized
+            if (!hasStaffAccess) {
+                return NextResponse.redirect(new URL("/unauthorized", request.url));
+            }
+
+            return NextResponse.next();
+        } catch (error) {
+            return NextResponse.redirect(new URL("/login", request.url));
+        }
+    }
+
     return NextResponse.next();
 }
 
 export const config = {
-    matcher: ["/", "/login", "/admin", "/admin/:path*"],
+    matcher: ["/", "/login", "/admin", "/admin/:path*", "/staff", "/staff/:path*"],
 };
