@@ -16,7 +16,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useSession } from 'next-auth/react';
 import LoadingSpinner from '@/components/LoadingSpinner';
-
+import StatisticsByDay from '@/components/statistics/StatisticsByDay'
 
 import { jwtDecode } from 'jwt-decode';
 import {IconBasket} from "@tabler/icons-react";
@@ -468,30 +468,13 @@ export default function AdminDashboard() {
 
             <Divider className="mb-8" />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
                 <Card className="shadow-lg">
                     <CardHeader>
-                        <p className="text-lg font-semibold text-gray-700 dark:text-white">Thống kê truy cập</p>
+                        <p className="text-lg font-semibold text-gray-700 dark:text-white">Thống kê theo doanh thu</p>
                     </CardHeader>
                     <CardBody>
-                        {/* Placeholder cho biểu đồ */}
-                        <div className="h-48 flex items-center justify-center text-gray-400 dark:text-gray-500">
-                            (Biểu đồ truy cập sẽ hiển thị ở đây)
-                        </div>
-                    </CardBody>
-                </Card>
-                <Card className="shadow-lg">
-                    <CardHeader>
-                        <p className="text-lg font-semibold text-gray-700 dark:text-white">Hoạt động gần đây</p>
-                    </CardHeader>
-                    <CardBody>
-                        {/* Placeholder cho hoạt động gần đây */}
-                        <ul className="space-y-2 text-gray-600 dark:text-gray-300 text-sm">
-                            <li>• Người dùng <b>admin</b> vừa thêm sản phẩm mới.</li>
-                            <li>• Đơn hàng #1234 vừa được xác nhận.</li>
-                            <li>• Người dùng <b>user01</b> vừa đăng ký tài khoản.</li>
-                            <li>• Sản phẩm <b>Áo thun nam</b> vừa được cập nhật tồn kho.</li>
-                        </ul>
+                            <StatisticsByDay/>
                     </CardBody>
                 </Card>
             </div>
