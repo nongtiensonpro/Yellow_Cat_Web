@@ -66,7 +66,7 @@ CREATE TABLE colors
 CREATE TABLE sizes
 (
     size_id     SERIAL PRIMARY KEY,
-    size_name   VARCHAR(20) NOT NULL, -- Ví dụ: "S", "M", "L", "XL"
+    size_name   VARCHAR(20) NOT NULL,
     description TEXT,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP

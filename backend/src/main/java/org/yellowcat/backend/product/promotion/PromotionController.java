@@ -17,43 +17,41 @@ import org.yellowcat.backend.product.promotion.dto.PromotionResponse;
 @RequestMapping("/api/promotions")
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@CrossOrigin(origins = "*")
 public class PromotionController {
     PromotionService promotionService;
 
     @GetMapping
-    ResponseEntity<?> getPromotions(
+    public ResponseEntity<?> getPromotions(
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "10") Integer size) {
         Pageable pageable = PageRequest.of(page, size);
         PageResponse<PromotionResponse> response = new PageResponse<>(promotionService.getAll(pageable));
-
         return ResponseEntityBuilder.success(response);
     }
 
     @GetMapping("/{id}")
-    ResponseEntity<?> getPromotionById(@PathVariable Integer id) {
+    public ResponseEntity<?> getPromotionById(@PathVariable Integer id) {
         return ResponseEntityBuilder.success(promotionService.getById(id));
     }
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('Admin_Web')")
-    ResponseEntity<?> createPromotion(@RequestBody PromotionRequest request) {
+    public ResponseEntity<?> createPromotion(@RequestBody PromotionRequest request) {
         PromotionResponse response = promotionService.create(request);
-
         return ResponseEntityBuilder.success(response);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('Admin_Wed')")
-    ResponseEntity<?> updatePromotion(@PathVariable Integer id, @RequestBody PromotionRequest request) {
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    public ResponseEntity<?> updatePromotion(@PathVariable Integer id, @RequestBody PromotionRequest request) {
         PromotionResponse response = promotionService.update(id, request);
-
         return ResponseEntityBuilder.success(response);
     }
 
     @DeleteMapping("/{id}")
-    ResponseEntity<Boolean> deletePromotion(@PathVariable Integer id) {
-
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    public ResponseEntity<Boolean> deletePromotion(@PathVariable Integer id) {
         return ResponseEntity.ok(promotionService.delete(id));
     }
 }

@@ -30,12 +30,19 @@ public class PromotionService {
         return promotionMapper.toPromotionResponse(promotion);
     }
 
+//    public PromotionResponse create(PromotionRequest request) {
+//        Promotion promotion = promotionMapper.toPromotion(request);
+//        promotionRepository.save(promotion);
+//
+//        return promotionMapper.toPromotionResponse(promotion);
+//    }
+
     public PromotionResponse create(PromotionRequest request) {
         Promotion promotion = promotionMapper.toPromotion(request);
         promotionRepository.save(promotion);
-
         return promotionMapper.toPromotionResponse(promotion);
     }
+
 
     public PromotionResponse update(Integer id, PromotionRequest request) {
         Promotion promotion = promotionMapper.toPromotion(request);
