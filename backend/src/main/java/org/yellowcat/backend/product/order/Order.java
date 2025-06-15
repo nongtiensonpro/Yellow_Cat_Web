@@ -30,9 +30,13 @@ public class Order { // Tên class là Order (số ít)
     @Column(name = "order_code", unique = true)
     private String orderCode;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "app_user_id") // Allow NULL as per ON DELETE SET NULL
-    private AppUser user;
+    @ManyToOne
+    @JoinColumn(name = "employee_id", referencedColumnName = "app_user_id")
+    private AppUser employee;
+
+    @ManyToOne
+    @JoinColumn(name = "customer_id", referencedColumnName = "app_user_id")
+    private AppUser customer;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shipping_address_id")

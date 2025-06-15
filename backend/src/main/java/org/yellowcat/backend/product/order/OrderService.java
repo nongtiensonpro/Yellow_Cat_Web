@@ -6,6 +6,9 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.yellowcat.backend.product.order.dto.OrderResponse;
@@ -16,6 +19,8 @@ import org.yellowcat.backend.product.orderItem.OrderItem;
 import org.yellowcat.backend.product.orderItem.OrderItemRepository;
 import org.yellowcat.backend.product.payment.Payment;
 import org.yellowcat.backend.product.payment.PaymentRepository;
+import org.yellowcat.backend.user.AppUser;
+import org.yellowcat.backend.user.AppUserRepository;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -29,6 +34,7 @@ public class OrderService {
     OrderItemRepository orderItemRepository;
     PaymentRepository paymentRepository;
     OrderMapper orderMapper;
+    AppUserRepository appUserRepository;
 
     public Page<OrderResponse> getOrders(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -76,49 +82,9 @@ public class OrderService {
         order.setDiscountAmount(discountAmount);
         order.setFinalAmount(finalAmount);
 
-        // Cập nhật/thêm mới payments nếu có
+        //Cập nhật payments
         if (request.getPayments() != null && !request.getPayments().isEmpty()) {
-            for (OrderUpdateRequest.PaymentUpdateRequest paymentReq : request.getPayments()) {
-                if (paymentReq.getPaymentId() == null) {
-                    // Payment mới
-                    Payment payment = new Payment();
-                    payment.setOrder(order);
-                    payment.setAmount(paymentReq.getAmount());
-                    payment.setPaymentMethod(paymentReq.getPaymentMethod());
-                    payment.setTransactionId(paymentReq.getTransactionId());
-
-                    // Tự động cập nhật status:
-                    if ("CASH".equalsIgnoreCase(paymentReq.getPaymentMethod()) ||
-                            ("BANK_TRANSFER".equalsIgnoreCase(paymentReq.getPaymentMethod()) && paymentReq.getTransactionId() != null)) {
-                        payment.setPaymentStatus("COMPLETED");
-                    } else if (paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
-                        payment.setPaymentStatus("COMPLETED");
-                    } else {
-                        payment.setPaymentStatus("PENDING");
-                    }
-                    paymentRepository.save(payment);
-                } else {
-                    // Payment đã tồn tại, update (tùy logic, cũng nên tính toán lại status)
-                    Payment existing = paymentRepository.findById(paymentReq.getPaymentId())
-                            .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + paymentReq.getPaymentId()));
-                    existing.setAmount(paymentReq.getAmount());
-                    existing.setPaymentMethod(paymentReq.getPaymentMethod());
-                    existing.setTransactionId(paymentReq.getTransactionId());
-                    // Update lại status nếu cần:
-                    if ("CASH".equalsIgnoreCase(paymentReq.getPaymentMethod()) ||
-                            ("BANK_TRANSFER".equalsIgnoreCase(paymentReq.getPaymentMethod()) && paymentReq.getTransactionId() != null)) {
-                        existing.setPaymentStatus("COMPLETED");
-                    } else if (paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
-                        existing.setPaymentStatus("COMPLETED");
-                    } else {
-                        existing.setPaymentStatus("PENDING");
-                    }
-                    paymentRepository.save(existing);
-                }
-            }
-            // Load lại danh sách payments của order sau khi thêm/sửa
-            List<Payment> updatedPayments = paymentRepository.findByOrder_OrderId(order.getOrderId());
-            order.setPayments(updatedPayments);
+            processPayments(order, request.getPayments());
         }
 
         // Tính tổng số tiền đã thanh toán (COMPLETED)
@@ -144,26 +110,113 @@ public class OrderService {
         return orderMapper.toOrderUpdateResponse(order);
     }
 
-    //Tạo order mới
+    @Transactional
     public Order createOrder() {
-        // Logic to create a new order
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (!(auth.getPrincipal() instanceof Jwt)) {
+            throw new IllegalStateException("Authentication principal is not a Jwt token");
+        }
+        Jwt jwt = (Jwt) auth.getPrincipal();
+        String keycloakUserId = jwt.getClaimAsString("sub");
+
+        AppUser user = appUserRepository.findByKeycloakUserId(keycloakUserId)
+                .orElseGet(() -> {
+                    AppUser newUser = AppUser.builder()
+                            .keycloakUserId(keycloakUserId)
+                            .email(jwt.getClaimAsString("email"))
+                            .fullName(jwt.getClaimAsString("name"))
+                            .build();
+                    return appUserRepository.save(newUser);
+                });
+
         Order order = Order.builder()
                 .orderCode(generateOrderCode())
                 .subTotalAmount(BigDecimal.ZERO)
                 .shippingFee(BigDecimal.ZERO)
                 .discountAmount(BigDecimal.ZERO)
                 .finalAmount(BigDecimal.ZERO)
+                .employee(user)
                 .build();
 
-        // Save the order to the repository
-        orderRepository.save(order);
+        return orderRepository.save(order);
+    }
 
-        return order;
+    private void processPayments(Order order, List<OrderUpdateRequest.PaymentUpdateRequest> payments) {
+        for (OrderUpdateRequest.PaymentUpdateRequest paymentReq : payments) {
+            Payment payment = (paymentReq.getPaymentId() == null)
+                    ? new Payment()
+                    : paymentRepository.findById(paymentReq.getPaymentId())
+                    .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + paymentReq.getPaymentId()));
+
+            payment.setOrder(order);
+            payment.setAmount(paymentReq.getAmount());
+            payment.setPaymentMethod(paymentReq.getPaymentMethod());
+            payment.setTransactionId(paymentReq.getTransactionId());
+
+            // Chuyển sang enum
+            PaymentMethod method = PaymentMethod.from(paymentReq.getPaymentMethod());
+            PaymentStatus status;
+
+            switch (method) {
+                case CASH:
+                    // Tiền mặt thu ngay, luôn COMPLETED
+                    status = PaymentStatus.COMPLETED;
+                    break;
+
+                case BANK_TRANSFER:
+                    // nếu đã có transactionId -> COMPLETED, nếu không thì PENDING
+                    if (paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
+                        status = PaymentStatus.COMPLETED;
+                    } else {
+                        status = PaymentStatus.PENDING;
+                    }
+                    break;
+
+                case VNPAY:
+                    // nếu đã có transactionId -> COMPLETED, nếu không thì PENDING
+                    if (paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
+                        status = PaymentStatus.COMPLETED;
+                    } else {
+                        status = PaymentStatus.PENDING;
+                    }
+                    break;
+
+                default:
+                    // Mặc định: PENDING
+                    status = PaymentStatus.PENDING;
+            }
+
+            payment.setPaymentStatus(status.name());
+            paymentRepository.save(payment);
+        }
+
+        // Reload danh sách payments để đồng bộ lại Order
+        List<Payment> updatedPayments = paymentRepository.findByOrder_OrderId(order.getOrderId());
+        order.setPayments(updatedPayments);
     }
 
     String generateOrderCode() {
         Random random = new Random();
         int randomNum = 10000 + random.nextInt(90000); // Sinh số ngẫu nhiên 5 chữ số
         return String.format("HD%d", randomNum);
+    }
+
+    public enum PaymentMethod {
+        CASH,
+        BANK_TRANSFER,
+        VNPAY;
+
+        public static PaymentMethod from(String method) {
+            try {
+                return PaymentMethod.valueOf(method.toUpperCase());
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Unsupported payment method: " + method);
+            }
+        }
+    }
+
+    public enum PaymentStatus {
+        PENDING,
+        COMPLETED
     }
 }

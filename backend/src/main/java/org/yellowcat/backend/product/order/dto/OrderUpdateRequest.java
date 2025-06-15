@@ -19,6 +19,5 @@ public class OrderUpdateRequest {
         String paymentMethod;
         String transactionId;
         BigDecimal amount;
-        String paymentStatus;
     }
 }
