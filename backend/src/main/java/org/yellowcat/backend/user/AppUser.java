@@ -4,18 +4,17 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.Instant;
+
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
 @Table(name = "app_users")
 @Getter
 @Setter
+@Builder
 public class AppUser {
 
     @jakarta.persistence.Id
@@ -39,7 +38,7 @@ public class AppUser {
     private String fullName;
 
     @Size(max = 20)
-    @Column(name = "phone_number", unique = true)
+    @Column(name = "phone_number")
     private String phoneNumber;
 
     @Size(max = 255)
@@ -51,4 +50,16 @@ public class AppUser {
 
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    @PrePersist
+    public void prePersist() {
+        Instant now = Instant.now();
+        this.createdAt = now;
+        this.updatedAt = now;
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = Instant.now();
+    }
 }
