@@ -1,4 +1,4 @@
-package org.yellowcat.backend.product.address;
+package org.yellowcat.backend.address;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -6,9 +6,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserService;
-import org.yellowcat.backend.product.address.dto.AddressesDTO;
+import org.yellowcat.backend.address.dto.AddressesDTO;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class AddressService {
@@ -24,28 +25,28 @@ public class AddressService {
     }
 
 
-    public Page<AddressesDTO> findAllAddressesByAppUserId(Integer appUID, Pageable pageable) {
-        Page<Addresses> addresses = addressRepository.findAllByAppUser_AppUserId(appUID, pageable);
-        return addresses.map(AddressesDTO::new); //
+    public Page<AddressesDTO> findAllByAppUserKeycloakId(UUID keycloakId, Pageable pageable) {
+        Page<Addresses> addresses = addressRepository.findAllByAppUserKeycloakId(keycloakId, pageable);
+        return addresses.map(AddressesDTO::new);
     }
 
-    public AddressesDTO create(AddressesDTO addressesDTO, int userAppId) {
-       Addresses adressnew =  convertFromDTO(addressesDTO, userAppId);
+    public AddressesDTO create(AddressesDTO addressesDTO, UUID keycloakId) {
+        Addresses adressnew =  convertFromDTO(addressesDTO, keycloakId);
         addressRepository.save(adressnew);
         return addressesDTO;
     }
 
-    public AddressesDTO update(AddressesDTO addressesDTO,int userAppId) {
-        Addresses addresses = convertFromDTO(addressesDTO, userAppId);
+    public AddressesDTO update(AddressesDTO addressesDTO,UUID keycloakId) {
+        Addresses addresses = convertFromDTO(addressesDTO, keycloakId);
         addressRepository.save(addresses);
         return addressesDTO;
     }
 
 
-    public Addresses convertFromDTO(AddressesDTO addressesDTO, int userAppId) {
+    public Addresses convertFromDTO(AddressesDTO addressesDTO, UUID  keycloakId) {
         Addresses addresses = new Addresses();
         addresses.setAddressId(addressesDTO.addressId());
-        AppUser uai = appUserService.findById(userAppId).orElseThrow(() -> new RuntimeException("User not found"));
+        AppUser uai = appUserService.findByKeycloakId(keycloakId).orElseThrow(() -> new RuntimeException("User not found"));
         addresses.setAppUser(uai);
         // Gán các trường khác từ DTO sang entity
         addresses.setRecipientName(addressesDTO.recipientName());

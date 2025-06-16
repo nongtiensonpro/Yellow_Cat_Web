@@ -1,4 +1,4 @@
-package org.yellowcat.backend.product.address;
+package org.yellowcat.backend.address;
 
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,9 +12,10 @@ import org.springframework.web.bind.annotation.*;
 import org.yellowcat.backend.common.config_api.response.ApiResponse;
 import org.yellowcat.backend.common.config_api.response.PageResponse;
 import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
-import org.yellowcat.backend.product.address.dto.AddressesDTO;
+import org.yellowcat.backend.address.dto.AddressesDTO;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/addresses")
@@ -36,30 +37,30 @@ public class AddressesController {
         return ResponseEntityBuilder.success(pageResponse);
     }
 
-    @GetMapping("/user/{appUserId}")
+    @GetMapping("/user/{keycloakId}")
     @Operation(summary = "Lấy tất cả địa chỉ của người dùng theo ID", description = "Trả về danh sách các địa chỉ của người dùng theo ID và phân trang")
-    public ResponseEntity<?> getAllByUser(
-            @PathVariable Integer appUserId,
+    public ResponseEntity<?> keycloakId(
+            @PathVariable UUID keycloakId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<AddressesDTO> addressPage = addressService.findAllAddressesByAppUserId(appUserId, pageable);
+        Page<AddressesDTO> addressPage = addressService.findAllByAppUserKeycloakId(keycloakId, pageable);
         PageResponse<AddressesDTO> pageResponse = new PageResponse<>(addressPage);
 
         return ResponseEntityBuilder.success(pageResponse);
     }
 
-    @PostMapping("/user/create/{userAppId}")
-    public ApiResponse create(@RequestBody AddressesDTO addressDTO, @PathVariable int userAppId) {
-        AddressesDTO createdAddress = addressService.create(addressDTO, userAppId);
+    @PostMapping("/user/create/{keycloakId}")
+    public ApiResponse create(@RequestBody AddressesDTO addressDTO, @PathVariable UUID  keycloakId) {
+        AddressesDTO createdAddress = addressService.create(addressDTO, keycloakId);
         return ApiResponse.success(createdAddress);
     }
 
 
-    @PutMapping("/user/update/{userAppId}")
-    public ApiResponse update(@RequestBody AddressesDTO addressDTO, @PathVariable int userAppId) {
-        AddressesDTO updatedAddress = addressService.update(addressDTO, userAppId);
+    @PutMapping("/user/update/{keycloakId}")
+    public ApiResponse update(@RequestBody AddressesDTO addressDTO, @PathVariable UUID keycloakId) {
+        AddressesDTO updatedAddress = addressService.update(addressDTO, keycloakId);
         return ApiResponse.success(updatedAddress);
     }
 

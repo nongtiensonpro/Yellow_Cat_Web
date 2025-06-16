@@ -126,5 +126,65 @@ public class KeycloakAdminService {
         usersResource.get(userId).roles().realmLevel().remove(roles);
     }
 
+    public UserDTO getUserById(String userId) {
+        RealmResource realmResource = keycloak.realm(realm);
+        UserRepresentation user = realmResource.users().get(userId).toRepresentation();
+
+        // Lấy client UUID
+        ClientRepresentation client = realmResource.clients()
+                .findByClientId(clientId)
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Client " + clientId + " không tồn tại"));
+        String clientUuid = client.getId();
+
+        UserDTO userDTO = new UserDTO();
+        userDTO.setId(user.getId());
+        userDTO.setUsername(user.getUsername());
+        userDTO.setEmail(user.getEmail());
+        userDTO.setFirstName(user.getFirstName());
+        userDTO.setLastName(user.getLastName());
+        userDTO.setEnabled(user.isEnabled());
+
+        List<String> realmRoleNames = new ArrayList<>();
+        List<String> clientRoleNames = new ArrayList<>();
+
+        try {
+            List<RoleRepresentation> realmRoles = realmResource.users()
+                    .get(userId)
+                    .roles()
+                    .realmLevel()
+                    .listAll();
+            realmRoleNames = realmRoles.stream()
+                    .map(RoleRepresentation::getName)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            System.err.println("Lỗi khi lấy Realm Roles: " + e.getMessage());
+        }
+
+        try {
+            List<RoleRepresentation> clientRoles = realmResource.users()
+                    .get(userId)
+                    .roles()
+                    .clientLevel(clientUuid)
+                    .listAll();
+            clientRoleNames = clientRoles.stream()
+                    .map(RoleRepresentation::getName)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            System.err.println("Lỗi khi lấy Client Roles: " + e.getMessage());
+        }
+
+        List<String> allRoles = new ArrayList<>();
+        allRoles.addAll(realmRoleNames);
+        allRoles.addAll(clientRoleNames);
+
+        userDTO.setRoles(allRoles);
+        userDTO.setRealmRoles(realmRoleNames);
+        userDTO.setClientRoles(clientRoleNames);
+
+        return userDTO;
+    }
+
 
 }
