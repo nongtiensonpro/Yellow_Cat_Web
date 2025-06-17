@@ -18,7 +18,9 @@ import {
     Tag,
     Palette,
     Ruler,
-    Target
+    Target,
+    Store,
+    ListOrdered
 } from "lucide-react";
 import { useState } from "react";
 interface MenuItem {
@@ -29,7 +31,8 @@ interface MenuItem {
 }
 const menuItems: MenuItem[] = [
     { href: "/admin", icon: <LayoutDashboard size={18} />, label: "Thống kê" },
-    { href: "/admin/order_management", icon: <BarChart2 size={18} />, label: "Đơn hàng" },
+    { href: "/staff/officesales", icon: <Store size={18} />, label: "Bán hàng tại quầy" },
+    { href: "/admin/order_management", icon: <ListOrdered size={18} />, label: "Đơn hàng" },
     {
         href: "/admin/product_management",
         icon: <Package size={18} />,
