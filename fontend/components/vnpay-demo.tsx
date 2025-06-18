@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createPayment } from '@/app/vnpay/service/vnpayService';
+import { createPayment } from '@/app/staff/officesales/vnpay/service/vnpayService';
 
 const orderTypes = [
   { value: 'billpayment', label: 'Thanh toán hóa đơn' }
