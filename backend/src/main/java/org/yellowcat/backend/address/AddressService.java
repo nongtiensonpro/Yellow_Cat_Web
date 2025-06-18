@@ -31,15 +31,37 @@ public class AddressService {
     }
 
     public AddressesDTO create(AddressesDTO addressesDTO, UUID keycloakId) {
-        Addresses adressnew =  convertFromDTO(addressesDTO, keycloakId);
-        addressRepository.save(adressnew);
-        return addressesDTO;
+        // Nếu địa chỉ mới được đặt làm mặc định, cập nhật tất cả địa chỉ khác thành không mặc định
+        if (addressesDTO.isDefault()) {
+            List<Addresses> existingAddresses = addressRepository.findAllByAppUserKeycloakId(keycloakId);
+            for (Addresses existingAddress : existingAddresses) {
+                if (existingAddress.getIsDefault()) {
+                    existingAddress.setIsDefault(false);
+                    addressRepository.save(existingAddress);
+                }
+            }
+        }
+        
+        Addresses adressnew = convertFromDTO(addressesDTO, keycloakId);
+        Addresses savedAddress = addressRepository.save(adressnew);
+        return new AddressesDTO(savedAddress);
     }
 
     public AddressesDTO update(AddressesDTO addressesDTO,UUID keycloakId) {
+        // Nếu địa chỉ được cập nhật thành mặc định, cập nhật tất cả địa chỉ khác thành không mặc định
+        if (addressesDTO.isDefault()) {
+            List<Addresses> existingAddresses = addressRepository.findAllByAppUserKeycloakId(keycloakId);
+            for (Addresses existingAddress : existingAddresses) {
+                if (existingAddress.getIsDefault() && !existingAddress.getAddressId().equals(addressesDTO.addressId())) {
+                    existingAddress.setIsDefault(false);
+                    addressRepository.save(existingAddress);
+                }
+            }
+        }
+        
         Addresses addresses = convertFromDTO(addressesDTO, keycloakId);
-        addressRepository.save(addresses);
-        return addressesDTO;
+        Addresses savedAddress = addressRepository.save(addresses);
+        return new AddressesDTO(savedAddress);
     }
 
 
@@ -55,7 +77,7 @@ public class AddressService {
         addresses.setWardCommune(addressesDTO.wardCommune());
         addresses.setDistrict(addressesDTO.district());
         addresses.setCityProvince(addressesDTO.cityProvince());
-        addresses.setCountry(addressesDTO.country());
+        addresses.setCountry(addressesDTO.country() != null ? addressesDTO.country() : "Việt Nam");
         addresses.setIsDefault(addressesDTO.isDefault());
         addresses.setAddressType(addressesDTO.addressType());
         return addresses;

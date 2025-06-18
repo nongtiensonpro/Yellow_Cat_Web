@@ -37,9 +37,11 @@ import {
     Edit,
     Eye,
     RefreshCw,
+    MapPin,
 } from "lucide-react";
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useTheme } from "next-themes";
+import { useRouter } from 'next/navigation';
 
 interface Users {
     id: string;
@@ -70,6 +72,7 @@ export default function Page() {
     const [roleFilter, setRoleFilter] = useState<string>('all');
 
     const { theme, setTheme } = useTheme();
+    const router = useRouter();
 
     useEffect(() => {
         if (status === 'authenticated' && session) {
@@ -438,6 +441,16 @@ export default function Page() {
                                                         onClick={() => console.log('Edit', item.id)}
                                                     >
                                                         <Edit size={16} />
+                                                    </Button>
+                                                </Tooltip>
+                                                <Tooltip content="Quản lý địa chỉ">
+                                                    <Button
+                                                        isIconOnly
+                                                        size="sm"
+                                                        variant="light"
+                                                        onClick={() => router.push(`/admin/address_management?userId=${item.id}`)}
+                                                    >
+                                                        <MapPin size={16} />
                                                     </Button>
                                                 </Tooltip>
                                                 <Dropdown>
