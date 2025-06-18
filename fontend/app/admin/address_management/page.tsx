@@ -1,22 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-    Table,
-    TableHeader,
-    TableColumn,
-    TableBody,
-    TableRow,
-    TableCell,
-    Button,
-    Chip,
-    Tooltip,
-    Input,
-    Pagination,
-    useDisclosure,
-    Modal,
-    Checkbox,
-} from "@nextui-org/react";
+
 import { useTheme } from "next-themes";
 import { useSearchParams } from 'next/navigation';
 import {
@@ -28,6 +13,19 @@ import {
 } from "lucide-react";
 import LoadingSpinner from '@/components/LoadingSpinner';
 import AddressForm from './components/AddressForm';
+import {
+    Button,
+    Checkbox,
+    Chip,
+    Input,
+    Pagination,
+    Table,
+    TableBody,
+    TableCell,
+    TableColumn,
+    TableHeader,
+    TableRow, Tooltip, useDisclosure
+} from '@heroui/react';
 
 interface Address {
     addressId: number;
@@ -517,4 +515,4 @@ export default function AddressManagement() {
             </div>
         </div>
     );
-} 
+}

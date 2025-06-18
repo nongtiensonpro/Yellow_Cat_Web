@@ -172,7 +172,7 @@ export const Navbar = () => {
                         <p className="font-semibold">Signed in as</p>
                         <p className="font-semibold">{session.user?.email}</p>
                     </DropdownItem>
-                    {isAdmin && <DropdownItem key="admin_dashboard" href="/admin">Admin Dashboard</DropdownItem>}
+                    {isAdmin ? <DropdownItem key="admin_dashboard"  onClick={() => router.push('/admin')}>Admin Dashboard</DropdownItem> : null}
                     <DropdownItem key="user_info" onClick={() => router.push('/user_info')}>User Profile</DropdownItem>
                     <DropdownItem key="logout" className="text-danger" color="danger" onClick={handleLogout}>Log Out</DropdownItem>
                 </DropdownMenu>
