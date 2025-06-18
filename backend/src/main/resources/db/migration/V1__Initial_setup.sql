@@ -2,8 +2,11 @@
 CREATE TABLE app_users
 (
     app_user_id      SERIAL PRIMARY KEY,
-    keycloak_user_id VARCHAR(255) UNIQUE NOT NULL,
+    keycloak_id      uuid,
+    username         VARCHAR(255),
     email            VARCHAR(255) UNIQUE NOT NULL,
+    roles            TEXT[],
+    enabled          BOOLEAN,
     full_name        VARCHAR(255),
     phone_number     VARCHAR(20) UNIQUE,
     avatar_url       VARCHAR(255),
@@ -120,7 +123,7 @@ CREATE TABLE product_variants
 CREATE TABLE addresses
 (
     address_id     SERIAL PRIMARY KEY,
-    app_user_id    INT          NOT NULL,
+    app_user_id    Integer          NOT NULL,
     recipient_name VARCHAR(255) NOT NULL,
     phone_number   VARCHAR(20)  NOT NULL,
     street_address VARCHAR(255) NOT NULL,
@@ -150,7 +153,7 @@ CREATE TABLE orders
 (
     order_id            SERIAL PRIMARY KEY,
     order_code          VARCHAR(20) UNIQUE,
-    app_user_id         INT,
+    app_user_id         integer,
     shipping_address_id INT,
     order_date          TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
     phone_number        VARCHAR(15),
@@ -222,7 +225,7 @@ CREATE TABLE reviews
 (
     review_id   SERIAL PRIMARY KEY,
     product_id  INT      NOT NULL,
-    app_user_id INT      NOT NULL,
+    app_user_id integer      NOT NULL,
     rating      SMALLINT NOT NULL CHECK (rating >= 1 AND rating <= 5),
     comment     TEXT,
     review_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -266,7 +269,7 @@ CREATE TABLE promotion_applicables
 CREATE TABLE carts
 (
     cart_id     SERIAL PRIMARY KEY,
-    app_user_id INT UNIQUE NOT NULL,
+    app_user_id integer UNIQUE NOT NULL,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (app_user_id) REFERENCES app_users (app_user_id) ON DELETE CASCADE
@@ -393,12 +396,12 @@ VALUES
 (5, 'NK-PEG40-GRY-43', 5, 4, 3200000.00, NULL, 40, 18, 'YellowCatWeb/nike-pegasus-grey', 0.1);
 
 -- 5. Dữ liệu cho bảng AppUsers
-INSERT INTO app_users (keycloak_user_id, email, full_name, phone_number, avatar_url)
-VALUES ('kc-user-001', 'nguyen.van.a@email.com', 'Nguyễn Văn A', '0901234567', 'https://example.com/avatars/user1.jpg'),
-       ('kc-user-002', 'tran.thi.b@email.com', 'Trần Thị B', '0902345678', 'https://example.com/avatars/user2.jpg'),
-       ('kc-user-003', 'le.van.c@email.com', 'Lê Văn C', '0903456789', 'https://example.com/avatars/user3.jpg'),
-       ('kc-user-004', 'pham.thi.d@email.com', 'Phạm Thị D', '0904567890', 'https://example.com/avatars/user4.jpg'),
-       ('kc-user-005', 'hoang.van.e@email.com', 'Hoàng Văn E', '0905678901', 'https://example.com/avatars/user5.jpg');
+INSERT INTO app_users (keycloak_id, email, full_name, phone_number, avatar_url)
+VALUES ('c56a4180-65aa-42ec-a945-5fd21dec0531', 'nguyen.van.a@email.com', 'Nguyễn Văn A', '0901234567', 'https://example.com/avatars/user1.jpg'),
+       ('c56a4180-65aa-42ec-a945-5fd21dec0532', 'tran.thi.b@email.com', 'Trần Thị B', '0902345678', 'https://example.com/avatars/user2.jpg'),
+       ('c56a4180-65aa-42ec-a945-5fd21dec0533', 'le.van.c@email.com', 'Lê Văn C', '0903456789', 'https://example.com/avatars/user3.jpg'),
+       ('c56a4180-65aa-42ec-a945-5fd21dec0534', 'pham.thi.d@email.com', 'Phạm Thị D', '0904567890', 'https://example.com/avatars/user4.jpg'),
+       ('c56a4180-65aa-42ec-a945-5fd21dec0535', 'hoang.van.e@email.com', 'Hoàng Văn E', '0905678901', 'https://example.com/avatars/user5.jpg');
 
 -- 6. Dữ liệu cho bảng Addresses
 INSERT INTO addresses (app_user_id, recipient_name, phone_number, street_address, ward_commune, district, city_province,
@@ -473,12 +476,12 @@ VALUES (1, 1, 'GHN-001234567', 'Delivered', '2024-01-06', '2024-01-05', '2024-01
        (5, 4, 'SPX-005678901', 'Confirmed', '2024-01-09', NULL, NULL, 0.00, 'Chờ lấy hàng');
 
 -- 12. Dữ liệu cho bảng Reviews
-INSERT INTO reviews (product_id, app_user_id, rating, comment, review_date)
-VALUES (1, 1, 5, 'Giày rất thoải mái, đi chạy bộ rất êm. Chất lượng tốt so với giá tiền.', '2024-01-06 20:30:00'),
-       (1, 2, 4, 'Design đẹp, nhưng hơi rộng so với targetAudience thông thường.', '2024-01-07 15:45:00'),
-       (2, 3, 5, 'Adidas luôn là lựa chọn tin cậy. Giày nhẹ, phù hợp tập gym.', '2024-01-08 09:15:00'),
-       (3, 1, 4, 'Giày bóng rổ chất lượng cao, grip tốt trên sân.', '2024-01-09 18:20:00'),
-       (4, 4, 3, 'Style đẹp nhưng chất liệu không bền như mong đợi.', '2024-01-10 12:10:00');
+-- INSERT INTO reviews (product_id, app_user_id, rating, comment, review_date)
+-- VALUES (1, 1, 5, 'Giày rất thoải mái, đi chạy bộ rất êm. Chất lượng tốt so với giá tiền.', '2024-01-06 20:30:00'),
+--        (1, 2, 4, 'Design đẹp, nhưng hơi rộng so với targetAudience thông thường.', '2024-01-07 15:45:00'),
+--        (2, 3, 5, 'Adidas luôn là lựa chọn tin cậy. Giày nhẹ, phù hợp tập gym.', '2024-01-08 09:15:00'),
+--        (3, 1, 4, 'Giày bóng rổ chất lượng cao, grip tốt trên sân.', '2024-01-09 18:20:00'),
+--        (4, 4, 3, 'Style đẹp nhưng chất liệu không bền như mong đợi.', '2024-01-10 12:10:00');
 
 -- 13. Dữ liệu cho bảng Promotions
 INSERT INTO promotions (promo_code, promo_name, description, discount_type, discount_value, start_date, end_date,

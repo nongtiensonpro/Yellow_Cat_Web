@@ -1,43 +1,43 @@
 package org.yellowcat.backend.user;
 
-import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.yellowcat.backend.common.config_api.response.ApiResponse;
-import org.yellowcat.backend.common.config_api.response.PageResponse;
 import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
-import org.yellowcat.backend.user.UserDTO.AppUserDTO;
+import org.yellowcat.backend.common.security.keycloak.KeycloakAdminService;
+import org.yellowcat.backend.common.security.keycloak.UserDTO;
+import org.yellowcat.backend.user.UserDTO.fromFE.UserRequestDTO;
 
 
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/users")
 public class AppUserController {
 
     @Autowired
+    private  KeycloakAdminService keycloakAdminService;
+
+    @Autowired
     private AppUserService appUserService;
 
     @GetMapping
-    public ResponseEntity<?> getAllUsers(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<AppUserDTO> addressPage = appUserService.findAll(pageable);
-        PageResponse<AppUserDTO> pageResponse = new PageResponse<>(addressPage);
-        return ResponseEntityBuilder.success(pageResponse);
+    public ResponseEntity<?> getAllUsers() {
+        List<UserDTO> users = keycloakAdminService.getUsersWithRoles();
+        return ResponseEntityBuilder.success(users);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable Integer id) {
         Optional<AppUser> appUser = appUserService.findById(id);
-        Optional<AppUserDTO> appUserDTO = appUser.map(AppUserDTO::new);
+        Optional<UserRequestDTO> appUserDTO = appUser.map(UserRequestDTO::new);
         if (appUserDTO.isEmpty()) {
             return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Người dùng không tồn tại", null);
         }
@@ -45,27 +45,61 @@ public class AppUserController {
         return ResponseEntityBuilder.success(appUserDTO.get());
     }
 
+//    @PostMapping("/creat/{key}")
+//    public ApiResponse createUser(@RequestBody UserRequestDTO user) {
+//        UserRequestDTO createdUser = appUserService.create(user);
+//        return ApiResponse.success(createdUser);
+//    }
 
-    @PostMapping("/creat/{key}")
-    public ApiResponse createUser(@RequestBody AppUserDTO user, @PathVariable String key) {
-        AppUserDTO createdUser = appUserService.create(user,key);
-        return ApiResponse.success(createdUser);
-    }
+//    @PutMapping("/update/{key}")
+//    public ApiResponse updateUser( @RequestBody  UserRequestDTO user) {
+//       UserRequestDTO audto = appUserService.update(user);
+//        return  ApiResponse.success(audto);
+//    }
 
-    @PutMapping("/update/{key}")
-    public ApiResponse updateUser( @RequestBody  AppUserDTO user, @PathVariable String key) {
-       AppUserDTO audto =appUserService.update(user,key);
-        return  ApiResponse.success(audto);
-    }
-
-    @DeleteMapping("/delete/{id}")
-    public ResponseEntity<?> deleteUser(@PathVariable Integer id) {
-        boolean isDeleted = appUserService.delete(id);
+    @DeleteMapping("/delete/{keycloakId}")
+    public ResponseEntity<?> deleteUser(@PathVariable UUID keycloakId) {
+        boolean isDeleted = appUserService.delete(keycloakId);
         if (isDeleted) {
-            return ResponseEntityBuilder.success("Brand đã được xóa thành công");
+            // Truyền null làm data nếu chỉ muốn gửi message
+            return ResponseEntityBuilder.success("Người dùng đã được xóa thành công", null);
         } else {
-            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST,"Xóa Brand thất bại","Brand không tồn tại hoặc đã bị xóa rồi");
+            return ResponseEntityBuilder.error(
+                    HttpStatus.BAD_REQUEST,
+                    "Xóa Người dùng thất bại",
+                    "Người dùng không tồn tại hoặc đã bị xóa rồi"
+            );
         }
-}
+    }
+
+
+
+    @GetMapping("/keycloak/{id}")
+    public ResponseEntity<UserDTO> getUser(@PathVariable String id) {
+        UserDTO user = keycloakAdminService.getUserById(id);
+        return ResponseEntity.ok(user);
+    }
+
+    @PostMapping("/me")
+    public ResponseEntity<ApiResponse<Void>> getOrCreateUser(
+            @RequestBody UserRequestDTO userDTO,
+            HttpServletRequest request
+    ) {
+        try {
+            appUserService.findOrCreateAppUser(userDTO);
+            ApiResponse<Void> response = new ApiResponse<>(HttpStatus.OK, "successfully", (Void) null);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            ApiResponse<Void> errorResponse = new ApiResponse<>(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "failed",
+                    e.getMessage(),
+                    request.getRequestURI()
+            );
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+
 }
 

@@ -41,6 +41,7 @@ public class UserManagementController {
             @ApiResponse(responseCode = "401", description = "Không được ủy quyền - Người dùng không có vai trò yêu cầu"),
             @ApiResponse(responseCode = "403", description = "Từ chối truy cập - Người dùng không có quyền truy cập vào điểm cuối này")
     })
+
     @PutMapping("/{userId}/roles")
     @RequirePermission(permission = "user.assign_roles", description = "Gán vai trò cho người dùng")
     public ResponseEntity<Void> assignRoles(@PathVariable String userId, @RequestBody Map<String, List<String>> roles) {
@@ -55,6 +56,7 @@ public class UserManagementController {
             @ApiResponse(responseCode = "401", description = "Không được ủy quyền - Người dùng không có vai trò yêu cầu"),
             @ApiResponse(responseCode = "403", description = "Từ chối truy cập - Người dùng không có quyền truy cập vào điểm cuối này")
     })
+
     @DeleteMapping("/{userId}/roles")
     @RequirePermission(permission = "user.remove_roles", description = "Xóa vai trò của người dùng")
     public ResponseEntity<Void> removeRoles(@PathVariable String userId, @RequestBody Map<String, List<String>> roles) {
