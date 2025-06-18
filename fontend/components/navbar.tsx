@@ -23,6 +23,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { jwtDecode } from 'jwt-decode';
 import BadgeVisibility from "@/components/user/BadgeVisibility"; // Điều chỉnh import path nếu cần (hoặc từ home/user/BadgeVisibility)
 import { HeartIcon } from "@heroicons/react/24/solid";
+import CheckoutUser from "./checkoutuser";
 
 
 interface DecodedToken {
@@ -186,6 +187,9 @@ export const Navbar = () => {
 
     return (
         <HeroUINavbar maxWidth="full" position="static" isMenuOpen={isMenuOpen} onMenuOpenChange={setIsMenuOpen} className="py-4 flex-col">
+            {/* Component ẩn để đồng bộ dữ liệu người dùng */}
+            <CheckoutUser />
+            
             <div className="w-24 h-auto relative transform translate-x-20">
                 <img src="/images/img_1.png" alt="Logo" className="object-contain w-full h-full" />
             </div>
