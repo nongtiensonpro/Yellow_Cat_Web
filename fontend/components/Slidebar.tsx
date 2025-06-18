@@ -1,5 +1,3 @@
-
-
 "use client";
 import Link from "next/link";
 import Image from "next/image";
@@ -57,7 +55,7 @@ const menuItems: MenuItem[] = [
 
 // Component Sidebar chính
 export default function Sidebar() {
-    const pathname: string = usePathname();
+    const pathname: string = usePathname() || "";
     const [isProductMenuOpen, setIsProductMenuOpen] = useState(pathname.startsWith("/admin/product_management"));
     return (
         <aside className="w-64 min-h-screen bg-white dark:bg-gray-900 shadow-md border-r border-gray-200 dark:border-gray-800 flex flex-col">
