@@ -8,8 +8,13 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
@@ -18,21 +23,27 @@ import java.time.Instant;
 @Setter
 public class AppUser {
 
-    @jakarta.persistence.Id
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "app_user_id")
+    @Column(name = "app_user_id", nullable = false)
     private Integer appUserId;
 
-    @NotNull
-    @Size(max = 255)
-    @Column(name = "keycloak_user_id", unique = true, nullable = false)
-    private String keycloakUserId;
 
-    @NotNull
-    @Email
-    @Size(max = 255)
-    @Column(name = "email", unique = true, nullable = false)
+    @Column(name = "keycloak_id", nullable = false)
+    private UUID keycloakId;
+
+    @Column(name = "username")
+    private String username;
+
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
+
+
+    @Column(name = "roles")
+    private List<String> roles;
+
+    @Column(name = "enabled")
+    private Boolean enabled;
 
     @Size(max = 255)
     @Column(name = "full_name")
@@ -46,9 +57,11 @@ public class AppUser {
     @Column(name = "avatar_url")
     private String avatarUrl;
 
+    @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
 
+    @UpdateTimestamp
     @Column(name = "updated_at")
     private Instant updatedAt;
 }
