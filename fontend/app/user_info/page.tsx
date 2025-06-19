@@ -5,6 +5,11 @@ import { useSession } from 'next-auth/react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { jwtDecode } from 'jwt-decode';
 import { CldImage, CldUploadButton } from 'next-cloudinary';
+import {MapPin} from "lucide-react";
+import {Button} from "@heroui/react";
+import { useRouter } from 'next/navigation';
+
+
 
 interface AppUser {
     appUserId: number;
@@ -58,6 +63,7 @@ interface UserUpdateData {
 }
 
 export default function Page() {
+    const router = useRouter();
     const { data: session, status } = useSession();
     const [user, setUser] = useState<AppUser | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
@@ -274,7 +280,8 @@ export default function Page() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
             {/* Header với nút Edit/Save/Cancel */}
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Thông tin người dùng</h2>
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-white text-center">Thông tin người dùng</h2>
+
                 <div className="flex gap-2">
                     {!isEditing ? (
                         <button
@@ -301,6 +308,12 @@ export default function Page() {
                             </button>
                         </>
                     )}
+                    <Button
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                        onClick={() => router.push(`/user_info/address_management?userId=${user.keycloakId}`)}
+                    >
+                        Quản lý địa chỉ giao hàng
+                    </Button>
                 </div>
             </div>
 
