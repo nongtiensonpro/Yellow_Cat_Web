@@ -186,5 +186,30 @@ public class KeycloakAdminService {
         return userDTO;
     }
 
+    public void enableUser(String userId) {
+        try {
+            RealmResource realmResource = keycloak.realm(realm);
+            UserRepresentation user = realmResource.users().get(userId).toRepresentation();
+            user.setEnabled(true);
+            realmResource.users().get(userId).update(user);
+            System.out.println("Đã kích hoạt tài khoản user: " + userId);
+        } catch (Exception e) {
+            System.err.println("Lỗi khi kích hoạt user " + userId + ": " + e.getMessage());
+            throw new RuntimeException("Không thể kích hoạt tài khoản người dùng: " + e.getMessage(), e);
+        }
+    }
+
+    public void disableUser(String userId) {
+        try {
+            RealmResource realmResource = keycloak.realm(realm);
+            UserRepresentation user = realmResource.users().get(userId).toRepresentation();
+            user.setEnabled(false);
+            realmResource.users().get(userId).update(user);
+            System.out.println("Đã vô hiệu hóa tài khoản user: " + userId);
+        } catch (Exception e) {
+            System.err.println("Lỗi khi vô hiệu hóa user " + userId + ": " + e.getMessage());
+            throw new RuntimeException("Không thể vô hiệu hóa tài khoản người dùng: " + e.getMessage(), e);
+        }
+    }
 
 }

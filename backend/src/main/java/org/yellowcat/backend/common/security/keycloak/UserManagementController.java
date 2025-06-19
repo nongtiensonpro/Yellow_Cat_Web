@@ -63,4 +63,34 @@ public class UserManagementController {
         keycloakAdminService.removeRoles(userId, roles.get("roles"));
         return ResponseEntity.ok().build();
     }
+
+    @Operation(summary = "Kích hoạt tài khoản người dùng", description = "Điểm cuối này kích hoạt tài khoản của một người dùng cụ thể. Chỉ có người dùng với vai trò 'Admin_Web' mới có thể truy cập điểm cuối này.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Tài khoản đã được kích hoạt thành công"),
+            @ApiResponse(responseCode = "400", description = "Yêu cầu không hợp lệ - ID người dùng không hợp lệ"),
+            @ApiResponse(responseCode = "401", description = "Không được ủy quyền - Người dùng không có vai trò yêu cầu"),
+            @ApiResponse(responseCode = "403", description = "Từ chối truy cập - Người dùng không có quyền truy cập vào điểm cuối này"),
+            @ApiResponse(responseCode = "404", description = "Không tìm thấy người dùng")
+    })
+    @PutMapping("/{userId}/enable")
+    @RequirePermission(permission = "user.enable", description = "Kích hoạt tài khoản người dùng")
+    public ResponseEntity<Void> enableUser(@PathVariable String userId) {
+        keycloakAdminService.enableUser(userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Vô hiệu hóa tài khoản người dùng", description = "Điểm cuối này vô hiệu hóa tài khoản của một người dùng cụ thể. Chỉ có người dùng với vai trò 'Admin_Web' mới có thể truy cập điểm cuối này.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Tài khoản đã được vô hiệu hóa thành công"),
+            @ApiResponse(responseCode = "400", description = "Yêu cầu không hợp lệ - ID người dùng không hợp lệ"),
+            @ApiResponse(responseCode = "401", description = "Không được ủy quyền - Người dùng không có vai trò yêu cầu"),
+            @ApiResponse(responseCode = "403", description = "Từ chối truy cập - Người dùng không có quyền truy cập vào điểm cuối này"),
+            @ApiResponse(responseCode = "404", description = "Không tìm thấy người dùng")
+    })
+    @PutMapping("/{userId}/disable")
+    @RequirePermission(permission = "user.disable", description = "Vô hiệu hóa tài khoản người dùng")
+    public ResponseEntity<Void> disableUser(@PathVariable String userId) {
+        keycloakAdminService.disableUser(userId);
+        return ResponseEntity.ok().build();
+    }
 }

@@ -25,6 +25,12 @@ import {
     Tooltip,
     Select,
     SelectItem,
+    useDisclosure,
+    Modal,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalFooter,
 } from "@heroui/react";
 import {
     Search,
@@ -42,6 +48,7 @@ import {
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useTheme } from "next-themes";
 import { useRouter } from 'next/navigation';
+import { CldImage } from 'next-cloudinary';
 
 interface Users {
     id: string;
@@ -55,10 +62,37 @@ interface Users {
     enabled: boolean;
 }
 
+interface AppUser {
+    appUserId: number;
+    keycloakId: string;
+    username: string;
+    email: string;
+    roles: string[];
+    enabled: boolean;
+    fullName: string;
+    phoneNumber: string;
+    avatarUrl: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+interface EnhancedUser extends Users {
+    profileData?: AppUser | null;
+}
+
+interface ApiResponse {
+    timestamp: string;
+    status: number;
+    message: string;
+    data: AppUser;
+    error?: string;
+    path?: string;
+}
+
 export default function Page() {
     const { data: session, status } = useSession();
-    const [demoData, setDemoData] = useState<Users[]>([]);
-    const [filteredData, setFilteredData] = useState<Users[]>([]);
+    const [demoData, setDemoData] = useState<EnhancedUser[]>([]);
+    const [filteredData, setFilteredData] = useState<EnhancedUser[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -71,8 +105,15 @@ export default function Page() {
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [roleFilter, setRoleFilter] = useState<string>('all');
 
+    // Action states
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const [selectedUser, setSelectedUser] = useState<EnhancedUser | null>(null);
+    const [actionType, setActionType] = useState<'enable' | 'disable' | null>(null);
+    const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null);
+
     const { theme, setTheme } = useTheme();
     const router = useRouter();
+    const {isOpen, onOpen, onClose} = useDisclosure();
 
     useEffect(() => {
         if (status === 'authenticated' && session) {
@@ -88,23 +129,31 @@ export default function Page() {
 
         // Search filter
         if (searchTerm) {
-            filtered = filtered.filter(user =>
-                user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
-            );
+            filtered = filtered.filter(user => {
+                const searchFields = [
+                    user.username,
+                    user.email,
+                    `${user.firstName} ${user.lastName}`,
+                    user.profileData?.fullName || '',
+                    user.profileData?.username || '',
+                    user.profileData?.email || ''
+                ].join(' ').toLowerCase();
+                
+                return searchFields.includes(searchTerm.toLowerCase());
+            });
         }
 
         // Status filter
         if (statusFilter !== 'all') {
-            filtered = filtered.filter(user =>
-                statusFilter === 'active' ? user.enabled : !user.enabled
-            );
+            filtered = filtered.filter(user => {
+                const enabled = user.profileData?.enabled !== undefined ? user.profileData.enabled : user.enabled;
+                return statusFilter === 'active' ? enabled : !enabled;
+            });
         }
 
         // Role filter
         if (roleFilter !== 'all') {
-            filtered = filtered.filter(user =>
+            filtered = filtered.filter(user => 
                 user.roles.includes(roleFilter) || user.clientRoles.includes(roleFilter)
             );
         }
@@ -146,8 +195,20 @@ export default function Page() {
                 throw new Error(errorMessage);
             }
 
-            const data = await response.json();
-            setDemoData(data);
+            const keycloakUsers: Users[] = await response.json();
+            
+            // Fetch profile data from database for each user
+            const enhancedUsers: EnhancedUser[] = await Promise.all(
+                keycloakUsers.map(async (user) => {
+                    const profileData = await fetchUserProfile(user.id);
+                    return {
+                        ...user,
+                        profileData
+                    };
+                })
+            );
+
+            setDemoData(enhancedUsers);
             setError(null);
         } catch (err) {
             const errorMessage = err instanceof Error
@@ -165,15 +226,6 @@ export default function Page() {
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
     const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-
-    const getRoleColor = (role: string) => {
-        switch (role) {
-            case 'Admin_Web': return 'secondary';
-            case 'Staff_Web': return 'warning';
-            default: return 'default';
-        }
-    };
-
     const getUserTypeIcon = (user: Users) => {
         if (user.roles.includes('Admin_Web') || user.clientRoles.includes('Admin_Web')) {
             return <Shield size={16} className="text-purple-500" />;
@@ -182,6 +234,119 @@ export default function Page() {
         }
         return <Users size={16} className="text-gray-500" />;
     };
+
+    // Function to fetch user profile from database
+    const fetchUserProfile = async (keycloakId: string): Promise<AppUser | null> => {
+        try {
+            const response = await fetch(`http://localhost:8080/api/users/keycloak-user/${keycloakId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.accessToken}`,
+                },
+            });
+
+            if (!response.ok) {
+                return null;
+            }
+
+            const apiResponse: ApiResponse = await response.json();
+            
+            if (apiResponse.status >= 200 && apiResponse.status < 300 && apiResponse.data) {
+                return apiResponse.data;
+            }
+            return null;
+        } catch (error) {
+            console.error('Error fetching user profile for', keycloakId, error);
+            return null;
+        }
+    };
+
+    // Handle enable/disable user actions
+    const handleUserAction = (user: EnhancedUser, action: 'enable' | 'disable') => {
+        setSelectedUser(user);
+        setActionType(action);
+        onOpen();
+    };
+
+    const confirmUserAction = async () => {
+        if (!selectedUser || !actionType) return;
+
+        const isEnable = actionType === 'enable';
+        const endpoint = isEnable ? 'enable' : 'disable';
+        
+        try {
+            setActionLoading(selectedUser.id);
+            
+            const token = session?.accessToken;
+            if (!token) {
+                throw new Error('Không có token xác thực');
+            }
+
+            const response = await fetch(`http://localhost:8080/api/admin/users/${selectedUser.id}/${endpoint}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorMessage = `Lỗi HTTP! Trạng thái: ${response.status}`;
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    errorMessage += ` - ${errorJson.message || errorJson.error || errorText}`;
+                } catch {
+                    errorMessage += errorText ? ` - ${errorText}` : '';
+                }
+                throw new Error(errorMessage);
+            }
+
+            // Update local state immediately
+            setDemoData(prevData => 
+                prevData.map(user => 
+                    user.id === selectedUser.id 
+                        ? { ...user, enabled: isEnable }
+                        : user
+                )
+            );
+
+            setNotification({
+                type: 'success',
+                message: `Đã ${isEnable ? 'kích hoạt' : 'vô hiệu hóa'} tài khoản ${selectedUser.username} thành công!`
+            });
+
+            // Refresh data to ensure consistency
+            await fetchDemoData();
+
+        } catch (err) {
+            const errorMessage = err instanceof Error
+                ? `Không thể ${isEnable ? 'kích hoạt' : 'vô hiệu hóa'} tài khoản: ${err.message}`
+                : `Không thể ${isEnable ? 'kích hoạt' : 'vô hiệu hóa'} tài khoản. Vui lòng thử lại sau.`;
+            
+            setNotification({
+                type: 'error',
+                message: errorMessage
+            });
+            console.error('Lỗi khi thay đổi trạng thái tài khoản:', err);
+        } finally {
+            setActionLoading(null);
+            onClose();
+            setSelectedUser(null);
+            setActionType(null);
+        }
+    };
+
+    // Auto hide notification after 5 seconds
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => {
+                setNotification(null);
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
 
     // Check if user is authenticated
     if (status === 'unauthenticated') {
@@ -263,7 +428,7 @@ export default function Page() {
                         <div>
                             <p className="text-sm text-gray-600 dark:text-gray-300">Đang hoạt động</p>
                             <p className="text-2xl font-bold text-green-600">
-                                {demoData.filter(u => u.enabled).length}
+                                {demoData.filter(u => u.profileData?.enabled !== undefined ? u.profileData.enabled : u.enabled).length}
                             </p>
                         </div>
                     </CardBody>
@@ -274,7 +439,9 @@ export default function Page() {
                         <div>
                             <p className="text-sm text-gray-600 dark:text-gray-300">Admin</p>
                             <p className="text-2xl font-bold text-purple-600">
-                                {demoData.filter(u => u.roles.includes('Admin_Web') || u.clientRoles.includes('Admin_Web')).length}
+                                {demoData.filter(u => 
+                                    u.clientRoles.includes('Admin_Web') || u.roles.includes('Admin_Web')
+                                ).length}
                             </p>
                         </div>
                     </CardBody>
@@ -285,7 +452,9 @@ export default function Page() {
                         <div>
                             <p className="text-sm text-gray-600 dark:text-gray-300">Nhân viên</p>
                             <p className="text-2xl font-bold text-yellow-600">
-                                {demoData.filter(u => u.roles.includes('Staff_Web') || u.clientRoles.includes('Staff_Web')).length}
+                                {demoData.filter(u => 
+                                    u.clientRoles.includes('Staff_Web') || u.roles.includes('Staff_Web')
+                                ).length}
                             </p>
                         </div>
                     </CardBody>
@@ -359,9 +528,9 @@ export default function Page() {
                             }}
                         >
                             <TableHeader>
-                                <TableColumn>ID</TableColumn>
                                 <TableColumn>NGƯỜI DÙNG</TableColumn>
                                 <TableColumn>EMAIL</TableColumn>
+                                <TableColumn>Số điện thoại</TableColumn>
                                 <TableColumn>VAI TRÒ</TableColumn>
                                 <TableColumn>TRẠNG THÁI</TableColumn>
                                 <TableColumn>HÀNH ĐỘNG</TableColumn>
@@ -369,56 +538,93 @@ export default function Page() {
                             <TableBody emptyContent="Không có dữ liệu">
                                 {currentItems.map((item) => (
                                     <TableRow key={item.id}>
-                                        <TableCell>{item.id}</TableCell>
                                         <TableCell>
-                                            <User
-                                                avatarProps={{
-                                                    icon: getUserTypeIcon(item),
-                                                    color: item.enabled ? "default" : "default"
-                                                }}
-                                                description={item.username}
-                                                name={`${item.firstName} ${item.lastName}`}
-                                            />
+                                            {item.profileData?.avatarUrl ? (
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-full overflow-hidden">
+                                                        <CldImage
+                                                            width={40}
+                                                            height={40}
+                                                            src={item.profileData.avatarUrl}
+                                                            alt={item.profileData.fullName || item.username}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-semibold text-sm">
+                                                            {item.profileData.fullName || `${item.firstName} ${item.lastName}`}
+                                                        </p>
+                                                        <p className="text-xs text-gray-500">
+                                                            {item.profileData.username || item.username}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <User
+                                                    avatarProps={{
+                                                        icon: getUserTypeIcon(item),
+                                                        color: item.enabled ? "default" : "default"
+                                                    }}
+                                                    description={item.profileData?.username || item.username}
+                                                    name={item.profileData?.fullName || `${item.firstName} ${item.lastName}`}
+                                                />
+                                            )}
                                         </TableCell>
-                                        <TableCell>{item.email}</TableCell>
+                                        <TableCell>{item.profileData?.email || item.email}</TableCell>
+                                        <TableCell>{item.profileData?.phoneNumber || 'Chưa cập nhật'}</TableCell>
                                         <TableCell>
                                             <div className="flex flex-wrap gap-1">
-                                                {(
-                                                    item.roles.length === 0 ||
-                                                    (item.roles.length === 1 && item.roles[0] === 'default-roles-yellow cat company') &&
-                                                    item.clientRoles.length === 0
-                                                ) ? (
-                                                    <Chip size="sm" color="default" variant="flat">
-                                                        Khách hàng
-                                                    </Chip>
-                                                ) : (
-                                                    Array.from(new Set([
-                                                        ...item.roles.filter(role => role !== 'default-roles-yellow cat company'),
-                                                        ...item.clientRoles
-                                                    ])).map((role, index) => (
+                                                {(() => {
+                                                    // Lấy roles từ Keycloak (như UserManagementController)
+                                                    const clientRoles = item.clientRoles || [];
+                                                    const realmRoles = item.roles || [];
+                                                    
+                                                    // Lọc bỏ default roles
+                                                    const filteredClientRoles = clientRoles.filter(role => 
+                                                        role !== 'default-roles-yellow cat company'
+                                                    );
+                                                    const filteredRealmRoles = realmRoles.filter(role => 
+                                                        role !== 'default-roles-yellow cat company' && 
+                                                        role !== 'offline_access' && 
+                                                        role !== 'uma_authorization'
+                                                    );
+                                                    
+                                                    const allRoles = [...filteredClientRoles, ...filteredRealmRoles];
+                                                    
+                                                    // Xác định vai trò có quyền hạn cao nhất
+                                                    let highestRole = '';
+                                                    let roleColor: "default" | "primary" | "secondary" | "success" | "warning" | "danger" = 'default';
+                                                    
+                                                    if (allRoles.includes('Admin_Web')) {
+                                                        highestRole = 'Admin';
+                                                        roleColor = 'secondary';
+                                                    } else if (allRoles.includes('Staff_Web')) {
+                                                        highestRole = 'Nhân viên';
+                                                        roleColor = 'warning';
+                                                    } else {
+                                                        highestRole = 'Khách hàng';
+                                                        roleColor = 'default';
+                                                    }
+                                                    
+                                                    return (
                                                         <Chip
-                                                            key={role}
                                                             size="sm"
-                                                            color={getRoleColor(role)}
+                                                            color={roleColor}
                                                             variant="flat"
                                                         >
-                                                            {role === 'Admin_Web'
-                                                                ? 'Quản lý cửa hàng'
-                                                                : role === 'Staff_Web'
-                                                                    ? 'Nhân viên cửa hàng'
-                                                                    : role.replace(/_/g, ' ')}
+                                                            {highestRole}
                                                         </Chip>
-                                                    ))
-                                                )}
+                                                    );
+                                                })()}
                                             </div>
                                         </TableCell>
                                         <TableCell>
                                             <Chip
-                                                color={item.enabled ? "success" : "danger"}
+                                                color={(item.profileData?.enabled !== undefined ? item.profileData.enabled : item.enabled) ? "success" : "danger"}
                                                 variant="flat"
-                                                startContent={item.enabled ? <UserCheck size={14} /> : <UserX size={14} />}
+                                                startContent={(item.profileData?.enabled !== undefined ? item.profileData.enabled : item.enabled) ? <UserCheck size={14} /> : <UserX size={14} />}
                                             >
-                                                {item.enabled ? 'Hoạt động' : 'Không hoạt động'}
+                                                {(item.profileData?.enabled !== undefined ? item.profileData.enabled : item.enabled) ? 'Hoạt động' : 'Không hoạt động'}
                                             </Chip>
                                         </TableCell>
                                         <TableCell>
@@ -459,6 +665,7 @@ export default function Page() {
                                                             isIconOnly
                                                             size="sm"
                                                             variant="light"
+                                                            isLoading={actionLoading === item.id}
                                                         >
                                                             <MoreVertical size={16} />
                                                         </Button>
@@ -466,17 +673,11 @@ export default function Page() {
                                                     <DropdownMenu aria-label="Actions">
                                                         <DropdownItem
                                                             key="enable"
-                                                            color={item.enabled ? "danger" : "success"}
-                                                            onClick={() => console.log('Toggle status', item.id)}
+                                                            color={(item.profileData?.enabled !== undefined ? item.profileData.enabled : item.enabled) ? "danger" : "success"}
+                                                            onClick={() => handleUserAction(item, (item.profileData?.enabled !== undefined ? item.profileData.enabled : item.enabled) ? 'disable' : 'enable')}
+                                                            isDisabled={actionLoading === item.id}
                                                         >
-                                                            {item.enabled ? 'Vô hiệu hóa' : 'Kích hoạt'}
-                                                        </DropdownItem>
-                                                        <DropdownItem
-                                                            key="delete"
-                                                            color="danger"
-                                                            onClick={() => console.log('Delete', item.id)}
-                                                        >
-                                                            Xóa tài khoản
+                                                            {(item.profileData?.enabled !== undefined ? item.profileData.enabled : item.enabled) ? 'Vô hiệu hóa' : 'Kích hoạt'}
                                                         </DropdownItem>
                                                     </DropdownMenu>
                                                 </Dropdown>
@@ -506,6 +707,111 @@ export default function Page() {
                     </CardBody>
                 )}
             </Card>
+
+            {/* Notification */}
+            {notification && (
+                <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm w-full transition-all duration-300 ${
+                    notification.type === 'success' 
+                        ? 'bg-green-100 border border-green-400 text-green-700 dark:bg-green-900 dark:border-green-600 dark:text-green-200' 
+                        : 'bg-red-100 border border-red-400 text-red-700 dark:bg-red-900 dark:border-red-600 dark:text-red-200'
+                }`}>
+                    <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                            <p className="font-medium">
+                                {notification.type === 'success' ? '✅ Thành công' : '❌ Lỗi'}
+                            </p>
+                            <p className="text-sm mt-1">{notification.message}</p>
+                        </div>
+                        <Button
+                            isIconOnly
+                            size="sm"
+                            variant="light"
+                            onClick={() => setNotification(null)}
+                            className="ml-2"
+                        >
+                            ×
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {/* Confirmation Modal */}
+            <Modal 
+                isOpen={isOpen} 
+                onClose={onClose}
+                placement="center"
+            >
+                <ModalContent>
+                    {(onClose) => (
+                        <>
+                            <ModalHeader className="flex flex-col gap-1">
+                                Xác nhận thay đổi trạng thái
+                            </ModalHeader>
+                            <ModalBody>
+                                {selectedUser && actionType && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-3">
+                                            {selectedUser.profileData?.avatarUrl ? (
+                                                <div className="w-12 h-12 rounded-full overflow-hidden">
+                                                    <CldImage
+                                                        width={48}
+                                                        height={48}
+                                                        src={selectedUser.profileData.avatarUrl}
+                                                        alt={selectedUser.profileData.fullName || selectedUser.username}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <Avatar 
+                                                    icon={getUserTypeIcon(selectedUser)}
+                                                    size="lg"
+                                                />
+                                            )}
+                                            <div>
+                                                <p className="font-semibold">
+                                                    {selectedUser.profileData?.fullName || `${selectedUser.firstName} ${selectedUser.lastName}`}
+                                                </p>
+                                                <p className="text-sm text-gray-500">
+                                                    {selectedUser.profileData?.email || selectedUser.email}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                                            <p className="text-sm">
+                                                Bạn có chắc chắn muốn <strong>
+                                                    {actionType === 'enable' ? 'kích hoạt' : 'vô hiệu hóa'}
+                                                </strong> tài khoản này không?
+                                            </p>
+                                            {actionType === 'disable' && (
+                                                <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
+                                                    ⚠️ Người dùng sẽ không thể đăng nhập sau khi bị vô hiệu hóa.
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </ModalBody>
+                            <ModalFooter>
+                                <Button 
+                                    color="danger" 
+                                    variant="light" 
+                                    onPress={onClose}
+                                    isDisabled={!!actionLoading}
+                                >
+                                    Hủy
+                                </Button>
+                                <Button 
+                                    color={actionType === 'enable' ? 'success' : 'danger'}
+                                    onPress={confirmUserAction}
+                                    isLoading={!!actionLoading}
+                                >
+                                    {actionType === 'enable' ? 'Kích hoạt' : 'Vô hiệu hóa'}
+                                </Button>
+                            </ModalFooter>
+                        </>
+                    )}
+                </ModalContent>
+            </Modal>
         </div>
     );
 }
