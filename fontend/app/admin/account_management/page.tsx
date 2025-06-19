@@ -111,9 +111,19 @@ export default function Page() {
     const [actionType, setActionType] = useState<'enable' | 'disable' | null>(null);
     const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null);
 
+    // Role management states
+    const [availableRoles, setAvailableRoles] = useState<string[]>([]);
+    const [roleManagementUser, setRoleManagementUser] = useState<EnhancedUser | null>(null);
+    const [roleLoading, setRoleLoading] = useState<boolean>(false);
+
+    // Role confirmation states
+    const [pendingRoleAction, setPendingRoleAction] = useState<{action: 'assign' | 'remove', roleName: string} | null>(null);
+
     const { theme, setTheme } = useTheme();
     const router = useRouter();
     const {isOpen, onOpen, onClose} = useDisclosure();
+    const {isOpen: isRoleModalOpen, onOpen: onRoleModalOpen, onClose: onRoleModalClose} = useDisclosure();
+    const {isOpen: isRoleConfirmModalOpen, onOpen: onRoleConfirmModalOpen, onClose: onRoleConfirmModalClose} = useDisclosure();
 
     useEffect(() => {
         if (status === 'authenticated' && session) {
@@ -347,6 +357,121 @@ export default function Page() {
             return () => clearTimeout(timer);
         }
     }, [notification]);
+
+    // Fetch available roles
+    const fetchAvailableRoles = async () => {
+        try {
+            const token = session?.accessToken;
+            if (!token) {
+                throw new Error('Không có token xác thực');
+            }
+
+            const response = await fetch('http://localhost:8080/api/admin/users/available-roles', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            const roles: string[] = await response.json();
+            setAvailableRoles(roles);
+        } catch (err) {
+            console.error('Lỗi khi tải danh sách vai trò:', err);
+            setNotification({
+                type: 'error',
+                message: 'Không thể tải danh sách vai trò có sẵn'
+            });
+        }
+    };
+
+    // Handle role management
+    const handleRoleManagement = async (user: EnhancedUser) => {
+        setRoleManagementUser(user);
+        await fetchAvailableRoles();
+        onRoleModalOpen();
+    };
+
+    // Show confirmation before assign role
+    const handleAssignRole = (roleName: string) => {
+        setPendingRoleAction({ action: 'assign', roleName });
+        onRoleConfirmModalOpen();
+    };
+
+    // Show confirmation before remove role
+    const handleRemoveRole = (roleName: string) => {
+        setPendingRoleAction({ action: 'remove', roleName });
+        onRoleConfirmModalOpen();
+    };
+
+    // Execute the confirmed role action
+    const executeRoleAction = async () => {
+        if (!roleManagementUser || !pendingRoleAction) return;
+        
+        const isAssign = pendingRoleAction.action === 'assign';
+        const roleName = pendingRoleAction.roleName;
+        
+        try {
+            setRoleLoading(true);
+            const token = session?.accessToken;
+            if (!token) {
+                throw new Error('Không có token xác thực');
+            }
+
+            const response = await fetch(`http://localhost:8080/api/admin/users/${roleManagementUser.id}/roles`, {
+                method: isAssign ? 'PUT' : 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    roles: [roleName]
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            // Update local user data
+            setDemoData(prevData => 
+                prevData.map(user => 
+                    user.id === roleManagementUser.id 
+                        ? { 
+                            ...user, 
+                            clientRoles: isAssign 
+                                ? [...(user.clientRoles || []), roleName].filter((role, index, self) => self.indexOf(role) === index)
+                                : (user.clientRoles || []).filter(role => role !== roleName)
+                        }
+                        : user
+                )
+            );
+
+            setNotification({
+                type: 'success',
+                message: `Đã ${isAssign ? 'gán' : 'xóa'} vai trò "${roleName}" ${isAssign ? 'cho' : 'của'} ${roleManagementUser.username}`
+            });
+
+            // Refresh data
+            await fetchDemoData();
+
+            // Auto close modals after success
+            onRoleConfirmModalClose();
+            onRoleModalClose();
+
+        } catch (err) {
+            console.error(`Lỗi khi ${isAssign ? 'gán' : 'xóa'} vai trò:`, err);
+            setNotification({
+                type: 'error',
+                message: `Không thể ${isAssign ? 'gán' : 'xóa'} vai trò "${roleName}"`
+            });
+        } finally {
+            setRoleLoading(false);
+            setPendingRoleAction(null);
+        }
+    };
 
     // Check if user is authenticated
     if (status === 'unauthenticated') {
@@ -672,12 +797,27 @@ export default function Page() {
                                                     </DropdownTrigger>
                                                     <DropdownMenu aria-label="Actions">
                                                         <DropdownItem
+                                                            key="roles"
+                                                            onClick={() => handleRoleManagement(item)}
+                                                            isDisabled={roleLoading}
+                                                        >
+                                                            Quản lý vai trò
+                                                        </DropdownItem>
+                                                        <DropdownItem
                                                             key="enable"
                                                             color={(item.profileData?.enabled !== undefined ? item.profileData.enabled : item.enabled) ? "danger" : "success"}
                                                             onClick={() => handleUserAction(item, (item.profileData?.enabled !== undefined ? item.profileData.enabled : item.enabled) ? 'disable' : 'enable')}
                                                             isDisabled={actionLoading === item.id}
                                                         >
                                                             {(item.profileData?.enabled !== undefined ? item.profileData.enabled : item.enabled) ? 'Vô hiệu hóa' : 'Kích hoạt'}
+                                                        </DropdownItem>
+                                                        <DropdownItem
+                                                            key="delete"
+                                                            color="danger"
+                                                            onClick={() => console.log('Delete', item.id)}
+                                                            isDisabled={actionLoading === item.id}
+                                                        >
+                                                            Xóa tài khoản
                                                         </DropdownItem>
                                                     </DropdownMenu>
                                                 </Dropdown>
@@ -806,6 +946,239 @@ export default function Page() {
                                     isLoading={!!actionLoading}
                                 >
                                     {actionType === 'enable' ? 'Kích hoạt' : 'Vô hiệu hóa'}
+                                </Button>
+                            </ModalFooter>
+                        </>
+                    )}
+                </ModalContent>
+            </Modal>
+
+            {/* Role Management Modal */}
+            <Modal 
+                isOpen={isRoleModalOpen} 
+                onClose={onRoleModalClose}
+                placement="center"
+                size="2xl"
+            >
+                <ModalContent>
+                    {(onClose) => (
+                        <>
+                            <ModalHeader className="flex flex-col gap-1">
+                                Quản lý vai trò người dùng
+                            </ModalHeader>
+                            <ModalBody>
+                                {roleManagementUser && (
+                                    <div className="space-y-6">
+                                        {/* User Info */}
+                                        <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                            {roleManagementUser.profileData?.avatarUrl ? (
+                                                <div className="w-12 h-12 rounded-full overflow-hidden">
+                                                    <CldImage
+                                                        width={48}
+                                                        height={48}
+                                                        src={roleManagementUser.profileData.avatarUrl}
+                                                        alt={roleManagementUser.profileData.fullName || roleManagementUser.username}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <Avatar 
+                                                    icon={getUserTypeIcon(roleManagementUser)}
+                                                    size="lg"
+                                                />
+                                            )}
+                                            <div>
+                                                <p className="font-semibold text-lg">
+                                                    {roleManagementUser.profileData?.fullName || `${roleManagementUser.firstName} ${roleManagementUser.lastName}`}
+                                                </p>
+                                                <p className="text-sm text-gray-500">
+                                                    {roleManagementUser.profileData?.email || roleManagementUser.email}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Current Roles */}
+                                        <div>
+                                            <h3 className="text-lg font-semibold mb-3">Vai trò hiện tại</h3>
+                                            <div className="space-y-2 max-h-32 overflow-y-auto">
+                                                {roleManagementUser.clientRoles && roleManagementUser.clientRoles.length > 0 ? (
+                                                    roleManagementUser.clientRoles.map((role) => (
+                                                        <div key={role} className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                                                            <div className="flex items-center gap-2">
+                                                                <Chip 
+                                                                    size="sm" 
+                                                                    color="primary" 
+                                                                    variant="flat"
+                                                                >
+                                                                    {role}
+                                                                </Chip>
+                                                            </div>
+                                                            <Button
+                                                                size="sm"
+                                                                color="danger"
+                                                                variant="light"
+                                                                onClick={() => handleRemoveRole(role)}
+                                                                isLoading={roleLoading}
+                                                                isDisabled={roleLoading}
+                                                            >
+                                                                Xóa
+                                                            </Button>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <p className="text-gray-500 italic">Chưa có vai trò nào được gán</p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Available Roles */}
+                                        <div>
+                                            <h3 className="text-lg font-semibold mb-3">Vai trò có sẵn</h3>
+                                            <div className="space-y-2 max-h-40 overflow-y-auto">
+                                                {availableRoles.length > 0 ? (
+                                                    availableRoles
+                                                        .filter(role => !roleManagementUser.clientRoles?.includes(role))
+                                                        .map((role) => (
+                                                            <div key={role} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Chip 
+                                                                        size="sm" 
+                                                                        color="default" 
+                                                                        variant="flat"
+                                                                    >
+                                                                        {role}
+                                                                    </Chip>
+                                                                </div>
+                                                                <Button
+                                                                    size="sm"
+                                                                    color="success"
+                                                                    variant="light"
+                                                                    onClick={() => handleAssignRole(role)}
+                                                                    isLoading={roleLoading}
+                                                                    isDisabled={roleLoading}
+                                                                >
+                                                                    Thêm
+                                                                </Button>
+                                                            </div>
+                                                        ))
+                                                ) : (
+                                                    <p className="text-gray-500 italic">Đang tải danh sách vai trò...</p>
+                                                )}
+                                                
+                                                {availableRoles.length > 0 && 
+                                                 availableRoles.filter(role => !roleManagementUser.clientRoles?.includes(role)).length === 0 && (
+                                                    <p className="text-gray-500 italic">Người dùng đã có tất cả vai trò có sẵn</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </ModalBody>
+                            <ModalFooter>
+                                <Button 
+                                    color="primary" 
+                                    onPress={onClose}
+                                    isDisabled={roleLoading}
+                                >
+                                    Đóng
+                                </Button>
+                            </ModalFooter>
+                        </>
+                    )}
+                </ModalContent>
+            </Modal>
+
+            {/* Role Confirmation Modal */}
+            <Modal 
+                isOpen={isRoleConfirmModalOpen} 
+                onClose={onRoleConfirmModalClose}
+                placement="center"
+                size="md"
+            >
+                <ModalContent>
+                    {(onClose) => (
+                        <>
+                            <ModalHeader className="flex flex-col gap-1">
+                                Xác nhận thay đổi vai trò
+                            </ModalHeader>
+                            <ModalBody>
+                                {roleManagementUser && pendingRoleAction && (
+                                    <div className="space-y-4">
+                                        {/* User Info */}
+                                        <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                            {roleManagementUser.profileData?.avatarUrl ? (
+                                                <div className="w-10 h-10 rounded-full overflow-hidden">
+                                                    <CldImage
+                                                        width={40}
+                                                        height={40}
+                                                        src={roleManagementUser.profileData.avatarUrl}
+                                                        alt={roleManagementUser.profileData.fullName || roleManagementUser.username}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <Avatar 
+                                                    icon={getUserTypeIcon(roleManagementUser)}
+                                                    size="md"
+                                                />
+                                            )}
+                                            <div>
+                                                <p className="font-semibold">
+                                                    {roleManagementUser.profileData?.fullName || `${roleManagementUser.firstName} ${roleManagementUser.lastName}`}
+                                                </p>
+                                                <p className="text-sm text-gray-500">
+                                                    {roleManagementUser.profileData?.email || roleManagementUser.email}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Confirmation Message */}
+                                        <div className="bg-yellow-50 dark:bg-yellow-900/30 p-4 rounded-lg border border-yellow-200 dark:border-yellow-700">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className="text-yellow-600 dark:text-yellow-400 text-lg">⚠️</span>
+                                                <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                                                    Xác nhận thao tác
+                                                </p>
+                                            </div>
+                                            <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                                                Bạn có chắc chắn muốn <strong>
+                                                    {pendingRoleAction.action === 'assign' ? 'gán vai trò' : 'xóa vai trò'}
+                                                </strong> <span className="bg-yellow-200 dark:bg-yellow-800 px-2 py-1 rounded text-yellow-900 dark:text-yellow-100 font-medium">
+                                                    {pendingRoleAction.roleName}
+                                                </span> {pendingRoleAction.action === 'assign' ? 'cho' : 'của'} người dùng này không?
+                                            </p>
+                                            {pendingRoleAction.action === 'remove' && (
+                                                <p className="text-sm text-red-600 dark:text-red-400 mt-2">
+                                                    💡 Người dùng sẽ mất quyền truy cập liên quan đến vai trò này.
+                                                </p>
+                                            )}
+                                            {pendingRoleAction.action === 'assign' && (
+                                                <p className="text-sm text-green-600 dark:text-green-400 mt-2">
+                                                    💡 Người dùng sẽ có thêm quyền truy cập từ vai trò này.
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </ModalBody>
+                            <ModalFooter>
+                                <Button 
+                                    color="danger" 
+                                    variant="light" 
+                                    onPress={() => {
+                                        onClose();
+                                        setPendingRoleAction(null);
+                                    }}
+                                    isDisabled={roleLoading}
+                                >
+                                    Hủy
+                                </Button>
+                                <Button 
+                                    color={pendingRoleAction?.action === 'assign' ? 'success' : 'danger'}
+                                    onPress={executeRoleAction}
+                                    isLoading={roleLoading}
+                                >
+                                    {pendingRoleAction?.action === 'assign' ? 'Gán vai trò' : 'Xóa vai trò'}
                                 </Button>
                             </ModalFooter>
                         </>

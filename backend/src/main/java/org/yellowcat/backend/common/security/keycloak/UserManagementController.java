@@ -34,6 +34,18 @@ public class UserManagementController {
         return ResponseEntity.ok(keycloakAdminService.getUsersWithRoles());
     }
 
+    @Operation(summary = "Lấy danh sách các vai trò có sẵn", description = "Điểm cuối này trả về danh sách tất cả các vai trò client có sẵn trong hệ thống. Chỉ có người dùng với vai trò 'Admin_Web' mới có thể truy cập điểm cuối này.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Danh sách các vai trò có sẵn"),
+            @ApiResponse(responseCode = "401", description = "Không được ủy quyền - Người dùng không có vai trò yêu cầu"),
+            @ApiResponse(responseCode = "403", description = "Từ chối truy cập - Người dùng không có quyền truy cập vào điểm cuối này")
+    })
+    @GetMapping("/available-roles")
+    @RequirePermission(permission = "user.manage_roles", description = "Xem danh sách vai trò có sẵn")
+    public ResponseEntity<List<String>> getAvailableRoles() {
+        return ResponseEntity.ok(keycloakAdminService.getAvailableClientRoles());
+    }
+
     @Operation(summary = "Gán các vai trò cho một người dùng", description = "Điểm cuối này gán các vai trò cho một người dùng cụ thể. Chỉ có người dùng với vai trò 'Admin_Web' mới có thể truy cập điểm cuối này.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Các vai trò đã được gán thành công"),
@@ -45,7 +57,7 @@ public class UserManagementController {
     @PutMapping("/{userId}/roles")
     @RequirePermission(permission = "user.assign_roles", description = "Gán vai trò cho người dùng")
     public ResponseEntity<Void> assignRoles(@PathVariable String userId, @RequestBody Map<String, List<String>> roles) {
-        keycloakAdminService.assignRoles(userId, roles.get("roles"));
+        keycloakAdminService.assignClientRoles(userId, roles.get("roles"));
         return ResponseEntity.ok().build();
     }
 
@@ -60,7 +72,7 @@ public class UserManagementController {
     @DeleteMapping("/{userId}/roles")
     @RequirePermission(permission = "user.remove_roles", description = "Xóa vai trò của người dùng")
     public ResponseEntity<Void> removeRoles(@PathVariable String userId, @RequestBody Map<String, List<String>> roles) {
-        keycloakAdminService.removeRoles(userId, roles.get("roles"));
+        keycloakAdminService.removeClientRoles(userId, roles.get("roles"));
         return ResponseEntity.ok().build();
     }
 
