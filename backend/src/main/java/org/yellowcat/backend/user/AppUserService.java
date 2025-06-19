@@ -4,6 +4,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.yellowcat.backend.user.UserDTO.fromFE.UserRequestDTO;
+import org.yellowcat.backend.user.UserDTO.fromFE.UserUpdateDTO;
 
 
 import java.util.Optional;
@@ -65,7 +66,7 @@ public class AppUserService {
         if (existingUser.isPresent()) {
             AppUser user = existingUser.get();
             user.setKeycloakId(dto.getId());
-            user.setFullName(dto.getName());
+//            user.setFullName(dto.getName()); không cập nhật tên người dùng sau khi đã lưu trữ thành công, để người dùng tự cập nhật
             user.setRoles(dto.getRoles());
             appUserRepository.save(user);
             return;
@@ -80,6 +81,41 @@ public class AppUserService {
         newUser.setEnabled(true);
 
         appUserRepository.save(newUser);
+    }
+
+    public AppUser updateUserProfile(Integer appUserId, UserUpdateDTO dto) {
+        Optional<AppUser> existingUser = appUserRepository.findById(appUserId);
+        
+        if (existingUser.isEmpty()) {
+            throw new RuntimeException("Người dùng không tồn tại với ID: " + appUserId);
+        }
+
+        AppUser user = existingUser.get();
+        
+        // Cập nhật các trường được phép
+        if (dto.getKeycloakId() != null) {
+            user.setKeycloakId(dto.getKeycloakId());
+        }
+        if (dto.getEmail() != null && !dto.getEmail().trim().isEmpty()) {
+            user.setEmail(dto.getEmail());
+        }
+        if (dto.getRoles() != null) {
+            user.setRoles(dto.getRoles());
+        }
+        if (dto.getEnabled() != null) {
+            user.setEnabled(dto.getEnabled());
+        }
+        if (dto.getFullName() != null && !dto.getFullName().trim().isEmpty()) {
+            user.setFullName(dto.getFullName());
+        }
+        if (dto.getPhoneNumber() != null && !dto.getPhoneNumber().trim().isEmpty()) {
+            user.setPhoneNumber(dto.getPhoneNumber());
+        }
+        if (dto.getAvatarUrl() != null) {
+            user.setAvatarUrl(dto.getAvatarUrl());
+        }
+
+        return appUserRepository.save(user);
     }
 
 }

@@ -126,6 +126,117 @@ public class KeycloakAdminService {
         usersResource.get(userId).roles().realmLevel().remove(roles);
     }
 
+    public List<String> getAvailableClientRoles() {
+        try {
+            RealmResource realmResource = keycloak.realm(realm);
+            
+            // Tìm client UUID như trong SecurityConfig
+            ClientRepresentation client = realmResource.clients()
+                    .findByClientId(clientId)
+                    .stream()
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Client " + clientId + " không tồn tại"));
+            String clientUuid = client.getId();
+
+            // Lấy tất cả client roles
+            List<RoleRepresentation> clientRoles = realmResource.clients()
+                    .get(clientUuid)
+                    .roles()
+                    .list();
+
+            return clientRoles.stream()
+                    .map(RoleRepresentation::getName)
+                    .filter(roleName -> !roleName.startsWith("default-roles-")) // Lọc bỏ default roles
+                    .collect(Collectors.toList());
+                    
+        } catch (Exception e) {
+            System.err.println("Lỗi khi lấy danh sách client roles: " + e.getMessage());
+            throw new RuntimeException("Không thể lấy danh sách vai trò: " + e.getMessage(), e);
+        }
+    }
+
+    public void assignClientRoles(String userId, List<String> roleNames) {
+        try {
+            RealmResource realmResource = keycloak.realm(realm);
+            
+            // Tìm client UUID
+            ClientRepresentation client = realmResource.clients()
+                    .findByClientId(clientId)
+                    .stream()
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Client " + clientId + " không tồn tại"));
+            String clientUuid = client.getId();
+
+            // Lấy client roles representations
+            List<RoleRepresentation> roles = roleNames.stream()
+                    .map(roleName -> {
+                        try {
+                            return realmResource.clients()
+                                    .get(clientUuid)
+                                    .roles()
+                                    .get(roleName)
+                                    .toRepresentation();
+                        } catch (Exception e) {
+                            throw new RuntimeException("Vai trò '" + roleName + "' không tồn tại");
+                        }
+                    })
+                    .collect(Collectors.toList());
+
+            // Gán client roles cho user
+            realmResource.users()
+                    .get(userId)
+                    .roles()
+                    .clientLevel(clientUuid)
+                    .add(roles);
+                    
+            System.out.println("Đã gán client roles " + roleNames + " cho user: " + userId);
+        } catch (Exception e) {
+            System.err.println("Lỗi khi gán client roles cho user " + userId + ": " + e.getMessage());
+            throw new RuntimeException("Không thể gán vai trò cho người dùng: " + e.getMessage(), e);
+        }
+    }
+
+    public void removeClientRoles(String userId, List<String> roleNames) {
+        try {
+            RealmResource realmResource = keycloak.realm(realm);
+            
+            // Tìm client UUID
+            ClientRepresentation client = realmResource.clients()
+                    .findByClientId(clientId)
+                    .stream()
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Client " + clientId + " không tồn tại"));
+            String clientUuid = client.getId();
+
+            // Lấy client roles representations
+            List<RoleRepresentation> roles = roleNames.stream()
+                    .map(roleName -> {
+                        try {
+                            return realmResource.clients()
+                                    .get(clientUuid)
+                                    .roles()
+                                    .get(roleName)
+                                    .toRepresentation();
+                        } catch (Exception e) {
+                            throw new RuntimeException("Vai trò '" + roleName + "' không tồn tại");
+                        }
+                    })
+                    .collect(Collectors.toList());
+
+            // Xóa client roles của user
+            realmResource.users()
+                    .get(userId)
+                    .roles()
+                    .clientLevel(clientUuid)
+                    .remove(roles);
+                    
+            System.out.println("Đã xóa client roles " + roleNames + " của user: " + userId);
+        } catch (Exception e) {
+            System.err.println("Lỗi khi xóa client roles của user " + userId + ": " + e.getMessage());
+            throw new RuntimeException("Không thể xóa vai trò của người dùng: " + e.getMessage(), e);
+        }
+    }
+
     public UserDTO getUserById(String userId) {
         RealmResource realmResource = keycloak.realm(realm);
         UserRepresentation user = realmResource.users().get(userId).toRepresentation();
@@ -186,5 +297,30 @@ public class KeycloakAdminService {
         return userDTO;
     }
 
+    public void enableUser(String userId) {
+        try {
+            RealmResource realmResource = keycloak.realm(realm);
+            UserRepresentation user = realmResource.users().get(userId).toRepresentation();
+            user.setEnabled(true);
+            realmResource.users().get(userId).update(user);
+            System.out.println("Đã kích hoạt tài khoản user: " + userId);
+        } catch (Exception e) {
+            System.err.println("Lỗi khi kích hoạt user " + userId + ": " + e.getMessage());
+            throw new RuntimeException("Không thể kích hoạt tài khoản người dùng: " + e.getMessage(), e);
+        }
+    }
+
+    public void disableUser(String userId) {
+        try {
+            RealmResource realmResource = keycloak.realm(realm);
+            UserRepresentation user = realmResource.users().get(userId).toRepresentation();
+            user.setEnabled(false);
+            realmResource.users().get(userId).update(user);
+            System.out.println("Đã vô hiệu hóa tài khoản user: " + userId);
+        } catch (Exception e) {
+            System.err.println("Lỗi khi vô hiệu hóa user " + userId + ": " + e.getMessage());
+            throw new RuntimeException("Không thể vô hiệu hóa tài khoản người dùng: " + e.getMessage(), e);
+        }
+    }
 
 }

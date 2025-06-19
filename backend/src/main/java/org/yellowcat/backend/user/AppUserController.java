@@ -12,6 +12,7 @@ import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
 import org.yellowcat.backend.common.security.keycloak.KeycloakAdminService;
 import org.yellowcat.backend.common.security.keycloak.UserDTO;
 import org.yellowcat.backend.user.UserDTO.fromFE.UserRequestDTO;
+import org.yellowcat.backend.user.UserDTO.fromFE.UserUpdateDTO;
 
 
 import java.util.List;
@@ -43,6 +44,28 @@ public class AppUserController {
         }
 
         return ResponseEntityBuilder.success(appUserDTO.get());
+    }
+
+    @GetMapping("/keycloak-user/{keycloakId}")
+    public ResponseEntity<?> getUserByKeycloakId(@PathVariable UUID keycloakId) {
+        Optional<AppUser> appUser = appUserService.findByKeycloakId(keycloakId);
+        if (appUser.isEmpty()) {
+            return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Người dùng không tồn tại", null);
+        }
+        
+        return ResponseEntityBuilder.success(appUser.get());
+    }
+
+    @PutMapping("/update-profile/{appUserId}")
+    public ResponseEntity<?> updateUserProfile(@PathVariable Integer appUserId, @RequestBody UserUpdateDTO userUpdateDTO) {
+        try {
+            AppUser updatedUser = appUserService.updateUserProfile(appUserId, userUpdateDTO);
+            return ResponseEntityBuilder.success("Cập nhật thông tin người dùng thành công", updatedUser);
+        } catch (RuntimeException e) {
+            return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Cập nhật thất bại", e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống", e.getMessage());
+        }
     }
 
 //    @PostMapping("/creat/{key}")

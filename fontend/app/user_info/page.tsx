@@ -4,17 +4,20 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { jwtDecode } from 'jwt-decode';
+import { CldImage, CldUploadButton } from 'next-cloudinary';
 
-interface Users {
-    id: string;
+interface AppUser {
+    appUserId: number;
+    keycloakId: string;
     username: string;
     email: string;
-    firstName: string;
-    lastName: string;
     roles: string[];
-    realmRoles: string[];
-    clientRoles: string[];
     enabled: boolean;
+    fullName: string;
+    phoneNumber: string;
+    avatarUrl: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
 interface DecodedToken {
@@ -34,15 +37,104 @@ interface DecodedToken {
     [key: string]: any;
 }
 
+interface ApiResponse {
+    timestamp: string;
+    status: number;  // HTTP status code (200, 404, etc.)
+    message: string;
+    data: AppUser;
+    error?: string;
+    path?: string;
+}
+
+interface UserUpdateData {
+    appUserId: number;
+    keycloakId: string;
+    email: string;
+    roles: string[];
+    enabled: boolean;
+    fullName: string;
+    phoneNumber: string;
+    avatarUrl: string;
+}
+
 export default function Page() {
     const { data: session, status } = useSession();
-    const [user, setUser] = useState<Users | null>(null);
+    const [user, setUser] = useState<AppUser | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [decodedAccessToken, setDecodedAccessToken] = useState<any>(null);
+    const [isEditing, setIsEditing] = useState<boolean>(false);
+    const [editData, setEditData] = useState<UserUpdateData | null>(null);
+    const [updating, setUpdating] = useState<boolean>(false);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+
+    const fetchUserByKeycloakId = async (keycloakId: string): Promise<AppUser> => {
+        const response = await fetch(`http://localhost:8080/api/users/keycloak-user/${keycloakId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session?.accessToken}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Lỗi API: ${response.status} - ${response.statusText}`);
+        }
+
+        const apiResponse: ApiResponse = await response.json();
+        console.log('API Response:', apiResponse); // Debug log
+        
+        // Kiểm tra HTTP status code (200 = thành công)
+        if (apiResponse.status < 200 || apiResponse.status >= 300) {
+            throw new Error(apiResponse.message || apiResponse.error || 'Có lỗi xảy ra khi lấy thông tin người dùng');
+        }
+
+        // Kiểm tra có error trong response không
+        if (apiResponse.error) {
+            throw new Error(apiResponse.error);
+        }
+
+        // Trả về data (AppUser object)
+        if (!apiResponse.data) {
+            throw new Error('Không có dữ liệu người dùng trong response');
+        }
+        
+        return apiResponse.data;
+    };
+
+    const updateUserProfile = async (updateData: UserUpdateData): Promise<AppUser> => {
+        const response = await fetch(`http://localhost:8080/api/users/update-profile/${updateData.appUserId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session?.accessToken}`,
+            },
+            body: JSON.stringify(updateData),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Lỗi API: ${response.status} - ${response.statusText}`);
+        }
+
+        const apiResponse: ApiResponse = await response.json();
+        
+        if (apiResponse.status < 200 || apiResponse.status >= 300) {
+            throw new Error(apiResponse.message || apiResponse.error || 'Có lỗi xảy ra khi cập nhật thông tin');
+        }
+
+        if (apiResponse.error) {
+            throw new Error(apiResponse.error);
+        }
+
+        if (!apiResponse.data) {
+            throw new Error('Không có dữ liệu trong response');
+        }
+        
+        return apiResponse.data;
+    };
 
     useEffect(() => {
-        const getUserInfo = () => {
+        const getUserInfo = async () => {
             if (status === 'loading') {
                 return;
             }
@@ -61,28 +153,19 @@ export default function Page() {
 
                 const tokenData = jwtDecode<DecodedToken>(accessToken);
                 setDecodedAccessToken(tokenData);
-                let clientRoles: string[] = [];
-                if (tokenData.resource_access) {
-                    clientRoles = tokenData.resource_access?.["YellowCatCompanyWeb"]?.roles || [];
+
+                const keycloakId = tokenData.sub;
+                if (!keycloakId) {
+                    throw new Error("Không tìm thấy keycloakId trong token");
                 }
 
-                // Xây dựng đối tượng user từ thông tin trong token
-                const userData: Users = {
-                    id: tokenData.sub || '',
-                    username: tokenData.preferred_username || '',
-                    email: tokenData.email || '',
-                    firstName: tokenData.given_name || '',
-                    lastName: tokenData.family_name || '',
-                    roles: clientRoles,
-                    realmRoles: tokenData.realm_access?.roles || [],
-                    clientRoles: clientRoles,
-                    enabled: true
-                };
-
+                // Gọi API để lấy thông tin user từ backend
+                const userData = await fetchUserByKeycloakId(keycloakId);
                 setUser(userData);
-            } catch (err) {
-                console.error("Lỗi khi lấy thông tin người dùng từ session:", err);
-                setError("Không thể lấy thông tin người dùng. Vui lòng thử lại sau.");
+
+            } catch (err: any) {
+                console.error("Lỗi khi lấy thông tin người dùng:", err);
+                setError(err.message || "Không thể lấy thông tin người dùng. Vui lòng thử lại sau.");
             } finally {
                 setLoading(false);
             }
@@ -90,6 +173,70 @@ export default function Page() {
 
         getUserInfo();
     }, [session, status]);
+
+    const handleRetry = () => {
+        setLoading(true);
+        setError(null);
+        window.location.reload();
+    };
+
+    const handleStartEdit = () => {
+        if (user) {
+            setEditData({
+                appUserId: user.appUserId,
+                keycloakId: user.keycloakId,
+                email: user.email,
+                roles: user.roles || [],
+                enabled: user.enabled,
+                fullName: user.fullName || '',
+                phoneNumber: user.phoneNumber || '',
+                avatarUrl: user.avatarUrl || '',
+            });
+            setIsEditing(true);
+        }
+    };
+
+    const handleCancelEdit = () => {
+        setIsEditing(false);
+        setEditData(null);
+        setUploadError(null);
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editData) return;
+
+        setUpdating(true);
+        try {
+            const updatedUser = await updateUserProfile(editData);
+            setUser(updatedUser);
+            setIsEditing(false);
+            setEditData(null);
+            setUploadError(null);
+        } catch (err: any) {
+            console.error("Lỗi khi cập nhật:", err);
+            setError(err.message || "Không thể cập nhật thông tin. Vui lòng thử lại.");
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    const handleInputChange = (field: keyof UserUpdateData, value: string | boolean) => {
+        if (editData) {
+            setEditData(prev => prev ? { ...prev, [field]: value } : null);
+        }
+    };
+
+    const handleAvatarUpload = (result: any) => {
+        if (result.event === "success") {
+            console.log("Upload thành công:", result.info);
+            const newAvatarUrl = result.info.public_id;
+            handleInputChange('avatarUrl', newAvatarUrl);
+            setUploadError(null);
+        } else {
+            setUploadError("Có lỗi xảy ra trong quá trình upload ảnh");
+            console.error("Lỗi upload:", result);
+        }
+    };
 
     if (status === 'loading' || loading) {
         return <LoadingSpinner />;
@@ -100,8 +247,8 @@ export default function Page() {
             <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
                 <p>{error}</p>
                 <button
-                    className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                    onClick={() => window.location.reload()}
+                    className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                    onClick={handleRetry}
                 >
                     Thử lại
                 </button>
@@ -114,8 +261,8 @@ export default function Page() {
             <div className="p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded-md">
                 <p>Không tìm thấy thông tin người dùng.</p>
                 <button
-                    className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                    onClick={() => window.location.reload()}
+                    className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                    onClick={handleRetry}
                 >
                     Thử lại
                 </button>
@@ -125,274 +272,146 @@ export default function Page() {
 
     return (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-            <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white">Thông tin người dùng</h2>
-
-            {/* Debug section to view all user data */}
-            <div className="mb-6 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-auto max-h-96">
-                <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-white">Debug - Tất cả thông tin:</h3>
-                <pre className="text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-                    {JSON.stringify(user, null, 2)}
-                </pre>
-
-                <h3 className="text-lg font-semibold mt-4 mb-2 text-gray-800 dark:text-white">Session Data:</h3>
-                <pre className="text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-                    {JSON.stringify(session, null, 2)}
-                </pre>
-
-                <h3 className="text-lg font-semibold mt-4 mb-2 text-gray-800 dark:text-white">Decoded Access Token:</h3>
-                <pre className="text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-                    {JSON.stringify(decodedAccessToken, null, 2)}
-                </pre>
+            {/* Header với nút Edit/Save/Cancel */}
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Thông tin người dùng</h2>
+                <div className="flex gap-2">
+                    {!isEditing ? (
+                        <button
+                            onClick={handleStartEdit}
+                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                        >
+                            Chỉnh sửa
+                        </button>
+                    ) : (
+                        <>
+                            <button
+                                onClick={handleSaveEdit}
+                                disabled={updating}
+                                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-400 transition-colors"
+                            >
+                                {updating ? 'Đang lưu...' : 'Lưu'}
+                            </button>
+                            <button
+                                onClick={handleCancelEdit}
+                                disabled={updating}
+                                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 disabled:bg-gray-400 transition-colors"
+                            >
+                                Hủy
+                            </button>
+                        </>
+                    )}
+                </div>
             </div>
 
-            <div className="space-y-4">
-                <div className="flex flex-col md:flex-row md:items-center">
-                    <span className="font-semibold text-gray-600 dark:text-gray-300 w-32">Tên đăng nhập:</span>
-                    <span className="text-gray-800 dark:text-white">{user.username}</span>
-                </div>
-
-                <div className="flex flex-col md:flex-row md:items-center">
-                    <span className="font-semibold text-gray-600 dark:text-gray-300 w-32">Họ và tên:</span>
-                    <span className="text-gray-800 dark:text-white">{user.firstName} {user.lastName}</span>
-                </div>
-
-                <div className="flex flex-col md:flex-row md:items-center">
-                    <span className="font-semibold text-gray-600 dark:text-gray-300 w-32">Email:</span>
-                    <span className="text-gray-800 dark:text-white">{user.email}</span>
-                </div>
-
-                {user.clientRoles && user.clientRoles.length > 0 && (
-                    <div className="flex flex-col">
-                        <span className="font-semibold text-gray-600 dark:text-gray-300 mb-2">Vai trò:</span>
-                        <div className="flex flex-wrap gap-2">
-                            {user.clientRoles.map((role, index) => (
-                                <span
-                                    key={index}
-                                    className="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-sm"
+            <div className="flex flex-col lg:flex-row gap-6">
+                {/* Avatar Section */}
+                <div className="flex flex-col items-center lg:w-1/3">
+                    <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-gray-200 dark:border-gray-600 mb-4">
+                        {(isEditing ? editData?.avatarUrl : user.avatarUrl) ? (
+                            <CldImage
+                                width={128}
+                                height={128}
+                                src={isEditing ? editData?.avatarUrl || '' : user.avatarUrl}
+                                alt={`Avatar của ${user.fullName || user.username}`}
+                                sizes="128px"
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                                <svg
+                                    className="w-16 h-16 text-gray-500 dark:text-gray-400"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
                                 >
-                                    {role}
-                                </span>
-                            ))}
+                                    <path
+                                        fillRule="evenodd"
+                                        d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                                        clipRule="evenodd"
+                                    />
+                                </svg>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {isEditing && (
+                        <div className="text-center">
+                            <div className="inline-block w-fit cursor-pointer transition-all bg-blue-500 text-white px-4 py-2 rounded-lg border-blue-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px] mb-2">
+                                <CldUploadButton
+                                    uploadPreset="YellowCatWeb"
+                                    onSuccess={(result, {widget}) => {
+                                        handleAvatarUpload(result);
+                                        widget.close();
+                                    }}
+                                >
+                                    Cập nhật ảnh đại diện
+                                </CldUploadButton>
+                            </div>
+                            {uploadError && (
+                                <p className="text-red-500 text-sm mt-1">{uploadError}</p>
+                            )}
+                        </div>
+                    )}
+
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white text-center">
+                        {isEditing ? editData?.fullName || user.username : user.fullName || user.username}
+                    </h3>
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white text-center">
+                        { user.email}
+                    </h3>
+                </div>
+
+                {/* User Information Section */}
+                <div className="lg:w-2/3 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <span className="font-semibold text-gray-600 dark:text-gray-300 block mb-1">Họ và tên:</span>
+                            {isEditing ? (
+                                <input
+                                    type="text"
+                                    value={editData?.fullName || ''}
+                                    onChange={(e) => handleInputChange('fullName', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                                    placeholder="Nhập họ và tên"
+                                />
+                            ) : (
+                                <span className="text-gray-800 dark:text-white">{user.fullName || 'Chưa cập nhật'}</span>
+                            )}
+                        </div>
+
+                        <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <span className="font-semibold text-gray-600 dark:text-gray-300 block mb-1">Số điện thoại:</span>
+                            {isEditing ? (
+                                <input
+                                    type="tel"
+                                    value={editData?.phoneNumber || ''}
+                                    onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                                    placeholder="Nhập số điện thoại"
+                                />
+                            ) : (
+                                <span className="text-gray-800 dark:text-white">{user.phoneNumber || 'Chưa cập nhật'}</span>
+                            )}
                         </div>
                     </div>
-                )}
 
-                {user.realmRoles && user.realmRoles.length > 0 && (
-                    <div className="flex flex-col">
-                        <span className="font-semibold text-gray-600 dark:text-gray-300 mb-2">Vai trò hệ thống:</span>
-                        <div className="flex flex-wrap gap-2">
-                            {user.realmRoles
-                                .filter(role => !['default-roles-yellow cat company', 'offline_access', 'uma_authorization'].includes(role))
-                                .map((role, index) => (
+                    {user.roles && user.roles.length > 0 && (
+                        <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <span className="font-semibold text-gray-600 dark:text-gray-300 block mb-3">Vai trò:</span>
+                            <div className="flex flex-wrap gap-2">
+                                {user.roles.map((role, index) => (
                                     <span
                                         key={index}
-                                        className="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full text-sm"
+                                        className="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-sm font-medium"
                                     >
                                         {role}
                                     </span>
-                                ))
-                            }
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                )}
-
-                <div className="flex items-center">
-                    <span className="font-semibold text-gray-600 dark:text-gray-300 w-32">Trạng thái:</span>
-                    <span className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                        Đang hoạt động
-                    </span>
+                    )}
                 </div>
             </div>
         </div>
     );
 }
-
-
-// "use client";
-//
-// import { useState, useEffect } from 'react';
-// import { useSession } from 'next-auth/react';
-// import LoadingSpinner from '@/components/LoadingSpinner';
-// import { jwtDecode } from 'jwt-decode';
-//
-// interface Users {
-//     id: string;
-//     username: string;
-//     email: string;
-//     firstName: string;
-//     lastName: string;
-//     roles: string[];
-//     realmRoles: string[];
-//     clientRoles: string[];
-//     enabled: boolean;
-// }
-//
-// interface DecodedToken {
-//     sub?: string;
-//     preferred_username?: string;
-//     email?: string;
-//     given_name?: string;
-//     family_name?: string;
-//     realm_access?: {
-//         roles: string[];
-//     };
-//     resource_access?: {
-//         [clientId: string]: {
-//             roles: string[];
-//         };
-//     };
-//     [key: string]: any;
-// }
-//
-// export default function Page() {
-//     const { data: session, status } = useSession();
-//     const [user, setUser] = useState<Users | null>(null);
-//     const [loading, setLoading] = useState<boolean>(true);
-//     const [error, setError] = useState<string | null>(null);
-//
-//     useEffect(() => {
-//         const getUserInfo = () => {
-//             if (status === 'loading') {
-//                 return;
-//             }
-//
-//             if (status === 'unauthenticated' || !session) {
-//                 setError("Người dùng chưa đăng nhập");
-//                 setLoading(false);
-//                 return;
-//             }
-//
-//             try {
-//                 const accessToken = session.accessToken as string;
-//                 if (!accessToken) {
-//                     throw new Error("Không tìm thấy access token hợp lệ");
-//                 }
-//
-//                 const tokenData = jwtDecode<DecodedToken>(accessToken);
-//                 let clientRoles: string[] = [];
-//                 if (tokenData.resource_access) {
-//                     clientRoles = tokenData.resource_access?.["YellowCatCompanyWeb"]?.roles || [];
-//                 }
-//
-//                 // Xây dựng đối tượng user từ thông tin trong token
-//                 const userData: Users = {
-//                     id: tokenData.sub || '',
-//                     username: tokenData.preferred_username || '',
-//                     email: tokenData.email || '',
-//                     firstName: tokenData.given_name || '',
-//                     lastName: tokenData.family_name || '',
-//                     roles: clientRoles,
-//                     realmRoles: tokenData.realm_access?.roles || [],
-//                     clientRoles: clientRoles,
-//                     enabled: true
-//                 };
-//
-//                 setUser(userData);
-//             } catch (err) {
-//                 console.error("Lỗi khi lấy thông tin người dùng từ session:", err);
-//                 setError("Không thể lấy thông tin người dùng. Vui lòng thử lại sau.");
-//             } finally {
-//                 setLoading(false);
-//             }
-//         };
-//
-//         getUserInfo();
-//     }, [session, status]);
-//
-//     if (status === 'loading' || loading) {
-//         return <LoadingSpinner />;
-//     }
-//
-//     if (error) {
-//         return (
-//             <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
-//                 <p>{error}</p>
-//                 <button
-//                     className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-//                     onClick={() => window.location.reload()}
-//                 >
-//                     Thử lại
-//                 </button>
-//             </div>
-//         );
-//     }
-//
-//     if (!user) {
-//         return (
-//             <div className="p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded-md">
-//                 <p>Không tìm thấy thông tin người dùng.</p>
-//                 <button
-//                     className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-//                     onClick={() => window.location.reload()}
-//                 >
-//                     Thử lại
-//                 </button>
-//             </div>
-//         );
-//     }
-//
-//     return (
-//         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-//             <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white">Thông tin người dùng</h2>
-//
-//             <div className="space-y-4">
-//                 <div className="flex flex-col md:flex-row md:items-center">
-//                     <span className="font-semibold text-gray-600 dark:text-gray-300 w-32">Tên đăng nhập:</span>
-//                     <span className="text-gray-800 dark:text-white">{user.username}</span>
-//                 </div>
-//
-//                 <div className="flex flex-col md:flex-row md:items-center">
-//                     <span className="font-semibold text-gray-600 dark:text-gray-300 w-32">Họ và tên:</span>
-//                     <span className="text-gray-800 dark:text-white">{user.firstName} {user.lastName}</span>
-//                 </div>
-//
-//                 <div className="flex flex-col md:flex-row md:items-center">
-//                     <span className="font-semibold text-gray-600 dark:text-gray-300 w-32">Email:</span>
-//                     <span className="text-gray-800 dark:text-white">{user.email}</span>
-//                 </div>
-//
-//                 {user.clientRoles && user.clientRoles.length > 0 && (
-//                     <div className="flex flex-col">
-//                         <span className="font-semibold text-gray-600 dark:text-gray-300 mb-2">Vai trò:</span>
-//                         <div className="flex flex-wrap gap-2">
-//                             {user.clientRoles.map((role, index) => (
-//                                 <span
-//                                     key={index}
-//                                     className="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-sm"
-//                                 >
-//                                     {role}
-//                                 </span>
-//                             ))}
-//                         </div>
-//                     </div>
-//                 )}
-//
-//                 {user.realmRoles && user.realmRoles.length > 0 && (
-//                     <div className="flex flex-col">
-//                         <span className="font-semibold text-gray-600 dark:text-gray-300 mb-2">Vai trò hệ thống:</span>
-//                         <div className="flex flex-wrap gap-2">
-//                             {user.realmRoles
-//                                 .filter(role => !['default-roles-yellow cat company', 'offline_access', 'uma_authorization'].includes(role))
-//                                 .map((role, index) => (
-//                                     <span
-//                                         key={index}
-//                                         className="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full text-sm"
-//                                     >
-//                                         {role}
-//                                     </span>
-//                                 ))
-//                             }
-//                         </div>
-//                     </div>
-//                 )}
-//
-//                 <div className="flex items-center">
-//                     <span className="font-semibold text-gray-600 dark:text-gray-300 w-32">Trạng thái:</span>
-//                     <span className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-//                         Đang hoạt động
-//                     </span>
-//                 </div>
-//             </div>
-//         </div>
-//     );
-// }

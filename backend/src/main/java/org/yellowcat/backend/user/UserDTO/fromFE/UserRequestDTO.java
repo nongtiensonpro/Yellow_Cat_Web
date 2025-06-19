@@ -25,5 +25,4 @@ public class UserRequestDTO {
         this.name = user.getFullName();
         this.roles = user.getRoles();
     }
-
 }

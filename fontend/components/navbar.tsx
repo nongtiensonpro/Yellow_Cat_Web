@@ -24,6 +24,7 @@ import { jwtDecode } from 'jwt-decode';
 import BadgeVisibility from "@/components/user/BadgeVisibility"; // Điều chỉnh import path nếu cần (hoặc từ home/user/BadgeVisibility)
 import { HeartIcon } from "@heroicons/react/24/solid";
 import CheckoutUser from "./checkoutuser";
+import { CldImage } from 'next-cloudinary';
 
 
 interface DecodedToken {
@@ -44,14 +45,63 @@ interface DecodedToken {
     [key: string]: any;
 }
 
+interface AppUser {
+    appUserId: number;
+    keycloakId: string;
+    username: string;
+    email: string;
+    roles: string[];
+    enabled: boolean;
+    fullName: string;
+    phoneNumber: string;
+    avatarUrl: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+interface ApiResponse {
+    timestamp: string;
+    status: number;
+    message: string;
+    data: AppUser;
+    error?: string;
+    path?: string;
+}
+
 export const Navbar = () => {
     const { data: session, status } = useSession();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isTokenValid, setIsTokenValid] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
     const [wishlistCount, setWishlistCount] = useState(0);
+    const [userProfile, setUserProfile] = useState<AppUser | null>(null);
     const router = useRouter();
     const pathname = usePathname();
+
+    const fetchUserProfile = async (keycloakId: string) => {
+        try {
+            const response = await fetch(`http://localhost:8080/api/users/keycloak-user/${keycloakId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.accessToken}`,
+                },
+            });
+
+            if (!response.ok) {
+                console.error('Failed to fetch user profile:', response.status);
+                return;
+            }
+
+            const apiResponse: ApiResponse = await response.json();
+            
+            if (apiResponse.status >= 200 && apiResponse.status < 300 && apiResponse.data) {
+                setUserProfile(apiResponse.data);
+            }
+        } catch (error) {
+            console.error('Error fetching user profile:', error);
+        }
+    };
 
     useEffect(() => {
         const updateWishlistCount = () => {
@@ -84,6 +134,7 @@ export const Navbar = () => {
             if (status === 'unauthenticated' || !session) {
                 setIsTokenValid(true);
                 setIsAdmin(false);
+                setUserProfile(null);
                 return;
             }
 
@@ -92,6 +143,7 @@ export const Navbar = () => {
                 if (!accessToken) {
                     setIsTokenValid(false);
                     setIsAdmin(false);
+                    setUserProfile(null);
                     return;
                 }
 
@@ -100,6 +152,7 @@ export const Navbar = () => {
                 if (tokenData.exp && tokenData.exp < currentTime) {
                     setIsTokenValid(false);
                     setIsAdmin(false);
+                    setUserProfile(null);
                     handleLogout(); // Log out if token expired
                     return;
                 }
@@ -112,9 +165,15 @@ export const Navbar = () => {
                     hasAdminRole = true;
                 }
                 setIsAdmin(hasAdminRole);
+
+                // Fetch user profile from database
+                if (tokenData.sub) {
+                    fetchUserProfile(tokenData.sub);
+                }
             } catch (error) {
                 setIsTokenValid(false);
                 setIsAdmin(false);
+                setUserProfile(null);
                 if (error instanceof Error && error.message.includes('Invalid token')) {
                     handleLogout(); // Log out if token is invalid
                 }
@@ -155,23 +214,40 @@ export const Navbar = () => {
         if (!isTokenValid || status === 'unauthenticated' || !session) {
             return <Button onClick={handleLogin} className="bg-primary-500/20 text-primary">Login</Button>;
         }
+
+        // Tính toán avatar src và name
+        const avatarSrc = userProfile?.avatarUrl || session.user?.image;
+        const userName = userProfile?.fullName || session.user?.name || session.user?.email || "User";
+
         return (
             <Dropdown placement="bottom-end">
                 <DropdownTrigger>
-                    <Avatar
-                        isBordered
-                        as="button"
-                        className="transition-transform"
-                        color="secondary"
-                        name={session.user?.name || session.user?.email || "User"}
-                        size="sm"
-                        src={session.user?.image || undefined}
-                    />
+                    {userProfile?.avatarUrl ? (
+                        <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-secondary cursor-pointer hover:scale-105 transition-transform">
+                            <CldImage
+                                width={32}
+                                height={32}
+                                src={userProfile.avatarUrl}
+                                alt={userName}
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
+                    ) : (
+                        <Avatar
+                            isBordered
+                            as="button"
+                            className="transition-transform"
+                            color="secondary"
+                            name={userName}
+                            size="sm"
+                            src={session.user?.image || undefined}
+                        />
+                    )}
                 </DropdownTrigger>
                 <DropdownMenu aria-label="Profile Actions" variant="flat">
                     <DropdownItem key="profile" className="h-14 gap-2">
                         <p className="font-semibold">Signed in as</p>
-                        <p className="font-semibold">{session.user?.email}</p>
+                        <p className="font-semibold">{userProfile?.email || session.user?.email}</p>
                     </DropdownItem>
                     {isAdmin ? <DropdownItem key="admin_dashboard"  onClick={() => router.push('/admin')}>Admin Dashboard</DropdownItem> : null}
                     <DropdownItem key="user_info" onClick={() => router.push('/user_info')}>User Profile</DropdownItem>

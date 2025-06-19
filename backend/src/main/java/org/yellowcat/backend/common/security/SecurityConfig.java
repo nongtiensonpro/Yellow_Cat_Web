@@ -180,6 +180,9 @@ public class SecurityConfig {
                             authorities.add(new SimpleGrantedAuthority("user.view"));
                             authorities.add(new SimpleGrantedAuthority("user.assign_roles"));
                             authorities.add(new SimpleGrantedAuthority("user.remove_roles"));
+                            authorities.add(new SimpleGrantedAuthority("user.enable"));
+                            authorities.add(new SimpleGrantedAuthority("user.disable"));
+                            authorities.add(new SimpleGrantedAuthority("user.manage_roles"));
                         }
                     }
                 }
