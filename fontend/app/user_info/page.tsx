@@ -395,21 +395,21 @@ export default function Page() {
                         </div>
                     </div>
 
-                    {user.roles && user.roles.length > 0 && (
-                        <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <span className="font-semibold text-gray-600 dark:text-gray-300 block mb-3">Vai trò:</span>
-                            <div className="flex flex-wrap gap-2">
-                                {user.roles.map((role, index) => (
-                                    <span
-                                        key={index}
-                                        className="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-sm font-medium"
-                                    >
-                                        {role}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    {/*{user.roles && user.roles.length > 0 && (*/}
+                    {/*    <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">*/}
+                    {/*        <span className="font-semibold text-gray-600 dark:text-gray-300 block mb-3">Vai trò:</span>*/}
+                    {/*        <div className="flex flex-wrap gap-2">*/}
+                    {/*            {user.roles.map((role, index) => (*/}
+                    {/*                <span*/}
+                    {/*                    key={index}*/}
+                    {/*                    className="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-sm font-medium"*/}
+                    {/*                >*/}
+                    {/*                    {role}*/}
+                    {/*                </span>*/}
+                    {/*            ))}*/}
+                    {/*        </div>*/}
+                    {/*    </div>*/}
+                    {/*)}*/}
                 </div>
             </div>
         </div>
