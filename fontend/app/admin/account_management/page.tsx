@@ -119,11 +119,17 @@ export default function Page() {
     // Role confirmation states
     const [pendingRoleAction, setPendingRoleAction] = useState<{action: 'assign' | 'remove', roleName: string} | null>(null);
 
+    // Edit profile states
+    const [editProfileUser, setEditProfileUser] = useState<EnhancedUser | null>(null);
+    const [editLoading, setEditLoading] = useState<boolean>(false);
+    const [editForm, setEditForm] = useState<{fullName: string, phoneNumber: string}>({fullName: '', phoneNumber: ''});
+
     const { theme, setTheme } = useTheme();
     const router = useRouter();
     const {isOpen, onOpen, onClose} = useDisclosure();
     const {isOpen: isRoleModalOpen, onOpen: onRoleModalOpen, onClose: onRoleModalClose} = useDisclosure();
     const {isOpen: isRoleConfirmModalOpen, onOpen: onRoleConfirmModalOpen, onClose: onRoleConfirmModalClose} = useDisclosure();
+    const {isOpen: isEditProfileModalOpen, onOpen: onEditProfileModalOpen, onClose: onEditProfileModalClose} = useDisclosure();
 
     useEffect(() => {
         if (status === 'authenticated' && session) {
@@ -317,7 +323,13 @@ export default function Page() {
             setDemoData(prevData => 
                 prevData.map(user => 
                     user.id === selectedUser.id 
-                        ? { ...user, enabled: isEnable }
+                        ? { 
+                            ...user, 
+                            enabled: isEnable,
+                            profileData: user.profileData 
+                                ? { ...user.profileData, enabled: isEnable }
+                                : user.profileData
+                        }
                         : user
                 )
             );
@@ -470,6 +482,162 @@ export default function Page() {
         } finally {
             setRoleLoading(false);
             setPendingRoleAction(null);
+        }
+    };
+
+    // Handle edit profile
+    const handleEditProfile = (user: EnhancedUser) => {
+        setEditProfileUser(user);
+        setEditForm({
+            fullName: user.profileData?.fullName || `${user.firstName} ${user.lastName}` || '',
+            phoneNumber: user.profileData?.phoneNumber || ''
+        });
+        onEditProfileModalOpen();
+    };
+
+    // Update profile
+    const handleUpdateProfile = async () => {
+        if (!editProfileUser) return;
+
+        try {
+            setEditLoading(true);
+            const token = session?.accessToken;
+            if (!token) {
+                throw new Error('Không có token xác thực');
+            }
+
+            // Nếu user đã có profileData, update existing profile
+            if (editProfileUser.profileData?.appUserId) {
+                const response = await fetch(`http://localhost:8080/api/users/update-profile/${editProfileUser.profileData.appUserId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        appUserId: editProfileUser.profileData.appUserId,
+                        keycloakId: editProfileUser.id,
+                        email: editProfileUser.profileData.email || editProfileUser.email,
+                        roles: editProfileUser.profileData.roles || editProfileUser.clientRoles,
+                        enabled: editProfileUser.profileData.enabled !== undefined ? editProfileUser.profileData.enabled : editProfileUser.enabled,
+                        fullName: editForm.fullName.trim(),
+                        phoneNumber: editForm.phoneNumber.trim(),
+                        avatarUrl: editProfileUser.profileData.avatarUrl || ''
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    let errorMessage = `HTTP error! Status: ${response.status}`;
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        errorMessage += ` - ${errorJson.message || errorJson.error || errorText}`;
+                    } catch {
+                        errorMessage += errorText ? ` - ${errorText}` : '';
+                    }
+                    throw new Error(errorMessage);
+                }
+            } else {
+                // Nếu user chưa có profileData, tạo mới profile
+                const newUserData = {
+                    id: editProfileUser.id,
+                    name: editForm.fullName.trim(),
+                    email: editProfileUser.email,
+                    roles: editProfileUser.clientRoles || []
+                };
+
+                const createResponse = await fetch('http://localhost:8080/api/users/me', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(newUserData),
+                });
+
+                if (!createResponse.ok) {
+                    throw new Error(`Không thể tạo profile: ${createResponse.status}`);
+                }
+
+                // Sau khi tạo xong, lấy profile mới và update
+                const profileResponse = await fetch(`http://localhost:8080/api/users/keycloak-user/${editProfileUser.id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+
+                if (profileResponse.ok) {
+                    const profileData = await profileResponse.json();
+                    if (profileData.data?.appUserId) {
+                        // Update với phone number
+                        await fetch(`http://localhost:8080/api/users/update-profile/${profileData.data.appUserId}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                appUserId: profileData.data.appUserId,
+                                keycloakId: editProfileUser.id,
+                                email: editProfileUser.email,
+                                roles: editProfileUser.clientRoles || [],
+                                enabled: editProfileUser.enabled,
+                                fullName: editForm.fullName.trim(),
+                                phoneNumber: editForm.phoneNumber.trim(),
+                                avatarUrl: ''
+                            }),
+                        });
+                    }
+                }
+            }
+
+            // Update local user data
+            setDemoData(prevData => 
+                prevData.map(user => 
+                    user.id === editProfileUser.id 
+                        ? { 
+                            ...user, 
+                            profileData: user.profileData ? {
+                                ...user.profileData,
+                                fullName: editForm.fullName.trim(),
+                                phoneNumber: editForm.phoneNumber.trim()
+                            } : {
+                                appUserId: 0, // Sẽ được cập nhật sau khi refresh
+                                keycloakId: editProfileUser.id,
+                                username: editProfileUser.username,
+                                email: editProfileUser.email,
+                                roles: editProfileUser.clientRoles || [],
+                                enabled: editProfileUser.enabled,
+                                fullName: editForm.fullName.trim(),
+                                phoneNumber: editForm.phoneNumber.trim(),
+                                avatarUrl: '',
+                                createdAt: new Date().toISOString(),
+                                updatedAt: new Date().toISOString()
+                            }
+                        }
+                        : user
+                )
+            );
+
+            setNotification({
+                type: 'success',
+                message: `Đã cập nhật thông tin của ${editProfileUser.username} thành công!`
+            });
+
+            // Refresh data to ensure consistency
+            await fetchDemoData();
+
+            // Close modal
+            onEditProfileModalClose();
+
+        } catch (err) {
+            console.error('Lỗi khi cập nhật thông tin:', err);
+            setNotification({
+                type: 'error',
+                message: `Không thể cập nhật thông tin: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`
+            });
+        } finally {
+            setEditLoading(false);
         }
     };
 
@@ -745,11 +913,11 @@ export default function Page() {
                                         </TableCell>
                                         <TableCell>
                                             <Chip
-                                                color={(item.profileData?.enabled !== undefined ? item.profileData.enabled : item.enabled) ? "success" : "danger"}
+                                                color={item.enabled ? "success" : "danger"}
                                                 variant="flat"
-                                                startContent={(item.profileData?.enabled !== undefined ? item.profileData.enabled : item.enabled) ? <UserCheck size={14} /> : <UserX size={14} />}
+                                                startContent={item.enabled ? <UserCheck size={14} /> : <UserX size={14} />}
                                             >
-                                                {(item.profileData?.enabled !== undefined ? item.profileData.enabled : item.enabled) ? 'Hoạt động' : 'Không hoạt động'}
+                                                {item.enabled ? 'Hoạt động' : 'Không hoạt động'}
                                             </Chip>
                                         </TableCell>
                                         <TableCell>
@@ -797,6 +965,13 @@ export default function Page() {
                                                     </DropdownTrigger>
                                                     <DropdownMenu aria-label="Actions">
                                                         <DropdownItem
+                                                            key="edit"
+                                                            onClick={() => handleEditProfile(item)}
+                                                            isDisabled={editLoading}
+                                                        >
+                                                            Chỉnh sửa thông tin
+                                                        </DropdownItem>
+                                                        <DropdownItem
                                                             key="roles"
                                                             onClick={() => handleRoleManagement(item)}
                                                             isDisabled={roleLoading}
@@ -805,20 +980,20 @@ export default function Page() {
                                                         </DropdownItem>
                                                         <DropdownItem
                                                             key="enable"
-                                                            color={(item.profileData?.enabled !== undefined ? item.profileData.enabled : item.enabled) ? "danger" : "success"}
-                                                            onClick={() => handleUserAction(item, (item.profileData?.enabled !== undefined ? item.profileData.enabled : item.enabled) ? 'disable' : 'enable')}
+                                                            color={item.enabled ? "danger" : "success"}
+                                                            onClick={() => handleUserAction(item, item.enabled ? 'disable' : 'enable')}
                                                             isDisabled={actionLoading === item.id}
                                                         >
-                                                            {(item.profileData?.enabled !== undefined ? item.profileData.enabled : item.enabled) ? 'Vô hiệu hóa' : 'Kích hoạt'}
+                                                            {item.enabled ? 'Vô hiệu hóa' : 'Kích hoạt'}
                                                         </DropdownItem>
-                                                        <DropdownItem
-                                                            key="delete"
-                                                            color="danger"
-                                                            onClick={() => console.log('Delete', item.id)}
-                                                            isDisabled={actionLoading === item.id}
-                                                        >
-                                                            Xóa tài khoản
-                                                        </DropdownItem>
+                                                        {/*<DropdownItem*/}
+                                                        {/*    key="delete"*/}
+                                                        {/*    color="danger"*/}
+                                                        {/*    onClick={() => console.log('Delete', item.id)}*/}
+                                                        {/*    isDisabled={actionLoading === item.id}*/}
+                                                        {/*>*/}
+                                                        {/*    Xóa tài khoản*/}
+                                                        {/*</DropdownItem>*/}
                                                     </DropdownMenu>
                                                 </Dropdown>
                                             </div>
@@ -1179,6 +1354,190 @@ export default function Page() {
                                     isLoading={roleLoading}
                                 >
                                     {pendingRoleAction?.action === 'assign' ? 'Gán vai trò' : 'Xóa vai trò'}
+                                </Button>
+                            </ModalFooter>
+                        </>
+                    )}
+                </ModalContent>
+            </Modal>
+
+            {/* Edit Profile Modal */}
+            <Modal 
+                isOpen={isEditProfileModalOpen} 
+                onClose={onEditProfileModalClose}
+                placement="center"
+                size="lg"
+            >
+                <ModalContent>
+                    {(onClose) => (
+                        <>
+                            <ModalHeader className="flex flex-col gap-1">
+                                Chỉnh sửa thông tin người dùng
+                            </ModalHeader>
+                            <ModalBody>
+                                {editProfileUser && (
+                                    <div className="space-y-6">
+                                        {/* User Info */}
+                                        <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                            {editProfileUser.profileData?.avatarUrl ? (
+                                                <div className="w-16 h-16 rounded-full overflow-hidden">
+                                                    <CldImage
+                                                        width={64}
+                                                        height={64}
+                                                        src={editProfileUser.profileData.avatarUrl}
+                                                        alt={editProfileUser.profileData.fullName || editProfileUser.username}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <Avatar 
+                                                    icon={getUserTypeIcon(editProfileUser)}
+                                                    size="lg"
+                                                />
+                                            )}
+                                            <div>
+                                                <p className="font-semibold text-lg">
+                                                    {editProfileUser.profileData?.fullName || `${editProfileUser.firstName} ${editProfileUser.lastName}`}
+                                                </p>
+                                                <p className="text-sm text-gray-500">
+                                                    {editProfileUser.profileData?.email || editProfileUser.email}
+                                                </p>
+                                                <p className="text-xs text-gray-400">
+                                                    Username: {editProfileUser.username}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Edit Form */}
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                                                    Họ và tên <span className="text-red-500">*</span>
+                                                </label>
+                                                <Input
+                                                    placeholder="Nhập họ và tên đầy đủ"
+                                                    value={editForm.fullName}
+                                                    onChange={(e) => setEditForm(prev => ({ ...prev, fullName: e.target.value }))}
+                                                    isRequired
+                                                    isDisabled={editLoading}
+                                                    variant="bordered"
+                                                    classNames={{
+                                                        input: "text-sm",
+                                                        inputWrapper: "h-12"
+                                                    }}
+                                                />
+                                                {editForm.fullName.trim().length === 0 && (
+                                                    <p className="text-xs text-red-500 mt-1">Họ và tên không được để trống</p>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                                                    Số điện thoại
+                                                </label>
+                                                <Input
+                                                    placeholder="Nhập số điện thoại (VD: 0912345678)"
+                                                    value={editForm.phoneNumber}
+                                                    onChange={(e) => setEditForm(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                                                    isDisabled={editLoading}
+                                                    variant="bordered"
+                                                    classNames={{
+                                                        input: "text-sm",
+                                                        inputWrapper: "h-12"
+                                                    }}
+                                                />
+                                                {editForm.phoneNumber && !/^(\+84|84|0)[3|5|7|8|9][0-9]{8}$/.test(editForm.phoneNumber.replace(/\s/g, '')) && (
+                                                    <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                                                        Định dạng số điện thoại không hợp lệ
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                                                                 {/* User Status */}
+                                        {!editProfileUser.profileData?.appUserId && (
+                                            <div className="bg-yellow-50 dark:bg-yellow-900/30 p-4 rounded-lg border border-yellow-200 dark:border-yellow-700">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="text-yellow-600 dark:text-yellow-400 text-lg">ℹ️</span>
+                                                    <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                                                        Người dùng chưa có thông tin trong hệ thống
+                                                    </p>
+                                                </div>
+                                                <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                                                    Thông tin sẽ được tạo mới trong database sau khi cập nhật.
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* Current vs New Comparison */}
+                                        <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg">
+                                            <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">
+                                                📝 Thông tin sẽ được {editProfileUser.profileData?.appUserId ? 'cập nhật' : 'tạo mới'}:
+                                            </h4>
+                                            <div className="space-y-2 text-sm">
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div>
+                                                        <span className="text-gray-600 dark:text-gray-400">Họ và tên hiện tại:</span>
+                                                        <p className="font-medium text-gray-800 dark:text-gray-200">
+                                                            {editProfileUser.profileData?.fullName || `${editProfileUser.firstName || ''} ${editProfileUser.lastName || ''}`.trim() || 'Chưa có'}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-blue-600 dark:text-blue-400">Họ và tên mới:</span>
+                                                        <p className="font-medium text-blue-800 dark:text-blue-200">
+                                                            {editForm.fullName.trim() || 'Chưa nhập'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div>
+                                                        <span className="text-gray-600 dark:text-gray-400">SĐT hiện tại:</span>
+                                                        <p className="font-medium text-gray-800 dark:text-gray-200">
+                                                            {editProfileUser.profileData?.phoneNumber || 'Chưa có'}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-blue-600 dark:text-blue-400">SĐT mới:</span>
+                                                        <p className="font-medium text-blue-800 dark:text-blue-200">
+                                                            {editForm.phoneNumber.trim() || 'Chưa nhập'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div>
+                                                        <span className="text-gray-600 dark:text-gray-400">Email:</span>
+                                                        <p className="font-medium text-gray-800 dark:text-gray-200">
+                                                            {editProfileUser.profileData?.email || editProfileUser.email}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-gray-600 dark:text-gray-400">Username:</span>
+                                                        <p className="font-medium text-gray-800 dark:text-gray-200">
+                                                            {editProfileUser.username}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </ModalBody>
+                            <ModalFooter>
+                                <Button 
+                                    color="danger" 
+                                    variant="light" 
+                                    onPress={onClose}
+                                    isDisabled={editLoading}
+                                >
+                                    Hủy
+                                </Button>
+                                <Button 
+                                    color="primary"
+                                    onPress={handleUpdateProfile}
+                                    isLoading={editLoading}
+                                    isDisabled={!editForm.fullName.trim() || editLoading}
+                                >
+                                    {editProfileUser?.profileData?.appUserId ? 'Cập nhật thông tin' : 'Tạo thông tin'}
                                 </Button>
                             </ModalFooter>
                         </>
