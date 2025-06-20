@@ -1,8 +1,10 @@
 package org.yellowcat.backend.product.order;
 
+import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -60,5 +62,21 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
                     "FROM orders o " +
                     "WHERE o.order_code = :orderCode " +
                     "ORDER BY o.order_date DESC")
-    OrderResponse findOrderByOrderCode(@Param("orderCode") String orderCode);
+    OrderResponse findOrderByOrderCodeOld(@Param("orderCode") String orderCode);
+
+    @Modifying
+    @Transactional
+    @Query(
+            nativeQuery = true,
+            value = "UPDATE orders " +
+                    "SET " +
+                    "  app_user_id   = :appUserId, " +
+                    "  updated_at    = CURRENT_TIMESTAMP " +
+                    "WHERE " +
+                    "  order_code    = :orderCode"
+    )
+    int updateOrderByOrderCode(
+            @Param("orderCode") String orderCode,
+            @Param("appUserId") Integer appUserId
+    );
 }

@@ -1,5 +1,6 @@
 package org.yellowcat.backend.product.order;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -16,11 +17,11 @@ import org.yellowcat.backend.product.orderItem.OrderItem;
 import org.yellowcat.backend.product.orderItem.OrderItemRepository;
 import org.yellowcat.backend.product.payment.Payment;
 import org.yellowcat.backend.product.payment.PaymentRepository;
+import org.yellowcat.backend.user.AppUser;
+import org.yellowcat.backend.user.AppUserService;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +31,8 @@ public class OrderService {
     OrderItemRepository orderItemRepository;
     PaymentRepository paymentRepository;
     OrderMapper orderMapper;
+    AppUserService appUserService;
+
 
     public Page<OrderResponse> getOrders(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -207,7 +210,7 @@ public class OrderService {
     }
 
     OrderResponse findOrderByOrderCode (String orderCode) {
-        return orderRepository.findOrderByOrderCode(orderCode);
+        return orderRepository.findOrderByOrderCodeOld(orderCode);
     }
     
     // Method mới để lấy Order với payments cho endpoint status
@@ -215,7 +218,7 @@ public class OrderService {
     public OrderUpdateResponse findOrderWithPaymentsByOrderCode(String orderCode) {
         System.out.println("🔍 findOrderWithPaymentsByOrderCode called with orderCode: " + orderCode);
         
-        OrderResponse orderResponse = orderRepository.findOrderByOrderCode(orderCode);
+        OrderResponse orderResponse = orderRepository.findOrderByOrderCodeOld(orderCode);
         System.out.println("📊 orderRepository.findOrderByOrderCode result: " + orderResponse);
         
         if (orderResponse == null) {
@@ -247,7 +250,7 @@ public class OrderService {
     @Transactional
     public OrderUpdateResponse confirmVNPayPayment(String orderCode, String transactionId) {
         // Tìm order theo orderCode - FIX: check null trước khi gọi getOrderId()
-        OrderResponse orderResponse = orderRepository.findOrderByOrderCode(orderCode);
+        OrderResponse orderResponse = orderRepository.findOrderByOrderCodeOld(orderCode);
         if (orderResponse == null) {
             throw new IllegalArgumentException("Order not found with orderCode: " + orderCode);
         }
@@ -340,7 +343,7 @@ public class OrderService {
         System.out.println("🏪 checkinCashPayment called with orderCode: " + orderCode);
         
         // Tìm order theo orderCode
-        OrderResponse orderResponse = orderRepository.findOrderByOrderCode(orderCode);
+        OrderResponse orderResponse = orderRepository.findOrderByOrderCodeOld(orderCode);
         if (orderResponse == null) {
             System.out.println("❌ Order not found with orderCode: " + orderCode);
             throw new IllegalArgumentException("Order not found with orderCode: " + orderCode);
@@ -448,7 +451,21 @@ public class OrderService {
         // Trả về response
         return orderMapper.toOrderUpdateResponse(order);
     }
-    
+
+
+
+    @Transactional
+    public void updateUserIDOrder(String orderCode, UUID userId) {
+        AppUser appUser = appUserService
+                .findByKeycloakId(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
+
+        int rows = orderRepository.updateOrderByOrderCode(orderCode, appUser.getAppUserId());
+        if (rows == 0) {
+            throw new EntityNotFoundException("Order not found: " + orderCode);
+        }
+    }
+
     // Method để debug và log thông tin thanh toán
     private void logPaymentInfo(Order order, List<Payment> payments, BigDecimal totalPaid, BigDecimal finalAmount) {
         System.out.println("=== DEBUG PAYMENT INFO ===");
