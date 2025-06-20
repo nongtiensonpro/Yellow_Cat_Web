@@ -1,3 +1,5 @@
+
+// ReviewStatsDTO.java
 package org.yellowcat.backend.product.review.dto;
 
 import lombok.AllArgsConstructor;
@@ -14,6 +16,14 @@ import java.util.List;
 public class ReviewStatsDTO {
     private double averageRating;
     private int totalReviews;
-    private int totalPages;
-    private List<Integer> starDistribution;
+    private List<StarDistributionItem> starDistribution;
+
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class StarDistributionItem {
+        private int star;
+        private int count;
+    }
 }
