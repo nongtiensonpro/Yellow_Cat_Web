@@ -1,3 +1,4 @@
+
 package org.yellowcat.backend.product.review.dto;
 
 import jakarta.validation.constraints.NotNull;
@@ -12,9 +13,12 @@ import lombok.Setter;
 @Getter
 @Setter
 public class CreateReviewDTO {
+    @NotNull
+    private Integer rating;
 
-    @Size(min = 1, max = 5)
-    Integer rating;
     @Size(max = 500, min = 1)
-    String comment;
+    private String comment;
+
+    private String customerName;
 }
+

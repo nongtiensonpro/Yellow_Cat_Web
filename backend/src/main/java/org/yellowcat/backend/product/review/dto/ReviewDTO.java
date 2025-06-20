@@ -1,19 +1,25 @@
+
 package org.yellowcat.backend.product.review.dto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 public interface ReviewDTO {
+    Long getId();
     Integer getRating();
     String getComment();
-    LocalDateTime getCreatedAt();
+    Instant getCreatedAt();
+    String getCustomerName();
+    String getCustomerAvatar();
+    Boolean getIsPurchased();
+    String getImageUrl();
 
-
-    default String getFormatCreatedAt(){
-        if (getCreatedAt() == null) {
-            return "";
-        }
-
-        return getCreatedAt().format(DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm"));
+    default String getFormatCreatedAt() {
+        if (getCreatedAt() == null) return "";
+        return DateTimeFormatter.ofPattern("dd MMMM yyyy, HH:mm")
+                .withZone(ZoneId.of("Asia/Ho_Chi_Minh"))
+                .format(getCreatedAt());
     }
 }
+

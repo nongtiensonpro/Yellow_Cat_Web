@@ -118,4 +118,9 @@ public class AppUserService {
         return appUserRepository.save(user);
     }
 
+    public Optional<AppUser> findByEmail(String email) {
+        return appUserRepository.findByEmail(email);
+    }
+
+
 }

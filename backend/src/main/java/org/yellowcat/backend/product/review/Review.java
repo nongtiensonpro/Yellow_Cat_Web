@@ -1,44 +1,94 @@
+//// Review.java
+//package org.yellowcat.backend.product.review;
+//
+//import jakarta.persistence.*;
+//import jakarta.validation.constraints.Size;
+//import lombok.Getter;
+//import lombok.NoArgsConstructor;
+//import lombok.Setter;
+//import org.yellowcat.backend.user.AppUser;
+//import org.yellowcat.backend.product.productvariant.ProductVariant;
+//
+//import java.time.Instant;
+//
+//@Entity
+//@Getter
+//@Setter
+//@NoArgsConstructor
+//public class Review {
+//    @Id
+//    @GeneratedValue(strategy = GenerationType.IDENTITY)
+//    private Long id;
+//
+//    private int rating;
+//
+//    //    @Column(length = 100)
+//    @Size(max = 100)
+//    private String comment;
+//
+//    private Integer productId;
+//    private Integer variantId;
+//
+//    private Instant createdAt;
+//
+//    private String customerName;
+//
+//    private String imageUrl;
+//
+//    private boolean isPurchased;
+//
+//    @ManyToOne(fetch = FetchType.LAZY)
+//    @JoinColumn(name = "user_id")
+//    private AppUser appUser;
+//
+//    @ManyToOne(fetch = FetchType.LAZY)
+//    @JoinColumn(name = "variant_id")
+//    private ProductVariant productVariant;
+//}
+
+
 package org.yellowcat.backend.product.review;
 
-import jakarta.persistence.*; // Hoặc import javax.persistence.*
-import lombok.AllArgsConstructor;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
-import org.yellowcat.backend.user.AppUser; // Import lớp AppUser của bạn
-import java.time.LocalDateTime;
+
+import java.time.Instant;
+
+@Entity
 @Getter
 @Setter
-@Entity
-@AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "Reviews",
-        uniqueConstraints = {@UniqueConstraint(columnNames = {"variant_id", "app_user_id"}) // Ràng buộc UNIQUE từ SQL
-})
 public class Review {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "review_id")
-    private Integer reviewId;
+    private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "variant_id", nullable = false) // Khóa ngoại trỏ đến ProductVariants
-    private ProductVariant productVariant;
+    private int rating;
 
-    @ManyToOne
-    @JoinColumn(name = "app_user_id", nullable = false) // Khóa ngoại trỏ đến AppUsers
-    private AppUser appUser;
-
-    @Column(name = "rating", nullable = false)
-    private Short rating;
-
-    @Column(name = "comment")
+    @Size(max = 100)
     private String comment;
 
-    @Column(name = "review_date", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-    private LocalDateTime reviewDate;
+    private Integer productId;
 
+    private Instant createdAt;
 
+    private String customerName;
+
+    private String imageUrl;
+
+    private boolean isPurchased;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private AppUser appUser;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_id")
+    private ProductVariant productVariant;
 }
+
