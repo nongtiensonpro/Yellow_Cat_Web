@@ -408,12 +408,12 @@ VALUES
 (5, 'NK-PEG40-GRY-43', 5, 4, 3200000.00, NULL, 40, 18, 'YellowCatWeb/nike-pegasus-grey', 0.1);
 
 -- 5. Dữ liệu cho bảng AppUsers
-INSERT INTO app_users (keycloak_user_id, email, full_name, phone_number, avatar_url)
-VALUES ('kc-user-001', 'nguyen.van.a@email.com', 'Nguyễn Văn A', '0901234567', 'https://example.com/avatars/user1.jpg'),
-       ('kc-user-002', 'tran.thi.b@email.com', 'Trần Thị B', '0902345678', 'https://example.com/avatars/user2.jpg'),
-       ('kc-user-003', 'le.van.c@email.com', 'Lê Văn C', '0903456789', 'https://example.com/avatars/user3.jpg'),
-       ('kc-user-004', 'pham.thi.d@email.com', 'Phạm Thị D', '0904567890', 'https://example.com/avatars/user4.jpg'),
-       ('kc-user-005', 'hoang.van.e@email.com', 'Hoàng Văn E', '0905678901', 'https://example.com/avatars/user5.jpg');
+INSERT INTO app_users (keycloak_id, email, full_name, phone_number, avatar_url)
+VALUES ('c56a4180-65aa-42ec-a945-5fd21dec0531', 'nguyen.van.a@email.com', 'Nguyễn Văn A', '0901234567', 'https://example.com/avatars/user1.jpg'),
+       ('c56a4180-65aa-42ec-a945-5fd21dec0532', 'tran.thi.b@email.com', 'Trần Thị B', '0902345678', 'https://example.com/avatars/user2.jpg'),
+       ('c56a4180-65aa-42ec-a945-5fd21dec0533', 'le.van.c@email.com', 'Lê Văn C', '0903456789', 'https://example.com/avatars/user3.jpg'),
+       ('c56a4180-65aa-42ec-a945-5fd21dec0534', 'pham.thi.d@email.com', 'Phạm Thị D', '0904567890', 'https://example.com/avatars/user4.jpg'),
+       ('c56a4180-65aa-42ec-a945-5fd21dec0535', 'hoang.van.e@email.com', 'Hoàng Văn E', '0905678901', 'https://example.com/avatars/user5.jpg');
 
 -- 6. Dữ liệu cho bảng Addresses
 INSERT INTO addresses (app_user_id, recipient_name, phone_number, street_address, ward_commune, district, city_province,
@@ -531,10 +531,10 @@ INSERT INTO promotion_orders
 (promotion_id, order_id, minimum_order_value, usage_limit_per_user, usage_limit_total)
 VALUES
     -- NEWUSER10 cho đơn 1001 (tối thiểu 500K, 1 lần/người, tổng 1.000 lượt)
-    (1, 1001, 500000.00, 1, 1000),
+    (1, 1, 500000.00, 1, 1000),
     -- SALE50K cho đơn 1002 (tối thiểu 1.000K, 5 lần/người, không giới hạn tổng)
-    (2, 1002, 1000000.00, 5, NULL),
+    (2, 2, 1000000.00, 5, NULL),
     -- FREESHIP cho đơn 1003 (tối thiểu 500K, không giới hạn lần/người và tổng)
-    (4, 1003, 500000.00, NULL, NULL),
+    (4, 3, 500000.00, NULL, NULL),
     -- SUMMER2024 cho đơn 1004 (tối thiểu 800K, 3 lần/người, tổng 5.000 lượt)
-    (3, 1004, 800000.00, 3, 5000);
+    (3, 4, 800000.00, 3, 5000);
