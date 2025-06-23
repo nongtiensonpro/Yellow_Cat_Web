@@ -52,6 +52,24 @@ export default function SizeForm({ onSuccess, onCancel }: SizeFormProps) {
             setFormError("Vui lòng nhập tên Kích cỡ.");
             return false;
         }
+        
+        // Kiểm tra có chứa dấu chấm thập phân không
+        if (name.trim().includes('.') || name.trim().includes(',')) {
+            setFormError("Tên Kích cỡ không được chứa số thập phân.");
+            return false;
+        }
+        
+        const nameNumber = parseInt(name.trim());
+        if (isNaN(nameNumber) || !Number.isInteger(Number(name.trim()))) {
+            setFormError("Tên Kích cỡ phải là một số nguyên.");
+            return false;
+        }
+        
+        if (nameNumber < 15 || nameNumber > 49) {
+            setFormError("Tên Kích cỡ phải là số nguyên từ 15 đến 49.");
+            return false;
+        }
+        
         if (!description.trim()) {
             setFormError("Vui lòng nhập mô tả Kích cỡ.");
             return false;
@@ -107,8 +125,11 @@ export default function SizeForm({ onSuccess, onCancel }: SizeFormProps) {
             <form onSubmit={handleSubmit} className="space-y-4">
                 <Input
                     label="Tên Kích cỡ"
-                    placeholder="Nhập tên Kích cỡ"
-                    type="text"
+                    placeholder="Nhập số từ 15 đến 49"
+                    type="number"
+                    min="15"
+                    max="49"
+                    step="1"
                     value={name}
                     onChange={e => { setName(e.target.value); setFormError(null); }}
                     isRequired

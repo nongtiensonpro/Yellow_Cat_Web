@@ -22,7 +22,7 @@ import {
     ModalFooter,
 } from "@heroui/react";
 import {useEffect, useState} from "react";
-import {Eye, Edit, Trash2, Plus, Tag} from "lucide-react";
+import {Eye, Edit, Trash2, Plus, Tag, ToggleLeft, ToggleRight} from "lucide-react";
 import Link from "next/link";
 import { useDisclosure } from "@heroui/react";
 import { useSession, signIn } from "next-auth/react";
@@ -71,8 +71,12 @@ export default function Page() {
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [totalElements, setTotalElements] = useState<number>(0);
     const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+    const [productToToggle, setProductToToggle] = useState<Product | null>(null);
     const { isOpen, onOpen, onClose } = useDisclosure();
+    const { isOpen: isToggleOpen, onOpen: onToggleOpen, onClose: onToggleClose } = useDisclosure();
     const [deleteError, setDeleteError] = useState<string | null>(null);
+    const [toggleError, setToggleError] = useState<string | null>(null);
+    const [isToggling, setIsToggling] = useState<boolean>(false);
     const { data: session, status } = useSession();
 
     const fetchProductsData = async () => {
@@ -125,6 +129,54 @@ export default function Page() {
         setProductToDelete(product);
         setDeleteError(null);
         onOpen();
+    };
+
+    const openToggleConfirm = (product: Product) => {
+        setProductToToggle(product);
+        setToggleError(null);
+        onToggleOpen();
+    };
+
+    const handleToggleProductStatus = async () => {
+        if (!productToToggle) return;
+        
+        try {
+            // Kiểm tra đăng nhập
+            if (status !== "authenticated" || !session) {
+                signIn();
+                return;
+            }
+            
+            // Lấy accessToken từ session
+            const token = session.accessToken;
+            if (!token) {
+                throw new Error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
+            }
+
+            setIsToggling(true);
+            setToggleError(null);
+            const response = await fetch(`http://localhost:8080/api/products/activeornotactive/${productToToggle.productId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => null);
+                throw new Error(errorData?.message || `HTTP error! Status: ${response.status}`);
+            }
+            
+            onToggleClose();
+            setProductToToggle(null);
+            fetchProductsData(); // Refresh data để cập nhật trạng thái mới
+            
+        } catch (err) {
+            setToggleError(err instanceof Error ? err.message : 'Không thể thay đổi trạng thái sản phẩm. Vui lòng thử lại sau.');
+        } finally {
+            setIsToggling(false);
+        }
     };
 
     const handleDeleteProduct = async () => {
@@ -258,6 +310,17 @@ export default function Page() {
                                                         <Edit size={16}/>
                                                     </Button>
                                                 </Tooltip>
+                                                <Tooltip content={product.isActive ? "Ngừng bán" : "Kích hoạt bán"}>
+                                                    <Button 
+                                                        isIconOnly 
+                                                        size="sm" 
+                                                        variant="light" 
+                                                        color={product.isActive ? "warning" : "success"}
+                                                        onClick={() => openToggleConfirm(product)}
+                                                    >
+                                                        {product.isActive ? <ToggleRight size={16}/> : <ToggleLeft size={16}/>}
+                                                    </Button>
+                                                </Tooltip>
                                                 <Tooltip content="Xóa">
                                                     <Button isIconOnly size="sm" variant="light" color="danger" onClick={() => openDeleteConfirm(product)}>
                                                         <Trash2 size={16}/>
@@ -303,6 +366,8 @@ export default function Page() {
                         </Button>
                     </div>
                 </div>
+
+                {/* Modal xác nhận xóa */}
                 <Modal isOpen={isOpen} onClose={onClose}>
                     <ModalContent>
                         <ModalHeader className="flex flex-col gap-1">
@@ -331,6 +396,37 @@ export default function Page() {
                                 isLoading={loading}
                             >
                                 Xóa
+                            </Button>
+                        </ModalFooter>
+                    </ModalContent>
+                </Modal>
+
+                {/* Modal xác nhận thay đổi trạng thái */}
+                <Modal isOpen={isToggleOpen} onClose={onToggleClose}>
+                    <ModalContent>
+                        <ModalHeader className="flex flex-col gap-1">
+                            Xác nhận thay đổi trạng thái
+                        </ModalHeader>
+                        <ModalBody>
+                            {productToToggle && (
+                                <p>
+                                    Bạn có chắc chắn muốn {productToToggle.isActive ? "ngừng bán" : "kích hoạt bán"} sản phẩm "<b>{productToToggle.productName}</b>"?
+                                </p>
+                            )}
+                            {toggleError && (
+                                <div className="text-red-500 text-sm mt-2">{toggleError}</div>
+                            )}
+                        </ModalBody>
+                        <ModalFooter>
+                            <Button color="default" variant="light" onPress={onToggleClose}>
+                                Hủy
+                            </Button>
+                            <Button
+                                color={productToToggle?.isActive ? "warning" : "success"}
+                                onPress={handleToggleProductStatus}
+                                isLoading={isToggling}
+                            >
+                                {productToToggle?.isActive ? "Ngừng bán" : "Kích hoạt"}
                             </Button>
                         </ModalFooter>
                     </ModalContent>
