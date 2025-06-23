@@ -69,7 +69,7 @@ public class SecurityConfig {
                                 requestMatchers(HttpMethod.GET,
                                 "/api/products",
                                 "/api/products/{id}",
-                                "/api/product-variants"
+                                "/api/product-variants/**"
                         ).permitAll().
                         // Product private API
                                 requestMatchers(
@@ -113,7 +113,7 @@ public class SecurityConfig {
 
                         // Promotion public API
                                 requestMatchers(HttpMethod.GET,
-                                "/api/promotions",
+                                "/api/promotions/**",
                                 "/api/promotions/{id}"
                         ).permitAll().
 

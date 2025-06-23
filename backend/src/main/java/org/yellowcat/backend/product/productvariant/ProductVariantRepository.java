@@ -1,6 +1,7 @@
 package org.yellowcat.backend.product.productvariant;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -10,7 +11,8 @@ import org.yellowcat.backend.product.productvariant.dto.ProductVariantListRespon
 import java.util.List;
 
 @Repository
-public interface ProductVariantRepository extends JpaRepository<ProductVariant, Integer> {
+public interface ProductVariantRepository extends JpaRepository<ProductVariant, Integer>,
+        JpaSpecificationExecutor<ProductVariant> {
     @Query("select p from ProductVariant p where p.product.productId = ?1")
     List<ProductVariant> findByProductId(Integer productId);
 
@@ -41,4 +43,6 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     @Query(nativeQuery = true, value = "SELECT COUNT(DISTINCT variant_id) FROM product_variants")
     long countTotalProductVariants();
+
+
 }
