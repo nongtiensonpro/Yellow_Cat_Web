@@ -1,6 +1,8 @@
 package org.yellowcat.backend.product;
 
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -117,4 +119,14 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
 
     @Query(nativeQuery = true, value = "SELECT COUNT(DISTINCT product_id) FROM Products")
     long countTotalProducts();
+
+    @Transactional
+    @Modifying
+    @Query(nativeQuery = true, value =
+            "UPDATE products " +
+                    "SET is_active = NOT is_active ," +
+                    "    updated_at = CURRENT_TIMESTAMP " +
+                    "WHERE product_id = :productId")
+    int activeornotactive(@Param("productId") Integer productId);
+
 }

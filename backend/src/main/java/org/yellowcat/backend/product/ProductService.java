@@ -246,6 +246,9 @@ public class ProductService {
         }
     }
 
+    public void activeornotactive(Integer productId){
+        productRepository.activeornotactive(productId);
+    }
 
     private String generateUniqueSku(Integer productId) {
         String sku;

@@ -84,4 +84,11 @@ public class ProductController {
         productService.updateProduct(productDto);
         return ResponseEntityBuilder.success("Product updated successfully!");
     }
+
+    @GetMapping("/activeornotactive/{id}")
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    public ResponseEntity<?> getActiveornotactive(@PathVariable("id") Integer productId) {
+        productService.activeornotactive(productId);
+        return ResponseEntityBuilder.success("Product active successfully!");
+    }
 }
