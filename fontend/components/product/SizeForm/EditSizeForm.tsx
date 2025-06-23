@@ -155,6 +155,27 @@ export default function EditSizeModal({
             addToast({ title: "Thiếu thông tin", description: "Vui lòng nhập tên Kích cỡ.", color: "warning" });
             return false;
         }
+        
+        // Kiểm tra có chứa dấu chấm thập phân không
+        if (sizeData.name.trim().includes('.') || sizeData.name.trim().includes(',')) {
+            setFormError("Tên Kích cỡ không được chứa số thập phân.");
+            addToast({ title: "Dữ liệu không hợp lệ", description: "Tên Kích cỡ không được chứa số thập phân.", color: "warning" });
+            return false;
+        }
+        
+        const nameNumber = parseInt(sizeData.name.trim());
+        if (isNaN(nameNumber) || !Number.isInteger(Number(sizeData.name.trim()))) {
+            setFormError("Tên Kích cỡ phải là một số nguyên.");
+            addToast({ title: "Dữ liệu không hợp lệ", description: "Tên Kích cỡ phải là một số nguyên.", color: "warning" });
+            return false;
+        }
+        
+        if (nameNumber < 15 || nameNumber > 49) {
+            setFormError("Tên Kích cỡ phải là số nguyên từ 15 đến 49.");
+            addToast({ title: "Dữ liệu không hợp lệ", description: "Tên Kích cỡ phải là số nguyên từ 15 đến 49.", color: "warning" });
+            return false;
+        }
+        
         if (!sizeData.description.trim()) {
             setFormError("Vui lòng nhập mô tả Kích cỡ.");
             addToast({ title: "Thiếu thông tin", description: "Vui lòng nhập mô tả Kích cỡ.", color: "warning" });
@@ -239,8 +260,11 @@ export default function EditSizeModal({
                                 <div className="space-y-6">
                                     <Input
                                         label="Tên Kích cỡ"
-                                        placeholder="Nhập tên Kích cỡ"
-                                        type="text"
+                                        placeholder="Nhập số từ 15 đến 49"
+                                        type="number"
+                                        min="15"
+                                        max="49"
+                                        step="1"
                                         name="name"
                                         value={sizeData.name}
                                         onChange={handleInputChange}
