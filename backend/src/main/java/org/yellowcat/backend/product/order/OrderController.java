@@ -7,12 +7,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.yellowcat.backend.common.config_api.response.PageResponse;
 import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
 import org.yellowcat.backend.product.order.dto.OrderResponse;
 import org.yellowcat.backend.product.order.dto.OrderUpdateRequest;
 import org.yellowcat.backend.product.order.dto.OrderUpdateResponse;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -88,10 +92,7 @@ public class OrderController {
             @PathVariable String orderCode,
             @RequestParam String transactionId) {
         try {
-
-            
             OrderUpdateResponse updatedOrder = orderService.confirmVNPayPayment(orderCode, transactionId);
-
             return ResponseEntityBuilder.success(updatedOrder);
         } catch (Exception e) {
 
@@ -105,13 +106,14 @@ public class OrderController {
     @PreAuthorize("hasAnyAuthority('Admin_Web','Staff_Web')")
     public ResponseEntity<?> confirmVNPayPaymentGet(
             @PathVariable String orderCode,
-            @RequestParam String transactionId) {
+            @RequestParam String transactionId,
+            @AuthenticationPrincipal Jwt jwt) {
         System.out.println("=== GET /api/orders/vnpay-confirm/" + orderCode + " called ===");
         try {
-
-
             OrderUpdateResponse updatedOrder = orderService.confirmVNPayPayment(orderCode, transactionId);
-
+            String userId = jwt.getSubject();
+            System.out.println("User ID: " + userId);
+            orderService.updateUserIDOrder(orderCode, UUID.fromString(userId));
             return ResponseEntityBuilder.success(updatedOrder);
         } catch (Exception e) {
             System.err.println("Error confirming VNPay payment: " + e.getMessage());
@@ -144,11 +146,14 @@ public class OrderController {
     // Endpoint để checkin thanh toán bằng tiền mặt tại quầy
     @PostMapping("/cash-checkin/{orderCode}")
     @PreAuthorize("hasAnyAuthority('Admin_Web','Staff_Web')")
-    public ResponseEntity<?> checkinCashPayment(@PathVariable String orderCode) {
+    public ResponseEntity<?> checkinCashPayment(@PathVariable String orderCode,
+                                                @AuthenticationPrincipal Jwt jwt) {
         System.out.println("=== POST /api/orders/cash-checkin/" + orderCode + " called ===");
         try {
+            String userId = jwt.getSubject();
+            System.out.println("User ID: " + userId);
             OrderUpdateResponse updatedOrder = orderService.checkinCashPayment(orderCode);
-            
+            orderService.updateUserIDOrder(orderCode, UUID.fromString(userId));
             if (updatedOrder == null) {
                 return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Order not found with orderCode: ", orderCode);
             }
