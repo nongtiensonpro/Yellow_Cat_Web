@@ -60,10 +60,10 @@ export default function Sidebar() {
     return (
         <aside className="w-64 min-h-screen bg-white dark:bg-gray-900 shadow-md border-r border-gray-200 dark:border-gray-800 flex flex-col">
             {/* Logo SneakPeak */}
-            <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+            <Link href={'/'} className="flex items-center gap-3 px-6 py-5 border-b border-gray-100 dark:border-gray-700">
                 <Image src="/images/logo.png" alt="SneakPeak Logo" width={32} height={32} />
                 <span className="text-xl font-bold text-orange-600">SneakPeak</span>
-            </div>
+            </Link>
 
             {/* Khối điều hướng chính */}
             <nav className="flex-1 px-4 py-6 space-y-2">
