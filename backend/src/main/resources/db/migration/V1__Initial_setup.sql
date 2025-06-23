@@ -4,9 +4,9 @@ CREATE TABLE app_users
     app_user_id      SERIAL PRIMARY KEY,
     keycloak_id      uuid,
     username         VARCHAR(255),
-    email            VARCHAR(255) UNIQUE NOT NULL,
     roles            TEXT[],
     enabled          BOOLEAN,
+    email            VARCHAR(255) UNIQUE NOT NULL,
     full_name        VARCHAR(255),
     phone_number     VARCHAR(20) UNIQUE,
     avatar_url       VARCHAR(255),
@@ -123,7 +123,7 @@ CREATE TABLE product_variants
 CREATE TABLE addresses
 (
     address_id     SERIAL PRIMARY KEY,
-    app_user_id    Integer          NOT NULL,
+    app_user_id    INT          NOT NULL,
     recipient_name VARCHAR(255) NOT NULL,
     phone_number   VARCHAR(20)  NOT NULL,
     street_address VARCHAR(255) NOT NULL,
@@ -153,7 +153,7 @@ CREATE TABLE orders
 (
     order_id            SERIAL PRIMARY KEY,
     order_code          VARCHAR(20) UNIQUE,
-    app_user_id         integer,
+    app_user_id         INT,
     shipping_address_id INT,
     order_date          TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
     phone_number        VARCHAR(15),
@@ -225,7 +225,7 @@ CREATE TABLE reviews
 (
     review_id   SERIAL PRIMARY KEY,
     product_id  INT      NOT NULL,
-    app_user_id integer      NOT NULL,
+    app_user_id INT      NOT NULL,
     rating      SMALLINT NOT NULL CHECK (rating >= 1 AND rating <= 5),
     comment     TEXT,
     review_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -237,39 +237,51 @@ CREATE TABLE reviews
 -- Bảng Khuyến mãi
 CREATE TABLE promotions
 (
-    promotion_id         SERIAL PRIMARY KEY,
-    promo_code           VARCHAR(50) UNIQUE,
-    promo_name           VARCHAR(255)   NOT NULL,
-    description          TEXT,
-    discount_type        VARCHAR(20)    NOT NULL,
-    discount_value       NUMERIC(10, 2) NOT NULL,
-    start_date           TIMESTAMP      NOT NULL,
-    end_date             TIMESTAMP      NOT NULL,
-    minimum_order_value  NUMERIC(12, 2),
-    usage_limit_per_user INT,
-    usage_limit_total    INT,
-    is_active            BOOLEAN     DEFAULT TRUE,
-    applicable_to        VARCHAR(20) DEFAULT 'all_orders',
-    created_at           TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
-    updated_at           TIMESTAMP   DEFAULT CURRENT_TIMESTAMP
+    promotion_id   SERIAL PRIMARY KEY,
+    app_user_id    INT            NOT NULL,
+    promotion_code VARCHAR(50) UNIQUE,
+    promotion_name VARCHAR(255)   NOT NULL,
+    description    TEXT,
+    discount_type  VARCHAR(20)    NOT NULL,
+    discount_value NUMERIC(10, 2) NOT NULL,
+    start_date     TIMESTAMP      NOT NULL,
+    end_date       TIMESTAMP      NOT NULL,
+    is_active      BOOLEAN   DEFAULT TRUE,
+    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (app_user_id) REFERENCES app_users (app_user_id) ON DELETE CASCADE
 );
 
--- Bảng Áp dụng khuyến mãi
-CREATE TABLE promotion_applicables
+-- Bảng Áp dụng khuyến mãi cho sản phẩm
+CREATE TABLE promotion_products
 (
-    promo_applicable_id SERIAL PRIMARY KEY,
-    promotion_id        INT         NOT NULL,
-    applicable_item_id  INT         NOT NULL,
-    applicable_type     VARCHAR(20) NOT NULL,
+    promotion_product_id SERIAL PRIMARY KEY,
+    promotion_id         INT NOT NULL,
+    variant_id           INT NOT NULL,
+
     FOREIGN KEY (promotion_id) REFERENCES promotions (promotion_id) ON DELETE CASCADE,
-    UNIQUE (promotion_id, applicable_item_id, applicable_type)
+    FOREIGN KEY (variant_id) REFERENCES product_variants (variant_id) ON DELETE CASCADE
+);
+
+-- Bảng Áp dụng khuyến mãi cho đơn hàng
+CREATE TABLE promotion_orders
+(
+    promotion_order_id   SERIAL PRIMARY KEY,
+    promotion_id         INT            NOT NULL,
+    order_id             INT            NOT NULL,
+    minimum_order_value  NUMERIC(12, 2) NOT NULL,
+    usage_limit_per_user INT DEFAULT 1,
+    usage_limit_total    INT,
+    FOREIGN KEY (promotion_id) REFERENCES promotions (promotion_id) ON DELETE CASCADE,
+    FOREIGN KEY (order_id) REFERENCES orders (order_id) ON DELETE CASCADE
 );
 
 -- Bảng giỏ hàng
 CREATE TABLE carts
 (
     cart_id     SERIAL PRIMARY KEY,
-    app_user_id integer UNIQUE NOT NULL,
+    app_user_id INT UNIQUE NOT NULL,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (app_user_id) REFERENCES app_users (app_user_id) ON DELETE CASCADE
@@ -396,12 +408,12 @@ VALUES
 (5, 'NK-PEG40-GRY-43', 5, 4, 3200000.00, NULL, 40, 18, 'YellowCatWeb/nike-pegasus-grey', 0.1);
 
 -- 5. Dữ liệu cho bảng AppUsers
-INSERT INTO app_users (keycloak_id, email, full_name, phone_number, avatar_url)
-VALUES ('c56a4180-65aa-42ec-a945-5fd21dec0531', 'nguyen.van.a@email.com', 'Nguyễn Văn A', '0901234567', 'https://example.com/avatars/user1.jpg'),
-       ('c56a4180-65aa-42ec-a945-5fd21dec0532', 'tran.thi.b@email.com', 'Trần Thị B', '0902345678', 'https://example.com/avatars/user2.jpg'),
-       ('c56a4180-65aa-42ec-a945-5fd21dec0533', 'le.van.c@email.com', 'Lê Văn C', '0903456789', 'https://example.com/avatars/user3.jpg'),
-       ('c56a4180-65aa-42ec-a945-5fd21dec0534', 'pham.thi.d@email.com', 'Phạm Thị D', '0904567890', 'https://example.com/avatars/user4.jpg'),
-       ('c56a4180-65aa-42ec-a945-5fd21dec0535', 'hoang.van.e@email.com', 'Hoàng Văn E', '0905678901', 'https://example.com/avatars/user5.jpg');
+INSERT INTO app_users (keycloak_user_id, email, full_name, phone_number, avatar_url)
+VALUES ('kc-user-001', 'nguyen.van.a@email.com', 'Nguyễn Văn A', '0901234567', 'https://example.com/avatars/user1.jpg'),
+       ('kc-user-002', 'tran.thi.b@email.com', 'Trần Thị B', '0902345678', 'https://example.com/avatars/user2.jpg'),
+       ('kc-user-003', 'le.van.c@email.com', 'Lê Văn C', '0903456789', 'https://example.com/avatars/user3.jpg'),
+       ('kc-user-004', 'pham.thi.d@email.com', 'Phạm Thị D', '0904567890', 'https://example.com/avatars/user4.jpg'),
+       ('kc-user-005', 'hoang.van.e@email.com', 'Hoàng Văn E', '0905678901', 'https://example.com/avatars/user5.jpg');
 
 -- 6. Dữ liệu cho bảng Addresses
 INSERT INTO addresses (app_user_id, recipient_name, phone_number, street_address, ward_commune, district, city_province,
@@ -476,33 +488,53 @@ VALUES (1, 1, 'GHN-001234567', 'Delivered', '2024-01-06', '2024-01-05', '2024-01
        (5, 4, 'SPX-005678901', 'Confirmed', '2024-01-09', NULL, NULL, 0.00, 'Chờ lấy hàng');
 
 -- 12. Dữ liệu cho bảng Reviews
--- INSERT INTO reviews (product_id, app_user_id, rating, comment, review_date)
--- VALUES (1, 1, 5, 'Giày rất thoải mái, đi chạy bộ rất êm. Chất lượng tốt so với giá tiền.', '2024-01-06 20:30:00'),
---        (1, 2, 4, 'Design đẹp, nhưng hơi rộng so với targetAudience thông thường.', '2024-01-07 15:45:00'),
---        (2, 3, 5, 'Adidas luôn là lựa chọn tin cậy. Giày nhẹ, phù hợp tập gym.', '2024-01-08 09:15:00'),
---        (3, 1, 4, 'Giày bóng rổ chất lượng cao, grip tốt trên sân.', '2024-01-09 18:20:00'),
---        (4, 4, 3, 'Style đẹp nhưng chất liệu không bền như mong đợi.', '2024-01-10 12:10:00');
+INSERT INTO reviews (product_id, app_user_id, rating, comment, review_date)
+VALUES (1, 1, 5, 'Giày rất thoải mái, đi chạy bộ rất êm. Chất lượng tốt so với giá tiền.', '2024-01-06 20:30:00'),
+       (1, 2, 4, 'Design đẹp, nhưng hơi rộng so với targetAudience thông thường.', '2024-01-07 15:45:00'),
+       (2, 3, 5, 'Adidas luôn là lựa chọn tin cậy. Giày nhẹ, phù hợp tập gym.', '2024-01-08 09:15:00'),
+       (3, 1, 4, 'Giày bóng rổ chất lượng cao, grip tốt trên sân.', '2024-01-09 18:20:00'),
+       (4, 4, 3, 'Style đẹp nhưng chất liệu không bền như mong đợi.', '2024-01-10 12:10:00');
 
--- 13. Dữ liệu cho bảng Promotions
-INSERT INTO promotions (promo_code, promo_name, description, discount_type, discount_value, start_date, end_date,
-                        minimum_order_value, usage_limit_per_user, usage_limit_total, is_active, applicable_to)
-VALUES ('NEWUSER10', 'Giảm giá 10% cho khách hàng mới', 'Chào mừng khách hàng mới với ưu đãi giảm 10%', 'percentage',
-        10.00, '2024-01-01 00:00:00', '2024-12-31 23:59:59', 500000.00, 1, 1000, TRUE, 'all_orders'),
-       ('SALE50K', 'Giảm 50K cho đơn hàng trên 1 triệu', 'Giảm giá cố định 50K', 'fixed_amount', 50000.00,
-        '2024-01-01 00:00:00', '2024-06-30 23:59:59', 1000000.00, 5, NULL, TRUE, 'all_orders'),
-       ('SUMMER2024', 'Sale mùa hè 2024', 'Giảm 15% tất cả sản phẩm mùa hè', 'percentage', 15.00, '2024-06-01 00:00:00',
-        '2024-08-31 23:59:59', 800000.00, 3, 5000, TRUE, 'all_orders'),
-       ('FREESHIP', 'Miễn phí vận chuyển', 'Miễn phí ship cho đơn hàng trên 500K', 'free_shipping', 0.00,
-        '2024-01-01 00:00:00', '2024-12-31 23:59:59', 500000.00, NULL, NULL, TRUE, 'shipping'),
-       ('NIKE20', 'Giảm 20% sản phẩm Nike', 'Khuyến mãi đặc biệt cho thương hiệu Nike', 'percentage', 20.00,
-        '2024-02-01 00:00:00', '2024-02-29 23:59:59', 1500000.00, 2, 2000, TRUE, 'brand');
+-- 1. Dữ liệu cho bảng promotions
+INSERT INTO promotions
+(app_user_id, promotion_code, promotion_name, description, discount_type, discount_value, start_date, end_date,
+ is_active)
+VALUES (1, 'NEWUSER10', 'Giảm giá 10% cho khách hàng mới', 'Chào mừng khách hàng mới với ưu đãi giảm 10%', 'percentage',
+        10.00, '2024-01-01 00:00:00', '2024-12-31 23:59:59', TRUE),
+       (1, 'SALE50K', 'Giảm 50K cho đơn hàng trên 1 triệu', 'Giảm giá cố định 50K', 'fixed_amount', 50000.00,
+        '2024-01-01 00:00:00', '2024-06-30 23:59:59', TRUE),
+       (1, 'SUMMER2024', 'Sale mùa hè 2024', 'Giảm 15% tất cả sản phẩm mùa hè', 'percentage', 15.00,
+        '2024-06-01 00:00:00',
+        '2024-08-31 23:59:59', TRUE),
+       (1, 'FREESHIP', 'Miễn phí vận chuyển', 'Miễn phí ship cho đơn hàng trên 500K', 'free_shipping', 0.00,
+        '2024-01-01 00:00:00', '2024-12-31 23:59:59', TRUE),
+       (1, 'NIKE20', 'Giảm 20% sản phẩm Nike', 'Khuyến mãi đặc biệt cho thương hiệu Nike', 'percentage', 20.00,
+        '2024-02-01 00:00:00', '2024-02-29 23:59:59', TRUE);
 
--- 14. Dữ liệu cho bảng PromotionApplicables
-INSERT INTO promotion_applicables (promotion_id, applicable_item_id, applicable_type)
+-- 2. Dữ liệu cho bảng promotion_products
+-- Giả sử các product_variant_id có sẵn lần lượt là 1,2,3,4
+INSERT INTO promotion_products
+    (promotion_id, variant_id)
 VALUES
--- NIKE20 áp dụng cho brand Nike (brand_id = 1)
-(5, 1, 'brand'),
--- Có thể thêm các áp dụng khác cho targetAudience, product cụ thể
-(3, 1, 'targetAudience'), -- SUMMER2024 áp dụng cho targetAudience "Giày thể thao nam"
-(3, 2, 'targetAudience');
--- SUMMER2024 áp dụng cho targetAudience "Giày chạy bộ"
+    -- NEWUSER10 áp dụng cho variant 1 và 2
+    (1, 1),
+    (1, 2),
+    -- SUMMER2024 áp dụng cho variant 3 và 4
+    (3, 3),
+    (3, 4),
+    -- NIKE20 áp dụng cho variant 5 (nếu có)
+    (5, 5);
+
+-- 3. Dữ liệu cho bảng promotion_orders
+-- Giả sử các order_id tồn tại lần lượt là 1001,1002,1003,1004
+INSERT INTO promotion_orders
+(promotion_id, order_id, minimum_order_value, usage_limit_per_user, usage_limit_total)
+VALUES
+    -- NEWUSER10 cho đơn 1001 (tối thiểu 500K, 1 lần/người, tổng 1.000 lượt)
+    (1, 1001, 500000.00, 1, 1000),
+    -- SALE50K cho đơn 1002 (tối thiểu 1.000K, 5 lần/người, không giới hạn tổng)
+    (2, 1002, 1000000.00, 5, NULL),
+    -- FREESHIP cho đơn 1003 (tối thiểu 500K, không giới hạn lần/người và tổng)
+    (4, 1003, 500000.00, NULL, NULL),
+    -- SUMMER2024 cho đơn 1004 (tối thiểu 800K, 3 lần/người, tổng 5.000 lượt)
+    (3, 1004, 800000.00, 3, 5000);

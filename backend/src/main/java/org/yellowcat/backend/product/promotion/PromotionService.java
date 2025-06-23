@@ -9,6 +9,10 @@ import org.springframework.stereotype.Service;
 import org.yellowcat.backend.product.promotion.dto.PromotionRequest;
 import org.yellowcat.backend.product.promotion.dto.PromotionResponse;
 import org.yellowcat.backend.product.promotion.mapper.PromotionMapper;
+import org.yellowcat.backend.user.AppUser;
+import org.yellowcat.backend.user.AppUserRepository;
+
+import java.util.Random;
 
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -16,6 +20,7 @@ import org.yellowcat.backend.product.promotion.mapper.PromotionMapper;
 public class PromotionService {
     PromotionRepository promotionRepository;
     PromotionMapper promotionMapper;
+    AppUserRepository appUserRepository;
 
     public Page<PromotionResponse> getAll(Pageable pageable) {
         Page<Promotion> promotions = promotionRepository.findAll(pageable);
@@ -31,15 +36,21 @@ public class PromotionService {
     }
 
     public PromotionResponse create(PromotionRequest request) {
+        AppUser appUser = appUserRepository.findById(1)
+                .orElseThrow(() -> new RuntimeException("User not found"));
         Promotion promotion = promotionMapper.toPromotion(request);
+        promotion.setPromotionCode(generatePromotionCode());
+        promotion.setAppUser(appUser);
         promotionRepository.save(promotion);
 
         return promotionMapper.toPromotionResponse(promotion);
     }
 
     public PromotionResponse update(Integer id, PromotionRequest request) {
-        Promotion promotion = promotionMapper.toPromotion(request);
-        promotion.setId(id);
+        Promotion promotion = promotionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Promotion not found"));
+
+        promotionMapper.updatePromotionFromRequest(promotion, request);
         promotionRepository.save(promotion);
 
         return promotionMapper.toPromotionResponse(promotion);
@@ -52,5 +63,11 @@ public class PromotionService {
 
         promotionRepository.deleteById(id);
         return true;
+    }
+
+    private String generatePromotionCode() {
+        Random random = new Random();
+        int randomNum = 10000 + random.nextInt(90000); // Sinh số ngẫu nhiên 5 chữ số
+        return String.format("KM%d", randomNum);
     }
 }

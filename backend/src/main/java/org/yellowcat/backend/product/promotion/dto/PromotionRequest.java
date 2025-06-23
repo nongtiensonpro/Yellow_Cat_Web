@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -12,13 +13,16 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class PromotionRequest {
-    Integer id;
+    @NotNull
+    String promotionName;
+
+    String description;
 
     @NotNull
-    String name;
+    String discountType;
 
     @NotNull
-    Double discountPercent;
+    BigDecimal discountValue;
 
     LocalDateTime startDate;
 

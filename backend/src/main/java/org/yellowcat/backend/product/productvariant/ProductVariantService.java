@@ -3,15 +3,64 @@ package org.yellowcat.backend.product.productvariant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.yellowcat.backend.product.productvariant.dto.ProductVariantFilterDTO;
 import org.yellowcat.backend.product.productvariant.dto.ProductVariantListResponse;
+import org.yellowcat.backend.product.productvariant.mapper.ProductVariantMapper;
+import org.yellowcat.backend.product.productvariant.specification.ProductVariantSpecification;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class ProductVariantService {
     private final ProductVariantRepository productVariantRepository;
+    private final ProductVariantMapper productVariantMapper;
 
+    @Transactional(readOnly = true)
+    public Page<ProductVariantFilterDTO> searchPaged(
+            String name,
+            Long categoryId,
+            Long brandId,
+            Long materialId,
+            Long targetAudienceId,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            Long colorId,
+            Long sizeId,
+            int page,
+            int size
+    ) {
+        var spec = ProductVariantSpecification.filter(
+                name, categoryId, brandId, materialId,
+                targetAudienceId, minPrice, maxPrice, colorId, sizeId
+        );
+
+        Pageable pageable = PageRequest.of(page, size);
+        return productVariantRepository.findAll(spec, pageable)
+                .map(productVariantMapper::toFilterDto);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductVariantFilterDTO> search(
+            String name,
+            Long categoryId,
+            Long brandId,
+            Long materialId,
+            Long targetAudienceId,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            Long colorId,
+            Long sizeId
+    ) {
+        var spec = ProductVariantSpecification.filter(
+                name, categoryId, brandId, materialId,
+                targetAudienceId, minPrice, maxPrice, colorId, sizeId
+        );
+        var entities = productVariantRepository.findAll(spec);
+        return productVariantMapper.toFilterDtoList(entities);
+    }
 
     public Page<ProductVariantListResponse> findAllProductVariant(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
