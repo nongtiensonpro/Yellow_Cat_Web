@@ -2,7 +2,10 @@
 CREATE TABLE app_users
 (
     app_user_id      SERIAL PRIMARY KEY,
-    keycloak_user_id VARCHAR(255) UNIQUE NOT NULL,
+    keycloak_id      uuid,
+    username         VARCHAR(255),
+    roles            TEXT[],
+    enabled          BOOLEAN,
     email            VARCHAR(255) UNIQUE NOT NULL,
     full_name        VARCHAR(255),
     phone_number     VARCHAR(20) UNIQUE,
@@ -264,7 +267,7 @@ CREATE TABLE promotion_products
 -- Bảng Áp dụng khuyến mãi cho đơn hàng
 CREATE TABLE promotion_orders
 (
-    promotion_product_id SERIAL PRIMARY KEY,
+    promotion_order_id   SERIAL PRIMARY KEY,
     promotion_id         INT            NOT NULL,
     order_id             INT            NOT NULL,
     minimum_order_value  NUMERIC(12, 2) NOT NULL,
@@ -494,16 +497,18 @@ VALUES (1, 1, 5, 'Giày rất thoải mái, đi chạy bộ rất êm. Chất l�
 
 -- 1. Dữ liệu cho bảng promotions
 INSERT INTO promotions
-(promotion_code, promotion_name, description, discount_type, discount_value, start_date, end_date, is_active)
-VALUES ('NEWUSER10', 'Giảm giá 10% cho khách hàng mới', 'Chào mừng khách hàng mới với ưu đãi giảm 10%', 'percentage',
+(app_user_id, promotion_code, promotion_name, description, discount_type, discount_value, start_date, end_date,
+ is_active)
+VALUES (1, 'NEWUSER10', 'Giảm giá 10% cho khách hàng mới', 'Chào mừng khách hàng mới với ưu đãi giảm 10%', 'percentage',
         10.00, '2024-01-01 00:00:00', '2024-12-31 23:59:59', TRUE),
-       ('SALE50K', 'Giảm 50K cho đơn hàng trên 1 triệu', 'Giảm giá cố định 50K', 'fixed_amount', 50000.00,
+       (1, 'SALE50K', 'Giảm 50K cho đơn hàng trên 1 triệu', 'Giảm giá cố định 50K', 'fixed_amount', 50000.00,
         '2024-01-01 00:00:00', '2024-06-30 23:59:59', TRUE),
-       ('SUMMER2024', 'Sale mùa hè 2024', 'Giảm 15% tất cả sản phẩm mùa hè', 'percentage', 15.00, '2024-06-01 00:00:00',
+       (1, 'SUMMER2024', 'Sale mùa hè 2024', 'Giảm 15% tất cả sản phẩm mùa hè', 'percentage', 15.00,
+        '2024-06-01 00:00:00',
         '2024-08-31 23:59:59', TRUE),
-       ('FREESHIP', 'Miễn phí vận chuyển', 'Miễn phí ship cho đơn hàng trên 500K', 'free_shipping', 0.00,
+       (1, 'FREESHIP', 'Miễn phí vận chuyển', 'Miễn phí ship cho đơn hàng trên 500K', 'free_shipping', 0.00,
         '2024-01-01 00:00:00', '2024-12-31 23:59:59', TRUE),
-       ('NIKE20', 'Giảm 20% sản phẩm Nike', 'Khuyến mãi đặc biệt cho thương hiệu Nike', 'percentage', 20.00,
+       (1, 'NIKE20', 'Giảm 20% sản phẩm Nike', 'Khuyến mãi đặc biệt cho thương hiệu Nike', 'percentage', 20.00,
         '2024-02-01 00:00:00', '2024-02-29 23:59:59', TRUE);
 
 -- 2. Dữ liệu cho bảng promotion_products
