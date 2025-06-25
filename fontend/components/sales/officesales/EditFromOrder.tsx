@@ -10,21 +10,37 @@ import {
 import { OptimizedProductItem } from "./OptimizedProductItem";
 import PaymentModal from './PaymentModal';
 import { useOrderStore } from './orderStore';
+import InvoicePrint from './InvoicePrint';
+
+// Regex để validate số điện thoại Việt Nam
+// Bắt đầu bằng 0 hoặc +84, theo sau là:
+// - 03[2-9] (Vinaphone, Mobifone)
+// - 05[689] (Vietnamobile) 
+// - 07[06-9] (Mobifone, Gmobile)
+// - 08[1-689] (Vinaphone, Vietnamobile)
+// - 09[0-46-9] (Mobifone, Vinaphone, Vietnamobile)
+// Kết thúc với 7 chữ số nữa (tổng cộng 10-11 số)
+const PHONE_REGEX = /^(0|\+84)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$/;
+
+// Helper function để format số điện thoại (loại bỏ ký tự không cần thiết)
+const formatPhoneNumber = (phone: string): string => {
+    return phone.replace(/[\s\-\(\)\.]/g, '').trim();
+};
 
 const statusMap: { [key: string]: string } = {
     // Trạng thái cũ
     'PENDING': 'Chờ xử lý',
-    'PROCESSING': 'Đang xử lý', 
+    'PROCESSING': 'Đang xử lý',
     'COMPLETED': 'Hoàn thành',
     'CANCELLED': 'Đã hủy',
-    
+
     // Trạng thái thanh toán mới từ backend (case-sensitive)
     'PAID': 'Đã thanh toán',
-    'PARTIAL': 'Thanh toán một phần', 
+    'PARTIAL': 'Thanh toán một phần',
     'Paid': 'Đã thanh toán',
     'Partial': 'Thanh toán một phần',
     'Pending': 'Chờ thanh toán',
-    
+
     // Thêm các trạng thái khác có thể có
     'pending': 'Chờ thanh toán',
     'paid': 'Đã thanh toán',
@@ -36,28 +52,71 @@ const statusMap: { [key: string]: string } = {
 // Helper function để hiển thị trạng thái an toàn
 const getStatusDisplay = (status: string): string => {
     if (!status) return 'Không xác định';
-    
+
     // Thử tìm exact match trước
     if (statusMap[status]) return statusMap[status];
-    
+
     // Thử uppercase
     if (statusMap[status.toUpperCase()]) return statusMap[status.toUpperCase()];
-    
+
     // Thử lowercase
     if (statusMap[status.toLowerCase()]) return statusMap[status.toLowerCase()];
-    
+
     // Thử capitalize first letter
     const capitalized = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
     if (statusMap[capitalized]) return statusMap[capitalized];
-    
+
     // Fallback: trả về status gốc
     return status;
+};
+
+// Function validate thông tin khách hàng với regex chính xác
+const validateCustomerInfoWithPhoneRegex = (editableOrder: any, orderItems: any[], setValidationErrors: any): boolean => {
+    const errors = {
+        customerName: '',
+        phoneNumber: '',
+    };
+
+    let isValid = true;
+
+    // Kiểm tra có sản phẩm trong đơn hàng không
+    if (orderItems.length === 0) {
+        console.warn('⚠️ Cannot validate customer info: No order items');
+        return false;
+    }
+
+    // Validate tên khách hàng
+    if (!editableOrder.customerName.trim()) {
+        errors.customerName = 'Vui lòng nhập tên khách hàng';
+        isValid = false;
+    } else if (editableOrder.customerName.trim().length < 2) {
+        errors.customerName = 'Tên khách hàng phải có ít nhất 2 ký tự';
+        isValid = false;
+    } else if (editableOrder.customerName.trim().length > 100) {
+        errors.customerName = 'Tên khách hàng không được quá 100 ký tự';
+        isValid = false;
+    }
+
+    // Validate số điện thoại với regex chính xác
+    if (!editableOrder.phoneNumber.trim()) {
+        errors.phoneNumber = 'Vui lòng nhập số điện thoại';
+        isValid = false;
+    } else {
+        const phone = formatPhoneNumber(editableOrder.phoneNumber);
+        if (!PHONE_REGEX.test(phone)) {
+            errors.phoneNumber = 'Số điện thoại không đúng định dạng Việt Nam (VD: 0987654321 hoặc +84987654321)';
+            isValid = false;
+        }
+    }
+
+    setValidationErrors(errors);
+    return isValid;
 };
 
 export default function EditFromOrder() {
     const { data: session } = useSession();
     const {isOpen: isPaymentOpen, onOpen: onPaymentOpen, onOpenChange: onPaymentOpenChange} = useDisclosure();
-    
+
     // Modal thanh toán tiền mặt states
     const {isOpen: isCashPaymentOpen, onOpen: onCashPaymentOpen, onOpenChange: onCashPaymentOpenChange} = useDisclosure();
     const [cashPaymentCountdown, setCashPaymentCountdown] = useState(5);
@@ -80,14 +139,14 @@ export default function EditFromOrder() {
         validationErrors,
         isUpdatingOrder,
         error: storeError,
-        
+
         // Actions
         setSearchTerm,
         setEditableOrder,
         setValidationErrors,
         resetError,
         closeEditOrder,
-        
+
         // API Actions
         fetchOrderItems,
         addVariantToOrder,
@@ -96,7 +155,7 @@ export default function EditFromOrder() {
         initializeProductData,
         updateOrder,
         cashPayment,
-        
+
         // Utils
         validateCustomerInfo,
         isPaid,
@@ -147,7 +206,7 @@ export default function EditFromOrder() {
     // Cash payment countdown logic
     useEffect(() => {
         let interval: NodeJS.Timeout;
-        
+
         if (isCashPaymentOpen && cashPaymentCountdown > 0) {
             interval = setInterval(() => {
                 setCashPaymentCountdown(prev => {
@@ -159,7 +218,7 @@ export default function EditFromOrder() {
                 });
             }, 1000);
         }
-        
+
         return () => {
             if (interval) {
                 clearInterval(interval);
@@ -170,7 +229,7 @@ export default function EditFromOrder() {
     // Handlers using store functions
     const handleUpdateOrder = async () => {
         if (!currentOrder || !session?.accessToken) return;
-        
+
         try {
             const requestBody = {
                 orderId: currentOrder.orderId,
@@ -179,9 +238,9 @@ export default function EditFromOrder() {
                 discountAmount: editableOrder.discountAmount,
                 payments: [],
             };
-            
+
             await updateOrder(requestBody, session);
-            
+
         } catch (err: any) {
             // Error đã được handle trong store
         }
@@ -189,14 +248,15 @@ export default function EditFromOrder() {
 
     const handleCashPaymentOpen = async () => {
         setValidationErrors({ customerName: '', phoneNumber: '' });
-        
+
         // Kiểm tra có sản phẩm trong đơn hàng không
         if (orderItems.length === 0) {
             console.warn('⚠️ Cannot proceed with cash payment: No order items');
             return;
         }
-        
-        if (!validateCustomerInfo()) {
+
+        // Sử dụng validation mới với regex chính xác
+        if (!validateCustomerInfoWithPhoneRegex(editableOrder, orderItems, setValidationErrors)) {
             return;
         }
 
@@ -212,17 +272,17 @@ export default function EditFromOrder() {
 
     const handleConfirmCashPayment = async () => {
         if (!currentOrder || !session?.accessToken) return;
-        
+
         setIsCashPaymentProcessing(true);
-        
+
         try {
             await cashPayment(currentOrder.orderCode, session);
-            
+
             // Force refresh UI để hiển thị trạng thái mới ngay lập tức
             console.log('💰 Cash payment successful, forcing UI refresh...');
             setForceRefresh(prev => prev + 1);
             forceUpdateCurrentOrder();
-            
+
             setTimeout(() => {
                 onCashPaymentOpenChange();
                 // Trigger another refresh after modal closes
@@ -230,7 +290,7 @@ export default function EditFromOrder() {
                 forceUpdateCurrentOrder();
                 console.log('🔄 Payment modal closed, UI should reflect new status');
             }, 2000);
-            
+
         } catch (error: any) {
             console.error('❌ Cash payment failed:', error);
             setTimeout(() => {
@@ -243,14 +303,15 @@ export default function EditFromOrder() {
 
     const handlePaymentOpen = async () => {
         setValidationErrors({ customerName: '', phoneNumber: '' });
-        
+
         // Kiểm tra có sản phẩm trong đơn hàng không
         if (orderItems.length === 0) {
             console.warn('⚠️ Cannot proceed with VNPay payment: No order items');
             return;
         }
-        
-        if (!validateCustomerInfo()) {
+
+        // Sử dụng validation mới với regex chính xác
+        if (!validateCustomerInfoWithPhoneRegex(editableOrder, orderItems, setValidationErrors)) {
             return;
         }
 
@@ -268,12 +329,52 @@ export default function EditFromOrder() {
             ...editableOrder,
             [field]: value
         });
-        
+
+        // Clear validation error khi người dùng bắt đầu nhập
         if (validationErrors[field as keyof typeof validationErrors]) {
             setValidationErrors({
                 ...validationErrors,
                 [field]: ''
             });
+        }
+
+        // Real-time validation cho số điện thoại
+        if (field === 'phoneNumber' && typeof value === 'string') {
+            const phone = formatPhoneNumber(value);
+            if (phone && !PHONE_REGEX.test(phone)) {
+                setValidationErrors({
+                    ...validationErrors,
+                    phoneNumber: 'Số điện thoại không đúng định dạng Việt Nam (VD: 0987654321 hoặc +84987654321)'
+                });
+            } else if (phone && PHONE_REGEX.test(phone)) {
+                // Clear error nếu số điện thoại hợp lệ
+                setValidationErrors({
+                    ...validationErrors,
+                    phoneNumber: ''
+                });
+            }
+        }
+
+        // Real-time validation cho tên khách hàng
+        if (field === 'customerName' && typeof value === 'string') {
+            const name = value.trim();
+            if (name && name.length < 2) {
+                setValidationErrors({
+                    ...validationErrors,
+                    customerName: 'Tên khách hàng phải có ít nhất 2 ký tự'
+                });
+            } else if (name && name.length > 100) {
+                setValidationErrors({
+                    ...validationErrors,
+                    customerName: 'Tên khách hàng không được quá 100 ký tự'
+                });
+            } else if (name && name.length >= 2 && name.length <= 100) {
+                // Clear error nếu tên hợp lệ
+                setValidationErrors({
+                    ...validationErrors,
+                    customerName: ''
+                });
+            }
         }
     };
 
@@ -292,9 +393,9 @@ export default function EditFromOrder() {
             {/* Header với nút quay lại */}
             <div className="flex justify-between items-center">
                 <div className="flex items-center gap-4">
-                    <Button 
-                        color="default" 
-                        variant="flat" 
+                    <Button
+                        color="default"
+                        variant="flat"
                         onPress={closeEditOrder}
                         startContent="←"
                     >
@@ -318,38 +419,50 @@ export default function EditFromOrder() {
                                         const isPaidStatus = totals.calculatedStatus.toUpperCase() === 'PAID';
                                         const hasOrderItems = orderItems.length > 0;
                                         const canPayment = !isPaidStatus && currentOrder.orderStatus !== 'COMPLETED' && hasOrderItems;
-                                        
+
                                         return (
                                             <>
-                                                <Button 
-                                                    color="warning" 
-                                                    size="sm" 
+                                                {!isPaidStatus  &&<Button
+                                                    color="warning"
+                                                    size="sm"
                                                     onPress={handleCashPaymentOpen}
                                                     disabled={!canPayment}
                                                     title={!hasOrderItems ? "Vui lòng thêm sản phẩm vào đơn hàng trước khi thanh toán" : ""}
                                                 >
                                                     💰 Tiền mặt
-                                                </Button>
-                                                <Button 
-                                                    color="success" 
-                                                    size="sm" 
+                                                </Button>}
+                                                {!isPaidStatus  &&<Button
+                                                    color="success"
+                                                    size="sm"
                                                     onPress={handlePaymentOpen}
                                                     disabled={!canPayment}
                                                     title={!hasOrderItems ? "Vui lòng thêm sản phẩm vào đơn hàng trước khi thanh toán" : ""}
                                                 >
                                                     Thanh toán VN Pay
-                                                </Button>
+                                                </Button>}
                                             </>
                                         );
                                     })()}
                                     {(() => {
                                         const totals = calculateOrderTotals();
                                         const isPaidStatus = totals.calculatedStatus.toUpperCase() === 'PAID';
+
+                                        // Hiển thị nút in hóa đơn khi đã thanh toán và có sản phẩm
+                                        if (isPaidStatus && orderItems.length > 0) {
+                                            return (
+                                                <InvoicePrint
+                                                    order={currentOrder}
+                                                    orderItems={orderItems}
+                                                    totals={totals}
+                                                />
+                                            );
+                                        }
+
                                         return (
-                                            <Button 
-                                                color="primary" 
-                                                size="sm" 
-                                                onPress={handleUpdateOrder} 
+                                            <Button
+                                                color="primary"
+                                                size="sm"
+                                                onPress={handleUpdateOrder}
                                                 disabled={isUpdatingOrder || isPaidStatus}
                                             >
                                                 {isUpdatingOrder ? <Spinner color="white" size="sm" /> : "Lưu thay đổi"}
@@ -369,23 +482,31 @@ export default function EditFromOrder() {
                                             <div>
                                                 <Input
                                                     label="Tên khách hàng"
+                                                    placeholder="VD: Nguyễn Văn A"
                                                     value={editableOrder.customerName}
                                                     onChange={(e) => handleEditableOrderChange('customerName', e.target.value)}
                                                     fullWidth
                                                     isInvalid={!!validationErrors.customerName}
                                                     errorMessage={validationErrors.customerName}
                                                     disabled={isPaidStatus}
+                                                    startContent={<span className="text-gray-400 text-sm">👤</span>}
+                                                    description="Nhập tên khách hàng (2-100 ký tự)"
+                                                    color={validationErrors.customerName ? "danger" : "default"}
                                                 />
                                             </div>
                                             <div>
                                                 <Input
                                                     label="Số điện thoại"
+                                                    placeholder="VD: 0987654321 hoặc +84987654321"
                                                     value={editableOrder.phoneNumber}
                                                     onChange={(e) => handleEditableOrderChange('phoneNumber', e.target.value)}
                                                     fullWidth
                                                     isInvalid={!!validationErrors.phoneNumber}
                                                     errorMessage={validationErrors.phoneNumber}
                                                     disabled={isPaidStatus}
+                                                    startContent={<span className="text-gray-400 text-sm">📱</span>}
+                                                    description="Nhập số điện thoại Việt Nam (VD: 0987654321)"
+                                                    color={validationErrors.phoneNumber ? "danger" : "default"}
                                                 />
                                             </div>
                                             <Input
@@ -414,7 +535,7 @@ export default function EditFromOrder() {
                                                 <p><strong>Tạm tính:</strong> {totals.subTotalAmount.toLocaleString('vi-VN')} VND</p>
                                                 <p><strong>Thành tiền:</strong> {totals.finalAmount.toLocaleString('vi-VN')} VND</p>
                                                 <p><strong>Trạng thái:</strong> {getStatusDisplay(totals.calculatedStatus)}</p>
-                                                
+
                                                 {/* Thông báo khi không có sản phẩm */}
                                                 {orderItems.length === 0 && (
                                                     <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-yellow-800 text-sm">
@@ -424,20 +545,20 @@ export default function EditFromOrder() {
                                             </>
                                         );
                                     })()}
-                                    
+
                                     {/* Hiển thị trạng thái thanh toán */}
                                     {(() => {
                                         const totals = calculateOrderTotals();
                                         const isPaidStatus = totals.calculatedStatus.toUpperCase() === 'PAID';
                                         return (
-                                            <p><strong>Thanh toán:</strong> 
+                                            <p><strong>Thanh toán:</strong>
                                                 <span className={`ml-1 px-2 py-1 rounded text-xs ${isPaidStatus ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                                                     {isPaidStatus ? 'Đã thanh toán' : 'Chưa thanh toán'}
                                                 </span>
                                             </p>
                                         );
                                     })()}
-                                    
+
                                     {/* Hiển thị thông tin thanh toán */}
                                     {currentOrder.payments && currentOrder.payments.length > 0 && (
                                         <div className="mt-3 pt-3 border-t">
@@ -446,7 +567,7 @@ export default function EditFromOrder() {
                                                 <div key={payment.paymentId || index} className="text-sm mb-2 p-2 bg-gray-50 rounded">
                                                     <p><strong>Phương thức:</strong> {payment.paymentMethod}</p>
                                                     <p><strong>Số tiền:</strong> {payment.amount.toLocaleString('vi-VN')} VND</p>
-                                                    <p><strong>Trạng thái:</strong> 
+                                                    <p><strong>Trạng thái:</strong>
                                                         <span className={`ml-1 px-2 py-1 rounded text-xs ${
                                                             payment.paymentStatus.toUpperCase() === 'SUCCESS' || payment.paymentStatus.toUpperCase() === 'COMPLETED' 
                                                                 ? 'bg-green-100 text-green-800' 
@@ -466,7 +587,7 @@ export default function EditFromOrder() {
                             </div>
                         </CardBody>
                     </Card>
-                    
+
                     <Card className="flex-grow">
                         <CardHeader>
                             <h3 className="text-lg font-bold">Sản phẩm trong đơn</h3>
@@ -512,10 +633,10 @@ export default function EditFromOrder() {
                                                                 const isPaidStatus = totals.calculatedStatus.toUpperCase() === 'PAID';
                                                                 return (
                                                                     <>
-                                                                        <Button 
-                                                                            isIconOnly 
-                                                                            size="sm" 
-                                                                            variant="flat" 
+                                                                        <Button
+                                                                            isIconOnly
+                                                                            size="sm"
+                                                                            variant="flat"
                                                                             onPress={() => updateOrderItemQuantity(item.orderItemId, item.quantity - 1, session)}
                                                                             disabled={isPaidStatus}
                                                                         >-</Button>
@@ -533,10 +654,10 @@ export default function EditFromOrder() {
                                                                             className="w-16 text-center"
                                                                             disabled={isPaidStatus}
                                                                         />
-                                                                        <Button 
-                                                                            isIconOnly 
-                                                                            size="sm" 
-                                                                            variant="flat" 
+                                                                        <Button
+                                                                            isIconOnly
+                                                                            size="sm"
+                                                                            variant="flat"
                                                                             onPress={() => updateOrderItemQuantity(item.orderItemId, item.quantity + 1, session)}
                                                                             disabled={isPaidStatus}
                                                                         >+</Button>
@@ -599,7 +720,7 @@ export default function EditFromOrder() {
                                         {(() => {
                                             const totals = calculateOrderTotals();
                                             const isPaidStatus = totals.calculatedStatus.toUpperCase() === 'PAID';
-                                            
+
                                             if (isPaidStatus) {
                                                 return (
                                                     <div className="text-center py-10 text-gray-500">
@@ -608,7 +729,7 @@ export default function EditFromOrder() {
                                                     </div>
                                                 );
                                             }
-                                            
+
                                             return filteredProducts.length > 0 ? (
                                                 filteredProducts.map(p => (
                                                     <OptimizedProductItem
@@ -629,7 +750,7 @@ export default function EditFromOrder() {
                     </CardBody>
                 </Card>
             </div>
-            
+
             {/* Modal thanh toán tiền mặt */}
             {isCashPaymentOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -650,7 +771,7 @@ export default function EditFromOrder() {
                                         Số tiền: {calculateOrderTotals().finalAmount.toLocaleString('vi-VN')} VND
                                     </p>
                                 </div>
-                                
+
                                 <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                                     {cashPaymentCountdown > 0 ? (
                                         <>
@@ -665,7 +786,7 @@ export default function EditFromOrder() {
                                                     Tự động thanh toán sau {cashPaymentCountdown} giây
                                                 </p>
                                                 <div className="w-full bg-blue-200 rounded-full h-2">
-                                                    <div 
+                                                    <div
                                                         className="bg-blue-600 h-2 rounded-full transition-all duration-1000"
                                                         style={{ width: `${((5 - cashPaymentCountdown) / 5) * 100}%` }}
                                                     ></div>
@@ -701,17 +822,17 @@ export default function EditFromOrder() {
                         </CardBody>
                         <CardFooter>
                             {cashPaymentCountdown > 0 ? (
-                                <Button 
-                                    color="danger" 
-                                    variant="light" 
+                                <Button
+                                    color="danger"
+                                    variant="light"
                                     onPress={onCashPaymentOpenChange}
                                     className="w-full"
                                 >
                                     Hủy thanh toán
                                 </Button>
                             ) : (
-                                <Button 
-                                    color="primary" 
+                                <Button
+                                    color="primary"
                                     onPress={onCashPaymentOpenChange}
                                     disabled={isCashPaymentProcessing}
                                     className="w-full"
@@ -723,7 +844,7 @@ export default function EditFromOrder() {
                     </Card>
                 </div>
             )}
-            
+
             {currentOrder && (
                 <PaymentModal
                     isOpen={isPaymentOpen}

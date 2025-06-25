@@ -700,9 +700,14 @@ export const useOrderStore = create<OrderState>()(
                 if (!editableOrder.phoneNumber.trim()) {
                     errors.phoneNumber = 'Vui lòng nhập số điện thoại';
                     isValid = false;
-                } else if (!/^[0-9]{10,11}$/.test(editableOrder.phoneNumber.trim())) {
-                    errors.phoneNumber = 'Số điện thoại phải có 10-11 chữ số';
-                    isValid = false;
+                } else {
+                    // Regex để validate số điện thoại Việt Nam
+                    const PHONE_REGEX = /^(0|\+84)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$/;
+                    const phone = editableOrder.phoneNumber.replace(/[\s\-\(\)\.]/g, '').trim();
+                    if (!PHONE_REGEX.test(phone)) {
+                        errors.phoneNumber = 'Số điện thoại không đúng định dạng Việt Nam (VD: 0987654321 hoặc +84987654321)';
+                        isValid = false;
+                    }
                 }
                 
                 set({ validationErrors: errors });

@@ -73,6 +73,11 @@ export default function Page() {
     const [editData, setEditData] = useState<UserUpdateData | null>(null);
     const [updating, setUpdating] = useState<boolean>(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
+    const [phoneError, setPhoneError] = useState<string | null>(null);
+    const [updateError, setUpdateError] = useState<string | null>(null);
+
+    // Regex pattern cho số điện thoại Việt Nam
+    const PHONE_REGEX = /^(0|\+84)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$/;
 
     const fetchUserByKeycloakId = async (keycloakId: string): Promise<AppUser> => {
         const response = await fetch(`http://localhost:8080/api/users/keycloak-user/${keycloakId}`, {
@@ -118,17 +123,39 @@ export default function Page() {
             body: JSON.stringify(updateData),
         });
 
-        if (!response.ok) {
+        let apiResponse: ApiResponse;
+        
+        try {
+            apiResponse = await response.json();
+        } catch (parseError) {
+            // Nếu không parse được JSON, tạo response lỗi
             throw new Error(`Lỗi API: ${response.status} - ${response.statusText}`);
         }
 
-        const apiResponse: ApiResponse = await response.json();
+        if (!response.ok) {
+            // Xử lý các loại lỗi cụ thể
+            if (response.status === 409 || (apiResponse.message && apiResponse.message.toLowerCase().includes('phone'))) {
+                throw new Error('Số điện thoại này đã được sử dụng bởi tài khoản khác. Vui lòng sử dụng số điện thoại khác.');
+            } else if (response.status === 404) {
+                throw new Error('Không tìm thấy người dùng để cập nhật.');
+            } else if (response.status === 400) {
+                throw new Error(apiResponse.message || 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin.');
+            } else {
+                throw new Error(apiResponse.message || apiResponse.error || `Lỗi API: ${response.status} - ${response.statusText}`);
+            }
+        }
         
         if (apiResponse.status < 200 || apiResponse.status >= 300) {
+            if (apiResponse.message && apiResponse.message.toLowerCase().includes('phone')) {
+                throw new Error('Số điện thoại này đã được sử dụng bởi tài khoản khác. Vui lòng sử dụng số điện thoại khác.');
+            }
             throw new Error(apiResponse.message || apiResponse.error || 'Có lỗi xảy ra khi cập nhật thông tin');
         }
 
         if (apiResponse.error) {
+            if (apiResponse.error.toLowerCase().includes('phone')) {
+                throw new Error('Số điện thoại này đã được sử dụng bởi tài khoản khác. Vui lòng sử dụng số điện thoại khác.');
+            }
             throw new Error(apiResponse.error);
         }
 
@@ -206,21 +233,32 @@ export default function Page() {
         setIsEditing(false);
         setEditData(null);
         setUploadError(null);
+        setPhoneError(null);
+        setUpdateError(null);
     };
 
     const handleSaveEdit = async () => {
         if (!editData) return;
 
+        // Validate số điện thoại trước khi lưu
+        if (editData.phoneNumber && editData.phoneNumber.trim() !== '' && !validatePhoneNumber(editData.phoneNumber)) {
+            setPhoneError('Số điện thoại không hợp lệ. Vui lòng nhập đúng định dạng.');
+            return;
+        }
+
         setUpdating(true);
+        setUpdateError(null);
         try {
             const updatedUser = await updateUserProfile(editData);
             setUser(updatedUser);
             setIsEditing(false);
             setEditData(null);
             setUploadError(null);
+            setPhoneError(null);
+            setUpdateError(null);
         } catch (err: any) {
             console.error("Lỗi khi cập nhật:", err);
-            setError(err.message || "Không thể cập nhật thông tin. Vui lòng thử lại.");
+            setUpdateError(err.message || "Không thể cập nhật thông tin. Vui lòng thử lại.");
         } finally {
             setUpdating(false);
         }
@@ -229,6 +267,22 @@ export default function Page() {
     const handleInputChange = (field: keyof UserUpdateData, value: string | boolean) => {
         if (editData) {
             setEditData(prev => prev ? { ...prev, [field]: value } : null);
+            
+            // Xóa thông báo lỗi cập nhật khi người dùng thay đổi dữ liệu
+            if (updateError) {
+                setUpdateError(null);
+            }
+            
+            // Validate số điện thoại real-time
+            if (field === 'phoneNumber' && typeof value === 'string') {
+                if (value.trim() === '') {
+                    setPhoneError(null);
+                } else if (!validatePhoneNumber(value)) {
+                    setPhoneError('Số điện thoại không hợp lệ. Định dạng: 0xxxxxxxxx hoặc +84xxxxxxxxx');
+                } else {
+                    setPhoneError(null);
+                }
+            }
         }
     };
 
@@ -242,6 +296,24 @@ export default function Page() {
             setUploadError("Có lỗi xảy ra trong quá trình upload ảnh");
             console.error("Lỗi upload:", result);
         }
+    };
+
+    const validatePhoneNumber = (phone: string): boolean => {
+        return PHONE_REGEX.test(phone);
+    };
+
+    const handleViewOrders = () => {
+        if (!user?.phoneNumber || user.phoneNumber.trim() === '') {
+            alert('Bạn cần cập nhật số điện thoại trước khi có thể xem đơn hàng!');
+            return;
+        }
+        
+        if (!validatePhoneNumber(user.phoneNumber)) {
+            alert('Số điện thoại không hợp lệ! Vui lòng cập nhật số điện thoại đúng định dạng.');
+            return;
+        }
+        
+        router.push('/user_info/order');
     };
 
     if (status === 'loading' || loading) {
@@ -315,12 +387,51 @@ export default function Page() {
                         Quản lý địa chỉ giao hàng
                     </Button>
                     <Button
-                        className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-                        onClick={() => router.push('/user_info/order')}
+                        className={`px-4 py-2 rounded-lg transition-colors ${
+                            !user?.phoneNumber || user.phoneNumber.trim() === '' || !validatePhoneNumber(user.phoneNumber)
+                                ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                                : 'bg-green-500 text-white hover:bg-green-600'
+                        }`}
+                        onClick={handleViewOrders}
+                        disabled={!user?.phoneNumber || user.phoneNumber.trim() === '' || !validatePhoneNumber(user.phoneNumber)}
                     >
                         Đơn hàng của tôi
                     </Button>
                 </div>
+                
+                {/* Hiển thị lỗi cập nhật */}
+                {updateError && (
+                    <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
+                        <div className="flex items-center">
+                            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                            <p><strong>Lỗi:</strong> {updateError}</p>
+                        </div>
+                    </div>
+                )}
+                
+                {/* Thông báo yêu cầu số điện thoại */}
+                {(!user?.phoneNumber || user.phoneNumber.trim() === '' || !validatePhoneNumber(user.phoneNumber)) && (
+                    <div className="mt-4 p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded-md">
+                        <div className="flex items-center">
+                            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                            <p>
+                                <strong>Lưu ý:</strong> 
+                                {!user?.phoneNumber || user.phoneNumber.trim() === '' 
+                                    ? ' Bạn cần cập nhật số điện thoại để có thể xem đơn hàng của mình.'
+                                    : ' Số điện thoại hiện tại không hợp lệ. Vui lòng cập nhật số điện thoại đúng định dạng để có thể xem đơn hàng.'
+                                }
+                            </p>
+                        </div>
+                        <div className="mt-2 text-sm">
+                            <p><strong>Định dạng hợp lệ:</strong> 0xxxxxxxxx hoặc +84xxxxxxxxx</p>
+                            <p><strong>Ví dụ:</strong> 0912345678, +84912345678</p>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="flex flex-col lg:flex-row gap-6">
@@ -401,15 +512,40 @@ export default function Page() {
                         <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                             <span className="font-semibold text-gray-600 dark:text-gray-300 block mb-1">Số điện thoại:</span>
                             {isEditing ? (
-                                <input
-                                    type="tel"
-                                    value={editData?.phoneNumber || ''}
-                                    onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
-                                    placeholder="Nhập số điện thoại"
-                                />
+                                <div>
+                                    <input
+                                        type="tel"
+                                        value={editData?.phoneNumber || ''}
+                                        onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 dark:bg-gray-600 dark:text-white ${
+                                            phoneError 
+                                                ? 'border-red-500 focus:ring-red-500 dark:border-red-400' 
+                                                : 'border-gray-300 focus:ring-blue-500 dark:border-gray-500'
+                                        }`}
+                                        placeholder="Nhập số điện thoại (VD: 0123456789)"
+                                    />
+                                    {phoneError && (
+                                        <p className="text-red-500 text-sm mt-1">{phoneError}</p>
+                                    )}
+                                    <p className="text-gray-500 text-xs mt-1">
+                                        Định dạng hợp lệ: 0xxxxxxxxx hoặc +84xxxxxxxxx
+                                    </p>
+                                </div>
                             ) : (
-                                <span className="text-gray-800 dark:text-white">{user.phoneNumber || 'Chưa cập nhật'}</span>
+                                <div>
+                                    <span className={`text-gray-800 dark:text-white ${
+                                        user.phoneNumber && !validatePhoneNumber(user.phoneNumber) 
+                                            ? 'text-red-600 dark:text-red-400' 
+                                            : ''
+                                    }`}>
+                                        {user.phoneNumber || 'Chưa cập nhật'}
+                                    </span>
+                                    {user.phoneNumber && !validatePhoneNumber(user.phoneNumber) && (
+                                        <p className="text-red-500 text-xs mt-1">
+                                            Số điện thoại không hợp lệ
+                                        </p>
+                                    )}
+                                </div>
                             )}
                         </div>
                     </div>

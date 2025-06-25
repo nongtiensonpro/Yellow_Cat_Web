@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import org.yellowcat.backend.product.order.dto.OrderDetailProjection;
 import org.yellowcat.backend.product.order.dto.OrderDetailResponse;
 import org.yellowcat.backend.product.order.dto.OrderResponse;
+import org.yellowcat.backend.product.order.dto.OrderWithStaffProjection;
 
 import java.util.List;
 
@@ -72,6 +73,11 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
                     "WHERE o.order_code = :orderCode " +
                     "ORDER BY o.order_date DESC")
     OrderResponse findOrderByOrderCodeOld(@Param("orderCode") String orderCode);
+
+    // Query đơn giản để lấy app_user_id từ order
+    @Query(nativeQuery = true,
+            value = "SELECT o.app_user_id FROM orders o WHERE o.order_code = :orderCode")
+    Integer findAppUserIdByOrderCode(@Param("orderCode") String orderCode);
 
     @Modifying
     @Transactional
