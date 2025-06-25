@@ -8,14 +8,23 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.yellowcat.backend.product.order.dto.OrderDetailProjection;
+import org.yellowcat.backend.product.order.dto.OrderDetailResponse;
 import org.yellowcat.backend.product.order.dto.OrderResponse;
+
+import java.util.List;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Integer> {
     @Query("SELECT o FROM Order o WHERE o.orderId = :orderId")
     Order findByIdFetchAll(@Param("orderId") Integer orderId);
 
-    @Query("SELECT o FROM Order o LEFT JOIN FETCH o.payments WHERE o.orderId = :orderId")
+    @Query("SELECT o FROM Order o " +
+           "LEFT JOIN FETCH o.payments " +
+           "LEFT JOIN FETCH o.user " +
+           "LEFT JOIN FETCH o.shippingAddress " +
+           "LEFT JOIN FETCH o.shippingMethod " +
+           "WHERE o.orderId = :orderId")
     Order findByIdWithPayments(@Param("orderId") Integer orderId);
 
     @Query(nativeQuery = true,
@@ -79,4 +88,88 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
             @Param("orderCode") String orderCode,
             @Param("appUserId") Integer appUserId
     );
+
+    @Query(nativeQuery = true,
+            value = "SELECT " +
+                    "o.order_id AS orderId, " +
+                    "o.order_code AS orderCode, " +
+                    "o.order_date AS orderDate, " +
+                    "o.order_status AS orderStatus, " +
+                    "o.customer_name AS customerName, " +
+                    "o.phone_number AS phoneNumber, " +
+                    "o.final_amount AS finalAmount, " +
+                    "o.sub_total_amount AS subTotalAmount, " +
+                    "o.shipping_fee AS shippingFee, " +
+                    "o.discount_amount AS discountAmount, " +
+                    "sm.method_name AS shippingMethod, " +
+                    "a.recipient_name AS recipientName, " +
+                    "CASE WHEN a.street_address IS NOT NULL " +
+                    "     THEN CONCAT(a.street_address, ', ', a.ward_commune, ', ', a.district, ', ', a.city_province) " +
+                    "     ELSE NULL END AS fullAddress, " +
+                    "u.email AS email, " +
+                    "u.full_name AS fullName, " +
+                    "o.customer_notes AS customerNotes " +
+                    "FROM orders o " +
+                    "LEFT JOIN app_users u ON o.app_user_id = u.app_user_id " +
+                    "LEFT JOIN shipping_methods sm ON o.shipping_method_id = sm.shipping_method_id " +
+                    "LEFT JOIN addresses a ON o.shipping_address_id = a.address_id " +
+                    "WHERE o.phone_number = :phoneNumber " +
+                    "ORDER BY o.order_date DESC")
+    List<OrderDetailProjection> findOrdersByPhoneNumber(@Param("phoneNumber") String phoneNumber);
+
+    @Query(nativeQuery = true,
+            value = "SELECT " +
+                    "o.order_id AS orderId, " +
+                    "o.order_code AS orderCode, " +
+                    "o.order_date AS orderDate, " +
+                    "o.order_status AS orderStatus, " +
+                    "o.customer_name AS customerName, " +
+                    "o.phone_number AS phoneNumber, " +
+                    "o.final_amount AS finalAmount, " +
+                    "o.sub_total_amount AS subTotalAmount, " +
+                    "o.shipping_fee AS shippingFee, " +
+                    "o.discount_amount AS discountAmount, " +
+                    "sm.method_name AS shippingMethod, " +
+                    "a.recipient_name AS recipientName, " +
+                    "CASE WHEN a.street_address IS NOT NULL " +
+                    "     THEN CONCAT(a.street_address, ', ', a.ward_commune, ', ', a.district, ', ', a.city_province) " +
+                    "     ELSE NULL END AS fullAddress, " +
+                    "u.email AS email, " +
+                    "u.full_name AS fullName, " +
+                    "o.customer_notes AS customerNotes " +
+                    "FROM orders o " +
+                    "LEFT JOIN app_users u ON o.app_user_id = u.app_user_id " +
+                    "LEFT JOIN shipping_methods sm ON o.shipping_method_id = sm.shipping_method_id " +
+                    "LEFT JOIN addresses a ON o.shipping_address_id = a.address_id " +
+                    "WHERE u.email = :email " +
+                    "ORDER BY o.order_date DESC")
+    List<OrderDetailProjection> findOrdersByEmail(@Param("email") String email);
+
+    @Query(nativeQuery = true,
+            value = "SELECT " +
+                    "o.order_id AS orderId, " +
+                    "o.order_code AS orderCode, " +
+                    "o.order_date AS orderDate, " +
+                    "o.order_status AS orderStatus, " +
+                    "o.customer_name AS customerName, " +
+                    "o.phone_number AS phoneNumber, " +
+                    "o.final_amount AS finalAmount, " +
+                    "o.sub_total_amount AS subTotalAmount, " +
+                    "o.shipping_fee AS shippingFee, " +
+                    "o.discount_amount AS discountAmount, " +
+                    "sm.method_name AS shippingMethod, " +
+                    "a.recipient_name AS recipientName, " +
+                    "CASE WHEN a.street_address IS NOT NULL " +
+                    "     THEN CONCAT(a.street_address, ', ', a.ward_commune, ', ', a.district, ', ', a.city_province) " +
+                    "     ELSE NULL END AS fullAddress, " +
+                    "u.email AS email, " +
+                    "u.full_name AS fullName, " +
+                    "o.customer_notes AS customerNotes " +
+                    "FROM orders o " +
+                    "LEFT JOIN app_users u ON o.app_user_id = u.app_user_id " +
+                    "LEFT JOIN shipping_methods sm ON o.shipping_method_id = sm.shipping_method_id " +
+                    "LEFT JOIN addresses a ON o.shipping_address_id = a.address_id " +
+                    "WHERE (o.phone_number = :searchValue OR u.email = :searchValue) " +
+                    "ORDER BY o.order_date DESC")
+    List<OrderDetailProjection> findOrdersByPhoneNumberOrEmail(@Param("searchValue") String searchValue);
 }

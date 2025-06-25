@@ -12,9 +12,13 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.yellowcat.backend.common.config_api.response.PageResponse;
 import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
+import org.yellowcat.backend.product.order.dto.OrderDetailResponse;
+import org.yellowcat.backend.product.order.dto.OrderDetailWithItemsResponse;
 import org.yellowcat.backend.product.order.dto.OrderResponse;
 import org.yellowcat.backend.product.order.dto.OrderUpdateRequest;
 import org.yellowcat.backend.product.order.dto.OrderUpdateResponse;
+
+import java.util.List;
 
 import java.util.UUID;
 
@@ -61,6 +65,7 @@ public class OrderController {
     @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
     public ResponseEntity<?> updateOrder(@RequestBody OrderUpdateRequest request) {
         OrderUpdateResponse order = orderService.updateOrder(request);
+        System.out.println("=== GET /api/orders" + request.getOrderId() + " called ===");
         return ResponseEntityBuilder.success(order);
     }
 
@@ -163,6 +168,120 @@ public class OrderController {
             System.err.println("Error checking in cash payment: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "Failed to checkin cash payment: ", e.getMessage());
+        }
+    }
+
+    // Endpoint để tìm kiếm đơn hàng theo số điện thoại
+    @GetMapping("/search/phone")
+    @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
+    public ResponseEntity<?> getOrdersByPhoneNumber(@RequestParam String phoneNumber) {
+        System.out.println("=== GET /api/orders/search/phone called with phoneNumber: " + phoneNumber + " ===");
+        try {
+            List<OrderDetailResponse> orders = orderService.findOrdersByPhoneNumber(phoneNumber);
+            
+            if (orders.isEmpty()) {
+                return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng nào với số điện thoại: ", phoneNumber);
+            }
+            
+            return ResponseEntityBuilder.success(orders);
+        } catch (Exception e) {
+            System.err.println("Error searching orders by phone number: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi khi tìm kiếm đơn hàng: ", e.getMessage());
+        }
+    }
+
+    // Endpoint để tìm kiếm đơn hàng theo email
+    @GetMapping("/search/email")
+    @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
+    public ResponseEntity<?> getOrdersByEmail(@RequestParam String email) {
+        System.out.println("=== GET /api/orders/search/email called with email: " + email + " ===");
+        try {
+            List<OrderDetailResponse> orders = orderService.findOrdersByEmail(email);
+            
+            if (orders.isEmpty()) {
+                return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng nào với email: ", email);
+            }
+            
+            return ResponseEntityBuilder.success(orders);
+        } catch (Exception e) {
+            System.err.println("Error searching orders by email: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi khi tìm kiếm đơn hàng: ", e.getMessage());
+        }
+    }
+
+    // Endpoint để tìm kiếm đơn hàng theo số điện thoại hoặc email (linh hoạt)
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
+    public ResponseEntity<?> getOrdersByPhoneNumberOrEmail(@RequestParam String searchValue) {
+        System.out.println("=== GET /api/orders/search called with searchValue: " + searchValue + " ===");
+        try {
+            List<OrderDetailResponse> orders = orderService.findOrdersByPhoneNumberOrEmail(searchValue);
+            
+            if (orders.isEmpty()) {
+                return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng nào với thông tin: ", searchValue);
+            }
+            
+            return ResponseEntityBuilder.success(orders);
+        } catch (Exception e) {
+            System.err.println("Error searching orders by phone number or email: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi khi tìm kiếm đơn hàng: ", e.getMessage());
+        }
+    }
+
+    // Endpoint để lấy chi tiết đơn hàng kèm order items theo mã đơn hàng
+    @GetMapping("/detail/{orderCode}")
+    @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
+    public ResponseEntity<?> getOrderDetailWithItems(@PathVariable String orderCode) {
+        System.out.println("=== GET /api/orders/detail/" + orderCode + " called ===");
+        try {
+            OrderDetailWithItemsResponse orderDetail = orderService.getOrderDetailByCode(orderCode);
+            
+            if (orderDetail == null) {
+                return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng với mã: ", orderCode);
+            }
+            
+            return ResponseEntityBuilder.success(orderDetail);
+        } catch (Exception e) {
+            System.err.println("Error getting order detail with items: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi khi lấy chi tiết đơn hàng: ", e.getMessage());
+        }
+    }
+
+    // Endpoint public để user có thể xem chi tiết đơn hàng của chính họ (không cần quyền Admin/Staff)
+    @GetMapping("/public/detail/{orderCode}")
+    public ResponseEntity<?> getOrderDetailPublic(@PathVariable String orderCode,
+                                                 @AuthenticationPrincipal Jwt jwt) {
+        System.out.println("=== GET /api/orders/public/detail/" + orderCode + " called ===");
+        try {
+            OrderDetailWithItemsResponse orderDetail = orderService.getOrderDetailByCode(orderCode);
+            
+            if (orderDetail == null) {
+                return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng với mã: ", orderCode);
+            }
+            
+            // Kiểm tra xem user hiện tại có quyền xem đơn hàng này không (optional - có thể bỏ qua nếu muốn public)
+            if (jwt != null) {
+                String userEmail = jwt.getClaimAsString("email");
+                String userPhone = jwt.getClaimAsString("phone_number");
+                
+                // Kiểm tra xem order có thuộc về user hiện tại không
+                boolean hasAccess = (orderDetail.getEmail() != null && orderDetail.getEmail().equals(userEmail)) ||
+                                  (orderDetail.getPhoneNumber() != null && orderDetail.getPhoneNumber().equals(userPhone));
+                
+                if (!hasAccess) {
+                    return ResponseEntityBuilder.error(HttpStatus.FORBIDDEN, "Bạn không có quyền xem đơn hàng này", "");
+                }
+            }
+            
+            return ResponseEntityBuilder.success(orderDetail);
+        } catch (Exception e) {
+            System.err.println("Error getting public order detail: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi khi lấy chi tiết đơn hàng: ", e.getMessage());
         }
     }
 }

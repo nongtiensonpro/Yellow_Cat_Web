@@ -314,6 +314,12 @@ export default function Page() {
                     >
                         Quản lý địa chỉ giao hàng
                     </Button>
+                    <Button
+                        className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                        onClick={() => router.push('/user_info/order')}
+                    >
+                        Đơn hàng của tôi
+                    </Button>
                 </div>
             </div>
 

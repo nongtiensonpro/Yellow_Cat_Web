@@ -9,9 +9,14 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.yellowcat.backend.product.order.dto.OrderDetailProjection;
+import org.yellowcat.backend.product.order.dto.OrderDetailResponse;
+import org.yellowcat.backend.product.order.dto.OrderDetailWithItemsResponse;
 import org.yellowcat.backend.product.order.dto.OrderResponse;
 import org.yellowcat.backend.product.order.dto.OrderUpdateRequest;
 import org.yellowcat.backend.product.order.dto.OrderUpdateResponse;
+import org.yellowcat.backend.product.orderItem.dto.OrderItemDetailProjection;
+import org.yellowcat.backend.product.orderItem.dto.OrderItemDetailResponse;
 import org.yellowcat.backend.product.order.mapper.OrderMapper;
 import org.yellowcat.backend.product.orderItem.OrderItem;
 import org.yellowcat.backend.product.orderItem.OrderItemRepository;
@@ -464,6 +469,197 @@ public class OrderService {
         if (rows == 0) {
             throw new EntityNotFoundException("Order not found: " + orderCode);
         }
+    }
+
+    // Method để tìm kiếm đơn hàng theo số điện thoại
+    public List<OrderDetailResponse> findOrdersByPhoneNumber(String phoneNumber) {
+        System.out.println("🔍 Tìm kiếm đơn hàng theo số điện thoại: " + phoneNumber);
+        List<OrderDetailProjection> projections = orderRepository.findOrdersByPhoneNumber(phoneNumber);
+        return projections.stream().map(this::convertToOrderDetailResponse).toList();
+    }
+
+    // Method để tìm kiếm đơn hàng theo email
+    public List<OrderDetailResponse> findOrdersByEmail(String email) {
+        System.out.println("🔍 Tìm kiếm đơn hàng theo email: " + email);
+        List<OrderDetailProjection> projections = orderRepository.findOrdersByEmail(email);
+        return projections.stream().map(this::convertToOrderDetailResponse).toList();
+    }
+
+    // Method để tìm kiếm đơn hàng theo số điện thoại hoặc email
+    public List<OrderDetailResponse> findOrdersByPhoneNumberOrEmail(String searchValue) {
+        System.out.println("🔍 Tìm kiếm đơn hàng theo số điện thoại hoặc email: " + searchValue);
+        List<OrderDetailProjection> projections = orderRepository.findOrdersByPhoneNumberOrEmail(searchValue);
+        return projections.stream().map(this::convertToOrderDetailResponse).toList();
+    }
+
+    // Method để lấy order detail với order items theo order code
+    public OrderDetailWithItemsResponse getOrderDetailWithItems(String orderCode) {
+        System.out.println("🔍 Lấy chi tiết đơn hàng với order items cho orderCode: " + orderCode);
+        
+        // Lấy thông tin order
+        OrderDetailProjection orderProjection = orderRepository.findOrdersByPhoneNumberOrEmail(orderCode)
+                .stream()
+                .filter(order -> order.getOrderCode().equals(orderCode))
+                .findFirst()
+                .orElse(null);
+        
+        if (orderProjection == null) {
+            // Thử tìm theo cách khác nếu không tìm thấy
+            List<OrderDetailProjection> allOrders = orderRepository.findOrdersByPhoneNumberOrEmail("");
+            orderProjection = allOrders.stream()
+                    .filter(order -> order.getOrderCode().equals(orderCode))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Order not found with orderCode: " + orderCode));
+        }
+        
+        // Lấy order items
+        List<OrderItemDetailProjection> itemProjections = orderItemRepository.findOrderItemsDetailByOrderCode(orderCode);
+        List<OrderItemDetailResponse> orderItems = itemProjections.stream()
+                .map(this::convertToOrderItemDetailResponse)
+                .toList();
+        
+        // Tính toán thống kê
+        Integer totalItems = orderItems.size();
+        Integer totalQuantity = orderItems.stream()
+                .mapToInt(OrderItemDetailResponse::getQuantity)
+                .sum();
+        
+        // Tạo response
+        OrderDetailWithItemsResponse response = new OrderDetailWithItemsResponse();
+        response.setOrderId(orderProjection.getOrderId());
+        response.setOrderCode(orderProjection.getOrderCode());
+        response.setOrderDate(orderProjection.getOrderDate());
+        response.setOrderStatus(orderProjection.getOrderStatus());
+        response.setCustomerName(orderProjection.getCustomerName());
+        response.setPhoneNumber(orderProjection.getPhoneNumber());
+        response.setFinalAmount(orderProjection.getFinalAmount());
+        response.setSubTotalAmount(orderProjection.getSubTotalAmount());
+        response.setShippingFee(orderProjection.getShippingFee());
+        response.setDiscountAmount(orderProjection.getDiscountAmount());
+        response.setShippingMethod(orderProjection.getShippingMethod());
+        response.setRecipientName(orderProjection.getRecipientName());
+        response.setFullAddress(orderProjection.getFullAddress());
+        response.setEmail(orderProjection.getEmail());
+        response.setFullName(orderProjection.getFullName());
+        response.setCustomerNotes(orderProjection.getCustomerNotes());
+        response.setOrderItems(orderItems);
+        response.setTotalItems(totalItems);
+        response.setTotalQuantity(totalQuantity);
+        
+        System.out.println("✅ Tìm thấy đơn hàng với " + totalItems + " sản phẩm, tổng " + totalQuantity + " số lượng");
+        
+        return response;
+    }
+    
+    // Method đơn giản hơn để lấy order detail với order items theo order code
+    @Transactional(readOnly = true)
+    public OrderDetailWithItemsResponse getOrderDetailByCode(String orderCode) {
+        System.out.println("🔍 Lấy chi tiết đơn hàng cho orderCode: " + orderCode);
+        
+        // Lấy thông tin order từ database
+        OrderResponse orderResponse = orderRepository.findOrderByOrderCodeOld(orderCode);
+        if (orderResponse == null) {
+            throw new IllegalArgumentException("Order not found with orderCode: " + orderCode);
+        }
+        
+        // Lấy thông tin đầy đủ của order bằng cách query lại
+        Order order = orderRepository.findByIdWithPayments(orderResponse.getOrderId());
+        if (order == null) {
+            throw new IllegalArgumentException("Order not found with orderCode: " + orderCode);
+        }
+        
+        // Lấy order items với chi tiết
+        List<OrderItemDetailProjection> itemProjections = orderItemRepository.findOrderItemsDetailByOrderCode(orderCode);
+        List<OrderItemDetailResponse> orderItems = itemProjections.stream()
+                .map(this::convertToOrderItemDetailResponse)
+                .toList();
+        
+        // Tính toán thống kê
+        Integer totalItems = orderItems.size();
+        Integer totalQuantity = orderItems.stream()
+                .mapToInt(OrderItemDetailResponse::getQuantity)
+                .sum();
+        
+        // Tạo response từ Order entity và order items
+        OrderDetailWithItemsResponse response = new OrderDetailWithItemsResponse();
+        response.setOrderId(order.getOrderId());
+        response.setOrderCode(order.getOrderCode());
+        response.setOrderDate(order.getOrderDate());
+        response.setOrderStatus(order.getOrderStatus());
+        response.setCustomerName(order.getCustomerName());
+        response.setPhoneNumber(order.getPhoneNumber());
+        response.setFinalAmount(order.getFinalAmount());
+        response.setSubTotalAmount(order.getSubTotalAmount());
+        response.setShippingFee(order.getShippingFee());
+        response.setDiscountAmount(order.getDiscountAmount());
+        
+        // Lấy thông tin từ relations
+        response.setShippingMethod(order.getShippingMethod() != null ? order.getShippingMethod().getMethodName() : null);
+        response.setRecipientName(order.getShippingAddress() != null ? order.getShippingAddress().getRecipientName() : null);
+        response.setFullAddress(order.getShippingAddress() != null ? 
+            String.format("%s, %s, %s, %s", 
+                order.getShippingAddress().getStreetAddress(),
+                order.getShippingAddress().getWardCommune(),
+                order.getShippingAddress().getDistrict(),
+                order.getShippingAddress().getCityProvince()) : null);
+        response.setEmail(order.getUser() != null ? order.getUser().getEmail() : null);
+        response.setFullName(order.getUser() != null ? order.getUser().getFullName() : null);
+        response.setCustomerNotes(order.getCustomerNotes());
+        
+        response.setOrderItems(orderItems);
+        response.setTotalItems(totalItems);
+        response.setTotalQuantity(totalQuantity);
+        
+        System.out.println("✅ Tìm thấy đơn hàng với " + totalItems + " sản phẩm, tổng " + totalQuantity + " số lượng");
+        
+        return response;
+    }
+
+    // Helper method để convert từ projection sang DTO
+    private OrderDetailResponse convertToOrderDetailResponse(OrderDetailProjection projection) {
+        return new OrderDetailResponse(
+            projection.getOrderId(),
+            projection.getOrderCode(),
+            projection.getOrderDate(),
+            projection.getOrderStatus(),
+            projection.getCustomerName(),
+            projection.getPhoneNumber(),
+            projection.getFinalAmount(),
+            projection.getSubTotalAmount(),
+            projection.getShippingFee(),
+            projection.getDiscountAmount(),
+            projection.getShippingMethod(),
+            projection.getRecipientName(),
+            projection.getFullAddress(),
+            projection.getEmail(),
+            projection.getFullName(),
+            projection.getCustomerNotes()
+        );
+    }
+
+    // Helper method để convert OrderItemDetailProjection sang OrderItemDetailResponse
+    private OrderItemDetailResponse convertToOrderItemDetailResponse(OrderItemDetailProjection projection) {
+        return new OrderItemDetailResponse(
+            projection.getOrderItemId(),
+            projection.getOrderId(),
+            projection.getQuantity(),
+            projection.getPriceAtPurchase(),
+            projection.getTotalPrice(),
+            projection.getVariantId(),
+            projection.getSku(),
+            projection.getProductName(),
+            projection.getColorName(),
+            projection.getSizeName(),
+            projection.getMaterialName(),
+            projection.getBrandName(),
+            projection.getCategoryName(),
+            projection.getTargetAudienceName(),
+            projection.getCurrentPrice(),
+            projection.getSalePrice(),
+            projection.getImageUrl(),
+            projection.getWeight(),
+            projection.getQuantityInStock()
+        );
     }
 
     // Method để debug và log thông tin thanh toán
