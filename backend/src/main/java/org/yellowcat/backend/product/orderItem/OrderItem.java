@@ -6,6 +6,7 @@ import org.yellowcat.backend.product.order.Order;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "order_items")
@@ -37,4 +38,22 @@ public class OrderItem {
 
     @Column(name = "total_price", precision = 14, scale = 2, nullable = false)
     private BigDecimal totalPrice;
+
+    @Column(name = "added_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }

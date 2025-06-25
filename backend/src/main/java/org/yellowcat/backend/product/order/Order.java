@@ -62,6 +62,9 @@ public class Order { // Tên class là Order (số ít)
     @Column(name = "order_status", nullable = false, columnDefinition = "VARCHAR(50) DEFAULT 'Pending'")
     private String orderStatus;
 
+    @Column(name = "code_order_in_ghtk", unique = true)
+    private String codeOrderInGHK;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shipping_method_id")
     private ShippingMethod shippingMethod;

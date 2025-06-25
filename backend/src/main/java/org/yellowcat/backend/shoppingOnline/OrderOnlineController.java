@@ -24,7 +24,7 @@ public class OrderOnlineController {
         try {
             Order order = orderOnlineService.createOrderFromOnlineRequest(requestDTO);
             String message = "Đơn hàng " + order.getOrderCode() + " đang chờ xét duyệt.";
-            return ResponseEntityBuilder.success(message, order);
+            return ResponseEntityBuilder.success(message, null);
         } catch (RuntimeException e) {
             return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "Tạo đơn hàng thất bại", e.getMessage());
         }
@@ -46,12 +46,12 @@ public class OrderOnlineController {
     @PatchMapping("/{orderId}/status")
     public ResponseEntity<?> changeOrderStatus(
             @PathVariable Integer orderId,
-            @RequestParam("newStatus") String newStatus) {
+            @RequestParam String newStatus) {
         try {
-            Order updatedOrder = orderOnlineService.updateOrderStatus(orderId, newStatus);
-            return ResponseEntityBuilder.success("Cập nhật trạng thái đơn hàng thành công", updatedOrder);
+            String message = orderOnlineService.updateOrderStatus(orderId, newStatus);
+            return ResponseEntity.ok(Map.of("message", message));
         } catch (RuntimeException e) {
-            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, e.getMessage(), null);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Chuyển trạng thái thất bại: " + e.getMessage()));
         }
     }
 

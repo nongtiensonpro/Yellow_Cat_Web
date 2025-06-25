@@ -17,6 +17,7 @@ import java.util.List;
 public class OrderOnlineRequestDTO {
  private List<ProductOnlineDTO> products;
  private AppUser appUser;
+ private String codeOrderInGHK;
  private Addresses shippingAddress;
  private BigDecimal shippingFee;
  private Integer payment;

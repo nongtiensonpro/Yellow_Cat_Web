@@ -33,11 +33,10 @@ public class GHTKController {
             @RequestParam String province,
             @RequestParam String district,
             @RequestParam Double weight,
-            @RequestParam int value,
-            @RequestParam String deliver_option
+            @RequestParam int value
     ) {
 
-        ApiResponse<Integer> response = ghtkService.getShippingFee(province, district, weight, value, deliver_option);
+        ApiResponse<Integer> response = ghtkService.getShippingFee(province, district, weight, value);
 
         return ResponseEntity
                 .status(response.getStatus())

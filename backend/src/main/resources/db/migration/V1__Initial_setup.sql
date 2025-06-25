@@ -166,6 +166,7 @@ CREATE TABLE orders
     shipping_method_id  INT,
     customer_notes      TEXT,
     is_synced_to_ghtk   BOOLEAN                 DEFAULT FALSE, -- Ghi nhận đơn đã gửi lên GHTK chưa
+    code_order_in_ghtk  varchar(100),
     updated_at          TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (app_user_id) REFERENCES app_users (app_user_id) ON DELETE SET NULL,
     FOREIGN KEY (shipping_address_id) REFERENCES addresses (address_id),
@@ -181,6 +182,8 @@ CREATE TABLE order_items
     quantity          INT            NOT NULL,
     price_at_purchase NUMERIC(12, 2) NOT NULL,
     total_price       NUMERIC(14, 2) NOT NULL,
+    updated_at          TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
+    added_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders (order_id) ON DELETE CASCADE,
     FOREIGN KEY (variant_id) REFERENCES product_variants (variant_id)
 );

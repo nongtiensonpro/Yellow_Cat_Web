@@ -84,13 +84,13 @@ public class GHTKService {
 
 
 
-    public ApiResponse<Integer> getShippingFee(String province, String district, double weight, int value, String deliverOption) {
+    public ApiResponse<Integer> getShippingFee(String province, String district, double weight, int value) {
         try {
             // Nhân weight với 50 để lấy đơn vị gram
             int weightGram = (int) (weight * 50);
             String url = String.format(
-                    "https://services.giaohangtietkiem.vn/services/shipment/fee?pick_province=Hà Nội&pick_district=Cầu Giấy&province=%s&district=%s&weight=%d&value=%d&deliver_option=%s",
-                    province, district, weightGram, value, deliverOption);
+                    "https://services.giaohangtietkiem.vn/services/shipment/fee?pick_province=Hà Nội&pick_district=Cầu Giấy&province=%s&district=%s&weight=%d&value=%d",
+                    province, district, weightGram, value);
 
             HttpHeaders headers = new HttpHeaders();
             headers.set("Token", ghtkToken);
