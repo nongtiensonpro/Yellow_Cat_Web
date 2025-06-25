@@ -84,11 +84,13 @@ public class GHTKService {
 
 
 
-    public ApiResponse<Integer> getShippingFee(String province, String district, int weight, int value) {
+    public ApiResponse<Integer> getShippingFee(String province, String district, double weight, int value, String deliverOption) {
         try {
+            // Nhân weight với 50 để lấy đơn vị gram
+            int weightGram = (int) (weight * 50);
             String url = String.format(
-                    "https://services.giaohangtietkiem.vn/services/shipment/fee?pick_province=Hà Nội&pick_district=Cầu Giấy&province=%s&district=%s&weight=%d&value=%d",
-                    province, district, weight, value);
+                    "https://services.giaohangtietkiem.vn/services/shipment/fee?pick_province=Hà Nội&pick_district=Cầu Giấy&province=%s&district=%s&weight=%d&value=%d&deliver_option=%s",
+                    province, district, weightGram, value, deliverOption);
 
             HttpHeaders headers = new HttpHeaders();
             headers.set("Token", ghtkToken);
@@ -117,6 +119,7 @@ public class GHTKService {
             return ApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi xử lý phí vận chuyển", e.getMessage());
         }
     }
+
 
 
     public ApiResponse<String> cancelOrder(String trackingOrder) {

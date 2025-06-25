@@ -123,7 +123,7 @@ CREATE TABLE product_variants
 CREATE TABLE addresses
 (
     address_id     SERIAL PRIMARY KEY,
-    app_user_id    Integer          NOT NULL,
+    app_user_id    Integer     ,
     recipient_name VARCHAR(255) NOT NULL,
     phone_number   VARCHAR(20)  NOT NULL,
     street_address VARCHAR(255) NOT NULL,
