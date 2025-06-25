@@ -500,16 +500,16 @@ INSERT INTO promotions
 (app_user_id, promotion_code, promotion_name, description, discount_type, discount_value, start_date, end_date,
  is_active)
 VALUES (1, 'NEWUSER10', 'Giảm giá 10% cho khách hàng mới', 'Chào mừng khách hàng mới với ưu đãi giảm 10%', 'percentage',
-        10.00, '2024-01-01 00:00:00', '2024-12-31 23:59:59', TRUE),
+        10.00, '2025-01-01 00:00:00', '2025-12-31 23:59:59', TRUE),
        (1, 'SALE50K', 'Giảm 50K cho đơn hàng trên 1 triệu', 'Giảm giá cố định 50K', 'fixed_amount', 50000.00,
-        '2024-01-01 00:00:00', '2024-06-30 23:59:59', TRUE),
-       (1, 'SUMMER2024', 'Sale mùa hè 2024', 'Giảm 15% tất cả sản phẩm mùa hè', 'percentage', 15.00,
-        '2024-06-01 00:00:00',
-        '2024-08-31 23:59:59', TRUE),
+        '2025-01-01 00:00:00', '2025-06-30 23:59:59', TRUE),
+       (1, 'SUMMER2025', 'Sale mùa hè 2025', 'Giảm 15% tất cả sản phẩm mùa hè', 'percentage', 15.00,
+        '2025-06-01 00:00:00', '2025-08-31 23:59:59', TRUE),
        (1, 'FREESHIP', 'Miễn phí vận chuyển', 'Miễn phí ship cho đơn hàng trên 500K', 'free_shipping', 0.00,
-        '2024-01-01 00:00:00', '2024-12-31 23:59:59', TRUE),
+        '2025-01-01 00:00:00', '2025-12-31 23:59:59', TRUE),
        (1, 'NIKE20', 'Giảm 20% sản phẩm Nike', 'Khuyến mãi đặc biệt cho thương hiệu Nike', 'percentage', 20.00,
-        '2024-02-01 00:00:00', '2024-02-29 23:59:59', TRUE);
+        '2025-02-01 00:00:00', '2025-02-28 23:59:59', TRUE);
+
 
 -- 2. Dữ liệu cho bảng promotion_products
 -- Giả sử các product_variant_id có sẵn lần lượt là 1,2,3,4

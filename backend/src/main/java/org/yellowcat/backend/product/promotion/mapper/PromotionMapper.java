@@ -17,3 +17,5 @@ public interface PromotionMapper {
     @Mapping(target = "id", ignore = true)
     void updatePromotionFromRequest(@MappingTarget Promotion promotion, PromotionRequest request);
 }
+
+
