@@ -5,6 +5,7 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.yellowcat.backend.product.productvariant.dto.ProductVariantFilterDTO;
+import org.yellowcat.backend.product.productvariant.dto.ProductVariantHistoryDto;
 import org.yellowcat.backend.product.productvariant.dto.ProductVariantListResponse;
 import org.yellowcat.backend.product.productvariant.mapper.ProductVariantMapper;
 import org.yellowcat.backend.product.productvariant.specification.ProductVariantSpecification;
@@ -17,6 +18,16 @@ import java.util.List;
 public class ProductVariantService {
     private final ProductVariantRepository productVariantRepository;
     private final ProductVariantMapper productVariantMapper;
+    private final ProductVariantHistoryRepository historyRepository;
+
+    public List<ProductVariantHistoryDto> getHistory(int variantId) {
+        return historyRepository.findByVariantId(variantId);
+    }
+
+    @Transactional
+    public void rollback(int historyId) {
+        historyRepository.rollbackToHistory(historyId);
+    }
 
     @Transactional(readOnly = true)
     public Page<ProductVariantFilterDTO> searchPaged(
