@@ -69,11 +69,12 @@ public class SecurityConfig {
                                 requestMatchers(HttpMethod.GET,
                                 "/api/products",
                                 "/api/products/{id}",
-                                "/api/product-variants/**"
+                                "/api/product-variants"
                         ).permitAll().
                         // Product private API
                                 requestMatchers(
-                                "/api/products/**")
+                                "/api/products/**",
+                                "/api/product-variants/**")
                         .hasAnyAuthority("Admin_Web").
 
                         // Customers public API

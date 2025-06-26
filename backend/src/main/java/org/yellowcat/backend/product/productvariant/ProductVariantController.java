@@ -5,23 +5,47 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 import org.yellowcat.backend.common.config_api.response.ApiResponse;
 import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
 import org.yellowcat.backend.product.productvariant.dto.ProductVariantFilterDTO;
+import org.yellowcat.backend.product.productvariant.dto.ProductVariantHistoryDto;
 import org.yellowcat.backend.product.productvariant.dto.ProductVariantListResponse;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/product-variants")
 @RequiredArgsConstructor
 public class ProductVariantController {
     private final ProductVariantService variantService;
+
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    @GetMapping("/history/{variantId}")
+    public ResponseEntity<List<ProductVariantHistoryDto>> getHistory(
+            @PathVariable int variantId
+    ) {
+        List<ProductVariantHistoryDto> list = variantService.getHistory(variantId);
+        return ResponseEntity.ok(list);
+    }
+
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    @PostMapping("/rollback/{historyId}")
+    public ResponseEntity<?> rollback(
+            @PathVariable Integer historyId,
+            @RequestBody Map<String, Integer> body
+    ) {
+        if (historyId == null) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(Map.of("error", "history_id is required"));
+        }
+        variantService.rollback(historyId);
+        return ResponseEntity.ok(Map.of("success", true));
+    }
 
     @GetMapping("/search-paged")
     public ResponseEntity<ApiResponse<Page<ProductVariantFilterDTO>>> searchPage(
