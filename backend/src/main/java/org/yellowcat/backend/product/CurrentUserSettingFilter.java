@@ -32,6 +32,13 @@ public class CurrentUserSettingFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return "POST".equalsIgnoreCase(request.getMethod())
+                && path.equals("/api/users/me");
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
             throws ServletException, IOException {
 
