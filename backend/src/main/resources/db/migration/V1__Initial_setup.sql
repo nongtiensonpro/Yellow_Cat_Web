@@ -1,17 +1,17 @@
 -- Bảng lưu trữ thông tin người dùng của ứng dụng, liên kết với Keycloak
 CREATE TABLE app_users
 (
-    app_user_id      SERIAL PRIMARY KEY,
-    keycloak_id      uuid,
-    username         VARCHAR(255),
-    roles            TEXT[],
-    enabled          BOOLEAN,
-    email            VARCHAR(255) UNIQUE NOT NULL,
-    full_name        VARCHAR(255),
-    phone_number     VARCHAR(20) UNIQUE,
-    avatar_url       VARCHAR(255),
-    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    app_user_id  SERIAL PRIMARY KEY,
+    keycloak_id  uuid,
+    username     VARCHAR(255),
+    roles        TEXT[],
+    enabled      BOOLEAN,
+    email        VARCHAR(255) UNIQUE NOT NULL,
+    full_name    VARCHAR(255),
+    phone_number VARCHAR(20) UNIQUE,
+    avatar_url   VARCHAR(255),
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Bảng Danh mục sản phẩm
@@ -301,6 +301,145 @@ CREATE TABLE cart_items
     UNIQUE (cart_id, variant_id)
 );
 
+-- 1. Tạo bảng lịch sử cho products
+CREATE TABLE products_history
+(
+    history_id         SERIAL PRIMARY KEY,
+    product_id         INT       NOT NULL,
+    product_name       VARCHAR(255),
+    description        TEXT,
+    category_id        INT,
+    brand_id           INT,
+    material_id        INT,
+    target_audience_id INT,
+    is_featured        BOOLEAN,
+    purchases          INT,
+    is_active          BOOLEAN,
+    thumbnail          VARCHAR(255),
+    created_at         TIMESTAMP,
+    updated_at         TIMESTAMP,
+    operation          CHAR(1)   NOT NULL, -- 'U' = UPDATE, 'D' = DELETE
+    changed_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    changed_by         TEXT               DEFAULT SESSION_USER
+);
+
+-- 2. Tạo bảng lịch sử cho product_variants
+CREATE TABLE product_variants_history
+(
+    history_id        SERIAL PRIMARY KEY,
+    variant_id        INT       NOT NULL,
+    product_id        INT,
+    sku               VARCHAR(50),
+    color_id          INT,
+    size_id           INT,
+    price             NUMERIC(12, 2),
+    sale_price        NUMERIC(12, 2),
+    quantity_in_stock INT,
+    sold              INT,
+    image_url         VARCHAR(255),
+    weight            FLOAT,
+    created_at        TIMESTAMP,
+    updated_at        TIMESTAMP,
+    operation         CHAR(1)   NOT NULL, -- 'U' = UPDATE, 'D' = DELETE
+    changed_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    changed_by        TEXT               DEFAULT SESSION_USER
+);
+
+-- Function audit cho products
+CREATE OR REPLACE FUNCTION fn_audit_products() RETURNS TRIGGER AS
+$$
+DECLARE
+    app_user TEXT := current_setting('app.current_user', true);
+BEGIN
+    IF TG_OP = 'UPDATE' THEN
+        INSERT INTO products_history (product_id, product_name, description, category_id, brand_id,
+                                      material_id, target_audience_id, is_featured, purchases, is_active,
+                                      thumbnail, created_at, updated_at,
+                                      operation, changed_at, changed_by)
+        VALUES (OLD.product_id, OLD.product_name, OLD.description, OLD.category_id, OLD.brand_id,
+                OLD.material_id, OLD.target_audience_id, OLD.is_featured, OLD.purchases, OLD.is_active,
+                OLD.thumbnail, OLD.created_at, OLD.updated_at,
+                'U', CURRENT_TIMESTAMP, COALESCE(app_user, SESSION_USER));
+        RETURN NEW;
+    ELSIF TG_OP = 'DELETE' THEN
+        INSERT INTO products_history (product_id, product_name, description, category_id, brand_id,
+                                      material_id, target_audience_id, is_featured, purchases, is_active,
+                                      thumbnail, created_at, updated_at,
+                                      operation, changed_at, changed_by)
+        VALUES (OLD.product_id, OLD.product_name, OLD.description, OLD.category_id, OLD.brand_id,
+                OLD.material_id, OLD.target_audience_id, OLD.is_featured, OLD.purchases, OLD.is_active,
+                OLD.thumbnail, OLD.created_at, OLD.updated_at,
+                'D', CURRENT_TIMESTAMP, COALESCE(app_user, SESSION_USER));
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 4. Function audit chung cho bảng product_variants
+CREATE OR REPLACE FUNCTION fn_audit_variants()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    IF TG_OP = 'UPDATE' THEN
+        INSERT INTO product_variants_history (variant_id, product_id, sku, color_id, size_id, price, sale_price,
+                                              quantity_in_stock, sold, image_url, weight, created_at, updated_at,
+                                              operation, changed_by)
+        SELECT OLD.variant_id,
+               OLD.product_id,
+               OLD.sku,
+               OLD.color_id,
+               OLD.size_id,
+               OLD.price,
+               OLD.sale_price,
+               OLD.quantity_in_stock,
+               OLD.sold,
+               OLD.image_url,
+               OLD.weight,
+               OLD.created_at,
+               OLD.updated_at,
+               'U',
+               SESSION_USER;
+        RETURN NEW;
+    ELSIF TG_OP = 'DELETE' THEN
+        INSERT INTO product_variants_history (variant_id, product_id, sku, color_id, size_id, price, sale_price,
+                                              quantity_in_stock, sold, image_url, weight, created_at, updated_at,
+                                              operation, changed_by)
+        SELECT OLD.variant_id,
+               OLD.product_id,
+               OLD.sku,
+               OLD.color_id,
+               OLD.size_id,
+               OLD.price,
+               OLD.sale_price,
+               OLD.quantity_in_stock,
+               OLD.sold,
+               OLD.image_url,
+               OLD.weight,
+               OLD.created_at,
+               OLD.updated_at,
+               'D',
+               SESSION_USER;
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Tạo trigger để gọi function trước UPDATE/DELETE
+CREATE TRIGGER trg_products_audit
+    BEFORE UPDATE OR DELETE
+    ON products
+    FOR EACH ROW
+EXECUTE FUNCTION fn_audit_products();
+
+CREATE TRIGGER trg_variants_audit
+    BEFORE UPDATE OR DELETE
+    ON product_variants
+    FOR EACH ROW
+EXECUTE FUNCTION fn_audit_variants();
+
+
 -- Thêm Index
 CREATE INDEX idx_orders_user_id ON orders (app_user_id);
 CREATE INDEX idx_product_variants_product_id ON product_variants (product_id);
@@ -409,11 +548,16 @@ VALUES
 
 -- 5. Dữ liệu cho bảng AppUsers
 INSERT INTO app_users (keycloak_id, email, full_name, phone_number, avatar_url)
-VALUES ('c56a4180-65aa-42ec-a945-5fd21dec0531', 'nguyen.van.a@email.com', 'Nguyễn Văn A', '0901234567', 'https://example.com/avatars/user1.jpg'),
-       ('c56a4180-65aa-42ec-a945-5fd21dec0532', 'tran.thi.b@email.com', 'Trần Thị B', '0902345678', 'https://example.com/avatars/user2.jpg'),
-       ('c56a4180-65aa-42ec-a945-5fd21dec0533', 'le.van.c@email.com', 'Lê Văn C', '0903456789', 'https://example.com/avatars/user3.jpg'),
-       ('c56a4180-65aa-42ec-a945-5fd21dec0534', 'pham.thi.d@email.com', 'Phạm Thị D', '0904567890', 'https://example.com/avatars/user4.jpg'),
-       ('c56a4180-65aa-42ec-a945-5fd21dec0535', 'hoang.van.e@email.com', 'Hoàng Văn E', '0905678901', 'https://example.com/avatars/user5.jpg');
+VALUES ('ab72419d-416b-4a75-8c49-f7ff012d01d9', 'nguyen.van.a@email.com', 'Nguyễn Văn A', '0901234567',
+        'https://example.com/avatars/user1.jpg'),
+       ('c56a4180-65aa-42ec-a945-5fd21dec0532', 'tran.thi.b@email.com', 'Trần Thị B', '0902345678',
+        'https://example.com/avatars/user2.jpg'),
+       ('c56a4180-65aa-42ec-a945-5fd21dec0533', 'le.van.c@email.com', 'Lê Văn C', '0903456789',
+        'https://example.com/avatars/user3.jpg'),
+       ('c56a4180-65aa-42ec-a945-5fd21dec0534', 'pham.thi.d@email.com', 'Phạm Thị D', '0904567890',
+        'https://example.com/avatars/user4.jpg'),
+       ('c56a4180-65aa-42ec-a945-5fd21dec0535', 'hoang.van.e@email.com', 'Hoàng Văn E', '0905678901',
+        'https://example.com/avatars/user5.jpg');
 
 -- 6. Dữ liệu cho bảng Addresses
 INSERT INTO addresses (app_user_id, recipient_name, phone_number, street_address, ward_commune, district, city_province,
