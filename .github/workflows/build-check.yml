@@ -1,0 +1,40 @@
+name: Build Check (FE & BE)
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Build Frontend (NextJS)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install FE dependencies
+        working-directory: ./frontend
+        run: npm install
+
+      - name: Build FE
+        working-directory: ./frontend
+        run: npm run build
+
+      # Build Backend (Spring Boot + Gradle)
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Build BE (Gradle)
+        working-directory: ./backend
+        run: ./gradlew build
