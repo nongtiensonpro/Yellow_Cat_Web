@@ -4,7 +4,7 @@ CREATE TABLE app_users
     app_user_id      SERIAL PRIMARY KEY,
     keycloak_id      uuid,
     username         VARCHAR(255),
-    email            VARCHAR(255) UNIQUE NOT NULL,
+    email            VARCHAR(255) UNIQUE,
     roles            TEXT[],
     enabled          BOOLEAN,
     full_name        VARCHAR(255),
@@ -272,7 +272,7 @@ CREATE TABLE promotion_applicables
 CREATE TABLE carts
 (
     cart_id     SERIAL PRIMARY KEY,
-    app_user_id integer UNIQUE NOT NULL,
+    app_user_id integer,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (app_user_id) REFERENCES app_users (app_user_id) ON DELETE CASCADE

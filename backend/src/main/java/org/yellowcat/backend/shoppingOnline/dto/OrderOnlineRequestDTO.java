@@ -22,4 +22,5 @@ public class OrderOnlineRequestDTO {
  private BigDecimal shippingFee;
  private Integer payment;
  private String note;
+// private Integer shippingMethodId;
 }

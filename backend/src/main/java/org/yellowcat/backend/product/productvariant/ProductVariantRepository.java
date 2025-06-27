@@ -1,7 +1,6 @@
 package org.yellowcat.backend.product.productvariant;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,7 +11,6 @@ import java.util.List;
 
 @Repository
 public interface ProductVariantRepository extends JpaRepository<ProductVariant, Integer> {
-
     @Query("select p from ProductVariant p where p.product.productId = ?1")
     List<ProductVariant> findByProductId(Integer productId);
 
@@ -43,9 +41,4 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     @Query(nativeQuery = true, value = "SELECT COUNT(DISTINCT variant_id) FROM product_variants")
     long countTotalProductVariants();
-
-    // ✅ Đặt ở đây bên trong interface
-    @Modifying
-    @Query("UPDATE ProductVariant v SET v.quantityInStock = v.quantityInStock - :qty WHERE v.variantId = :id AND v.quantityInStock >= :qty")
-    int deductStockIfEnough(@Param("id") Integer variantId, @Param("qty") int qty);
 }

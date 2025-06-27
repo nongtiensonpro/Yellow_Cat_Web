@@ -7,7 +7,6 @@ import org.yellowcat.backend.product.cart.dto.CartConfirmResponseDTO;
 import org.yellowcat.backend.product.cart.dto.CartResponseDTO;
 import org.yellowcat.backend.product.cart.dto.ItemResponseDTO;
 import org.yellowcat.backend.product.cart.dto.ProductConfirmDTO;
-import org.yellowcat.backend.product.cartItem.CartItem;
 import org.yellowcat.backend.product.cartItem.dto.CartItemSummaryDTO;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
 import org.yellowcat.backend.product.productvariant.ProductVariantRepository;
@@ -17,7 +16,7 @@ import org.yellowcat.backend.user.AppUserRepository;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+
 
 @Service
 @RequiredArgsConstructor
@@ -27,66 +26,53 @@ public class CartService {
     private final AppUserRepository userRepository;
     private final ProductVariantRepository variantRepository;
 
-    // Giỏ hàng ID -> Map<variantId, quantity deducted>
-    private final Map<Integer, Map<Integer, Integer>> temporarilyDeductedCarts = new ConcurrentHashMap<>();
+
+    private final Map<UUID, Map<Integer, Integer>> temporarilyDeductedCarts = new ConcurrentHashMap<>();
 
     /**
      * Xác nhận giỏ hàng: trừ tạm kho và trả về tổng giá trị từng sản phẩm + toàn bộ giỏ
      */
     @Transactional
     public CartConfirmResponseDTO confirmCartItems(UUID keycloakId, List<ProductConfirmDTO> selectedProducts) {
-        AppUser user = userRepository.findByKeycloakId(keycloakId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
-
-        Cart cart = cartRepository.findByAppUser(user)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy giỏ hàng"));
-
-        if (cart.getCartItems() == null || cart.getCartItems().isEmpty()) {
-            throw new RuntimeException("Giỏ hàng trống.");
-        }
-
         Map<Integer, Integer> deductedMap = new HashMap<>();
         List<CartItemSummaryDTO> itemSummaries = new ArrayList<>();
         BigDecimal subTotal = BigDecimal.ZERO;
 
         try {
             for (ProductConfirmDTO selected : selectedProducts) {
-                CartItem item = cart.getCartItems().stream()
-                        .filter(ci -> ci.getVariant().getVariantId().equals(selected.getVariantId()))
-                        .findFirst()
-                        .orElseThrow(() -> new RuntimeException("Sản phẩm không nằm trong giỏ hàng"));
+                Integer variantId = selected.getVariantId();
+                Integer quantity = selected.getQuantity();
 
-                if (selected.getQuantity() > item.getQuantity()) {
-                    throw new RuntimeException("Số lượng yêu cầu vượt quá số lượng trong giỏ hàng.");
-                }
+                ProductVariant variant = variantRepository.findById(variantId)
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm ID: " + variantId));
 
-                ProductVariant variant = item.getVariant();
-
-                // Trừ tạm kho bằng cách gọi query an toàn
-                int updated = variantRepository.deductStockIfEnough(variant.getVariantId(), selected.getQuantity());
-                if (updated == 0) {
+                if (variant.getQuantityInStock() < quantity) {
                     throw new RuntimeException("Sản phẩm '" + variant.getProduct().getProductName()
-                            + "' không đủ hàng (yêu cầu: " + selected.getQuantity() + ").");
+                            + "' không đủ hàng (còn " + variant.getQuantityInStock()
+                            + ", yêu cầu: " + quantity + ").");
                 }
 
-                deductedMap.put(variant.getVariantId(), selected.getQuantity());
+                // Trừ tạm kho
+                variant.setQuantityInStock(variant.getQuantityInStock() - quantity);
+                variantRepository.save(variant);
+                deductedMap.put(variantId, quantity);
 
                 // Tính giá
                 BigDecimal unitPrice = variant.getPrice();
-                BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(selected.getQuantity()));
-                subTotal = subTotal.add(totalPrice).setScale(2, BigDecimal.ROUND_HALF_UP);
+                BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(quantity));
+                subTotal = subTotal.add(totalPrice);
 
                 itemSummaries.add(CartItemSummaryDTO.builder()
-                        .variantId(variant.getVariantId())
+                        .variantId(variantId)
                         .productName(variant.getProduct().getProductName())
-                        .quantity(selected.getQuantity())
+                        .quantity(quantity)
                         .unitPrice(unitPrice)
                         .totalPrice(totalPrice)
-                        .imageUrl(variant.getImageUrl())
                         .build());
             }
 
-            temporarilyDeductedCarts.put(cart.getCartId(), deductedMap);
+            // Lưu tạm trừ
+            temporarilyDeductedCarts.put(keycloakId, deductedMap);
 
             return CartConfirmResponseDTO.builder()
                     .items(itemSummaries)
@@ -104,48 +90,45 @@ public class CartService {
      */
     @Transactional
     public void revertCartItems(UUID keycloakId) {
-        AppUser user = userRepository.findByKeycloakId(keycloakId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+        Map<Integer, Integer> deductedMap = temporarilyDeductedCarts.get(keycloakId);
 
-        Cart cart = cartRepository.findByAppUserWithItems(user)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy giỏ hàng"));
-
-        Map<Integer, Integer> deductedMap = temporarilyDeductedCarts.get(cart.getCartId());
         if (deductedMap == null || deductedMap.isEmpty()) {
             throw new RuntimeException("Không có sản phẩm nào cần hoàn lại kho.");
         }
 
-        for (CartItem item : cart.getCartItems()) {
-            Integer variantId = item.getVariant().getVariantId();
-            Integer qtyToRevert = deductedMap.get(variantId);
+        for (Map.Entry<Integer, Integer> entry : deductedMap.entrySet()) {
+            Integer variantId = entry.getKey();
+            Integer quantity = entry.getValue();
 
-            if (qtyToRevert != null && qtyToRevert > 0) {
-                ProductVariant variant = item.getVariant();
-                variant.setQuantityInStock(variant.getQuantityInStock() + qtyToRevert);
-                variantRepository.save(variant);
-            }
+            ProductVariant variant = variantRepository.findById(variantId)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm ID: " + variantId));
+
+            variant.setQuantityInStock(variant.getQuantityInStock() + quantity);
+            variantRepository.save(variant);
         }
 
-        temporarilyDeductedCarts.remove(cart.getCartId());
+        temporarilyDeductedCarts.remove(keycloakId);
     }
 
     /**
      * Rollback sản phẩm đã trừ kho nếu có lỗi trong quá trình xác nhận giỏ hàng
      */
-    private void rollbackVariants(Map<Integer, Integer> deductedVariants) {
-        for (Map.Entry<Integer, Integer> entry : deductedVariants.entrySet()) {
+    private void rollbackVariants(Map<Integer, Integer> deductedMap) {
+        for (Map.Entry<Integer, Integer> entry : deductedMap.entrySet()) {
             Integer variantId = entry.getKey();
             Integer quantity = entry.getValue();
 
-            variantRepository.findById(variantId).ifPresent(variant -> {
+            ProductVariant variant = variantRepository.findById(variantId)
+                    .orElse(null);
+            if (variant != null) {
                 variant.setQuantityInStock(variant.getQuantityInStock() + quantity);
                 variantRepository.save(variant);
-            });
+            }
         }
     }
 
     /**
-     * Trả về giỏ hàng theo người dùng
+     * Trả về giỏ hàng theo người dùng đã đăng nhập
      */
     @Transactional
     public CartResponseDTO getCartByUser(UUID keycloakId) {
@@ -155,21 +138,15 @@ public class CartService {
         Cart cart = cartRepository.findByAppUser(user)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy giỏ hàng"));
 
-        List<ItemResponseDTO> itemDTOs = cart.getCartItems().stream().map(item -> {
-            ProductVariant variant = item.getVariant();
-            return ItemResponseDTO.builder()
-                    .cartItemId(item.getCartItemId())
-                    .variantId(variant.getVariantId())
-                    .productName(variant.getProduct().getProductName())
-                    .quantity(item.getQuantity())
-                    .price(variant.getPrice())
-                    .imageUrl(variant.getImageUrl())
-                    .sku(variant.getSku())
-                    .stockLevel(variant.getQuantityInStock())
-                    .colorName(variant.getColor() != null ? variant.getColor().getName() : null)
-                    .sizeName(variant.getSize() != null ? variant.getSize().getName() : null)
-                    .build();
-        }).toList();
+        List<ItemResponseDTO> itemDTOs = cart.getCartItems().stream().map(item ->
+                ItemResponseDTO.builder()
+                        .cartItemId(item.getCartItemId())
+                        .variantId(item.getVariant().getVariantId())
+                        .productName(item.getVariant().getProduct().getProductName())
+                        .quantity(item.getQuantity())
+                        .price(item.getVariant().getPrice())
+                        .build()
+        ).toList();
 
         return CartResponseDTO.builder()
                 .cartId(cart.getCartId())

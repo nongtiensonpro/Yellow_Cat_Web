@@ -16,6 +16,9 @@ import org.yellowcat.backend.product.orderItem.OrderItemRepository;
 import org.yellowcat.backend.product.payment.PaymentRepository;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
 import org.yellowcat.backend.product.productvariant.ProductVariantRepository;
+import org.yellowcat.backend.product.shipment.ShipmentRepository;
+import org.yellowcat.backend.product.shippingMethod.ShippingMethod;
+import org.yellowcat.backend.product.shippingMethod.ShippingMethodIdRepository;
 import org.yellowcat.backend.shoppingOnline.dto.OrderOnlineRequestDTO;
 import org.yellowcat.backend.shoppingOnline.dto.ProductOnlineDTO;
 import org.yellowcat.backend.user.AppUser;
@@ -28,6 +31,7 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class OrderOnlineService {
+
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final ProductVariantRepository productVariantRepository;
@@ -35,20 +39,23 @@ public class OrderOnlineService {
     private final AppUserRepository appUserRepository;
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
-    PaymentRepository paymentRepository;
+    private final ShippingMethodIdRepository shippingMethodIdRepository;
+    private final PaymentRepository paymentRepository;
 
+    /**
+     * Tạo đơn hàng từ yêu cầu đặt hàng
+     */
     @Transactional
     public Order createOrderFromOnlineRequest(OrderOnlineRequestDTO request) {
         List<OrderItem> orderItems = new ArrayList<>();
         BigDecimal subTotal = BigDecimal.ZERO;
 
+        // Xử lý sản phẩm
         for (ProductOnlineDTO p : request.getProducts()) {
-
             ProductVariant variant = productVariantRepository.findById(p.getId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với ID: " + p.getId()));
 
-            // Không cần trừ kho ở đây nữa
-            // (Kho đã trừ ở bước xác nhận cart)
+            // (Kho đã được trừ ở bước xác nhận giỏ hàng)
 
             OrderItem item = OrderItem.builder()
                     .variant(variant)
@@ -64,12 +71,14 @@ public class OrderOnlineService {
         BigDecimal shippingFee = request.getShippingFee();
         BigDecimal finalAmount = subTotal.add(shippingFee);
 
+        // Tìm AppUser
         AppUser user = null;
         if (request.getAppUser() != null && request.getAppUser().getKeycloakId() != null) {
             user = appUserRepository.findByKeycloakId(request.getAppUser().getKeycloakId())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với keycloakId"));
+                    .orElse(null); // Không tìm thấy => user = null (coi là guest)
         }
 
+        // Xử lý địa chỉ giao hàng
         Addresses shippingAddress = request.getShippingAddress();
         if (shippingAddress.getAddressId() == null) {
             shippingAddress.setAppUser(user);
@@ -79,6 +88,10 @@ public class OrderOnlineService {
                     .orElseThrow(() -> new RuntimeException("Địa chỉ không tồn tại"));
         }
 
+//        // Phương thức giao hàng
+//        ShippingMethod shippingMethod = shippingMethodIdRepository.findByShippingMethodId(request.getShippingMethodId());
+
+        // Tạo đơn hàng
         Order order = Order.builder()
                 .orderCode(generateOrderCode())
                 .user(user)
@@ -93,6 +106,7 @@ public class OrderOnlineService {
                 .customerNotes(request.getNote())
                 .orderItems(orderItems)
                 .orderDate(LocalDateTime.now())
+//                .shippingMethod(shippingMethod)
                 .orderStatus("Pending")
                 .isSyncedToGhtk(false)
                 .build();
@@ -101,33 +115,33 @@ public class OrderOnlineService {
 
         Order savedOrder = orderRepository.save(order);
 
-        //  Xóa các sản phẩm trong giỏ hàng của user
-        if (user != null) {
-            Cart cart = cartRepository.findByAppUser(user)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy giỏ hàng"));
-
+        // Xóa sản phẩm khỏi giỏ nếu có (user đăng nhập)
+        cartRepository.findByAppUser(user).ifPresent(cart -> {
             List<CartItem> itemsToRemove = cart.getCartItems().stream()
                     .filter(cartItem -> request.getProducts().stream()
                             .anyMatch(p -> p.getId().equals(cartItem.getVariant().getVariantId())))
                     .toList();
 
             cartItemRepository.deleteAll(itemsToRemove);
-
             cart.getCartItems().removeAll(itemsToRemove);
             cartRepository.save(cart);
+        });
 
-        }
+
         return savedOrder;
     }
 
-
-
-    String generateOrderCode() {
-        Random random = new Random();
-        int randomNum = 10000 + random.nextInt(90000); // Sinh số ngẫu nhiên 5 chữ số
+    /**
+     * Sinh mã đơn hàng dạng HDxxxxx
+     */
+    private String generateOrderCode() {
+        int randomNum = 10000 + new Random().nextInt(90000);
         return String.format("HD%d", randomNum);
     }
 
+    /**
+     * Hủy đơn hàng và hoàn kho nếu đang ở trạng thái 'Pending'
+     */
     @Transactional
     public Order cancelOrder(Integer orderId) {
         Order order = orderRepository.findById(orderId)
@@ -137,18 +151,20 @@ public class OrderOnlineService {
             throw new RuntimeException("Chỉ được huỷ đơn hàng ở trạng thái 'Pending'");
         }
 
-        // Cộng lại tồn kho
+        // Hoàn kho
         for (OrderItem item : order.getOrderItems()) {
             ProductVariant variant = item.getVariant();
             variant.setQuantityInStock(variant.getQuantityInStock() + item.getQuantity());
             productVariantRepository.save(variant);
         }
 
-        // Cập nhật trạng thái đơn hàng
         order.setOrderStatus("Cancelled");
         return orderRepository.save(order);
     }
 
+    /**
+     * Cập nhật trạng thái đơn hàng với kiểm soát chuyển trạng thái hợp lệ
+     */
     @Transactional
     public String updateOrderStatus(Integer orderId, String newStatus) {
         Order order = orderRepository.findById(orderId)
@@ -177,15 +193,12 @@ public class OrderOnlineService {
         return "Chuyển sang trạng thái '" + newStatus + "' thành công.";
     }
 
-    // Các trạng thái không thể chuyển tiếp nữa
     private boolean isTerminalStatus(String status) {
         return List.of("Cancelled", "Completed", "Refunded", "ReturnedToSeller").contains(status);
     }
 
-    // Định nghĩa trạng thái chuyển tiếp hợp lệ
     private Map<String, Set<String>> getAllowedTransitions() {
         Map<String, Set<String>> transitions = new HashMap<>();
-
         transitions.put("Pending", Set.of("Confirmed", "Cancelled"));
         transitions.put("Confirmed", Set.of("Shipping", "Cancelled"));
         transitions.put("Shipping", Set.of("Delivered", "DeliveryFailed1"));
@@ -195,9 +208,6 @@ public class OrderOnlineService {
         transitions.put("Delivered", Set.of("Completed", "ReturnRequested"));
         transitions.put("ReturnRequested", Set.of("Returned"));
         transitions.put("Returned", Set.of("Refunded"));
-
         return transitions;
     }
-
-
 }
