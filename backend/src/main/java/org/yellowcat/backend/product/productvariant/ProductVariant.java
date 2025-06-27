@@ -8,6 +8,7 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.yellowcat.backend.product.Product;
 import org.yellowcat.backend.product.color.Color;
+import org.yellowcat.backend.product.material.Material;
 import org.yellowcat.backend.product.size.Size;
 
 import java.math.BigDecimal;
@@ -42,6 +43,12 @@ public class ProductVariant {
     @OnDelete(action = OnDeleteAction.SET_NULL)
     @JoinColumn(name = "size_id")
     private Size size;
+
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    @JoinColumn(name = "material_id")
+    private Material material;
+
 
     @Column(precision = 12, scale = 2, nullable = false)
     private BigDecimal price;

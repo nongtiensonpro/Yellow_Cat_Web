@@ -3,16 +3,17 @@ package org.yellowcat.backend.product.productvariant;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.yellowcat.backend.common.config_api.response.ApiResponse;
 import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
+import org.yellowcat.backend.product.productvariant.dto.ProductVariantDetailDTO;
 import org.yellowcat.backend.product.productvariant.dto.ProductVariantFilterDTO;
 import org.yellowcat.backend.product.productvariant.dto.ProductVariantListResponse;
+import org.yellowcat.backend.product.promotionproduct.dto.ProductVariantSelectionResponse;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -78,4 +79,54 @@ public class ProductVariantController {
             return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Error retrieving products", "Error retrieving products");
         }
     }
+
+//    @GetMapping("/for-selection")
+//    public ResponseEntity<List<ProductVariantSelectionResponse>> getVariantsForSelection() {
+//        return ResponseEntity.ok(variantService.getAllVariantsForSelection());
+//    }
+
+    @GetMapping("/for-selection")
+    public ResponseEntity<ApiResponse<Page<ProductVariantSelectionResponse>>> getVariantsForSelectionPaged(
+            @RequestParam(defaultValue = "") String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size
+    ) {
+        Page<ProductVariantSelectionResponse> result =
+                variantService.getAllVariantsForSelection(keyword, page, size);
+        return ResponseEntityBuilder.success(result);
+    }
+
+
+//    @PostMapping("/details")
+//    public ResponseEntity<List<ProductVariantDetailDTO>> getDetails(@RequestBody List<Integer> variantIds) {
+//        List<ProductVariantDetailDTO> result = variantService.getVariantDetailsByIds(variantIds);
+//        return ResponseEntity.ok(result);
+//    }
+
+//    @PostMapping("/details")
+//    public ResponseEntity<?> getDetails(@RequestBody List<Integer> variantIds) {
+//        try {
+//            System.out.println("Received variantIds: " + variantIds);
+//            List<ProductVariantDetailDTO> result = variantService.getVariantDetailsByIds(variantIds);
+//            return ResponseEntity.ok(result);
+//        } catch (Exception e) {
+//            e.printStackTrace(); // In ra console để xem lỗi gì
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+//                    .body("Lỗi xử lý chi tiết sản phẩm: " + e.getMessage());
+//        }
+//    }
+
+    @PostMapping("/details")
+    public ResponseEntity<?> getDetails(@RequestBody List<Integer> variantIds) {
+        try {
+            List<ProductVariantDetailDTO> result = variantService.getVariantDetailsByIds(variantIds);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Lỗi xử lý chi tiết sản phẩm: " + e.getMessage());
+        }
+    }
+
+   
 }

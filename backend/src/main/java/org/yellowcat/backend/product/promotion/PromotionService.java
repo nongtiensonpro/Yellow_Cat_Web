@@ -1,17 +1,22 @@
 package org.yellowcat.backend.product.promotion;
 
+import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.yellowcat.backend.product.productvariant.ProductVariant;
+import org.yellowcat.backend.product.promotion.dto.CreatePromotionDTO;
 import org.yellowcat.backend.product.promotion.dto.PromotionRequest;
 import org.yellowcat.backend.product.promotion.dto.PromotionResponse;
 import org.yellowcat.backend.product.promotion.mapper.PromotionMapper;
+import org.yellowcat.backend.product.promotionproduct.PromotionProduct;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserRepository;
 
+import java.util.List;
 import java.util.Random;
 
 @Service
@@ -70,4 +75,6 @@ public class PromotionService {
         int randomNum = 10000 + random.nextInt(90000); // Sinh số ngẫu nhiên 5 chữ số
         return String.format("KM%d", randomNum);
     }
+
+
 }
