@@ -557,7 +557,7 @@ public class OrderService {
         System.out.println("🔍 Lấy chi tiết đơn hàng cho orderCode: " + orderCode);
         
         // Lấy thông tin order từ database
-        OrderResponse orderResponse = orderRepository.findOrderByOrderCodeOld(orderCode);
+        OrderResponse orderResponse = (OrderResponse) orderRepository.findOrderByOrderCodeOld(orderCode);
         if (orderResponse == null) {
             throw new IllegalArgumentException("Order not found with orderCode: " + orderCode);
         }
@@ -681,5 +681,10 @@ public class OrderService {
             }
         }
         System.out.println("=========================");
+    }
+
+    // Method để lấy app_user_id từ order code
+    public Integer getAppUserIdByOrderCode(String orderCode) {
+        return orderRepository.findAppUserIdByOrderCode(orderCode);
     }
 }

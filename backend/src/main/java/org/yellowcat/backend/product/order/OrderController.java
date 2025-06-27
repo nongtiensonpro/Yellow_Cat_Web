@@ -12,14 +12,18 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.yellowcat.backend.common.config_api.response.PageResponse;
 import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
+import org.yellowcat.backend.common.security.keycloak.UserDTO;
 import org.yellowcat.backend.product.order.dto.OrderDetailResponse;
 import org.yellowcat.backend.product.order.dto.OrderDetailWithItemsResponse;
 import org.yellowcat.backend.product.order.dto.OrderResponse;
 import org.yellowcat.backend.product.order.dto.OrderUpdateRequest;
 import org.yellowcat.backend.product.order.dto.OrderUpdateResponse;
+import org.yellowcat.backend.user.AppUser;
+import org.yellowcat.backend.user.AppUserService;
 
 import java.util.List;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -28,6 +32,7 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class OrderController {
     OrderService orderService;
+    AppUserService appUserService;
 
     @GetMapping()
     @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
@@ -282,6 +287,34 @@ public class OrderController {
             System.err.println("Error getting public order detail: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi khi lấy chi tiết đơn hàng: ", e.getMessage());
+        }
+    }
+
+    // Endpoint đơn giản để lấy thông tin nhân viên theo mã đơn hàng
+    @GetMapping("/staff-info/{orderCode}")
+    @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
+    public ResponseEntity<?> getStaffInfoByOrderCode(@PathVariable String orderCode) {
+        System.out.println("=== GET /api/orders/staff-info/" + orderCode + " called ===");
+        try {
+            // Lấy app_user_id từ order
+            Integer appUserId = orderService.getAppUserIdByOrderCode(orderCode);
+            
+            if (appUserId == null) {
+                return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Không tìm thấy thông tin nhân viên cho đơn hàng: ", orderCode);
+            }
+            
+            // Lấy thông tin nhân viên từ AppUserService
+            Optional<AppUser> staffInfo = appUserService.findById(appUserId);
+            
+            if (staffInfo == null) {
+                return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Không tìm thấy thông tin nhân viên với ID: ", appUserId.toString());
+            }
+            
+            return ResponseEntityBuilder.success(staffInfo);
+        } catch (Exception e) {
+            System.err.println("Error getting staff info by order code: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi khi lấy thông tin nhân viên: ", e.getMessage());
         }
     }
 }

@@ -11,6 +11,9 @@ import org.springframework.data.domain.Pageable;
 import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
 import org.yellowcat.backend.product.dto.*;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/products")
 public class ProductController {
@@ -19,6 +22,30 @@ public class ProductController {
 
     public ProductController(ProductService productService) {
         this.productService = productService;
+    }
+
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    @GetMapping("/history/{productId}")
+    public ResponseEntity<List<ProductHistoryDto>> getHistory(
+            @PathVariable int productId
+    ) {
+        List<ProductHistoryDto> list = productService.getHistory(productId);
+        return ResponseEntity.ok(list);
+    }
+
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    @PostMapping("/rollback/{historyId}")
+    public ResponseEntity<?> rollback(
+            @PathVariable Integer historyId,
+            @RequestBody Map<String, Integer> body
+    ) {
+        if (historyId == null) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(Map.of("error", "history_id is required"));
+        }
+        productService.rollback(historyId);
+        return ResponseEntity.ok(Map.of("success", true));
     }
 
     @GetMapping
