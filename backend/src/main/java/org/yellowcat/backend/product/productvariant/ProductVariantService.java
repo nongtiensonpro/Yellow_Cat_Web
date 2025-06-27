@@ -4,14 +4,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.yellowcat.backend.product.productvariant.dto.ProductVariantDetailDTO;
 import org.yellowcat.backend.product.productvariant.dto.ProductVariantFilterDTO;
 import org.yellowcat.backend.product.productvariant.dto.ProductVariantHistoryDto;
 import org.yellowcat.backend.product.productvariant.dto.ProductVariantListResponse;
 import org.yellowcat.backend.product.productvariant.mapper.ProductVariantMapper;
 import org.yellowcat.backend.product.productvariant.specification.ProductVariantSpecification;
+import org.yellowcat.backend.product.promotionproduct.dto.ProductVariantSelectionResponse;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -84,5 +87,22 @@ public class ProductVariantService {
 
         return new PageImpl<>(productDTOs, pageable, totalProducts);
     }
+//    public List<ProductVariantSelectionResponse> getAllVariantsForSelection() {
+//        return productVariantRepository.getAllVariantWithProductName();
+//    }
+
+    public Page<ProductVariantSelectionResponse> getAllVariantsForSelection(String keyword, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return productVariantRepository.searchVariantsByKeyword(keyword, pageable);
+    }
+
+//    public List<ProductVariantDetailDTO> getVariantDetailsByIds(List<Integer> ids) {
+//        return productVariantRepository.findDetailsByVariantIds(ids);
+//    }
+
+    public List<ProductVariantDetailDTO> getVariantDetailsByIds(List<Integer> ids) {
+        return productVariantRepository.findDetailsByVariantIds(ids);
+    }
+
 
 }

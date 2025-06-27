@@ -29,5 +29,3 @@ public interface PromotionRepository extends JpaRepository<Promotion, Integer>, 
                                     Pageable pageable);
 
 }
-
-

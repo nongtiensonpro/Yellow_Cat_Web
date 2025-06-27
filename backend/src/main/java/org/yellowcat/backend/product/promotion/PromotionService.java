@@ -90,10 +90,7 @@
 
 package org.yellowcat.backend.product.promotion;
 
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
+import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -101,14 +98,18 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.yellowcat.backend.product.productvariant.ProductVariant;
+import org.yellowcat.backend.product.promotion.dto.CreatePromotionDTO;
 import org.yellowcat.backend.product.promotion.dto.PromotionRequest;
 import org.yellowcat.backend.product.promotion.dto.PromotionResponse;
 import org.yellowcat.backend.product.promotion.mapper.PromotionMapper;
+import org.yellowcat.backend.product.promotionproduct.PromotionProduct;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserRepository;
 
-import java.time.LocalDateTime;
-import java.util.*;
+
+import java.util.List;
+import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
@@ -224,4 +225,6 @@ public class PromotionService {
         int randomNum = 10000 + new Random().nextInt(90000);
         return "KM" + randomNum;
     }
+
+
 }
