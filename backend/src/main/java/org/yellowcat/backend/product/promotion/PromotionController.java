@@ -95,6 +95,8 @@ import org.yellowcat.backend.product.promotion.dto.PromotionRequest;
 import org.yellowcat.backend.product.promotion.dto.PromotionResponse;
 import org.yellowcat.backend.product.promotionproduct.PromotionProductService;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/promotions")
 @RequiredArgsConstructor
