@@ -7,6 +7,7 @@ import org.yellowcat.backend.product.cart.dto.CartConfirmResponseDTO;
 import org.yellowcat.backend.product.cart.dto.CartResponseDTO;
 import org.yellowcat.backend.product.cart.dto.ItemResponseDTO;
 import org.yellowcat.backend.product.cart.dto.ProductConfirmDTO;
+import org.yellowcat.backend.product.cartItem.CartItem;
 import org.yellowcat.backend.product.cartItem.dto.CartItemSummaryDTO;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
 import org.yellowcat.backend.product.productvariant.ProductVariantRepository;
@@ -16,7 +17,7 @@ import org.yellowcat.backend.user.AppUserRepository;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,7 +27,7 @@ public class CartService {
     private final AppUserRepository userRepository;
     private final ProductVariantRepository variantRepository;
 
-
+    // Map: { keycloakId -> { variantId -> deductedQuantity } }
     private final Map<UUID, Map<Integer, Integer>> temporarilyDeductedCarts = new ConcurrentHashMap<>();
 
     /**

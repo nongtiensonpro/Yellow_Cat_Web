@@ -71,12 +71,13 @@ public class OrderOnlineService {
         BigDecimal shippingFee = request.getShippingFee();
         BigDecimal finalAmount = subTotal.add(shippingFee);
 
-        // Tìm AppUser
+        // Tìm  AppUser
         AppUser user = null;
         if (request.getAppUser() != null && request.getAppUser().getKeycloakId() != null) {
             user = appUserRepository.findByKeycloakId(request.getAppUser().getKeycloakId())
-                    .orElse(null); // Không tìm thấy => user = null (coi là guest)
+                    .orElse(null);
         }
+
 
         // Xử lý địa chỉ giao hàng
         Addresses shippingAddress = request.getShippingAddress();
@@ -116,17 +117,18 @@ public class OrderOnlineService {
         Order savedOrder = orderRepository.save(order);
 
         // Xóa sản phẩm khỏi giỏ nếu có (user đăng nhập)
-        cartRepository.findByAppUser(user).ifPresent(cart -> {
-            List<CartItem> itemsToRemove = cart.getCartItems().stream()
-                    .filter(cartItem -> request.getProducts().stream()
-                            .anyMatch(p -> p.getId().equals(cartItem.getVariant().getVariantId())))
-                    .toList();
+        if (user != null) {
+            cartRepository.findByAppUser(user).ifPresent(cart -> {
+                List<CartItem> itemsToRemove = cart.getCartItems().stream()
+                        .filter(cartItem -> request.getProducts().stream()
+                                .anyMatch(p -> p.getId().equals(cartItem.getVariant().getVariantId())))
+                        .toList();
 
-            cartItemRepository.deleteAll(itemsToRemove);
-            cart.getCartItems().removeAll(itemsToRemove);
-            cartRepository.save(cart);
-        });
-
+                cartItemRepository.deleteAll(itemsToRemove);
+                cart.getCartItems().removeAll(itemsToRemove);
+                cartRepository.save(cart);
+            });
+        }
 
         return savedOrder;
     }
