@@ -6,19 +6,28 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Pageable;
 import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
 import org.yellowcat.backend.product.dto.*;
+import org.yellowcat.backend.user.AppUser;
+import org.yellowcat.backend.user.AppUserService;
+
+import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/products")
 public class ProductController {
 
     private final ProductService productService;
+    private final AppUserService appUserService;
 
-    public ProductController(ProductService productService) {
+    public ProductController(ProductService productService, AppUserService appUserService) {
         this.productService = productService;
+        this.appUserService = appUserService;
     }
 
     @GetMapping
@@ -73,15 +82,36 @@ public class ProductController {
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('Admin_Web')")
-    public ResponseEntity<?> createProduct(@RequestBody ProductWithVariantsRequestDTO productDto) {
-        productService.createProduct(productDto);
+    public ResponseEntity<?> createProduct(@RequestBody ProductWithVariantsRequestDTO productDto,
+                                           @AuthenticationPrincipal Jwt jwt) {
+        UUID userId = UUID.fromString(jwt.getSubject());
+        Optional<AppUser> appUser = appUserService.findByKeycloakId(userId);
+        AppUser user;
+        if (appUser.isEmpty()){
+            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "User not found", "User not found");
+        }else {
+            user = appUser.get();
+        }
+        productService.createProduct(productDto,user);
         return ResponseEntityBuilder.success("Product created successfully!");
     }
 
     @PutMapping
     @PreAuthorize("hasAnyAuthority('Admin_Web')")
-    public ResponseEntity<?> updateProduct(@RequestBody ProductWithVariantsUpdateRequestDTO productDto) {
-        productService.updateProduct(productDto);
+    public ResponseEntity<?> updateProduct(@RequestBody ProductWithVariantsUpdateRequestDTO productDto,
+                                            @AuthenticationPrincipal Jwt jwt) {
+        UUID userId = UUID.fromString(jwt.getSubject());
+
+        Optional<AppUser> appUser = appUserService.findByKeycloakId(userId);
+        AppUser user;
+        if (appUser.isEmpty()){
+            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "User not found", "User not found");
+        }else {
+            user = appUser.get();
+        }
+
+        productService.updateProduct(productDto,user);
+
         return ResponseEntityBuilder.success("Product updated successfully!");
     }
 
