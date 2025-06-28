@@ -13,6 +13,7 @@ import org.yellowcat.backend.product.category.Category;
 import org.yellowcat.backend.product.material.Material;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
 import org.yellowcat.backend.product.targetaudience.TargetAudience;
+import org.yellowcat.backend.user.AppUser;
 
 import java.time.Instant;
 import java.util.List;
@@ -81,6 +82,11 @@ public class Product {
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
     private List<ProductVariant> productVariants;
+
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    @JoinColumn(name = "created_by")
+    private AppUser createdBy;
 
     @PrePersist
     protected void onCreate() {

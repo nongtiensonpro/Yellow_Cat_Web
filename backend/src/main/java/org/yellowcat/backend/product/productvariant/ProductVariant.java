@@ -10,13 +10,13 @@ import org.yellowcat.backend.product.Product;
 import org.yellowcat.backend.product.color.Color;
 import org.yellowcat.backend.product.material.Material;
 import org.yellowcat.backend.product.size.Size;
+import org.yellowcat.backend.user.AppUser;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "product_variants",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"product_id", "color", "size"}))
+@Table(name = "product_variants")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -44,12 +44,6 @@ public class ProductVariant {
     @JoinColumn(name = "size_id")
     private Size size;
 
-    @ManyToOne
-    @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JoinColumn(name = "material_id")
-    private Material material;
-
-
     @Column(precision = 12, scale = 2, nullable = false)
     private BigDecimal price;
 
@@ -72,6 +66,11 @@ public class ProductVariant {
 
     @Column(name = "updated_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime updatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    @JoinColumn(name = "app_user_id")
+    private AppUser createdBy;
 
     @PrePersist
     protected void onCreate() {

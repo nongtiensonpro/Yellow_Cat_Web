@@ -91,10 +91,12 @@ CREATE TABLE products
     thumbnail          VARCHAR(255) NOT NULL,
     created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by         INT,
     FOREIGN KEY (category_id) REFERENCES categories (category_id) ON DELETE SET NULL,
     FOREIGN KEY (brand_id) REFERENCES brands (brand_id) ON DELETE SET NULL,
     FOREIGN KEY (material_id) REFERENCES materials (material_id) ON DELETE SET NULL,
-    FOREIGN KEY (target_audience_id) REFERENCES target_audiences (target_audience_id) ON DELETE SET NULL
+    FOREIGN KEY (target_audience_id) REFERENCES target_audiences (target_audience_id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES app_users (app_user_id) ON DELETE CASCADE
 );
 
 -- Bảng Biến thể sản phẩm
@@ -113,10 +115,12 @@ CREATE TABLE product_variants
     weight            FLOAT,
     created_at        TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
     updated_at        TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
+    created_by        INT,
     UNIQUE (product_id, color_id, size_id),
     FOREIGN KEY (product_id) REFERENCES products (product_id) ON DELETE CASCADE,
     FOREIGN KEY (color_id) REFERENCES colors (color_id) ON DELETE SET NULL,
-    FOREIGN KEY (size_id) REFERENCES sizes (size_id) ON DELETE SET NULL
+    FOREIGN KEY (size_id) REFERENCES sizes (size_id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES app_users (app_user_id) ON DELETE CASCADE
 );
 
 -- Bảng Địa chỉ
@@ -320,7 +324,9 @@ CREATE TABLE products_history
     updated_at         TIMESTAMP,
     operation          CHAR(1)   NOT NULL, -- 'U' = UPDATE, 'D' = DELETE
     changed_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    changed_by         TEXT               DEFAULT SESSION_USER
+    changed_by         INT,
+
+    FOREIGN KEY (changed_by) REFERENCES app_users (app_user_id) ON DELETE CASCADE
 );
 
 -- 2. Tạo bảng lịch sử cho product_variants
@@ -342,103 +348,10 @@ CREATE TABLE product_variants_history
     updated_at        TIMESTAMP,
     operation         CHAR(1)   NOT NULL, -- 'U' = UPDATE, 'D' = DELETE
     changed_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    changed_by        TEXT               DEFAULT SESSION_USER
+    changed_by        INT,
+
+    FOREIGN KEY (changed_by) REFERENCES app_users (app_user_id) ON DELETE CASCADE
 );
-
--- Function audit cho products
-CREATE OR REPLACE FUNCTION fn_audit_products() RETURNS TRIGGER AS
-$$
-DECLARE
-    app_user TEXT := current_setting('app.current_user', true);
-BEGIN
-    IF TG_OP = 'UPDATE' THEN
-        INSERT INTO products_history (product_id, product_name, description, category_id, brand_id,
-                                      material_id, target_audience_id, is_featured, purchases, is_active,
-                                      thumbnail, created_at, updated_at,
-                                      operation, changed_at, changed_by)
-        VALUES (OLD.product_id, OLD.product_name, OLD.description, OLD.category_id, OLD.brand_id,
-                OLD.material_id, OLD.target_audience_id, OLD.is_featured, OLD.purchases, OLD.is_active,
-                OLD.thumbnail, OLD.created_at, OLD.updated_at,
-                'U', CURRENT_TIMESTAMP, COALESCE(app_user, SESSION_USER));
-        RETURN NEW;
-    ELSIF TG_OP = 'DELETE' THEN
-        INSERT INTO products_history (product_id, product_name, description, category_id, brand_id,
-                                      material_id, target_audience_id, is_featured, purchases, is_active,
-                                      thumbnail, created_at, updated_at,
-                                      operation, changed_at, changed_by)
-        VALUES (OLD.product_id, OLD.product_name, OLD.description, OLD.category_id, OLD.brand_id,
-                OLD.material_id, OLD.target_audience_id, OLD.is_featured, OLD.purchases, OLD.is_active,
-                OLD.thumbnail, OLD.created_at, OLD.updated_at,
-                'D', CURRENT_TIMESTAMP, COALESCE(app_user, SESSION_USER));
-        RETURN OLD;
-    END IF;
-    RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
--- 4. Function audit chung cho bảng product_variants
-CREATE OR REPLACE FUNCTION fn_audit_variants()
-    RETURNS TRIGGER AS
-$$
-BEGIN
-    IF TG_OP = 'UPDATE' THEN
-        INSERT INTO product_variants_history (variant_id, product_id, sku, color_id, size_id, price, sale_price,
-                                              quantity_in_stock, sold, image_url, weight, created_at, updated_at,
-                                              operation, changed_by)
-        SELECT OLD.variant_id,
-               OLD.product_id,
-               OLD.sku,
-               OLD.color_id,
-               OLD.size_id,
-               OLD.price,
-               OLD.sale_price,
-               OLD.quantity_in_stock,
-               OLD.sold,
-               OLD.image_url,
-               OLD.weight,
-               OLD.created_at,
-               OLD.updated_at,
-               'U',
-               SESSION_USER;
-        RETURN NEW;
-    ELSIF TG_OP = 'DELETE' THEN
-        INSERT INTO product_variants_history (variant_id, product_id, sku, color_id, size_id, price, sale_price,
-                                              quantity_in_stock, sold, image_url, weight, created_at, updated_at,
-                                              operation, changed_by)
-        SELECT OLD.variant_id,
-               OLD.product_id,
-               OLD.sku,
-               OLD.color_id,
-               OLD.size_id,
-               OLD.price,
-               OLD.sale_price,
-               OLD.quantity_in_stock,
-               OLD.sold,
-               OLD.image_url,
-               OLD.weight,
-               OLD.created_at,
-               OLD.updated_at,
-               'D',
-               SESSION_USER;
-        RETURN OLD;
-    END IF;
-    RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
--- Tạo trigger để gọi function trước UPDATE/DELETE
-CREATE TRIGGER trg_products_audit
-    BEFORE UPDATE OR DELETE
-    ON products
-    FOR EACH ROW
-EXECUTE FUNCTION fn_audit_products();
-
-CREATE TRIGGER trg_variants_audit
-    BEFORE UPDATE OR DELETE
-    ON product_variants
-    FOR EACH ROW
-EXECUTE FUNCTION fn_audit_variants();
-
 
 -- Thêm Index
 CREATE INDEX idx_orders_user_id ON orders (app_user_id);
@@ -641,22 +554,22 @@ VALUES (1, 1, 5, 'Giày rất thoải mái, đi chạy bộ rất êm. Chất l�
 
 -- 1. Dữ liệu cho bảng promotions
 INSERT INTO promotions
-(app_user_id, promotion_code, promotion_name, description, discount_type, discount_value, start_date, end_date, is_active)
-VALUES
-    (1, 'NEWUSER10', 'Giảm giá 10% cho khách hàng mới', 'Chào mừng khách hàng mới với ưu đãi giảm 10%', 'percentage',
-     10.00, '2025-01-01 00:00:00', '2025-12-31 23:59:59', TRUE),
+(app_user_id, promotion_code, promotion_name, description, discount_type, discount_value, start_date, end_date,
+ is_active)
+VALUES (1, 'NEWUSER10', 'Giảm giá 10% cho khách hàng mới', 'Chào mừng khách hàng mới với ưu đãi giảm 10%', 'percentage',
+        10.00, '2025-01-01 00:00:00', '2025-12-31 23:59:59', TRUE),
 
-    (1, 'SALE50K', 'Giảm 50K cho đơn hàng trên 1 triệu', 'Giảm giá cố định 50K', 'fixed_amount',
-     50000.00, '2025-01-01 00:00:00', '2025-06-30 23:59:59', TRUE),
+       (1, 'SALE50K', 'Giảm 50K cho đơn hàng trên 1 triệu', 'Giảm giá cố định 50K', 'fixed_amount',
+        50000.00, '2025-01-01 00:00:00', '2025-06-30 23:59:59', TRUE),
 
-    (1, 'SUMMER2025', 'Sale mùa hè 2025', 'Giảm 15% tất cả sản phẩm mùa hè', 'percentage',
-     15.00, '2025-06-01 00:00:00', '2025-08-31 23:59:59', TRUE),
+       (1, 'SUMMER2025', 'Sale mùa hè 2025', 'Giảm 15% tất cả sản phẩm mùa hè', 'percentage',
+        15.00, '2025-06-01 00:00:00', '2025-08-31 23:59:59', TRUE),
 
-    (1, 'FREESHIP', 'Miễn phí vận chuyển', 'Miễn phí ship cho đơn hàng trên 500K', 'free_shipping',
-     0.00, '2025-01-01 00:00:00', '2025-12-31 23:59:59', TRUE),
+       (1, 'FREESHIP', 'Miễn phí vận chuyển', 'Miễn phí ship cho đơn hàng trên 500K', 'free_shipping',
+        0.00, '2025-01-01 00:00:00', '2025-12-31 23:59:59', TRUE),
 
-    (1, 'NIKE20', 'Giảm 20% sản phẩm Nike', 'Khuyến mãi đặc biệt cho thương hiệu Nike', 'percentage',
-     20.00, '2025-02-01 00:00:00', '2025-02-28 23:59:59', TRUE);
+       (1, 'NIKE20', 'Giảm 20% sản phẩm Nike', 'Khuyến mãi đặc biệt cho thương hiệu Nike', 'percentage',
+        20.00, '2025-02-01 00:00:00', '2025-02-28 23:59:59', TRUE);
 
 -- 2. Dữ liệu cho bảng promotion_products
 -- Giả sử các product_variant_id có sẵn lần lượt là 1,2,3,4

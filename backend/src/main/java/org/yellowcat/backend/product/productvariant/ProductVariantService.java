@@ -14,7 +14,6 @@ import org.yellowcat.backend.product.promotionproduct.dto.ProductVariantSelectio
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -103,6 +102,4 @@ public class ProductVariantService {
     public List<ProductVariantDetailDTO> getVariantDetailsByIds(List<Integer> ids) {
         return productVariantRepository.findDetailsByVariantIds(ids);
     }
-
-
 }
