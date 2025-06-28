@@ -39,5 +39,4 @@ public class ProductVariantDetailDTO {
     private String sizeName;
     private BigDecimal price;
     private BigDecimal salePrice;
-    private String materialName;
 }

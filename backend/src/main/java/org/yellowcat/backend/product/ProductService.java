@@ -37,15 +37,6 @@ public class ProductService {
     private final SizeRepository sizeRepository;
     private final ProductHistoryRepository productHistoryRepository;
 
-    public List<ProductHistoryDto> getHistory(int productId) {
-        return productHistoryRepository.findByProductId(productId);
-    }
-
-    @Transactional
-    public void rollback(int historyId) {
-        productHistoryRepository.rollbackToHistory(historyId);
-    }
-
     public Page<ProductListItemDTO> getProductsPaginated(Pageable pageable) {
         int pageSize = pageable.getPageSize();
         int offset = (int) pageable.getOffset();

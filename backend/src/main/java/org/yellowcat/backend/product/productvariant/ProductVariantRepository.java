@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import org.yellowcat.backend.product.dto.ProductListItemDTO;
 import org.yellowcat.backend.product.productvariant.dto.ProductVariantDetailDTO;
 import org.yellowcat.backend.product.productvariant.dto.ProductVariantListResponse;
 import org.yellowcat.backend.product.promotionproduct.dto.ProductVariantSelectionResponse;
@@ -127,15 +126,13 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
         c.name,
         s.name,
         v.price,
-        v.salePrice,
-        m.name
+        v.salePrice
     )
     FROM ProductVariant v
     JOIN v.product p
     LEFT JOIN p.brand b
     LEFT JOIN v.color c
     LEFT JOIN v.size s
-    LEFT JOIN p.material m
     WHERE v.variantId IN :ids
 """)
     List<ProductVariantDetailDTO> findDetailsByVariantIds(@Param("ids") List<Integer> ids);

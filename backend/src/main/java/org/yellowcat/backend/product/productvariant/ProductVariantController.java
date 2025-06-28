@@ -152,6 +152,4 @@ public class ProductVariantController {
                     .body("Lỗi xử lý chi tiết sản phẩm: " + e.getMessage());
         }
     }
-
-   
 }
