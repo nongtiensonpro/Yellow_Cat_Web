@@ -67,9 +67,9 @@ public class ProductVariant {
     @Column(name = "updated_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime updatedAt;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne
     @OnDelete(action = OnDeleteAction.SET_NULL)
-    @JoinColumn(name = "app_user_id")
+    @JoinColumn(name = "created_by")
     private AppUser createdBy;
 
     @PrePersist
