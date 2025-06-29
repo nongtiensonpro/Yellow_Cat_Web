@@ -18,3 +18,4 @@ public interface PromotionMapper {
     void updatePromotionFromRequest(@MappingTarget Promotion promotion, PromotionRequest request);
 }
 
+

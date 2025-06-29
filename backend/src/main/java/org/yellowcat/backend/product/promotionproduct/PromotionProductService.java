@@ -15,8 +15,10 @@ import org.yellowcat.backend.product.promotionproduct.dto.ProductVariantSelectio
 import org.yellowcat.backend.product.promotionproduct.dto.PromotionProductRequest;
 import org.yellowcat.backend.product.promotionproduct.dto.PromotionProductResponse;
 import org.yellowcat.backend.user.AppUser;
+import org.yellowcat.backend.user.AppUserRepository;
 
 import java.util.List;
+import java.util.UUID;
 
 import static lombok.AccessLevel.PRIVATE;
 
@@ -28,26 +30,75 @@ public class PromotionProductService {
     PromotionProductRepository promotionProductRepository;
     PromotionRepository promotionRepository;
     ProductVariantRepository productVariantRepository;
+    AppUserRepository appUserRepository;
 
     public List<PromotionProductResponse> getAllWithJoin() {
         return promotionProductRepository.findAllWithJoin();
     }
+//
+//    public PromotionProductResponse create(PromotionProductRequest request) {
+//        Promotion promotion = promotionRepository.findById(request.getPromotionId())
+//                .orElseThrow(() -> new EntityNotFoundException("Promotion not found"));
+//        ProductVariant variant = productVariantRepository.findById(request.getVariantId())
+//                .orElseThrow(() -> new EntityNotFoundException("ProductVariant not found"));
+//
+//        PromotionProduct entity = promotionProductRepository.save(PromotionProduct.builder()
+//                .promotion(promotion)
+//                .productVariant(variant)
+//                .build());
+//
+//        return promotionProductRepository.findByIdWithJoin(entity.getPromotionProductId())
+//                .orElseThrow(() -> new EntityNotFoundException("Created entity not found"));
+//    }
 
-    public PromotionProductResponse create(PromotionProductRequest request) {
-        Promotion promotion = promotionRepository.findById(request.getPromotionId())
-                .orElseThrow(() -> new EntityNotFoundException("Promotion not found"));
-        ProductVariant variant = productVariantRepository.findById(request.getVariantId())
-                .orElseThrow(() -> new EntityNotFoundException("ProductVariant not found"));
+//
+//    public PromotionProductResponse create(PromotionProductRequest request, UUID userId) {
+//        Promotion promotion = promotionRepository.findById(request.getPromotionId())
+//                .orElseThrow(() -> new EntityNotFoundException("Promotion not found"));
+//
+//        ProductVariant variant = productVariantRepository.findById(request.getVariantId())
+//                .orElseThrow(() -> new EntityNotFoundException("ProductVariant not found"));
+//
+//        // Lấy AppUser từ userId
+//        AppUser user = appUserRepository.findByKeycloakId(userId)
+//                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+//
+//        PromotionProduct entity = promotionProductRepository.save(
+//                PromotionProduct.builder()
+//                        .promotion(promotion)
+//                        .productVariant(variant)
+//                        .appUser(user) // RẤT QUAN TRỌNG: SET APPUSER
+//                        .build()
+//        );
+//
+//        return promotionProductRepository.findByIdWithJoin(entity.getPromotionProductId())
+//                .orElseThrow(() -> new EntityNotFoundException("Created entity not found"));
+//    }
 
-        PromotionProduct entity = promotionProductRepository.save(PromotionProduct.builder()
-                .promotion(promotion)
-                .productVariant(variant)
-                .build());
+    @Transactional
+    public void createPromotionWithProducts(CreatePromotionDTO dto, UUID userId) {
+        AppUser user = appUserRepository.findByKeycloakId(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return promotionProductRepository.findByIdWithJoin(entity.getPromotionProductId())
-                .orElseThrow(() -> new EntityNotFoundException("Created entity not found"));
+        Promotion promotion = new Promotion();
+        promotion.setPromotionName(dto.getPromotionName());
+        promotion.setDiscountValue(dto.getDiscountValue());
+        promotion.setDiscountType("percentage"); // ✅ GÁN LUÔN
+        promotion.setStartDate(dto.getStartDate());
+        promotion.setEndDate(dto.getEndDate());
+        promotion.setAppUser(user);
+
+        promotionRepository.save(promotion);
+
+        List<ProductVariant> variants = productVariantRepository.findAllById(dto.getProductIds());
+        for (ProductVariant variant : variants) {
+            PromotionProduct pp = new PromotionProduct();
+            pp.setPromotion(promotion);
+            pp.setProductVariant(variant);
+            pp.setAppUser(user); // ✅ BẮT BUỘC
+            promotionProductRepository.save(pp);
+        }
     }
-
 
 
     public void delete(Integer id) {
