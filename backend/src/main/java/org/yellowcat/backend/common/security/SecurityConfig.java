@@ -45,6 +45,11 @@ public class SecurityConfig {
                                 "/api/address/**",
                                 "/api/users/**",
                                 "/api/ghtk/**",
+                                "/api/orders/**",
+                                "/api/cart/**",
+                                "/api/order-timelines/**",
+                                "/api/shipping-methods/**",
+                                "/api/cart-items/**",
                                 "/api/vnpay/**",
                                 "/api/ghn/**",
                                 "/api/examples/**")

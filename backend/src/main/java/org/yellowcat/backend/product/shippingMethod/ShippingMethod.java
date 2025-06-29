@@ -12,7 +12,6 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ShippingMethod {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "shipping_method_id")
@@ -21,7 +20,7 @@ public class ShippingMethod {
     @Column(name = "method_name", nullable = false)
     private String methodName;
 
-    @Lob // Hoặc @Column(columnDefinition = "TEXT")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     @Column(name = "base_cost", precision = 10, scale = 2, nullable = false)
