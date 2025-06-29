@@ -19,6 +19,7 @@ import org.yellowcat.backend.product.size.Size;
 import org.yellowcat.backend.product.size.SizeRepository;
 import org.yellowcat.backend.product.targetaudience.TargetAudience;
 import org.yellowcat.backend.product.targetaudience.TargetAudienceRepository;
+import org.yellowcat.backend.user.AppUser;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -35,7 +36,7 @@ public class ProductService {
     private final TargetAudienceRepository targetAudienceRepository;
     private final ColorRepository colorRepository;
     private final SizeRepository sizeRepository;
-    private final ProductHistoryRepository productHistoryRepository;
+
 
     public Page<ProductListItemDTO> getProductsPaginated(Pageable pageable) {
         int pageSize = pageable.getPageSize();
@@ -108,7 +109,7 @@ public class ProductService {
     }
 
     @Transactional
-    public void createProduct(ProductWithVariantsRequestDTO productDto) {
+    public void createProduct(ProductWithVariantsRequestDTO productDto, AppUser appUser) {
         // Tìm Brand & Category (có thể throw nếu không tồn tại)
         Brand brand = brandRepository.findById(productDto.getBrandId())
                 .orElseThrow(() -> new RuntimeException("Brand not found"));
@@ -128,6 +129,7 @@ public class ProductService {
         product.setMaterial(material);
         product.setTargetAudience(targetAudience);
         product.setThumbnail(productDto.getThumbnail());
+        product.setCreatedBy(appUser);
         product = productRepository.save(product);
 
         // Xử lý các biến thể
@@ -152,13 +154,13 @@ public class ProductService {
             variant.setQuantityInStock(variantDto.getStockLevel());
             variant.setImageUrl(variantDto.getImageUrl());
             variant.setWeight(variantDto.getWeight());
-
-            variant = productVariantRepository.save(variant);
+            variant.setCreatedBy(appUser);
+            productVariantRepository.save(variant);
         }
     }
 
     @Transactional
-    public void updateProduct(ProductWithVariantsUpdateRequestDTO productDto) {
+    public void updateProduct(ProductWithVariantsUpdateRequestDTO productDto, AppUser appUser) {
         // 1. Tìm Product cũ
         Product product = productRepository.findById(productDto.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found with ID: " + productDto.getProductId()));
@@ -181,6 +183,7 @@ public class ProductService {
         product.setMaterial(material);
         product.setTargetAudience(targetAudience);
         product.setThumbnail(productDto.getThumbnail());
+        product.setCreatedBy(appUser);
         product = productRepository.save(product);
 
         // 4. Xử lý biến thể
@@ -219,8 +222,8 @@ public class ProductService {
                 variant.setQuantityInStock(variantDto.getStockLevel());
                 variant.setImageUrl(variantDto.getImageUrl());
                 variant.setWeight(variantDto.getWeight());
-
-                variant = productVariantRepository.save(variant);
+                variant.setCreatedBy(appUser);
+                productVariantRepository.save(variant);
             }
         }
 
