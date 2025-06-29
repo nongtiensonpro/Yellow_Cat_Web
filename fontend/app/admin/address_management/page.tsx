@@ -373,7 +373,7 @@ export default function AddressManagement() {
                     <Button
                         isIconOnly
                         variant="light"
-                        onClick={handleBack}
+                        onPress={handleBack}
                     >
                         <ArrowLeft size={20} />
                     </Button>
@@ -390,7 +390,7 @@ export default function AddressManagement() {
                     <Button
                         color="primary"
                         startContent={<Plus size={18} />}
-                        onClick={handleAddNew}
+                        onPress={handleAddNew}
                     >
                         Thêm địa chỉ
                     </Button>
@@ -460,7 +460,7 @@ export default function AddressManagement() {
                                                 isIconOnly
                                                 size="sm"
                                                 variant="light"
-                                                onClick={() => handleEdit(address)}
+                                                onPress={() => handleEdit(address)}
                                             >
                                                 <Edit size={16} />
                                             </Button>
@@ -471,7 +471,7 @@ export default function AddressManagement() {
                                                 size="sm"
                                                 variant="light"
                                                 color="danger"
-                                                onClick={() => handleDeleteSingle(address.addressId)}
+                                                onPress={() => handleDeleteSingle(address.addressId)}
                                             >
                                                 <Trash2 size={16} />
                                             </Button>
@@ -504,7 +504,7 @@ export default function AddressManagement() {
                 <Button 
                     color="danger" 
                     variant="flat"
-                    onClick={() => {
+                    onPress={() => {
                         if (window.confirm(`Bạn có chắc chắn muốn xóa ${selectedAddresses.length} địa chỉ đã chọn?`)) {
                             handleDeleteSelected();
                         }
