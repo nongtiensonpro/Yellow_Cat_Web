@@ -5,17 +5,15 @@ import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import React from "react";
 
-
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const isAdminPage = pathname?.startsWith("/admin");
-    const isStaffPage = pathname?.startsWith("/staff");
+    const isAdminPage = pathname?.startsWith("/staff");
 
     return (
         <>
-            {!isAdminPage && !isStaffPage && <Navbar />}
+            {!isAdminPage && <Navbar />}
             <main>{children}</main>
-            {!isAdminPage && !isStaffPage && <Footer />}
+            {!isAdminPage && <Footer />}
         </>
     );
 }
