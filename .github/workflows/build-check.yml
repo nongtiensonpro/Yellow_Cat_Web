@@ -21,11 +21,11 @@ jobs:
           node-version: 20
 
       - name: Install FE dependencies
-        working-directory: ./frontend
+        working-directory: ./fontend
         run: npm install
 
       - name: Build FE
-        working-directory: ./frontend
+        working-directory: ./fontend
         run: npm run build
 
       # Build Backend (Spring Boot + Gradle)
