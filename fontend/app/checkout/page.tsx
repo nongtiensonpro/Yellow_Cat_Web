@@ -421,7 +421,7 @@ export default function CheckoutPage() {
                         </>
                     )}
 
-                    <Button variant="ghost" size="sm" onClick={() => router.back()} className="text-gray-500 mt-6 w-full">
+                    <Button variant="ghost" size="sm" onPress={() => router.back()} className="text-gray-500 mt-6 w-full">
                         &larr; Quay lại giỏ hàng
                     </Button>
                 </div>

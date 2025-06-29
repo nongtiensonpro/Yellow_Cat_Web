@@ -657,7 +657,7 @@ export default function Page() {
                     </CardHeader>
                     <CardBody className="text-center">
                         <Button
-                            onClick={login}
+                            onPress={login}
                             color="primary"
                             size="lg"
                             className="w-full"
@@ -697,7 +697,7 @@ export default function Page() {
                 <Button
                     color="default"
                     startContent={<RefreshCw size={16} />}
-                    onClick={fetchDemoData}
+                    onPress={fetchDemoData}
                     isLoading={loading}
                 >
                     Làm mới
@@ -927,7 +927,7 @@ export default function Page() {
                                                         isIconOnly
                                                         size="sm"
                                                         variant="light"
-                                                        onClick={() => console.log('View', item.id)}
+                                                        onPress={() => console.log('View', item.id)}
                                                     >
                                                         <Eye size={16} />
                                                     </Button>
@@ -937,7 +937,7 @@ export default function Page() {
                                                         isIconOnly
                                                         size="sm"
                                                         variant="light"
-                                                        onClick={() => console.log('Edit', item.id)}
+                                                        onPress={() => console.log('Edit', item.id)}
                                                     >
                                                         <Edit size={16} />
                                                     </Button>
@@ -947,7 +947,7 @@ export default function Page() {
                                                         isIconOnly
                                                         size="sm"
                                                         variant="light"
-                                                        onClick={() => router.push(`/admin/address_management?userId=${item.id}`)}
+                                                        onPress={() => router.push(`/admin/address_management?userId=${item.id}`)}
                                                     >
                                                         <MapPin size={16} />
                                                     </Button>
@@ -966,14 +966,14 @@ export default function Page() {
                                                     <DropdownMenu aria-label="Actions">
                                                         <DropdownItem
                                                             key="edit"
-                                                            onClick={() => handleEditProfile(item)}
+                                                            onPress={() => handleEditProfile(item)}
                                                             isDisabled={editLoading}
                                                         >
                                                             Chỉnh sửa thông tin
                                                         </DropdownItem>
                                                         <DropdownItem
                                                             key="roles"
-                                                            onClick={() => handleRoleManagement(item)}
+                                                            onPress={() => handleRoleManagement(item)}
                                                             isDisabled={roleLoading}
                                                         >
                                                             Quản lý vai trò
@@ -981,7 +981,7 @@ export default function Page() {
                                                         <DropdownItem
                                                             key="enable"
                                                             color={item.enabled ? "danger" : "success"}
-                                                            onClick={() => handleUserAction(item, item.enabled ? 'disable' : 'enable')}
+                                                            onPress={() => handleUserAction(item, item.enabled ? 'disable' : 'enable')}
                                                             isDisabled={actionLoading === item.id}
                                                         >
                                                             {item.enabled ? 'Vô hiệu hóa' : 'Kích hoạt'}
@@ -989,7 +989,7 @@ export default function Page() {
                                                         {/*<DropdownItem*/}
                                                         {/*    key="delete"*/}
                                                         {/*    color="danger"*/}
-                                                        {/*    onClick={() => console.log('Delete', item.id)}*/}
+                                                        {/*    onPress={() => console.log('Delete', item.id)}*/}
                                                         {/*    isDisabled={actionLoading === item.id}*/}
                                                         {/*>*/}
                                                         {/*    Xóa tài khoản*/}
@@ -1041,7 +1041,7 @@ export default function Page() {
                             isIconOnly
                             size="sm"
                             variant="light"
-                            onClick={() => setNotification(null)}
+                            onPress={() => setNotification(null)}
                             className="ml-2"
                         >
                             ×
@@ -1192,7 +1192,7 @@ export default function Page() {
                                                                 size="sm"
                                                                 color="danger"
                                                                 variant="light"
-                                                                onClick={() => handleRemoveRole(role)}
+                                                                onPress={() => handleRemoveRole(role)}
                                                                 isLoading={roleLoading}
                                                                 isDisabled={roleLoading}
                                                             >
@@ -1228,7 +1228,7 @@ export default function Page() {
                                                                     size="sm"
                                                                     color="success"
                                                                     variant="light"
-                                                                    onClick={() => handleAssignRole(role)}
+                                                                    onPress={() => handleAssignRole(role)}
                                                                     isLoading={roleLoading}
                                                                     isDisabled={roleLoading}
                                                                 >

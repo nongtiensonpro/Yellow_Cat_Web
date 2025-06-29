@@ -22,7 +22,7 @@ import {
     ModalFooter,
 } from "@heroui/react";
 import {useEffect, useState} from "react";
-import {Eye, Edit, Trash2, Plus, Tag, ToggleLeft, ToggleRight} from "lucide-react";
+import {Eye, Edit, Trash2, Plus, ToggleLeft, ToggleRight} from "lucide-react";
 import Link from "next/link";
 import { useDisclosure } from "@heroui/react";
 import { useSession, signIn } from "next-auth/react";
@@ -84,7 +84,7 @@ export default function Page() {
             setLoading(true);
             const searchQuery = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : "";
             const response = await fetch(`http://localhost:8080/api/products/management?page=${currentPage}&size=${itemsPerPage}${searchQuery}`);
-            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+            if (!response.ok) console.log(`HTTP error! Status: ${response.status}`);
             const apiResponse: ApiResponse = await response.json();
 
             if (apiResponse.status === 200 && apiResponse.data) {
@@ -92,7 +92,7 @@ export default function Page() {
                 setTotalPages(apiResponse.data.page.totalPages);
                 setTotalElements(apiResponse.data.page.totalElements);
             } else {
-                throw new Error(apiResponse.message || "Lỗi khi tải dữ liệu");
+                console.log(apiResponse.message || "Lỗi khi tải dữ liệu");
             }
         } catch (err) {
             setError('Không thể tải dữ liệu. Vui lòng thử lại sau.');
@@ -150,7 +150,7 @@ export default function Page() {
             // Lấy accessToken từ session
             const token = session.accessToken;
             if (!token) {
-                throw new Error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
+                console.log("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
             }
 
             setIsToggling(true);
@@ -165,7 +165,7 @@ export default function Page() {
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => null);
-                throw new Error(errorData?.message || `HTTP error! Status: ${response.status}`);
+                console.log(errorData?.message || `HTTP error! Status: ${response.status}`);
             }
             
             onToggleClose();
@@ -190,7 +190,7 @@ export default function Page() {
             // Lấy accessToken từ session
             const token = session.accessToken;
             if (!token) {
-                throw new Error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
+                console.log("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
             }
 
             setLoading(true);
@@ -204,7 +204,7 @@ export default function Page() {
             });
             if (!response.ok) {
                 const errorData = await response.json().catch(() => null);
-                throw new Error(errorData?.message || `HTTP error! Status: ${response.status}`);
+                console.log(errorData?.message || `HTTP error! Status: ${response.status}`);
             }
             onClose();
             setProductToDelete(null);
@@ -316,13 +316,13 @@ export default function Page() {
                                                         size="sm" 
                                                         variant="light" 
                                                         color={product.isActive ? "warning" : "success"}
-                                                        onClick={() => openToggleConfirm(product)}
+                                                        onPress={() => openToggleConfirm(product)}
                                                     >
                                                         {product.isActive ? <ToggleRight size={16}/> : <ToggleLeft size={16}/>}
                                                     </Button>
                                                 </Tooltip>
                                                 <Tooltip content="Xóa">
-                                                    <Button isIconOnly size="sm" variant="light" color="danger" onClick={() => openDeleteConfirm(product)}>
+                                                    <Button isIconOnly size="sm" variant="light" color="danger" onPress={() => openDeleteConfirm(product)}>
                                                         <Trash2 size={16}/>
                                                     </Button>
                                                 </Tooltip>
@@ -348,7 +348,7 @@ export default function Page() {
                         <Button
                             color="default"
                             variant="flat"
-                            onClick={() => setCurrentPage((old) => Math.max(0, old - 1))}
+                            onPress={() => setCurrentPage((old) => Math.max(0, old - 1))}
                             disabled={currentPage === 0 || loading}
                         >
                             Trang trước
@@ -359,7 +359,7 @@ export default function Page() {
                         <Button
                             color="default"
                             variant="flat"
-                            onClick={() => setCurrentPage((old) => Math.min(totalPages - 1, old + 1))}
+                            onPress={() => setCurrentPage((old) => Math.min(totalPages - 1, old + 1))}
                             disabled={currentPage >= totalPages - 1 || loading}
                         >
                             Trang sau

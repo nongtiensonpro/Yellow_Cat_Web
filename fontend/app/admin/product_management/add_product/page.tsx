@@ -11,7 +11,7 @@ import {
     Accordion,
     AccordionItem,
     Autocomplete,
-    AutocompleteItem, useDisclosure, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter
+    AutocompleteItem, useDisclosure, Modal, ModalContent, ModalHeader, ModalBody
 } from "@heroui/react";
 import {Input, Textarea} from "@heroui/input";
 import {CldUploadButton, CldImage} from "next-cloudinary";
@@ -155,12 +155,12 @@ export default function AddProductPage() {
                     sizeRes.json()
                 ]);
 
-                if (!brandRes.ok) throw new Error(`Không thể tải thương hiệu: ${brandRes.status}`);
-                if (!catRes.ok) throw new Error(`Không thể tải danh mục: ${catRes.status}`);
-                if (!materialRes.ok) throw new Error(`Không thể tải chất liệu: ${materialRes.status}`);
-                if (!audienceRes.ok) throw new Error(`Không thể tải đối tượng: ${audienceRes.status}`);
-                if (!colorRes.ok) throw new Error(`Không thể tải màu sắc: ${colorRes.status}`);
-                if (!sizeRes.ok) throw new Error(`Không thể tải kích thước: ${sizeRes.status}`);
+                if (!brandRes.ok) console.log(`Không thể tải thương hiệu: ${brandRes.status}`);
+                if (!catRes.ok) console.log(`Không thể tải danh mục: ${catRes.status}`);
+                if (!materialRes.ok) console.log(`Không thể tải chất liệu: ${materialRes.status}`);
+                if (!audienceRes.ok) console.log(`Không thể tải đối tượng: ${audienceRes.status}`);
+                if (!colorRes.ok) console.log(`Không thể tải màu sắc: ${colorRes.status}`);
+                if (!sizeRes.ok) console.log(`Không thể tải kích thước: ${sizeRes.status}`);
 
                 setBrands(results[0].data.content || []);
                 setCategories(results[1].data.content || []);
@@ -501,7 +501,7 @@ export default function AddProductPage() {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({message: "Lỗi không xác định từ máy chủ."}));
-                throw new Error(errorData?.message || `HTTP error! Status: ${response.status}`);
+                console.log(errorData?.message || `HTTP error! Status: ${response.status}`);
             }
 
             addToast({title: "Thành công", description: "Tạo sản phẩm thành công!", color: "success"});
@@ -982,7 +982,7 @@ export default function AddProductPage() {
                                 </div>
 
                                 <div className="flex justify-end">
-                                    <Button type="button" color="primary" variant="solid" onClick={addVariant}>
+                                    <Button type="button" color="primary" variant="solid" onPress={addVariant}>
                                         ➕ Thêm biến thể
                                     </Button>
                                 </div>
@@ -996,7 +996,7 @@ export default function AddProductPage() {
                                         <div className="flex items-center justify-between mb-3">
                                             <h6 className="font-semibold text-lg">Biến thể #{idx + 1}</h6>
                                             <Button type="button" color="danger" variant="light" size="sm"
-                                                    onClick={() => removeVariant(idx)}>
+                                                    onPress={() => removeVariant(idx)}>
                                                 Xóa biến thể
                                             </Button>
                                         </div>
@@ -1257,7 +1257,7 @@ export default function AddProductPage() {
                 </CardBody>
                 <Divider/>
                 <CardFooter className="p-5 flex justify-end gap-3">
-                    <Button color="default" type="button" onClick={() => router.push("/admin/product_management")}>
+                    <Button color="default" type="button" onPress={() => router.push("/admin/product_management")}>
                         Quay lại
                     </Button>
                     <Button color="success" type="submit" isDisabled={isSubmitting || !session}>

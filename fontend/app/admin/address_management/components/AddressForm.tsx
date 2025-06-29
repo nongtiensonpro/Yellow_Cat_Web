@@ -102,7 +102,7 @@ export default function AddressForm({ isOpen, onClose, onSubmit, initialData, mo
     const fetchProvinces = useCallback(async () => {
         try {
             const res = await fetch('http://localhost:8080/api/address/provinces');
-            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            if (!res.ok) console.log(`HTTP error! status: ${res.status}`);
             const data = await res.json();
             setProvinces(data);
         } catch (err) {

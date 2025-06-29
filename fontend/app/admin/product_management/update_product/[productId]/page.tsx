@@ -40,7 +40,6 @@ import EditSizeModal from "@/components/product/SizeForm/EditSizeForm";
 interface ProductVariant {
     variantId: number;
     sku: string;
-
     colorId: number;
     sizeId: number;
     price: number;
@@ -202,7 +201,7 @@ export default function UpdateProductPage() {
                 try {
                     const response = await fetch(`http://localhost:8080/api/products/${productId}`);
                     if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
+                        console.log(`HTTP error! Status: ${response.status}`);
                     }
                     const data: ApiResponse = await response.json();
 
@@ -229,7 +228,7 @@ export default function UpdateProductPage() {
                         }));
                         setVariants(variantInputs);
                     } else {
-                        throw new Error(data.message || 'Không thể tải dữ liệu sản phẩm');
+                        console.log(data.message || 'Không thể tải dữ liệu sản phẩm');
                     }
                 } catch (err: any) {
                     console.error('Lỗi khi tải dữ liệu sản phẩm:', err);
@@ -256,12 +255,12 @@ export default function UpdateProductPage() {
                         fetch("http://localhost:8080/api/sizes?page=0&size=1000")
                     ]);
 
-                    if (!brandRes.ok) throw new Error(`Không thể tải thương hiệu: ${brandRes.status}`);
-                    if (!catRes.ok) throw new Error(`Không thể tải danh mục: ${catRes.status}`);
-                    if (!materialRes.ok) throw new Error(`Không thể tải chất liệu: ${materialRes.status}`);
-                    if (!audienceRes.ok) throw new Error(`Không thể tải đối tượng khách hàng: ${audienceRes.status}`);
-                    if (!colorRes.ok) throw new Error(`Không thể tải màu sắc: ${colorRes.status}`);
-                    if (!sizeRes.ok) throw new Error(`Không thể tải kích thước: ${sizeRes.status}`);
+                    if (!brandRes.ok) console.log(`Không thể tải thương hiệu: ${brandRes.status}`);
+                    if (!catRes.ok) console.log(`Không thể tải danh mục: ${catRes.status}`);
+                    if (!materialRes.ok) console.log(`Không thể tải chất liệu: ${materialRes.status}`);
+                    if (!audienceRes.ok) console.log(`Không thể tải đối tượng khách hàng: ${audienceRes.status}`);
+                    if (!colorRes.ok) console.log(`Không thể tải màu sắc: ${colorRes.status}`);
+                    if (!sizeRes.ok) console.log(`Không thể tải kích thước: ${sizeRes.status}`);
 
                     const [brandData, catData, materialData, audienceData, colorData, sizeData] = await Promise.all([
                         brandRes.json(),
@@ -387,7 +386,7 @@ export default function UpdateProductPage() {
 
         try {
             const token = session?.accessToken;
-            if (!token) throw new Error("Bạn cần đăng nhập.");
+            if (!token) console.log("Bạn cần đăng nhập.");
 
             const variantPayload = variants.map(v => ({
                 variantId: v.variantId || null,
@@ -423,7 +422,7 @@ export default function UpdateProductPage() {
 
             const responseData = await response.json();
             if (!response.ok) {
-                throw new Error(responseData?.message || `HTTP error! Status: ${response.status}`);
+                console.log(responseData?.message || `HTTP error! Status: ${response.status}`);
             }
 
             addToast({title: "Thành công", description: "Cập nhật sản phẩm thành công!", color: "success"});
@@ -603,7 +602,7 @@ export default function UpdateProductPage() {
                     <p className="text-red-600 p-3 bg-red-100 border border-red-300 rounded-md" role="alert">
                         {formError}. Không thể hiển thị form cập nhật. Vui lòng thử lại sau.
                     </p>
-                    <Button className="mt-4" onClick={() => router.back()}>Quay lại</Button>
+                    <Button className="mt-4" onPress={() => router.back()}>Quay lại</Button>
                 </CardBody>
             </Card>
         );
@@ -1071,7 +1070,7 @@ export default function UpdateProductPage() {
                                             {variants.length === 0 ? "Chưa có biến thể nào" : `${variants.length} biến thể`}
                                         </p>
                                     </div>
-                                    <Button type="button" color="primary" variant="solid" onClick={addVariant}
+                                    <Button type="button" color="primary" variant="solid" onPress={addVariant}
                                             className="font-medium">
                                         ➕ Thêm biến thể mới
                                     </Button>
@@ -1080,7 +1079,7 @@ export default function UpdateProductPage() {
                                 {variants.length === 0 ? (
                                     <div
                                         className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                                        <Button type="button" color="primary" variant="ghost" onClick={addVariant}>
+                                        <Button type="button" color="primary" variant="ghost" onPress={addVariant}>
                                             🚀 Tạo biến thể đầu tiên
                                         </Button>
                                     </div>
@@ -1096,7 +1095,7 @@ export default function UpdateProductPage() {
                                                             className="text-sm text-gray-500 ml-2">(ID: {variant.variantId})</span>)}
                                                     </h6>
                                                     <Button type="button" color="danger" variant="light" size="sm"
-                                                            onClick={() => removeVariant(idx)}>
+                                                            onPress={() => removeVariant(idx)}>
                                                         🗑️ Xóa biến thể
                                                     </Button>
                                                 </div>
@@ -1395,7 +1394,7 @@ export default function UpdateProductPage() {
                 </CardBody>
                 <Divider/>
                 <CardFooter className="p-5 flex justify-end gap-3">
-                    <Button color="default" type="button" onClick={() => router.push("/admin/product_management")}>
+                    <Button color="default" type="button" onPress={() => router.push("/admin/product_management")}>
                         Quay lại
                     </Button>
                     <Button color="success" type="submit" isDisabled={isSubmitting || status !== "authenticated"}>
