@@ -47,7 +47,7 @@ const menuItems: MenuItem[] = [
 
         ],
     },
-    { href: "/admin/promotion_management", icon: <Percent size={18} />, label: "Khuyến mãi" },
+    { href: "/admin/promotion_management/vouchers", icon: <Percent size={18} />, label: "Khuyến mãi" },
     { href: "/admin/promotion_products", icon: <Percent size={18} />, label: "Đợt giảm giá" },
     { href: "/admin/return_management", icon: <RotateCcw size={18} />, label: "Trả hàng" },
     { href: "/admin/invoice_management", icon: <FileText size={18} />, label: "Hóa đơn" },

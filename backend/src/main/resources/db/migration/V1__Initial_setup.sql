@@ -243,7 +243,7 @@ CREATE TABLE promotions
 (
     promotion_id   SERIAL PRIMARY KEY,
     app_user_id    INT            NOT NULL,
-    promotion_code VARCHAR(50) UNIQUE,
+    promotion_code VARCHAR(50) unique,
     promotion_name VARCHAR(255)   NOT NULL,
     description    TEXT,
     discount_type  VARCHAR(20)    NOT NULL,
