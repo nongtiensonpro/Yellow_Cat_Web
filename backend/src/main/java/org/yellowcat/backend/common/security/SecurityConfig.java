@@ -49,6 +49,7 @@ public class SecurityConfig {
                                 "/api/cart/**",
                                 "/api/order-timelines/**",
                                 "/api/shipping-methods/**",
+                                "/api/payment/**",
                                 "/api/cart-items/**",
                                 "/api/vnpay/**",
                                 "/api/ghn/**",
