@@ -30,7 +30,7 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
     { href: "/admin", icon: <LayoutDashboard size={18} />, label: "Thống kê" },
     { href: "/staff/officesales", icon: <Store size={18} />, label: "Bán hàng tại quầy" },
-    { href: "/admin/order_management", icon: <ListOrdered size={18} />, label: "Đơn hàng" },
+    { href: "/admin/order/officesales", icon: <FileText size={18} />, label: "Hóa đơn" },
     {
         href: "/admin/product_management",
         icon: <Package size={18} />,
@@ -50,7 +50,6 @@ const menuItems: MenuItem[] = [
     { href: "/admin/promotion_management/vouchers", icon: <Percent size={18} />, label: "Khuyến mãi" },
     { href: "/admin/promotion_products", icon: <Percent size={18} />, label: "Đợt giảm giá" },
     { href: "/admin/return_management", icon: <RotateCcw size={18} />, label: "Trả hàng" },
-    { href: "/admin/invoice_management", icon: <FileText size={18} />, label: "Hóa đơn" },
     { href: "/admin/account_management", icon: <User size={18} />, label: "Tài khoản" },
 ];
 

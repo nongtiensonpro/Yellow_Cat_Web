@@ -34,30 +34,50 @@ public class OrderController {
     OrderService orderService;
     AppUserService appUserService;
 
+//    @GetMapping()
+//    @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
+//    public ResponseEntity<?> getOrders(
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "10") int size
+//    ) {
+//        Page<OrderResponse> orders = orderService.getOrders(page, size);
+//        PageResponse<OrderResponse> pageResponse = new PageResponse<>(orders);
+//
+//        return ResponseEntityBuilder.success(pageResponse);
+//    }
+
     @GetMapping()
     @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
     public ResponseEntity<?> getOrders(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
-        Page<OrderResponse> orders = orderService.getOrders(page, size);
-        PageResponse<OrderResponse> pageResponse = new PageResponse<>(orders);
-
-        return ResponseEntityBuilder.success(pageResponse);
-    }
-
-    @GetMapping("/status")
-    @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
-    public ResponseEntity<?> getOrderByStatus(
-            @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam String status
+            @RequestParam(required = false) String status
     ) {
-        Page<OrderResponse> orders = orderService.getOrderByStatus(page, size, status);
-        PageResponse<OrderResponse> pageResponse = new PageResponse<>(orders);
+        Page<OrderResponse> orders;
+        if (status != null && !status.isEmpty()) {
+            orders = orderService.getOrderByStatus(page, size, status);
+        } else {
+            orders = orderService.getOrders(page, size);
+        }
 
+        PageResponse<OrderResponse> pageResponse = new PageResponse<>(orders);
         return ResponseEntityBuilder.success(pageResponse);
     }
+
+
+
+//    @GetMapping("/status")
+//    @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
+//    public ResponseEntity<?> getOrderByStatus(
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "10") int size,
+//            @RequestParam String status
+//    ) {
+//        Page<OrderResponse> orders = orderService.getOrderByStatus(page, size, status);
+//        PageResponse<OrderResponse> pageResponse = new PageResponse<>(orders);
+//
+//        return ResponseEntityBuilder.success(pageResponse);
+//    }
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")

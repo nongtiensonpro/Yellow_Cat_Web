@@ -3,21 +3,20 @@
 'use client';
 import { Card, Button } from "@heroui/react"; // Simplified imports
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react"; // Import useCallback for memoization
+import { useState, useEffect, useCallback } from "react";
 
 interface CartItem {
     id: number;
     productId: number;
     productName: string;
-    name: string; // The variant name in the cart
-    price: number; // This is assumed to be the price of the selected variant
+    name: string;
+    price: number;
     quantity: number;
     imageUrl: string;
     sku: string;
     stockLevel: number;
 }
 
-// Interfaces for administrative divisions
 interface Province {
     code: number;
     name: string;
@@ -79,9 +78,7 @@ export default function CheckoutPage() {
         setLoadingCart(false);
     }, []);
 
-    // --- API Calls for Provinces, Districts, Wards ---
 
-    // Fetch Provinces
     useEffect(() => {
         const fetchProvinces = async () => {
             setLoadingProvinces(true);

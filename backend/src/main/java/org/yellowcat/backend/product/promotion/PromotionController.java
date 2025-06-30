@@ -76,4 +76,12 @@ public class PromotionController {
     public ResponseEntity<Boolean> deletePromotion(@PathVariable Integer id) {
         return ResponseEntity.ok(promotionService.delete(id));
     }
+
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getPromotionById(@PathVariable Integer id) {
+        PromotionResponse response = promotionService.getById(id);
+        return ResponseEntity.ok(Map.of("data", response));
+    }
+
 }

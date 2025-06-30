@@ -492,14 +492,26 @@ VALUES ('Giao hàng tiêu chuẩn', 'Giao hàng trong 3-5 ngày làm việc', 30
        ('Giao hàng hỏa tốc', 'Giao hàng trong ngày', 100000.00, TRUE),
        ('Giao hàng miễn phí', 'Miễn phí giao hàng cho đơn hàng trên 1 triệu', 0.00, TRUE);
 
+-- -- 8. Dữ liệu cho bảng Orders
+-- INSERT INTO orders (order_code, app_user_id, shipping_address_id, sub_total_amount, shipping_fee, discount_amount,
+--                     final_amount, order_status, shipping_method_id, customer_notes)
+-- VALUES ('ORD-2024-001', 1, 1, 3600000.00, 30000.00, 180000.00, 3450000.00, 'Delivered', 1, 'Giao hàng giờ hành chính'),
+--        ('ORD-2024-002', 2, 3, 1650000.00, 50000.00, 0.00, 1700000.00, 'Processing', 2, NULL),
+--        ('ORD-2024-003', 3, 4, 3500000.00, 0.00, 350000.00, 3150000.00, 'Shipped', 4, 'Liên hệ trước khi giao'),
+--        ('ORD-2024-004', 1, 2, 2200000.00, 30000.00, 0.00, 2230000.00, 'Pending', 1, NULL),
+--        ('ORD-2024-005', 4, 5, 5400000.00, 0.00, 540000.00, 4860000.00, 'Confirmed', 4, 'Giao hàng cuối tuần');
+
 -- 8. Dữ liệu cho bảng Orders
 INSERT INTO orders (order_code, app_user_id, shipping_address_id, sub_total_amount, shipping_fee, discount_amount,
                     final_amount, order_status, shipping_method_id, customer_notes)
-VALUES ('ORD-2024-001', 1, 1, 3600000.00, 30000.00, 180000.00, 3450000.00, 'Delivered', 1, 'Giao hàng giờ hành chính'),
-       ('ORD-2024-002', 2, 3, 1650000.00, 50000.00, 0.00, 1700000.00, 'Processing', 2, NULL),
-       ('ORD-2024-003', 3, 4, 3500000.00, 0.00, 350000.00, 3150000.00, 'Shipped', 4, 'Liên hệ trước khi giao'),
-       ('ORD-2024-004', 1, 2, 2200000.00, 30000.00, 0.00, 2230000.00, 'Pending', 1, NULL),
-       ('ORD-2024-005', 4, 5, 5400000.00, 0.00, 540000.00, 4860000.00, 'Confirmed', 4, 'Giao hàng cuối tuần');
+VALUES ('ORD-2024-001', 1, 1, 3600000.00, 30000.00, 180000.00, 3450000.00, 'Chờ xác nhận', 1, 'Giao hàng giờ hành chính'),
+       ('ORD-2024-002', 2, 3, 1650000.00, 50000.00, 0.00, 1700000.00, 'Đã xác nhận', 2, NULL),
+       ('ORD-2024-003', 3, 4, 3500000.00, 0.00, 350000.00, 3150000.00, 'Chờ vận chuyển', 4, 'Liên hệ trước khi giao'),
+       ('ORD-2024-004', 1, 2, 2200000.00, 30000.00, 0.00, 2230000.00, 'Đang vận chuyển', 1, NULL),
+       ('ORD-2024-005', 4, 5, 5400000.00, 0.00, 540000.00, 4860000.00, 'Đã thanh toán', 4, 'Giao hàng cuối tuần'),
+       ('ORD-2025-006', 3, 1, 6400000.00, 0.00, 640000.00, 4860000.00, 'Đã hoàn thành', 4, 'Giao hàng cuối tuần'),
+       ('ORD-2025-007', 3, 1, 6400000.00, 0.00, 640000.00, 600000.00, 'Đã hủy', 4, Null);
+
 
 -- 9. Dữ liệu cho bảng OrderItems
 INSERT INTO order_items (order_id, variant_id, quantity, price_at_purchase, total_price)

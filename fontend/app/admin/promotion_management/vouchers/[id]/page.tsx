@@ -160,15 +160,6 @@ export default function EditVoucherPage() {
                     {errors.promotionName && <p className="text-red-600 text-sm">{errors.promotionName}</p>}
                 </div>
                 <div>
-                    <Label text="Mô tả" />
-                    <textarea
-                        name="description"
-                        value={form.description}
-                        onChange={handleChange}
-                        className="w-full border px-3 py-2 rounded"
-                    />
-                </div>
-                <div>
                     <Label text="Loại giảm" required />
                     <select
                         name="discountType"
