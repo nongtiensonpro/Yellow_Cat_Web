@@ -3,6 +3,7 @@ package org.yellowcat.backend.product.order;
 import jakarta.persistence.*;
 import lombok.*;
 import org.yellowcat.backend.address.Addresses;
+import org.yellowcat.backend.online_selling.PaymentStatus;
 import org.yellowcat.backend.product.orderItem.OrderItem;
 import org.yellowcat.backend.product.payment.Payment;
 import org.yellowcat.backend.product.shipment.Shipment;
@@ -70,6 +71,10 @@ public class Order { // Tên class là Order (số ít)
     @Column(name = "customer_notes")
     private String customerNotes;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", nullable = false)
+    private PaymentStatus paymentStatus;
+
     @Column(name = "is_synced_to_ghtk", columnDefinition = "BOOLEAN DEFAULT FALSE")
     private Boolean isSyncedToGhtk;
 
@@ -98,5 +103,9 @@ public class Order { // Tên class là Order (số ít)
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    public boolean isPaid() {
+        return PaymentStatus.PAID.equals(this.paymentStatus);
     }
 }

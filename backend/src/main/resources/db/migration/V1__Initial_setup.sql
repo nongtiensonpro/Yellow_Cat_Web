@@ -167,6 +167,7 @@ CREATE TABLE orders
     discount_amount     NUMERIC(12, 2)          DEFAULT 0,
     final_amount        NUMERIC(14, 2) NOT NULL,
     order_status        VARCHAR(50)    NOT NULL DEFAULT 'Pending',
+    payment_status      VARCHAR(20) ,
     shipping_method_id  INT,
     customer_notes      TEXT,
     is_synced_to_ghtk   BOOLEAN                 DEFAULT FALSE, -- Ghi nhận đơn đã gửi lên GHTK chưa
@@ -187,6 +188,16 @@ CREATE TABLE order_items
     total_price       NUMERIC(14, 2) NOT NULL,
     FOREIGN KEY (order_id) REFERENCES orders (order_id) ON DELETE CASCADE,
     FOREIGN KEY (variant_id) REFERENCES product_variants (variant_id)
+);
+
+CREATE TABLE order_timelines (
+    id SERIAL PRIMARY KEY,
+    order_id INT NOT NULL,
+    from_status VARCHAR(50),
+    to_status VARCHAR(50) NOT NULL,
+    note TEXT,
+    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE
 );
 
 -- Bảng Giao dịch thanh toán
