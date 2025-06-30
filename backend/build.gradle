@@ -75,6 +75,8 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     testImplementation 'com.h2database:h2'
 
+    implementation 'org.json:json:20231013'
+
 }
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
