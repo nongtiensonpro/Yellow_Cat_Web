@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -19,7 +18,7 @@ interface Voucher {
 
 export default function VouchersPage() {
     const searchParams = useSearchParams();
-    const initialPage = Number(searchParams.get('page')) || 0;
+    const initialPage = Number(searchParams?.get('page')) || 0;
 
     const [vouchers, setVouchers] = useState<Voucher[]>([]);
     const [loading, setLoading] = useState(true);

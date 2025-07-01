@@ -1,9 +1,9 @@
-
-
 'use client';
-import { Card, Button } from "@heroui/react"; // Simplified imports
+import { Card, Button, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/react"; // Simplified imports
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react"; // Import useCallback for memoization
+import { useState, useEffect, useCallback, useRef } from "react"; // Import useCallback for memoization
+import { useSession } from "next-auth/react";
+import { jwtDecode } from "jwt-decode";
 
 interface CartItem {
     id: number;
@@ -47,7 +47,7 @@ interface Ward {
 export default function CheckoutPage() {
     const router = useRouter();
     const [paymentMethod, setPaymentMethod] = useState('cod');
-    const [cartItems, setCartItems] = useState<CartItem[]>([]);
+    const [cartItems, setCartItems] = useState<any[]>([]);
     const [loadingCart, setLoadingCart] = useState(true);
 
     // --- State for Address Form ---
@@ -68,16 +68,35 @@ export default function CheckoutPage() {
     const [loadingDistricts, setLoadingDistricts] = useState(false);
     const [loadingWards, setLoadingWards] = useState(false);
 
-    // Fetch cart items from localStorage
+    const { data: session } = useSession();
+    const revertedRef = useRef(false);
+
+    const [shippingFee, setShippingFee] = useState<number>(0);
+    const [loadingShippingFee, setLoadingShippingFee] = useState(false);
+    const [shippingError, setShippingError] = useState<string | null>(null);
+
+    const [addressModalOpen, setAddressModalOpen] = useState(false);
+    const [userAddresses, setUserAddresses] = useState<any[]>([]);
+    const [selectedAddressText, setSelectedAddressText] = useState('');
+
     useEffect(() => {
-        if (typeof window !== 'undefined') {
+        if (session?.user) {
+            // Lấy từ backend
+            fetch(`http://localhost:8080/api/cart?keycloakId=${session.user.id}`)
+                .then(res => res.json())
+                .then(data => setCartItems((data.items || []).map((item: any) => ({
+                    ...item,
+                    id: item.id || item.variantId
+                }))));
+        } else if (typeof window !== 'undefined') {
+            // Lấy từ localStorage
             const storedCart = localStorage.getItem('cart');
             if (storedCart) {
                 setCartItems(JSON.parse(storedCart));
             }
         }
         setLoadingCart(false);
-    }, []);
+    }, [session]);
 
     // --- API Calls for Provinces, Districts, Wards ---
 
@@ -168,11 +187,18 @@ export default function CheckoutPage() {
     const handleProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const code = parseInt(e.target.value);
         setSelectedProvinceCode(isNaN(code) ? null : code);
+        setSelectedDistrictCode(null);
+        setShippingFee(0);
+        setShippingError(null);
     };
 
     const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const code = parseInt(e.target.value);
         setSelectedDistrictCode(isNaN(code) ? null : code);
+        if (isNaN(code)) {
+            setShippingFee(0);
+            setShippingError(null);
+        }
     };
 
     const handleWardChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -193,9 +219,179 @@ export default function CheckoutPage() {
 
     // Calculate totals without shipping fee and discount
     const totalBeforeDiscount = calculateSubtotal();
-    const shippingFee = 0; // Set shipping fee to 0
     const discount = 0; // Set discount to 0
     const finalTotal = totalBeforeDiscount + shippingFee - discount; // The final total is now just the subtotal
+
+    const handleRevertStock = useCallback(async () => {
+        if (revertedRef.current) return; // Đã revert rồi thì không gọi nữa
+        revertedRef.current = true;
+        if (!session || !session.accessToken) return;
+        let keycloakId = null;
+        try {
+            const tokenData = jwtDecode(session.accessToken);
+            keycloakId = tokenData.sub;
+        } catch {
+            return;
+        }
+        try {
+            await fetch(`http://localhost:8080/api/cart/revert?keycloakId=${keycloakId}`, {
+                method: 'POST',
+            });
+        } catch (error) {
+            console.error('Error reverting stock:', error);
+        }
+    }, [session]);
+
+    // Xử lý khi người dùng bấm nút quay lại
+    const handleGoBack = () => {
+        handleRevertStock();
+        router.push('/cart');
+    };
+
+    // Chỉ revert khi đóng tab/trình duyệt hoặc quay lại (popstate)
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            handleRevertStock();
+        };
+        const handlePopState = () => {
+            handleRevertStock();
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        window.addEventListener('popstate', handlePopState);
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [handleRevertStock]);
+
+    // Revert stock khi chuyển route nội bộ Next.js (SPA)
+    useEffect(() => {
+        let ignore = false;
+        const handleRouteChange = (url: string) => {
+            if (ignore) return;
+            if (url !== '/checkout') {
+                handleRevertStock();
+            }
+        };
+        const pushState = window.history.pushState;
+        const replaceState = window.history.replaceState;
+        function patchHistory(method: any) {
+            return function(this: any) {
+                const url = arguments[2];
+                if (typeof url === 'string') {
+                    handleRouteChange(url);
+                }
+                return method.apply(this, arguments);
+            };
+        }
+        window.history.pushState = patchHistory(pushState);
+        window.history.replaceState = patchHistory(replaceState);
+        const popHandler = (e: any) => {
+            handleRouteChange(window.location.pathname);
+        };
+        window.addEventListener('popstate', popHandler);
+        return () => {
+            ignore = true;
+            window.history.pushState = pushState;
+            window.history.replaceState = replaceState;
+            window.removeEventListener('popstate', popHandler);
+        };
+    }, [handleRevertStock]);
+
+    // Hàm lấy phí vận chuyển
+    const fetchShippingFee = async (province: string, district: string, value: number) => {
+        setLoadingShippingFee(true);
+        setShippingError(null);
+        try {
+            const res = await fetch(
+                `http://localhost:8080/api/ghtk/fee?province=${encodeURIComponent(province)}&district=${encodeURIComponent(district)}&weight=1000&value=${value}`
+            );
+            const data = await res.json();
+            if (res.ok && data.data != null) {
+                setShippingFee(data.data);
+            } else {
+                setShippingFee(0);
+                setShippingError("Không lấy được phí vận chuyển");
+            }
+        } catch (err) {
+            setShippingFee(0);
+            setShippingError("Không lấy được phí vận chuyển");
+        } finally {
+            setLoadingShippingFee(false);
+        }
+    };
+
+    // Gọi phí vận chuyển khi chọn tỉnh/huyện
+    useEffect(() => {
+        if (
+            selectedProvinceCode &&
+            selectedDistrictCode &&
+            cartItems.length > 0 &&
+            provinces.length > 0 &&
+            districts.length > 0
+        ) {
+            const provinceName = provinces.find(p => p.code === selectedProvinceCode)?.name;
+            const districtName = districts.find(d => d.code === selectedDistrictCode)?.name;
+            if (provinceName && districtName) {
+                fetchShippingFee(provinceName, districtName, totalBeforeDiscount);
+            }
+        } else {
+            setShippingFee(0);
+            setShippingError(null);
+        }
+        // eslint-disable-next-line
+    }, [selectedProvinceCode, selectedDistrictCode, cartItems.length, provinces, districts]);
+
+    // Hàm lấy danh sách địa chỉ user (giả sử đã có API, có thể cần sửa lại endpoint cho đúng)
+    const fetchUserAddresses = async () => {
+        if (!session || !session.accessToken) return;
+        let keycloakId = null;
+        try {
+            const tokenData = jwtDecode(session.accessToken);
+            keycloakId = tokenData.sub;
+        } catch {
+            return;
+        }
+        try {
+            const res = await fetch(`http://localhost:8080/api/addresses/user/${keycloakId}?page=0&size=100`);
+            if (!res.ok) throw new Error('Không thể lấy địa chỉ');
+            const data = await res.json();
+            if (data && data.data && data.data.content) {
+                setUserAddresses(data.data.content);
+            } else {
+                setUserAddresses([]);
+            }
+        } catch {
+            setUserAddresses([]);
+        }
+    };
+
+    const handleOpenAddressModal = () => {
+        fetchUserAddresses();
+        setAddressModalOpen(true);
+    };
+
+    const handleCloseAddressModal = () => setAddressModalOpen(false);
+
+    const handleSelectAddress = (address: any) => {
+        // Reset toàn bộ các ô input về rỗng/null
+        setFullName('');
+        setPhone('');
+        setAddressDetail('');
+        setSelectedProvinceCode(null);
+        setSelectedDistrictCode(null);
+        setSelectedWardCode(null);
+        // Ghi ra ô input text
+        const text = `${address.recipientName || ''} - ${address.phoneNumber || ''} - ${address.streetAddress || ''}${address.wardCommune ? ', ' + address.wardCommune : ''}${address.district ? ', ' + address.district : ''}${address.province || address.cityProvince ? ', ' + (address.province || address.cityProvince) : ''}`;
+        setSelectedAddressText(text);
+        setAddressModalOpen(false);
+        // Nếu có tỉnh và huyện, tự động lấy phí vận chuyển
+        const provinceName = address.province || address.cityProvince;
+        const districtName = address.district;
+        if (provinceName && districtName) {
+            fetchShippingFee(provinceName, districtName, totalBeforeDiscount);
+        }
+    };
 
     if (loadingCart || loadingProvinces) {
         return (
@@ -220,7 +416,10 @@ export default function CheckoutPage() {
                                     type="text"
                                     id="fullName"
                                     value={fullName}
-                                    onChange={(e) => setFullName(e.target.value)}
+                                    onChange={(e) => {
+                                        setFullName(e.target.value);
+                                        setSelectedAddressText('');
+                                    }}
                                     className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
                                 />
                             </div>
@@ -230,7 +429,10 @@ export default function CheckoutPage() {
                                     type="text"
                                     id="phone"
                                     value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
+                                    onChange={(e) => {
+                                        setPhone(e.target.value);
+                                        setSelectedAddressText('');
+                                    }}
                                     className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
                                 />
                             </div>
@@ -240,7 +442,10 @@ export default function CheckoutPage() {
                                 <select
                                     id="province"
                                     className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
-                                    onChange={handleProvinceChange}
+                                    onChange={(e) => {
+                                        handleProvinceChange(e);
+                                        setSelectedAddressText('');
+                                    }}
                                     value={selectedProvinceCode || ''}
                                     disabled={loadingProvinces}
                                 >
@@ -258,7 +463,10 @@ export default function CheckoutPage() {
                                 <select
                                     id="district"
                                     className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
-                                    onChange={handleDistrictChange}
+                                    onChange={(e) => {
+                                        handleDistrictChange(e);
+                                        setSelectedAddressText('');
+                                    }}
                                     value={selectedDistrictCode || ''}
                                     disabled={!selectedProvinceCode || loadingDistricts}
                                 >
@@ -276,7 +484,10 @@ export default function CheckoutPage() {
                                 <select
                                     id="ward"
                                     className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
-                                    onChange={handleWardChange}
+                                    onChange={(e) => {
+                                        handleWardChange(e);
+                                        setSelectedAddressText('');
+                                    }}
                                     value={selectedWardCode || ''}
                                     disabled={!selectedDistrictCode || loadingWards}
                                 >
@@ -296,7 +507,10 @@ export default function CheckoutPage() {
                                     id="addressDetail"
                                     placeholder="Số nhà, tên đường"
                                     value={addressDetail}
-                                    onChange={(e) => setAddressDetail(e.target.value)}
+                                    onChange={(e) => {
+                                        setAddressDetail(e.target.value);
+                                        setSelectedAddressText('');
+                                    }}
                                     className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
                                 />
                             </div>
@@ -311,9 +525,19 @@ export default function CheckoutPage() {
                                     className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
                                 ></textarea>
                             </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ đã chọn</label>
+                                <input
+                                    type="text"
+                                    value={selectedAddressText}
+                                    onChange={e => setSelectedAddressText(e.target.value)}
+                                    className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="Chưa chọn địa chỉ"
+                                />
+                            </div>
                         </div>
                         <div className="flex justify-end mt-4">
-                            <Button className="bg-white text-blue-600 border border-blue-600 hover:bg-blue-50 text-base py-2 px-6 rounded-md">
+                            <Button className="bg-white text-blue-600 border border-blue-600 hover:bg-blue-50 text-base py-2 px-6 rounded-md" onClick={handleOpenAddressModal}>
                                 CHỌN ĐỊA CHỈ ĐÃ LƯU
                             </Button>
                         </div>
@@ -385,7 +609,6 @@ export default function CheckoutPage() {
                                             No Image
                                         </div>
                                     )}
-
                                     <div className="flex-1">
                                         <h3 className="text-md font-semibold text-gray-800">{item.name}</h3>
                                         {item.productName !== item.name && (
@@ -403,29 +626,76 @@ export default function CheckoutPage() {
                                     <span>{formatPrice(totalBeforeDiscount)}</span>
                                 </div>
 
-                                <div className="flex justify-between">
-                                    <span>Phí vận chuyển:</span>
-                                    <span>{formatPrice(shippingFee)}</span>
-                                </div>
-
-                                <div className="flex justify-between">
-                                    <span>Giảm giá:</span>
-                                    <span>- {formatPrice(discount)}</span>
-                                </div>
-
-                                <div className="flex justify-between font-bold text-lg text-gray-800 pt-2 border-t border-gray-200 mt-2">
-                                    <span>Tổng cộng:</span>
-                                    <span className="text-red-600">{formatPrice(finalTotal)}</span>
-                                </div>
+                                {cartItems.length > 0 && (
+                                    <>
+                                        <div className="flex justify-between text-base text-gray-700">
+                                            <span>Phí giao hàng:</span>
+                                            {loadingShippingFee ? (
+                                                <span>Đang tính...</span>
+                                            ) : shippingError ? (
+                                                <span className="text-red-500">{shippingError}</span>
+                                            ) : (
+                                                <span>{formatPrice(shippingFee)}</span>
+                                            )}
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Giảm giá:</span>
+                                            <span>- {formatPrice(discount)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-lg font-bold text-green-700">
+                                            <span>Tổng cộng:</span>
+                                            <span>{formatPrice(totalBeforeDiscount + (shippingFee || 0))}</span>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </>
                     )}
 
-                    <Button variant="ghost" size="sm" onPress={() => router.back()} className="text-gray-500 mt-6 w-full">
+                    <Button variant="ghost" size="sm" onPress={handleGoBack} className="text-gray-500 mt-6 w-full">
                         &larr; Quay lại giỏ hàng
                     </Button>
                 </div>
             </div>
+
+            {/* Modal chọn địa chỉ */}
+            <Modal isOpen={addressModalOpen} onOpenChange={setAddressModalOpen} size="lg">
+                <ModalContent>
+                    <ModalHeader>Chọn địa chỉ giao hàng</ModalHeader>
+                    <ModalBody>
+                        {userAddresses.length === 0 ? (
+                            <div className="text-center py-8 text-gray-400">Bạn chưa có địa chỉ nào.</div>
+                        ) : (
+                            <div className="space-y-4">
+                                {userAddresses.map((address, idx) => (
+                                    <div
+                                        key={address.addressId || idx}
+                                        className="border border-gray-200 rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between cursor-pointer hover:border-blue-500 transition-all"
+                                        onClick={() => handleSelectAddress(address)}
+                                    >
+                                        <div>
+                                            <div className="font-semibold text-gray-900">{address.recipientName}</div>
+                                            <div className="text-sm text-gray-500">{address.phoneNumber}</div>
+                                            <div className="text-sm text-gray-500">
+                                                {address.streetAddress}
+                                                {address.wardCommune ? `, ${address.wardCommune}` : ''}
+                                                {address.district ? `, ${address.district}` : ''}
+                                                {address.province || address.cityProvince ? `, ${address.province || address.cityProvince}` : ''}
+                                            </div>
+                                        </div>
+                                        <Button size="sm" className="mt-2 md:mt-0" onClick={() => handleSelectAddress(address)}>
+                                            Chọn
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button variant="light" onClick={handleCloseAddressModal}>Đóng</Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
         </div>
     );
 }

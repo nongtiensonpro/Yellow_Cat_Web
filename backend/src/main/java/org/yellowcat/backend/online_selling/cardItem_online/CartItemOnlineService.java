@@ -38,7 +38,8 @@ public class CartItemOnlineService {
         ProductVariant variant = variantRepository.findById(dto.getVariantId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm"));
 
-        Optional<CartItem> existingItem = cart.getCartItems().stream()
+        Optional<CartItem> existingItem = (cart.getCartItems() != null ? (java.util.List<CartItem>) cart.getCartItems() : java.util.Collections.<CartItem>emptyList())
+                .stream()
                 .filter(i -> i.getVariant().getVariantId().equals(dto.getVariantId()))
                 .findFirst();
 

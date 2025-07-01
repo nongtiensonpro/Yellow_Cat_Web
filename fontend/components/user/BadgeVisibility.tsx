@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {Badge, Switch} from "@heroui/react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 export const NotificationIcon = ({size, height, width, ...props}: {size?: number, height?: number, width?: number, [x: string]: any}) => {
     return (
@@ -53,43 +54,59 @@ export const CartIcon = ({size, height, width, ...props}: {size?: number, height
 };
 
 export default function App() {
+    const { data: session } = useSession();
     const [isInvisible, setIsInvisible] = useState(false);
     const [cartCount, setCartCount] = useState(0);
     const router = useRouter();
 
     // Hàm tính tổng số lượng sản phẩm trong giỏ hàng
-    const getCartCount = () => {
-        if (typeof window === 'undefined') return 0;
-        const storedCart = localStorage.getItem('cart');
-        if (!storedCart) return 0;
-        try {
-            const cartItems = JSON.parse(storedCart);
-            if (!Array.isArray(cartItems)) return 0;
-            return cartItems.reduce((total, item) => total + (item.quantity || 0), 0);
-        } catch {
-            return 0;
+    const getCartCount = async () => {
+        if (session?.user) {
+            try {
+                const res = await fetch(`http://localhost:8080/api/cart?keycloakId=${session.user.id}`);
+                const data = await res.json();
+                return (data.items || []).reduce((total: number, item: any) => total + (item.quantity || 0), 0);
+            } catch {
+                return 0;
+            }
+        } else if (typeof window !== 'undefined') {
+            const storedCart = localStorage.getItem('cart');
+            if (!storedCart) return 0;
+            try {
+                const cartItems = JSON.parse(storedCart);
+                if (!Array.isArray(cartItems)) return 0;
+                return cartItems.reduce((total: number, item: any) => total + (item.quantity || 0), 0);
+            } catch {
+                return 0;
+            }
         }
+        return 0;
     };
 
-    // Lấy số lượng khi mount và khi localStorage thay đổi
+    // Cập nhật realtime khi localStorage thay đổi hoặc khi thêm/xóa/cập nhật sản phẩm
     useEffect(() => {
-        setCartCount(getCartCount());
+        let interval: NodeJS.Timeout | null = null;
+        const updateCartCount = async () => {
+            setCartCount(await getCartCount());
+        };
+        updateCartCount();
+
+        // Lắng nghe sự kiện storage (tab khác)
         const handleStorage = (e: StorageEvent) => {
             if (e.key === 'cart') {
-                setCartCount(getCartCount());
+                updateCartCount();
             }
         };
         window.addEventListener('storage', handleStorage);
-        return () => window.removeEventListener('storage', handleStorage);
-    }, []);
 
-    // Đảm bảo cập nhật khi thao tác trên cùng tab
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setCartCount(getCartCount());
-        }, 1000);
-        return () => clearInterval(interval);
-    }, []);
+        // Lắng nghe thay đổi localStorage trên cùng tab (polling)
+        interval = setInterval(updateCartCount, 700);
+
+        return () => {
+            window.removeEventListener('storage', handleStorage);
+            if (interval) clearInterval(interval);
+        };
+    }, [session]);
 
     return (
         <div className="flex items-center gap-4">

@@ -91,7 +91,7 @@ export default function OrderDetailPage() {
     const { data: session, status } = useSession();
     const params = useParams();
     const router = useRouter();
-    const orderCode = params.orderCode as string;
+    const orderCode = params?.orderCode as string;
     
     const [orderDetail, setOrderDetail] = useState<OrderDetailWithItems | null>(null);
     const [loading, setLoading] = useState<boolean>(true);

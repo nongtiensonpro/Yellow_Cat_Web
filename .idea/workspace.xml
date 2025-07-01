@@ -5,16 +5,24 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f81662f5-da82-4a75-9d40-0998afea6bd8" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/config/ZaloPayConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/zalopay/ZaloPayController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/zalopay/ZaloPayService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/zalopay/ZaloPayUtil.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/sqldialects.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/backend/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/common/security/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/common/security/SecurityConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/online_selling/cardItem_online/CartItemOnlineService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/online_selling/cardItem_online/CartItemOnlineService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/product/cart/Cart.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/product/cart/Cart.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/resources/db/migration/V1__Initial_setup.sql" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/db/migration/V1__Initial_setup.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deployment/postgres/init.sql" beforeDir="false" afterPath="$PROJECT_DIR$/deployment/postgres/init.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fontend/.env" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/.env" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fontend/app/admin/promotion_management/vouchers/[id]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/admin/promotion_management/vouchers/[id]/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fontend/app/admin/promotion_management/vouchers/create/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/admin/promotion_management/vouchers/create/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fontend/app/admin/promotion_management/vouchers/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/admin/promotion_management/vouchers/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fontend/app/cart/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/cart/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fontend/app/checkout/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/checkout/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fontend/app/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fontend/app/products/[productId]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/products/[productId]/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fontend/app/user_info/order/[orderCode]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/user_info/order/[orderCode]/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fontend/components/navbar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/components/navbar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fontend/components/user/BadgeVisibility.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/components/user/BadgeVisibility.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -51,34 +59,39 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Docker.deployment: Compose Deployment.executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.Build backend.executor&quot;: &quot;Run&quot;,
-    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
-    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
-    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
-    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;Spring Boot.BackendApplication.executor&quot;: &quot;Run&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/NAMTT/DATN/Yellow_Cat_Web&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Docker.deployment: Compose Deployment.executor": "Run",
+    "Gradle.Build backend.executor": "Run",
+    "RequestMappingsPanelOrder0": "0",
+    "RequestMappingsPanelOrder1": "1",
+    "RequestMappingsPanelWidth0": "75",
+    "RequestMappingsPanelWidth1": "75",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "Spring Boot.BackendApplication.executor": "Run",
+    "git-widget-placeholder": "main",
+    "junie.onboarding.icon.badge.shown": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/DuAn/Yellow_Cat_Web",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "npm.build.executor": "Run",
+    "npm.dev.executor": "Run",
+    "ts.external.directory.path": "C:\\YellowCatWeb\\Yellow_Cat_Web\\fontend\\node_modules\\typescript\\lib",
+    "vue.rearranger.settings.migration": "true"
   },
-  &quot;keyToStringList&quot;: {
-    &quot;DatabaseDriversLRU&quot;: [
-      &quot;postgresql&quot;
+  "keyToStringList": {
+    "DatabaseDriversLRU": [
+      "postgresql"
     ]
   }
-}</component>
-  <component name="RunManager" selected="Spring Boot.BackendApplication">
+}]]></component>
+  <component name="RunManager" selected="npm.dev">
     <configuration name="V1__Initial_setup.sql" type="DatabaseScript" editBeforeRun="true" temporary="true" nameIsGenerated="true">
       <script-file value="$PROJECT_DIR$/backend/src/main/resources/db/migration/V1__Initial_setup.sql" />
       <script-mode>FILE</script-mode>
@@ -105,21 +118,44 @@
       </deployment>
       <method v="2" />
     </configuration>
+    <configuration name="build" type="js.build_tools.npm" temporary="true" nameIsGenerated="true">
+      <package-json value="$PROJECT_DIR$/fontend/package.json" />
+      <command value="run" />
+      <scripts>
+        <script value="build" />
+      </scripts>
+      <node-interpreter value="project" />
+      <envs />
+      <method v="2" />
+    </configuration>
+    <configuration name="dev" type="js.build_tools.npm" temporary="true" nameIsGenerated="true">
+      <package-json value="$PROJECT_DIR$/fontend/package.json" />
+      <command value="run" />
+      <scripts>
+        <script value="dev" />
+      </scripts>
+      <node-interpreter value="project" />
+      <envs />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Database Script.V1__Initial_setup.sql" />
+        <item itemvalue="npm.dev" />
+        <item itemvalue="npm.build" />
         <item itemvalue="Docker.deployment: Compose Deployment" />
+        <item itemvalue="Database Script.V1__Initial_setup.sql" />
       </list>
     </recent_temporary>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-jdk-9823dce3aa75-fbdcb00ec9e3-intellij.indexing.shared.core-IU-251.25410.129" />
-        <option value="bundled-js-predefined-d6986cc7102b-6a121458b545-JavaScript-IU-251.25410.129" />
+        <option value="bundled-jdk-9823dce3aa75-a94e463ab2e7-intellij.indexing.shared.core-IU-243.26053.27" />
+        <option value="bundled-js-predefined-d6986cc7102b-1632447f56bf-JavaScript-IU-243.26053.27" />
       </set>
     </attachedChunks>
   </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="f81662f5-da82-4a75-9d40-0998afea6bd8" name="Changes" comment="" />
@@ -131,6 +167,7 @@
       <workItem from="1751290082989" duration="287000" />
       <workItem from="1751290390671" duration="19000" />
       <workItem from="1751290672191" duration="5242000" />
+      <workItem from="1751306157251" duration="20023000" />
     </task>
     <servers />
   </component>

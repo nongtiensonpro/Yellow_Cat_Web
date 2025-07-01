@@ -309,7 +309,7 @@ CREATE TABLE cart_items
     cart_id      INT NOT NULL,
     variant_id   INT NOT NULL,
     quantity     INT NOT NULL CHECK (quantity > 0),
-    added_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (cart_id) REFERENCES carts (cart_id) ON DELETE CASCADE,
     FOREIGN KEY (variant_id) REFERENCES product_variants (variant_id) ON DELETE CASCADE,
