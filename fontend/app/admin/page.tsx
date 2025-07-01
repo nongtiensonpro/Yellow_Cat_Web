@@ -15,7 +15,8 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useSession } from 'next-auth/react';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import StatisticsByDay from '@/components/statistics/StatisticsByDay'
+import StatisticsByDay from '@/components/statistics/StatisticsByDay';
+import QuickStartGuide from '@/components/promotion/QuickStartGuide';
 
 import { jwtDecode } from 'jwt-decode';
 import {IconBasket} from "@tabler/icons-react";

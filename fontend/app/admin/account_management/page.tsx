@@ -189,7 +189,7 @@ export default function Page() {
             const token = session?.accessToken;
 
             if (!token) {
-                throw new Error('Không có token xác thực');
+                console.log('Không có token xác thực');
             }
 
             const response = await fetch('http://localhost:8080/api/admin/users', {
@@ -208,7 +208,7 @@ export default function Page() {
                     errorMessage += errorText ? ` - ${errorText}` : '';
                 }
                 console.error(errorMessage);
-                throw new Error(errorMessage);
+                console.log(errorMessage);
             }
 
             const keycloakUsers: Users[] = await response.json();
@@ -296,7 +296,7 @@ export default function Page() {
             
             const token = session?.accessToken;
             if (!token) {
-                throw new Error('Không có token xác thực');
+                console.log('Không có token xác thực');
             }
 
             const response = await fetch(`http://localhost:8080/api/admin/users/${selectedUser.id}/${endpoint}`, {
@@ -316,7 +316,7 @@ export default function Page() {
                 } catch {
                     errorMessage += errorText ? ` - ${errorText}` : '';
                 }
-                throw new Error(errorMessage);
+                console.log(errorMessage);
             }
 
             // Update local state immediately
@@ -375,7 +375,7 @@ export default function Page() {
         try {
             const token = session?.accessToken;
             if (!token) {
-                throw new Error('Không có token xác thực');
+                console.log('Không có token xác thực');
             }
 
             const response = await fetch('http://localhost:8080/api/admin/users/available-roles', {
@@ -385,7 +385,7 @@ export default function Page() {
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                console.log(`HTTP error! Status: ${response.status}`);
             }
 
             const roles: string[] = await response.json();
@@ -429,7 +429,7 @@ export default function Page() {
             setRoleLoading(true);
             const token = session?.accessToken;
             if (!token) {
-                throw new Error('Không có token xác thực');
+                console.log('Không có token xác thực');
             }
 
             const response = await fetch(`http://localhost:8080/api/admin/users/${roleManagementUser.id}/roles`, {
@@ -444,7 +444,7 @@ export default function Page() {
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                console.log(`HTTP error! Status: ${response.status}`);
             }
 
             // Update local user data
@@ -503,7 +503,7 @@ export default function Page() {
             setEditLoading(true);
             const token = session?.accessToken;
             if (!token) {
-                throw new Error('Không có token xác thực');
+                console.log('Không có token xác thực');
             }
 
             // Nếu user đã có profileData, update existing profile
@@ -535,7 +535,7 @@ export default function Page() {
                     } catch {
                         errorMessage += errorText ? ` - ${errorText}` : '';
                     }
-                    throw new Error(errorMessage);
+                    console.log(errorMessage);
                 }
             } else {
                 // Nếu user chưa có profileData, tạo mới profile
@@ -556,7 +556,7 @@ export default function Page() {
                 });
 
                 if (!createResponse.ok) {
-                    throw new Error(`Không thể tạo profile: ${createResponse.status}`);
+                   console.log(`Không thể tạo profile: ${createResponse.status}`);
                 }
 
                 // Sau khi tạo xong, lấy profile mới và update

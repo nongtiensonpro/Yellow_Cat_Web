@@ -1,20 +1,16 @@
-// Controller: PromotionProductController.java
 package org.yellowcat.backend.product.promotionproduct;
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
 import org.yellowcat.backend.product.promotion.dto.CreatePromotionDTO;
-import org.yellowcat.backend.product.promotionproduct.dto.ProductVariantSelectionResponse;
-import org.yellowcat.backend.product.promotionproduct.dto.PromotionProductRequest;
+import org.yellowcat.backend.product.promotionproduct.dto.PromotionEditResponse;
 import org.yellowcat.backend.product.promotionproduct.dto.PromotionProductResponse;
 
 import java.util.List;
@@ -32,39 +28,68 @@ public class PromotionProductController {
     public ResponseEntity<List<PromotionProductResponse>> getAllOrFiltered(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String discountType,
             @RequestParam(required = false) Double discountValue
     ) {
-        if (keyword != null || status != null || discountValue != null) {
-            return ResponseEntity.ok(promotionProductService.getFiltered(keyword, status, discountValue));
+        if (keyword != null || status != null || discountType != null || discountValue != null) {
+            return ResponseEntity.ok(promotionProductService.getFiltered(keyword, status, discountType, discountValue));
         } else {
             return ResponseEntity.ok(promotionProductService.getAllWithJoin());
         }
     }
 
-//    @PostMapping
-//    public ResponseEntity<PromotionProductResponse> create(@RequestBody PromotionProductRequest request) {
-//        return ResponseEntity.ok(promotionProductService.create(request));
-//    }
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getPromotionProductById(@PathVariable Integer id) {
+        try {
+            PromotionProductResponse response = promotionProductService.getById(id);
+            return ResponseEntityBuilder.success(response);
+        } catch (Exception e) {
+            return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Không tìm thấy đợt giảm giá với ID: " + id, e.getMessage());
+        }
+    }
 
-    @PostMapping  // ✅ KHÔNG thêm "/promotion-products" nữa!
-    public ResponseEntity<Void> createPromotion(
+    @GetMapping("/{id}/edit")
+    public ResponseEntity<?> getPromotionForEdit(@PathVariable Integer id) {
+        try {
+            PromotionEditResponse response = promotionProductService.getPromotionForEdit(id);
+            return ResponseEntityBuilder.success(response);
+        } catch (Exception e) {
+            return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Không tìm thấy đợt giảm giá với ID: " + id, e.getMessage());
+        }
+    }
+
+    @PostMapping
+    public ResponseEntity<?> createPromotion(
             @RequestBody CreatePromotionDTO dto,
             @AuthenticationPrincipal Jwt jwt
     ) {
-        UUID userId = UUID.fromString(jwt.getSubject());
-        promotionProductService.createPromotionWithProducts(dto, userId);
-        return ResponseEntity.ok().build();
+        try {
+            UUID userId = UUID.fromString(jwt.getSubject());
+            promotionProductService.createPromotionWithProducts(dto, userId);
+            return ResponseEntityBuilder.success("Tạo đợt giảm giá thành công!");
+        } catch (Exception e) {
+            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST,"Lỗi khi tạo đợt giảm giá: " + e.getMessage(),"Lỗi khi tạo đợt giảm giá: " + e.getMessage());
+        }
     }
 
-
-
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updatePromotion(
+            @PathVariable Integer id,
+            @RequestBody CreatePromotionDTO dto,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        try {
+            UUID userId = UUID.fromString(jwt.getSubject());
+            promotionProductService.updatePromotionWithProducts(id, dto, userId);
+            return ResponseEntityBuilder.success("Cập nhật đợt giảm giá thành công!");
+        } catch (Exception e) {
+            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "Lỗi khi cập nhật đợt giảm giá: " + e.getMessage(), e.getMessage());
+        }
+    }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
         promotionProductService.delete(id);
         return ResponseEntity.noContent().build();
     }
-
-
-
 }
