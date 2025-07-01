@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -61,7 +60,8 @@ export default function EditVoucherPage() {
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
     ) => {
-        const { name, type, value, checked } = e.target;
+        const { name, type, value,  } = e.target;
+        let checked: any;
         setForm(prev => ({
             ...prev,
             [name]: type === 'checkbox' ? checked : value,

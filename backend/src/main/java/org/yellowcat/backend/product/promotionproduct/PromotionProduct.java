@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
 import org.yellowcat.backend.product.promotion.Promotion;
-import org.yellowcat.backend.user.AppUser;
 
 @Entity
 @Table(name = "promotion_products")
@@ -20,12 +19,7 @@ public class PromotionProduct {
     @Column(name = "promotion_product_id")
     private Integer promotionProductId;
 
-    //    @OneToOne
-//    @JoinColumn(name = "app_user_id", nullable = false)
-//    private AppUser appUser;
-    @OneToOne
-    @JoinColumn(name = "app_user_id")
-    private AppUser appUser;
+    // Không cần appUser ở đây vì thông tin user đã có trong promotion
 
     @ManyToOne
     @JoinColumn(name = "promotion_id", nullable = false, referencedColumnName = "promotion_id", foreignKey = @ForeignKey(name = "fk_promotion_product_promotion"))

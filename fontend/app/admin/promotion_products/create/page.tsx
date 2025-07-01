@@ -1,229 +1,11 @@
-//
-// 'use client'
-//
-// import { useEffect, useState } from 'react'
-// import { useSession } from 'next-auth/react'
-//
-// type Product = {
-//     variantId: number
-//     productName: string
-//     sku: string
-// }
-//
-// export default function AddPromotionPage() {
-//     const { data: session } = useSession()
-//     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
-//
-//     const [form, setForm] = useState({
-//         promotionName: '',
-//         discountValue: '',
-//         startDate: '',
-//         endDate: '',
-//     })
-//
-//     const [products, setProducts] = useState<Product[]>([])
-//     const [selectedProductIds, setSelectedProductIds] = useState<number[]>([])
-//     const [productSearch, setProductSearch] = useState('')
-//     const [page, setPage] = useState(0)
-//     const [totalPages, setTotalPages] = useState(0)
-//     const [loading, setLoading] = useState(false)
-//
-//     useEffect(() => {
-//         const token = session?.accessToken
-//         if (!token) return
-//
-//         const query = new URLSearchParams()
-//         query.append('keyword', productSearch)
-//         query.append('page', page.toString())
-//         query.append('size', '5')
-//
-//         setLoading(true)
-//         fetch(`${API_URL}/api/product-variants/for-selection?${query}`, {
-//             headers: { Authorization: `Bearer ${token}` },
-//         })
-//             .then(res => res.json())
-//             .then(data => {
-//                 const pageData = data.data
-//                 setProducts(pageData.content || [])
-//                 setTotalPages(pageData.totalPages || 1)
-//             })
-//             .catch(console.error)
-//             .finally(() => setLoading(false))
-//     }, [productSearch, page, session])
-//
-//     const handleCheckboxChange = (productId: number) => {
-//         setSelectedProductIds(prev =>
-//             prev.includes(productId)
-//                 ? prev.filter(id => id !== productId)
-//                 : [...prev, productId]
-//         )
-//     }
-//
-//     const handleSubmit = async () => {
-//         const token = session?.accessToken
-//         if (!token) return alert('Bạn chưa đăng nhập')
-//
-//         try {
-//             const res = await fetch(`${API_URL}/api/promotion-products`, {
-//                 method: 'POST',
-//                 headers: {
-//                     Authorization: `Bearer ${token}`,
-//                     'Content-Type': 'application/json',
-//                 },
-//                 body: JSON.stringify({
-//                     ...form,
-//                     productIds: selectedProductIds,
-//                 }),
-//             })
-//
-//             if (!res.ok) throw new Error('Tạo đợt giảm giá thất bại')
-//             alert('Tạo đợt giảm giá thành công!')
-//         } catch (err) {
-//             alert(err instanceof Error ? err.message : 'Đã có lỗi xảy ra')
-//         }
-//     }
-//
-//     const isFormValid =
-//         form.promotionName.trim() !== '' &&
-//         +form.discountValue > 0 &&
-//         form.startDate &&
-//         form.endDate &&
-//         selectedProductIds.length > 0
-//
-//     return (
-//         <div className="p-6 bg-gray-50 min-h-screen">
-//             <h2 className="text-xl font-semibold mb-4">Thêm đợt giảm giá</h2>
-//             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-//                 {/* Form bên trái */}
-//                 <div className="space-y-4">
-//                     <div>
-//                         <label className="block mb-1 font-medium text-sm">*Tên đợt giảm giá</label>
-//                         <input
-//                             className="w-full border px-3 py-2 rounded"
-//                             value={form.promotionName}
-//                             onChange={e => setForm({ ...form, promotionName: e.target.value })}
-//                         />
-//                     </div>
-//                     <div>
-//                         <label className="block mb-1 font-medium text-sm">*Giá trị (%)</label>
-//                         <input
-//                             type="number"
-//                             className="w-full border px-3 py-2 rounded"
-//                             value={form.discountValue}
-//                             onChange={e => setForm({ ...form, discountValue: e.target.value })}
-//                         />
-//                     </div>
-//                     <div>
-//                         <label className="block mb-1 font-medium text-sm">*Từ ngày</label>
-//                         <input
-//                             type="datetime-local"
-//                             className="w-full border px-3 py-2 rounded"
-//                             value={form.startDate}
-//                             onChange={e => setForm({ ...form, startDate: e.target.value })}
-//                         />
-//                     </div>
-//                     <div>
-//                         <label className="block mb-1 font-medium text-sm">*Đến ngày</label>
-//                         <input
-//                             type="datetime-local"
-//                             className="w-full border px-3 py-2 rounded"
-//                             value={form.endDate}
-//                             onChange={e => setForm({ ...form, endDate: e.target.value })}
-//                         />
-//                     </div>
-//                     <button
-//                         onClick={handleSubmit}
-//                         disabled={!isFormValid}
-//                         className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 disabled:opacity-50"
-//                     >
-//                         TẠO MỚI
-//                     </button>
-//                 </div>
-//
-//                 {/* Danh sách sản phẩm bên phải */}
-//                 <div>
-//                     <label className="block mb-2 font-medium">Chọn sản phẩm áp dụng</label>
-//                     <input
-//                         type="text"
-//                         placeholder="Tìm tên sản phẩm"
-//                         className="w-full mb-3 px-3 py-2 border rounded"
-//                         value={productSearch}
-//                         onChange={e => {
-//                             setProductSearch(e.target.value)
-//                             setPage(0)
-//                         }}
-//                     />
-//                     {loading ? (
-//                         <div className="text-center py-4">Đang tải sản phẩm...</div>
-//                     ) : (
-//                         <table className="w-full text-sm border">
-//                             <thead className="bg-gray-100 text-left">
-//                             <tr>
-//                                 <th className="px-3 py-2 text-center"><input type="checkbox" disabled /></th>
-//                                 <th className="px-3 py-2">STT</th>
-//                                 <th className="px-3 py-2">Tên sản phẩm</th>
-//                             </tr>
-//                             </thead>
-//                             <tbody>
-//                             {products.map((prod, index) => (
-//                                 <tr key={prod.variantId} className="border-t">
-//                                     <td className="px-3 py-2 text-center">
-//                                         <input
-//                                             type="checkbox"
-//                                             checked={selectedProductIds.includes(prod.variantId)}
-//                                             onChange={() => handleCheckboxChange(prod.variantId)}
-//                                         />
-//                                     </td>
-//                                     <td className="px-3 py-2">{page * 5 + index + 1}</td>
-//                                     <td className="px-3 py-2">{prod.productName} ({prod.sku})</td>
-//                                 </tr>
-//                             ))}
-//                             </tbody>
-//                         </table>
-//                     )}
-//
-//                     {/* Pagination */}
-//                     <div className="flex justify-center mt-4 gap-2">
-//                         <button
-//                             onClick={() => setPage(p => Math.max(p - 1, 0))}
-//                             className="px-2 py-1 border rounded disabled:opacity-50"
-//                             disabled={page === 0}
-//                         >
-//                             {'<'}
-//                         </button>
-//                         {[...Array(totalPages)].map((_, idx) => (
-//                             <button
-//                                 key={idx}
-//                                 onClick={() => setPage(idx)}
-//                                 className={`px-3 py-1 border rounded ${
-//                                     idx === page ? 'bg-orange-500 text-white' : ''
-//                                 }`}
-//                             >
-//                                 {idx + 1}
-//                             </button>
-//                         ))}
-//                         <button
-//                             onClick={() => setPage(p => Math.min(p + 1, totalPages - 1))}
-//                             className="px-2 py-1 border rounded disabled:opacity-50"
-//                             disabled={page >= totalPages - 1}
-//                         >
-//                             {'>'}
-//                         </button>
-//                     </div>
-//                 </div>
-//             </div>
-//         </div>
-//     )
-// }
-
-
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { AlertCircle } from 'lucide-react';
 import axios from 'axios';
+import HelpTooltip from '../../../../components/promotion/HelpTooltip';
 
 type ProductVariant = {
     variantId: number;
@@ -248,6 +30,7 @@ export default function CreatePromotionPage() {
 
     const [form, setForm] = useState({
         promotionName: '',
+        description: '',
         discountValue: 0,
         discountType: 'percentage',
         startDate: '',
@@ -317,7 +100,7 @@ export default function CreatePromotionPage() {
         fetchDetails();
     }, [selectedVariants]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: value }));
         setErrors((prev) => ({ ...prev, [name]: '' }));
@@ -337,9 +120,15 @@ export default function CreatePromotionPage() {
         if (!form.startDate) newErrors.startDate = 'Từ ngày là bắt buộc.';
         if (!form.endDate) newErrors.endDate = 'Đến ngày là bắt buộc.';
         const value = parseFloat(form.discountValue.toString());
-        if (value <= 0) newErrors.discountValue = 'Giá trị phải lớn hơn 0.';
-        if (form.discountType === 'percentage' && value > 100)
-            newErrors.discountValue = 'Không vượt quá 100%.';
+        if ((form.discountType === 'percentage' || form.discountType === 'fixed_amount') && value <= 0) {
+            newErrors.discountValue = 'Giá trị phải lớn hơn 0.';
+        }
+        if (form.discountType === 'percentage' && value > 100) {
+            newErrors.discountValue = 'Phần trăm giảm không được vượt quá 100%.';
+        }
+        if (form.discountType === 'fixed_amount' && value > 1000000) {
+            newErrors.discountValue = 'Số tiền giảm không được vượt quá 1.000.000₫.';
+        }
         if (new Date(form.startDate) >= new Date(form.endDate)) {
             newErrors.startDate = 'Từ ngày phải nhỏ hơn đến ngày.';
             newErrors.endDate = 'Đến ngày phải lớn hơn từ ngày.';
@@ -395,7 +184,24 @@ export default function CreatePromotionPage() {
 
     return (
         <div className="max-w-6xl mx-auto p-6 bg-white rounded-xl shadow mt-6">
-            <h2 className="text-2xl font-bold mb-6">Thêm đợt giảm giá</h2>
+            <div className="mb-6">
+                <h2 className="text-2xl font-bold mb-2">Thêm đợt giảm giá</h2>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                            <h3 className="font-medium text-blue-800 mb-1">💡 Cách hoạt động của Giảm giá Sản phẩm</h3>
+                            <p className="text-sm text-blue-700 mb-2">
+                                Chọn sản phẩm → Đặt giá trị giảm → Giá sản phẩm tự động cập nhật trên website ngay lập tức
+                            </p>
+                            <div className="text-xs text-blue-600 space-y-1">
+                                <p><strong>⚡ Khác biệt:</strong> Không cần mã giảm giá, customer thấy giá đã giảm ngay</p>
+                                <p><strong>🎯 Phù hợp:</strong> Flash Sale, Sale theo danh mục, Thanh lý hàng tồn kho</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-4">
@@ -415,16 +221,81 @@ export default function CreatePromotionPage() {
                         </div>
 
                         <div>
-                            <label className="block mb-1 font-medium">
-                                Giá trị (%) <span className="text-red-500">*</span>
+                            <label className="block mb-1 font-medium">Mô tả</label>
+                            <textarea
+                                name="description"
+                                value={form.description}
+                                onChange={handleChange}
+                                rows={3}
+                                className="w-full border px-3 py-2 rounded"
+                                placeholder="Nhập mô tả chi tiết về đợt giảm giá..."
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block mb-1 font-medium flex items-center">
+                                Loại giảm <span className="text-red-500">*</span>
+                                <HelpTooltip text="Chọn loại giảm giá: % giảm trên giá gốc, số tiền cố định, hoặc miễn phí ship" />
+                            </label>
+                            <select
+                                name="discountType"
+                                value={form.discountType}
+                                onChange={handleChange}
+                                className="w-full border px-3 py-2 rounded"
+                            >
+                                <option value="percentage">Giảm theo % (VD: 20%)</option>
+                                <option value="fixed_amount">Giảm số tiền (VD: 50.000₫)</option>
+                                <option value="free_shipping">Miễn phí vận chuyển</option>
+                            </select>
+                            <p className="text-xs text-gray-500 mt-1">
+                                💡 <strong>Percentage:</strong> Giảm % trên giá gốc | <strong>Fixed:</strong> Giảm số tiền cụ thể
+                            </p>
+                        </div>
+
+                        <div>
+                            <label className="block mb-1 font-medium flex items-center">
+                                Giá trị giảm <span className="text-red-500">*</span>
+                                <HelpTooltip 
+                                    text={form.discountType === 'percentage' 
+                                        ? "Nhập % giảm (VD: 20 = giảm 20%)" 
+                                        : form.discountType === 'fixed_amount'
+                                        ? "Nhập số tiền giảm (VD: 50000 = giảm 50k)" 
+                                        : "Tự động miễn phí ship"
+                                    } 
+                                />
                             </label>
                             <input
                                 name="discountValue"
                                 type="number"
-                                value={form.discountValue}
+                                placeholder={
+                                    form.discountType === 'percentage' 
+                                        ? "VD: 20 (= giảm 20%)" 
+                                        : form.discountType === 'fixed_amount'
+                                        ? "VD: 50000 (= giảm 50.000₫)" 
+                                        : "Tự động miễn phí"
+                                }
+                                value={
+                                    form.discountType === 'free_shipping'
+                                        ? ''
+                                        : form.discountValue === 0
+                                            ? ''
+                                            : form.discountValue
+                                }
                                 onChange={handleChange}
                                 className="w-full border px-3 py-2 rounded"
+                                disabled={form.discountType === 'free_shipping'}
                             />
+                            <div className="text-xs text-gray-500 mt-1">
+                                {form.discountType === 'percentage' && (
+                                    <p>💡 Giới hạn: 1-100%. VD: 20 = sản phẩm 100k giảm còn 80k</p>
+                                )}
+                                {form.discountType === 'fixed_amount' && (
+                                    <p>💡 Giới hạn: tối đa 1.000.000₫. VD: 50000 = giảm 50k cho mọi sản phẩm</p>
+                                )}
+                                {form.discountType === 'free_shipping' && (
+                                    <p>💡 Tự động miễn phí phí vận chuyển cho tất cả sản phẩm được chọn</p>
+                                )}
+                            </div>
                             {errors.discountValue && (
                                 <p className="text-red-600 text-sm">{errors.discountValue}</p>
                             )}

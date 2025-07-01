@@ -1,5 +1,5 @@
-// app/contact/page.tsx
 "use client";
+
 import React from 'react';
 import { FaMapMarkerAlt, FaPhoneAlt, FaEnvelope } from 'react-icons/fa'; // Import các icon cần thiết
 

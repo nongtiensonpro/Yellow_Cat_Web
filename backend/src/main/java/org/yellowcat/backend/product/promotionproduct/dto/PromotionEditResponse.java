@@ -1,15 +1,18 @@
-package org.yellowcat.backend.product.promotion.dto;
+package org.yellowcat.backend.product.promotionproduct.dto;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Getter
-@Setter
-public class CreatePromotionDTO {
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class PromotionEditResponse {
+    private Integer promotionId;
     private String promotionName;
     private String description;
     private String discountType;
@@ -17,4 +20,4 @@ public class CreatePromotionDTO {
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private List<Integer> variantIds;
-}
+} 
