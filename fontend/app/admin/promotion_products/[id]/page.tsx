@@ -1,248 +1,528 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
-import { ArrowLeft, Calendar, Package, Tag, Users, Edit } from 'lucide-react';
+import { useEffect, useState } from 'react'
+import { useRouter, useParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import axios from 'axios'
 
-interface PromotionProductDetail {
-    promotionProductId: number;
-    promotionCode: string;
-    promotionName: string;
-    discountType: string;
-    discountValue: number;
-    startDate: string;
-    endDate: string;
-    variantId: number;
-    sku: string;
-    price: number;
-    salePrice: number;
-    imageUrl: string;
-    productName: string;
+interface ProductVariant {
+    variantId: number
+    sku: string
+    price: number
+    salePrice: number
+    imageUrl: string
+    productName: string
 }
 
-export default function PromotionProductDetailPage() {
-    const router = useRouter();
-    const params = useParams();
-    const { data: session } = useSession();
-    
-    const idRaw = params?.id;
-    const id = Array.isArray(idRaw) ? idRaw[0] : idRaw;
-    const numericId = id ? Number(id) : NaN;
-    
-    const [detail, setDetail] = useState<PromotionProductDetail | null>(null);
-    const [loading, setLoading] = useState(true);
+interface ProductVariantDetail {
+    variantId: number
+    productName: string
+    brandName: string
+    colorName: string
+    sizeName: string
+    materialName: string
+    price: number
+    salePrice: number
+}
 
-    useEffect(() => {
-        if (isNaN(numericId) || !session?.accessToken) return;
+interface PromotionData {
+    promotionId: number
+    promotionName: string
+    description: string
+    discountType: string
+    discountValue: number
+    startDate: string
+    endDate: string
+    variantIds: number[]
+}
 
-        const fetchDetail = async () => {
-            try {
-                const res = await fetch(`http://localhost:8080/api/promotion-products/${numericId}`, {
-                    headers: {
-                        Authorization: `Bearer ${session.accessToken}`,
-                    },
-                });
-                
-                if (!res.ok) throw new Error('Không thể tải thông tin');
-                
-                const result = await res.json();
-                setDetail(result.data);
-            } catch (error) {
-                console.error('Lỗi khi tải chi tiết:', error);
-                alert('Không thể tải thông tin đợt giảm giá!');
-            } finally {
-                setLoading(false);
-            }
-        };
+export default function EditPromotionProductPage() {
+    const router = useRouter()
+    const params = useParams()
+    const { data: session, status } = useSession()
+    const [loading, setLoading] = useState(false)
+    const [submitting, setSubmitting] = useState(false)
 
-        fetchDetail();
-    }, [numericId, session?.accessToken]);
-
-    const formatDateTime = (dateStr: string) => {
-        return new Intl.DateTimeFormat('vi-VN', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-        }).format(new Date(dateStr));
-    };
-
-    const formatDiscount = (value: number, type: string) => {
-        const t = type.toLowerCase();
-        if (t === 'percentage') return `${value}%`;
-        if (t === 'fixed_amount') return `${value.toLocaleString()}₫`;
-        if (t === 'free_shipping') return 'Miễn phí vận chuyển';
-        return `${value}`;
-    };
-
-    const getDiscountTypeLabel = (type: string) => {
-        const t = type.toLowerCase();
-        if (t === 'percentage') return 'Giảm theo %';
-        if (t === 'fixed_amount') return 'Giảm số tiền';
-        if (t === 'free_shipping') return 'Miễn phí vận chuyển';
-        return type;
-    };
-
-    const isActive = detail ? 
-        new Date() >= new Date(detail.startDate) && new Date() <= new Date(detail.endDate) : false;
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-2 text-gray-600">Đang tải...</p>
-                </div>
-            </div>
-        );
+    // Kiểm tra params để tránh lỗi TypeScript
+    const id = params?.id
+    if (!id || Array.isArray(id)) {
+        return <div className="text-center py-8">ID không hợp lệ</div>
     }
 
-    if (!detail) {
+    const [form, setForm] = useState({
+        promotionName: '',
+        description: '',
+        discountValue: 0,
+        discountType: 'percentage',
+        startDate: '',
+        endDate: '',
+    })
+
+    const [errors, setErrors] = useState<{ [key: string]: string }>({})
+    const [variants, setVariants] = useState<ProductVariant[]>([])
+    const [selectedVariants, setSelectedVariants] = useState<number[]>([])
+    const [details, setDetails] = useState<ProductVariantDetail[]>([])
+    const [currentPage, setCurrentPage] = useState(1)
+    const itemsPerPage = 5
+
+    const [detailPage, setDetailPage] = useState(1)
+    const detailPerPage = 5
+
+    // Search state
+    const [searchTerm, setSearchTerm] = useState('')
+
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+
+    // Load promotion data
+    useEffect(() => {
+        if (status !== 'authenticated' || !session?.accessToken) return
+
+        setLoading(true)
+
+        // Load promotion data
+        fetch(`${API_URL}/api/promotion-products/${id}/edit`, {
+            headers: { Authorization: `Bearer ${session.accessToken}` },
+        })
+            .then((res) => res.json())
+            .then((response) => {
+                const data = response.data || response
+                setForm({
+                    promotionName: data.promotionName,
+                    description: data.description || '',
+                    discountType: data.discountType,
+                    discountValue: data.discountValue,
+                    startDate: formatDateTimeLocal(data.startDate),
+                    endDate: formatDateTimeLocal(data.endDate),
+                })
+                setSelectedVariants(data.variantIds)
+            })
+            .catch((error) => {
+                console.error('Lỗi khi tải dữ liệu:', error)
+                alert('Không thể tải dữ liệu đợt giảm giá')
+            })
+            .finally(() => setLoading(false))
+    }, [session, status, id])
+
+    // Load all variants for selection
+    useEffect(() => {
+        const fetchVariants = async () => {
+            try {
+                const res = await axios.get(`${API_URL}/api/product-variants/for-selection`, {
+                    headers: {
+                        Authorization: `Bearer ${session?.accessToken}`,
+                    },
+                    params: {
+                        page: 0,
+                        size: 100,
+                    },
+                })
+                setVariants(res.data.data.content || [])
+            } catch (err) {
+                console.error('Lỗi khi tải sản phẩm:', err)
+            }
+        }
+
+        if (session?.accessToken) {
+            fetchVariants()
+        }
+    }, [session?.accessToken])
+
+    // Load selected variant details
+    useEffect(() => {
+        const fetchDetails = async () => {
+            if (selectedVariants.length === 0) {
+                setDetails([])
+                return
+            }
+            try {
+                const res = await axios.post(
+                    `${API_URL}/api/product-variants/details`,
+                    selectedVariants,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${session?.accessToken}`,
+                            'Content-Type': 'application/json',
+                        },
+                    }
+                )
+                setDetails(res.data)
+                setDetailPage(1)
+            } catch (err) {
+                console.error('Lỗi khi lấy chi tiết sản phẩm:', err)
+            }
+        }
+
+        if (session?.accessToken) {
+            fetchDetails()
+        }
+    }, [selectedVariants, session?.accessToken])
+
+    const formatDateTimeLocal = (dateStr: string) => {
+        const date = new Date(dateStr)
+        return date.toISOString().slice(0, 16)
+    }
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target
+        setForm((prev) => ({ ...prev, [name]: value }))
+        setErrors((prev) => ({ ...prev, [name]: '' }))
+    }
+
+    const handleSelectVariant = (variantId: number) => {
+        setSelectedVariants((prev) =>
+            prev.includes(variantId)
+                ? prev.filter((id) => id !== variantId)
+                : [...prev, variantId]
+        )
+    }
+
+    const validateForm = () => {
+        const newErrors: { [key: string]: string } = {}
+        if (!form.promotionName) newErrors.promotionName = 'Tên đợt giảm giá là bắt buộc.'
+        if (!form.startDate) newErrors.startDate = 'Từ ngày là bắt buộc.'
+        if (!form.endDate) newErrors.endDate = 'Đến ngày là bắt buộc.'
+        const value = parseFloat(form.discountValue.toString())
+        if ((form.discountType === 'percentage' || form.discountType === 'fixed_amount') && value <= 0) {
+            newErrors.discountValue = 'Giá trị phải lớn hơn 0.'
+        }
+        if (form.discountType === 'percentage' && value > 100) {
+            newErrors.discountValue = 'Phần trăm giảm không được vượt quá 100%.'
+        }
+        if (form.discountType === 'fixed_amount' && value > 1000000) {
+            newErrors.discountValue = 'Số tiền giảm không được vượt quá 1.000.000₫.'
+        }
+        if (new Date(form.startDate) >= new Date(form.endDate)) {
+            newErrors.startDate = 'Từ ngày phải nhỏ hơn đến ngày.'
+            newErrors.endDate = 'Đến ngày phải lớn hơn từ ngày.'
+        }
+        if (selectedVariants.length === 0) {
+            newErrors.variants = 'Vui lòng chọn ít nhất một sản phẩm.'
+        }
+        setErrors(newErrors)
+        return Object.keys(newErrors).length === 0
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!validateForm()) return
+
+        setSubmitting(true)
+
+        try {
+            await axios.put(
+                `${API_URL}/api/promotion-products/${id}`,
+                {
+                    ...form,
+                    discountValue: form.discountType === 'free_shipping' ? 0 : Number(form.discountValue),
+                    variantIds: selectedVariants,
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${session?.accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                }
+            )
+            alert('✅ Cập nhật đợt giảm giá thành công!')
+            router.push('/admin/promotion_products')
+        } catch (err: any) {
+            alert('❌ Lỗi: ' + (err?.response?.data?.message || err.message))
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
+    // Filter variants by search term
+    const filteredVariants = variants.filter((v) =>
+        v.productName.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+
+    const pageCount = Math.ceil(filteredVariants.length / itemsPerPage)
+    const currentVariants = filteredVariants.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    )
+
+    const detailPageCount = Math.ceil(details.length / detailPerPage)
+    const currentDetailRows = details.slice(
+        (detailPage - 1) * detailPerPage,
+        detailPage * detailPerPage
+    )
+
+    if (status === 'loading' || loading) {
         return (
-            <div className="max-w-4xl mx-auto p-6">
-                <div className="text-center">
-                    <p className="text-gray-600 mb-4">Không tìm thấy thông tin đợt giảm giá</p>
-                    <button
-                        onClick={() => router.back()}
-                        className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                    >
-                        Quay lại
-                    </button>
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span>Đang tải dữ liệu...</span>
                 </div>
             </div>
-        );
+        )
+    }
+
+    if (status !== 'authenticated') {
+        return (
+            <div className="text-center py-8">
+                <p>Bạn cần đăng nhập để truy cập trang này.</p>
+            </div>
+        )
     }
 
     return (
-        <div className="max-w-4xl mx-auto p-6 space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => router.back()}
-                        className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
-                    >
-                        <ArrowLeft size={20} />
-                        Quay lại
-                    </button>
-                    <h1 className="text-2xl font-bold text-gray-800">Chi tiết đợt giảm giá</h1>
-                </div>
-                
+        <div className="max-w-6xl mx-auto p-6 bg-white rounded-xl shadow mt-6">
+            <div className="flex items-center gap-4 mb-6">
                 <button
-                    onClick={() => router.push(`/admin/promotion_products/${id}/edit`)}
-                    className="flex items-center gap-2 bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
+                    onClick={() => router.back()}
+                    className="text-gray-600 hover:text-gray-800"
                 >
-                    <Edit size={16} />
-                    Chỉnh sửa
+                    ← Quay lại
                 </button>
+                <h2 className="text-2xl font-bold">Chỉnh sửa đợt giảm giá</h2>
             </div>
 
-            {/* Promotion Info Card */}
-            <div className="bg-white rounded-lg shadow border p-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold text-gray-800">{detail.promotionName}</h2>
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-                    }`}>
-                        {isActive ? 'Đang diễn ra' : 'Đã kết thúc'}
-                    </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                            <Tag className="text-blue-600" size={20} />
-                            <div>
-                                <p className="text-sm text-gray-600">Mã khuyến mãi</p>
-                                <p className="font-semibold">{detail.promotionCode}</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <Users className="text-purple-600" size={20} />
-                            <div>
-                                <p className="text-sm text-gray-600">Loại giảm</p>
-                                <p className="font-semibold">{getDiscountTypeLabel(detail.discountType)}</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <Package className="text-orange-600" size={20} />
-                            <div>
-                                <p className="text-sm text-gray-600">Giá trị giảm</p>
-                                <p className="font-semibold text-lg text-red-600">
-                                    {formatDiscount(detail.discountValue, detail.discountType)}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                            <Calendar className="text-green-600" size={20} />
-                            <div>
-                                <p className="text-sm text-gray-600">Thời gian bắt đầu</p>
-                                <p className="font-semibold">{formatDateTime(detail.startDate)}</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <Calendar className="text-red-600" size={20} />
-                            <div>
-                                <p className="text-sm text-gray-600">Thời gian kết thúc</p>
-                                <p className="font-semibold">{formatDateTime(detail.endDate)}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Product Info Card */}
-            <div className="bg-white rounded-lg shadow border p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Sản phẩm áp dụng</h3>
-                
-                <div className="flex items-start gap-4">
-                    {detail.imageUrl && (
-                        <img
-                            src={detail.imageUrl}
-                            alt={detail.productName}
-                            className="w-20 h-20 object-cover rounded-lg border"
-                        />
-                    )}
-                    
-                    <div className="flex-1 space-y-2">
-                        <h4 className="font-semibold text-gray-800">{detail.productName}</h4>
-                        <p className="text-sm text-gray-600">SKU: {detail.sku}</p>
-                        
-                        <div className="flex items-center gap-4">
-                            <div>
-                                <p className="text-sm text-gray-600">Giá gốc</p>
-                                <p className="font-semibold">{detail.price?.toLocaleString()}₫</p>
-                            </div>
-                            
-                            {detail.salePrice && detail.salePrice < detail.price && (
-                                <div>
-                                    <p className="text-sm text-gray-600">Giá sale</p>
-                                    <p className="font-semibold text-red-600">{detail.salePrice.toLocaleString()}₫</p>
-                                </div>
+                        <div>
+                            <label className="block mb-1 font-medium">
+                                Tên đợt giảm giá <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                name="promotionName"
+                                value={form.promotionName}
+                                onChange={handleChange}
+                                className="w-full border px-3 py-2 rounded"
+                            />
+                            {errors.promotionName && (
+                                <p className="text-red-600 text-sm">{errors.promotionName}</p>
                             )}
                         </div>
+
+                        <div>
+                            <label className="block mb-1 font-medium">Mô tả</label>
+                            <textarea
+                                name="description"
+                                value={form.description}
+                                onChange={handleChange}
+                                rows={3}
+                                className="w-full border px-3 py-2 rounded"
+                                placeholder="Nhập mô tả chi tiết về đợt giảm giá..."
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block mb-1 font-medium">
+                                Loại giảm <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                                name="discountType"
+                                value={form.discountType}
+                                onChange={handleChange}
+                                className="w-full border px-3 py-2 rounded"
+                            >
+                                <option value="percentage">Giảm theo %</option>
+                                <option value="fixed_amount">Giảm số tiền</option>
+                                <option value="free_shipping">Miễn phí vận chuyển</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block mb-1 font-medium">
+                                Giá trị giảm <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                name="discountValue"
+                                type="number"
+                                value={
+                                    form.discountType === 'free_shipping'
+                                        ? ''
+                                        : form.discountValue === 0
+                                            ? ''
+                                            : form.discountValue
+                                }
+                                onChange={handleChange}
+                                className="w-full border px-3 py-2 rounded"
+                                disabled={form.discountType === 'free_shipping'}
+                            />
+                            {errors.discountValue && (
+                                <p className="text-red-600 text-sm">{errors.discountValue}</p>
+                            )}
+                        </div>
+
+                        <div>
+                            <label className="block mb-1 font-medium">
+                                Từ ngày <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                name="startDate"
+                                type="datetime-local"
+                                value={form.startDate}
+                                onChange={handleChange}
+                                className="w-full border px-3 py-2 rounded"
+                            />
+                            {errors.startDate && (
+                                <p className="text-red-600 text-sm">{errors.startDate}</p>
+                            )}
+                        </div>
+
+                        <div>
+                            <label className="block mb-1 font-medium">
+                                Đến ngày <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                name="endDate"
+                                type="datetime-local"
+                                value={form.endDate}
+                                onChange={handleChange}
+                                className="w-full border px-3 py-2 rounded"
+                            />
+                            {errors.endDate && (
+                                <p className="text-red-600 text-sm">{errors.endDate}</p>
+                            )}
+                        </div>
+
+                        <div className="flex gap-4">
+                            <button
+                                type="button"
+                                onClick={() => router.back()}
+                                className="bg-gray-500 text-white px-6 py-2 rounded shadow hover:bg-gray-600"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={submitting}
+                                className="bg-blue-600 text-white px-6 py-2 rounded shadow hover:bg-blue-700 disabled:opacity-50"
+                            >
+                                {submitting ? 'Đang cập nhật...' : 'Cập nhật đợt giảm giá'}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 className="font-medium mb-2">Chọn sản phẩm áp dụng</h3>
+
+                        {/* Search input */}
+                        <input
+                            type="text"
+                            placeholder="🔍 Tìm kiếm tên sản phẩm..."
+                            value={searchTerm}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value)
+                                setCurrentPage(1) // reset về trang 1
+                            }}
+                            className="w-full border px-3 py-2 rounded mb-4"
+                        />
+
+                        {errors.variants && (
+                            <p className="text-red-600 text-sm mb-2">{errors.variants}</p>
+                        )}
+
+                        <div className="border rounded overflow-x-auto">
+                            <table className="min-w-full text-sm">
+                                <thead className="bg-gray-100 text-gray-700 font-semibold">
+                                    <tr>
+                                        <th className="px-3 py-2">Chọn</th>
+                                        <th className="px-3 py-2">STT</th>
+                                        <th className="px-3 py-2">SKU</th>
+                                        <th className="px-3 py-2">Tên sản phẩm</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {currentVariants.map((v, idx) => (
+                                        <tr key={v.variantId} className="border-t">
+                                            <td className="px-3 py-2 text-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedVariants.includes(v.variantId)}
+                                                    onChange={() => handleSelectVariant(v.variantId)}
+                                                />
+                                            </td>
+                                            <td className="px-3 py-2 text-center">
+                                                {(currentPage - 1) * itemsPerPage + idx + 1}
+                                            </td>
+                                            <td className="px-3 py-2">{v.sku}</td>
+                                            <td className="px-3 py-2">{v.productName}</td>
+
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Pagination */}
+                        {pageCount > 1 && (
+                            <div className="flex items-center justify-center gap-2 mt-3">
+                                {Array.from({ length: pageCount }, (_, i) => i + 1).map((page) => (
+                                    <button
+                                        key={page}
+                                        type="button"
+                                        onClick={() => setCurrentPage(page)}
+                                        className={`w-8 h-8 rounded-full text-sm border ${
+                                            page === currentPage ? 'bg-blue-600 text-white' : 'hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        {page}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
-            </div>
 
-            {/* Actions */}
-            <div className="flex justify-end gap-3">
-                <button
-                    onClick={() => router.push('/admin/promotion_products')}
-                    className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600"
-                >
-                    Trở về danh sách
-                </button>
-            </div>
+                {details.length > 0 && (
+                    <div className="mt-6">
+                        <h4 className="text-lg font-semibold mb-2">Chi tiết sản phẩm đã chọn ({details.length})</h4>
+                        <div className="border rounded overflow-x-auto">
+                            <table className="min-w-full text-sm">
+                                <thead className="bg-gray-200">
+                                    <tr>
+                                        <th className="border px-2 py-1">STT</th>
+                                        <th className="border px-2 py-1">Tên</th>
+                                        <th className="border px-2 py-1">Thương hiệu</th>
+                                        <th className="border px-2 py-1">Màu sắc</th>
+                                        <th className="border px-2 py-1">Kích cỡ</th>
+                                        <th className="border px-2 py-1">Chất liệu</th>
+                                        <th className="border px-2 py-1">Giá gốc</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {currentDetailRows.map((d, index) => (
+                                        <tr key={d.variantId}>
+                                            <td className="border px-2 py-1 text-center">
+                                                {(detailPage - 1) * detailPerPage + index + 1}
+                                            </td>
+                                            <td className="border px-2 py-1">{d.productName}</td>
+                                            <td className="border px-2 py-1">{d.brandName}</td>
+                                            <td className="border px-2 py-1">{d.colorName}</td>
+                                            <td className="border px-2 py-1">{d.sizeName}</td>
+                                            <td className="border px-2 py-1">{d.materialName}</td>
+                                            <td className="border px-2 py-1">{d.price?.toLocaleString()}₫</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {detailPageCount > 1 && (
+                            <div className="flex items-center justify-center gap-2 mt-3">
+                                {Array.from({ length: detailPageCount }, (_, i) => i + 1).map((page) => (
+                                    <button
+                                        key={page}
+                                        type="button"
+                                        onClick={() => setDetailPage(page)}
+                                        className={`w-8 h-8 rounded-full text-sm border ${
+                                            page === detailPage ? 'bg-blue-600 text-white' : 'hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        {page}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </form>
         </div>
-    );
+    )
 } 

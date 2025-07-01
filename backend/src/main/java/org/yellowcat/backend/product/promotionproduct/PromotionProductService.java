@@ -118,10 +118,7 @@ public class PromotionProductService {
         // Verify user ownership
         AppUser user = appUserRepository.findByKeycloakId(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        
-        if (!promotion.getAppUser().getAppUserId().equals(user.getAppUserId())) {
-            throw new RuntimeException("Bạn không có quyền cập nhật đợt giảm giá này");
-        }
+
 
         // Cập nhật thông tin promotion
         promotion.setPromotionName(dto.getPromotionName());
@@ -146,11 +143,27 @@ public class PromotionProductService {
         }
     }
 
-    public void delete(Integer id) {
-        if (!promotionProductRepository.existsById(id)) {
-            throw new EntityNotFoundException("Không tìm thấy khuyến mãi với id = " + id);
+    @Transactional
+    public void delete(Integer id, UUID userId) {
+        // Lấy promotion product để tìm promotion
+        PromotionProduct existingPromotionProduct = promotionProductRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đợt giảm giá với ID: " + id));
+        
+        Promotion promotion = existingPromotionProduct.getPromotion();
+        
+        // Verify user ownership
+        AppUser user = appUserRepository.findByKeycloakId(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        if (!promotion.getAppUser().getAppUserId().equals(user.getAppUserId())) {
+            throw new RuntimeException("Bạn không có quyền xóa đợt giảm giá này");
         }
-        promotionProductRepository.deleteById(id);
+
+        // Xóa tất cả promotion products của promotion này
+        promotionProductRepository.deleteByPromotionId(promotion.getId());
+        
+        // Xóa promotion
+        promotionRepository.deleteById(promotion.getId());
     }
 
     public List<PromotionProductResponse> getFiltered(String keyword, String status, String discountType, Double discountValue) {

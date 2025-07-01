@@ -88,8 +88,16 @@ public class PromotionProductController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        promotionProductService.delete(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> delete(
+            @PathVariable Integer id,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        try {
+            UUID userId = UUID.fromString(jwt.getSubject());
+            promotionProductService.delete(id, userId);
+            return ResponseEntityBuilder.success("Xóa đợt giảm giá thành công!");
+        } catch (Exception e) {
+            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "Lỗi khi xóa đợt giảm giá: " + e.getMessage(), e.getMessage());
+        }
     }
 }

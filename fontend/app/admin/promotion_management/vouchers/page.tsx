@@ -297,13 +297,6 @@ export default function VouchersPage() {
                                             <div className="flex items-center justify-center gap-2">
                                                 <Link
                                                     href={`/admin/promotion_management/vouchers/${voucher.id}`}
-                                                    className="text-blue-500 hover:text-blue-600 p-1"
-                                                    title="Xem chi tiết"
-                                                >
-                                                    <Eye size={16} />
-                                                </Link>
-                                                <Link
-                                                    href={`/admin/promotion_management/vouchers/${voucher.id}/edit`}
                                                     className="text-orange-500 hover:text-orange-600 p-1"
                                                     title="Chỉnh sửa"
                                                 >
