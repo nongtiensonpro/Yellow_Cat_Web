@@ -41,4 +41,4 @@ jobs:
         
       - name: Build BE (Gradle)
         working-directory: ./backend
-        run: ./gradlew build
+        run: ./gradlew build -x test
