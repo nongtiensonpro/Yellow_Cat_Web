@@ -42,12 +42,12 @@ export default function CartPage() {
             if (session?.user) {
                 await fetchCart();
             } else if (typeof window !== 'undefined') {
-                const storedCart = localStorage.getItem('cart');
-                if (storedCart) {
-                    setCartItems(JSON.parse(storedCart));
-                }
+            const storedCart = localStorage.getItem('cart');
+            if (storedCart) {
+                setCartItems(JSON.parse(storedCart));
             }
-            setLoading(false);
+        }
+        setLoading(false);
         };
         fetchInitialCart();
     }, [session]);
@@ -86,16 +86,16 @@ export default function CartPage() {
             await fetchCart();
         } else {
             // Chưa đăng nhập: tìm theo id (variantId)
-            setCartItems(prevItems => {
-                const updatedItems = prevItems.map(item => {
+        setCartItems(prevItems => {
+            const updatedItems = prevItems.map(item => {
                     if (item.id === itemKey) {
-                        const quantity = Math.max(1, Math.min(newQuantity, item.stockLevel));
-                        return { ...item, quantity };
-                    }
-                    return item;
-                });
-                return updatedItems;
+                    const quantity = Math.max(1, Math.min(newQuantity, item.stockLevel));
+                    return { ...item, quantity };
+                }
+                return item;
             });
+            return updatedItems;
+        });
         }
     };
 
@@ -148,7 +148,7 @@ export default function CartPage() {
                     return;
                 }
                 // Nếu thành công, chuyển sang trang checkout
-                router.push('/checkout');
+        router.push('/checkout');
             } catch (err) {
                 alert('Lỗi xác nhận giỏ hàng!');
             }
@@ -207,13 +207,13 @@ export default function CartPage() {
                                                 />
                                             ) : (
                                                 <CldImage
-                                                    src={item.imageUrl}
-                                                    alt={item.name}
-                                                    width={80}
-                                                    height={80}
+                                                src={item.imageUrl}
+                                                alt={item.name}
+                                                width={80}
+                                                height={80}
                                                     crop="fill"
-                                                    className="rounded-md object-cover"
-                                                />
+                                                className="rounded-md object-cover"
+                                            />
                                             )
                                         ) : (
                                             <div className="w-20 h-20 bg-gray-200 rounded-md flex items-center justify-center text-gray-500 text-xs">
@@ -287,11 +287,11 @@ export default function CartPage() {
                                                 ))}
                                             </tbody>
                                         </table>
-                                    </div>
+                                </div>
                                     <div className="flex justify-between items-center mt-6 mb-2">
                                         <span className="text-lg text-gray-700 font-medium">Tổng cộng:</span>
                                         <span className="text-2xl font-extrabold text-primary-600">{formatPrice(calculateSubtotal())}</span>
-                                    </div>
+                                </div>
                                     <Button color="primary" size="lg" className="w-full mt-6 shadow-lg text-base font-semibold py-3 rounded-xl" onClick={handleProceedToCheckout}>
                                         Tiến hành thanh toán
                                     </Button>

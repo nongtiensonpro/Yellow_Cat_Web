@@ -5,24 +5,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f81662f5-da82-4a75-9d40-0998afea6bd8" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/dataSources.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/sqldialects.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/025d34e0-4738-4cb9-a8b8-415d4bcbe060.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/025d34e0-4738-4cb9-a8b8-415d4bcbe060.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/025d34e0-4738-4cb9-a8b8-415d4bcbe060/storage_v2/_src_/database/postgres.edMnLQ/schema/public.abK9xQ.meta" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/025d34e0-4738-4cb9-a8b8-415d4bcbe060/storage_v2/_src_/database/postgres.edMnLQ/schema/public.abK9xQ.meta" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/93898032-b9f2-44d7-a698-44f9334a6f2e.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/93898032-b9f2-44d7-a698-44f9334a6f2e/storage_v2/_src_/database/postgres.edMnLQ.meta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/93898032-b9f2-44d7-a698-44f9334a6f2e/storage_v2/_src_/database/postgres.edMnLQ/schema/information_schema.FNRwLQ.meta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/93898032-b9f2-44d7-a698-44f9334a6f2e/storage_v2/_src_/database/postgres.edMnLQ/schema/pg_catalog.0S1ZNQ.meta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources/93898032-b9f2-44d7-a698-44f9334a6f2e/storage_v2/_src_/database/postgres.edMnLQ/schema/public.abK9xQ.meta" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/online_selling/cardItem_online/CartItemOnlineService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/online_selling/cardItem_online/CartItemOnlineService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/product/cart/Cart.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/product/cart/Cart.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/main/resources/db/migration/V1__Initial_setup.sql" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/db/migration/V1__Initial_setup.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deployment/postgres/init.sql" beforeDir="false" afterPath="$PROJECT_DIR$/deployment/postgres/init.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fontend/.env" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/.env" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fontend/app/admin/promotion_management/vouchers/[id]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/admin/promotion_management/vouchers/[id]/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fontend/app/admin/promotion_management/vouchers/create/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/admin/promotion_management/vouchers/create/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fontend/app/admin/promotion_management/vouchers/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/admin/promotion_management/vouchers/page.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/fontend/app/cart/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/cart/page.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/fontend/app/checkout/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/checkout/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fontend/app/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/layout.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fontend/app/products/[productId]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/products/[productId]/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fontend/app/user_info/order/[orderCode]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/user_info/order/[orderCode]/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fontend/components/navbar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/components/navbar.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fontend/components/user/BadgeVisibility.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/components/user/BadgeVisibility.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -71,7 +65,7 @@
     "RunOnceActivity.git.unshallow": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "Spring Boot.BackendApplication.executor": "Run",
-    "git-widget-placeholder": "main",
+    "git-widget-placeholder": "fe/online__selling",
     "junie.onboarding.icon.badge.shown": "true",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "C:/DuAn/Yellow_Cat_Web",
@@ -91,7 +85,7 @@
     ]
   }
 }]]></component>
-  <component name="RunManager" selected="npm.dev">
+  <component name="RunManager" selected="Spring Boot.BackendApplication">
     <configuration name="V1__Initial_setup.sql" type="DatabaseScript" editBeforeRun="true" temporary="true" nameIsGenerated="true">
       <script-file value="$PROJECT_DIR$/backend/src/main/resources/db/migration/V1__Initial_setup.sql" />
       <script-mode>FILE</script-mode>
@@ -168,6 +162,7 @@
       <workItem from="1751290390671" duration="19000" />
       <workItem from="1751290672191" duration="5242000" />
       <workItem from="1751306157251" duration="20023000" />
+      <workItem from="1751364030600" duration="9322000" />
     </task>
     <servers />
   </component>

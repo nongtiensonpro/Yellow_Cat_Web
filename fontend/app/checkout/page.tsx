@@ -78,6 +78,7 @@ export default function CheckoutPage() {
     const [addressModalOpen, setAddressModalOpen] = useState(false);
     const [userAddresses, setUserAddresses] = useState<any[]>([]);
     const [selectedAddressText, setSelectedAddressText] = useState('');
+    const [selectedAddress, setSelectedAddress] = useState<any>(null);
 
     useEffect(() => {
         if (session?.user) {
@@ -374,22 +375,113 @@ export default function CheckoutPage() {
     const handleCloseAddressModal = () => setAddressModalOpen(false);
 
     const handleSelectAddress = (address: any) => {
-        // Reset toàn bộ các ô input về rỗng/null
-        setFullName('');
-        setPhone('');
-        setAddressDetail('');
-        setSelectedProvinceCode(null);
-        setSelectedDistrictCode(null);
-        setSelectedWardCode(null);
-        // Ghi ra ô input text
-        const text = `${address.recipientName || ''} - ${address.phoneNumber || ''} - ${address.streetAddress || ''}${address.wardCommune ? ', ' + address.wardCommune : ''}${address.district ? ', ' + address.district : ''}${address.province || address.cityProvince ? ', ' + (address.province || address.cityProvince) : ''}`;
-        setSelectedAddressText(text);
-        setAddressModalOpen(false);
-        // Nếu có tỉnh và huyện, tự động lấy phí vận chuyển
-        const provinceName = address.province || address.cityProvince;
-        const districtName = address.district;
-        if (provinceName && districtName) {
-            fetchShippingFee(provinceName, districtName, totalBeforeDiscount);
+        if (session?.user) {
+            setSelectedAddress(address);
+            const text = `${address.recipientName || ''} - ${address.phoneNumber || ''} - ${address.streetAddress || ''}${address.wardCommune ? ', ' + address.wardCommune : ''}${address.district ? ', ' + address.district : ''}${address.province || address.cityProvince ? ', ' + (address.province || address.cityProvince) : ''}`;
+            setSelectedAddressText(text);
+            setAddressModalOpen(false);
+            // Nếu có tỉnh và huyện, tự động lấy phí vận chuyển
+            const provinceName = address.province || address.cityProvince;
+            const districtName = address.district;
+            if (provinceName && districtName) {
+                fetchShippingFee(provinceName, districtName, totalBeforeDiscount);
+            }
+        } else {
+            // Reset toàn bộ các ô input về rỗng/null (chỉ cho khách chưa đăng nhập)
+            setFullName('');
+            setPhone('');
+            setAddressDetail('');
+            setSelectedProvinceCode(null);
+            setSelectedDistrictCode(null);
+            setSelectedWardCode(null);
+            const text = `${address.recipientName || ''} - ${address.phoneNumber || ''} - ${address.streetAddress || ''}${address.wardCommune ? ', ' + address.wardCommune : ''}${address.district ? ', ' + address.district : ''}${address.province || address.cityProvince ? ', ' + (address.province || address.cityProvince) : ''}`;
+            setSelectedAddressText(text);
+            setAddressModalOpen(false);
+            // Nếu có tỉnh và huyện, tự động lấy phí vận chuyển
+            const provinceName = address.province || address.cityProvince;
+            const districtName = address.district;
+            if (provinceName && districtName) {
+                fetchShippingFee(provinceName, districtName, totalBeforeDiscount);
+            }
+        }
+    };
+
+    const handleOrder = async () => {
+        if (session?.user && !selectedAddress) {
+            alert('Vui lòng chọn địa chỉ giao hàng!');
+            return;
+        }
+
+        // Lấy tên tỉnh/thành, quận/huyện, phường/xã từ dropdown
+        const selectedProvinceName = provinces.find(p => p.code === selectedProvinceCode)?.name || '';
+        const selectedDistrictName = districts.find(d => d.code === selectedDistrictCode)?.name || '';
+        const selectedWardName = wards.find(w => w.code === selectedWardCode)?.name || '';
+
+        // Nếu user đăng nhập, lấy keycloakId và username từ session
+        const keycloakId = session?.user?.id || '';
+
+        // Nếu chọn địa chỉ đã lưu, lấy addressId, còn không thì để rỗng
+        const addressId = userAddresses.find(addr =>
+            addr.recipientName === fullName &&
+            addr.phoneNumber === phone &&
+            addr.streetAddress === addressDetail
+        )?.addressId || '';
+
+        // Lấy thông tin từ selectedAddress nếu có, ưu tiên selectedAddress
+        const recipientName = selectedAddress?.recipientName || fullName;
+        const phoneNumber = selectedAddress?.phoneNumber || phone;
+        const streetAddress = selectedAddress?.streetAddress || addressDetail;
+        const wardCommune = selectedAddress?.wardCommune || selectedWardName;
+        const district = selectedAddress?.district || selectedDistrictName;
+        const cityProvince = selectedAddress?.province || selectedProvinceName || selectedAddress?.cityProvince;
+        const isDefault = selectedAddress?.isDefault ?? true;
+        const addressType = selectedAddress?.addressType || 'home';
+
+        const orderRequest = {
+            appUser: {
+                keycloakId: session?.user?.id || '',
+                username: selectedAddress?.recipientName || '',
+                phoneNumber: selectedAddress?.phoneNumber || ''
+            },
+            shippingAddress: {
+                addressId: selectedAddress?.addressId || '',
+                recipientName: selectedAddress?.recipientName || '',
+                phoneNumber: selectedAddress?.phoneNumber || '',
+                streetAddress: selectedAddress?.streetAddress || '',
+                wardCommune: selectedAddress?.wardCommune || '',
+                district: selectedAddress?.district || '',
+                cityProvince: selectedAddress?.province || selectedAddress?.cityProvince || '',
+                country: 'Việt Nam',
+                isDefault: selectedAddress?.isDefault ?? true,
+                addressType: selectedAddress?.addressType || 'home'
+            },
+            shippingMethodId: 1,
+            shippingFee: shippingFee,
+            note: note,
+            paymentStatus: 'PENDING',
+            products: cartItems.map(item => ({
+                id: item.id || item.productId || item.variantId,
+                quantity: item.quantity
+            }))
+        };
+        console.log('orderRequest:', orderRequest);
+        try {
+            const response = await fetch('http://localhost:8080/api/orders/online', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(orderRequest),
+            });
+            const data = await response.json();
+            if (response.ok) {
+                router.push('/checkout/success');
+            } else {
+                console.error('Order API error:', data);
+                alert(data.message || 'Đặt hàng thất bại');
+            }
+        } catch (err) {
+            alert('Có lỗi xảy ra khi đặt hàng');
         }
     };
 
@@ -582,7 +674,7 @@ export default function CheckoutPage() {
                         </label>
                     </div>
 
-                    <Button color="primary" size="lg" className="w-full mt-6 py-3 text-lg font-semibold">
+                    <Button color="primary" size="lg" className="w-full mt-6 py-3 text-lg font-semibold" onClick={handleOrder}>
                         XÁC NHẬN ĐẶT HÀNG
                     </Button>
                 </div>
