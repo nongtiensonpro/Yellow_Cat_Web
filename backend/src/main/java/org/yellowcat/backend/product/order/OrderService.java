@@ -39,6 +39,7 @@ public class OrderService {
     AppUserService appUserService;
 
 
+
     public Map<String, Integer> getOrderStatusCounts() {
         List<Object[]> raw = orderRepository.countOrdersGroupByStatus();
         Map<String, Integer> result = new HashMap<>();

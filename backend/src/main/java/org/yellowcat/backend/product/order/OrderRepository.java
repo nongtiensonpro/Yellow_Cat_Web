@@ -14,9 +14,11 @@ import org.yellowcat.backend.product.order.dto.OrderResponse;
 import org.yellowcat.backend.product.order.dto.OrderWithStaffProjection;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Integer> {
+
 
     @Query("SELECT o.orderStatus, COUNT(o) FROM Order o GROUP BY o.orderStatus")
     List<Object[]> countOrdersGroupByStatus();

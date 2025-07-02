@@ -1140,9 +1140,15 @@ export default function OrderListPage() {
                                 {STATUS_MAP[o.orderStatus] || o.orderStatus}
                             </td>
                             <td className="p-2 border text-center">
-                                <Link href={`/orders/${o.orderId}`}>
-                                    <EyeIcon className="w-5 h-5 text-blue-500 hover:text-blue-700 cursor-pointer inline" />
+                                <Link
+                                    href={`/admin/order/officesales/${o.orderId}`}
+                                    title="Xem chi tiết đơn hàng"
+                                    aria-label={`Xem chi tiết đơn hàng ${o.orderId}`}
+                                    className="inline-flex items-center justify-center text-gray-600 hover:text-primary transition"
+                                >
+                                    <EyeIcon className="w-5 h-5" />
                                 </Link>
+
                             </td>
                         </tr>
                     ))
