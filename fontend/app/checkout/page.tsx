@@ -15,6 +15,8 @@ interface CartItem {
     imageUrl: string;
     sku: string;
     stockLevel: number;
+    colorName?: string;
+    sizeName?: string;
 }
 
 // Interfaces for administrative divisions
@@ -47,7 +49,7 @@ interface Ward {
 export default function CheckoutPage() {
     const router = useRouter();
     const [paymentMethod, setPaymentMethod] = useState('cod');
-    const [cartItems, setCartItems] = useState<any[]>([]);
+    const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [loadingCart, setLoadingCart] = useState(true);
 
     // --- State for Address Form ---
@@ -79,6 +81,23 @@ export default function CheckoutPage() {
     const [userAddresses, setUserAddresses] = useState<any[]>([]);
     const [selectedAddressText, setSelectedAddressText] = useState('');
     const [selectedAddress, setSelectedAddress] = useState<any>(null);
+    const [addAddressModalOpen, setAddAddressModalOpen] = useState(false);
+    const [newAddress, setNewAddress] = useState({
+        recipientName: '',
+        phoneNumber: '',
+        streetAddress: '',
+        wardCommune: '',
+        district: '',
+        province: '',
+    });
+    const [addProvinceCode, setAddProvinceCode] = useState<number | null>(null);
+    const [addDistrictCode, setAddDistrictCode] = useState<number | null>(null);
+    const [addWardCode, setAddWardCode] = useState<number | null>(null);
+    const [addDistricts, setAddDistricts] = useState<District[]>([]);
+    const [addWards, setAddWards] = useState<Ward[]>([]);
+    const [addLoadingDistricts, setAddLoadingDistricts] = useState(false);
+    const [addLoadingWards, setAddLoadingWards] = useState(false);
+    const [addError, setAddError] = useState<string | null>(null);
 
     useEffect(() => {
         if (session?.user) {
@@ -460,7 +479,7 @@ export default function CheckoutPage() {
             note: note,
             paymentStatus: 'PENDING',
             products: cartItems.map(item => ({
-                id: item.id || item.productId || item.variantId,
+                id: item.id || item.productId,
                 quantity: item.quantity
             }))
         };
@@ -475,6 +494,7 @@ export default function CheckoutPage() {
             });
             const data = await response.json();
             if (response.ok) {
+                revertedRef.current = true;
                 router.push('/checkout/success');
             } else {
                 console.error('Order API error:', data);
@@ -482,6 +502,102 @@ export default function CheckoutPage() {
             }
         } catch (err) {
             alert('Có lỗi xảy ra khi đặt hàng');
+        }
+    };
+
+    // Xử lý chọn tỉnh trong modal thêm địa chỉ
+    const handleAddProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const code = parseInt(e.target.value);
+        setAddProvinceCode(isNaN(code) ? null : code);
+        setAddDistrictCode(null);
+        setAddWardCode(null);
+        setAddDistricts([]);
+        setAddWards([]);
+        if (!isNaN(code)) {
+            setAddLoadingDistricts(true);
+            fetch(`https://provinces.open-api.vn/api/p/${code}?depth=2`)
+                .then(res => res.json())
+                .then(data => setAddDistricts(data.districts || []))
+                .catch(() => setAddDistricts([]))
+                .finally(() => setAddLoadingDistricts(false));
+        }
+    };
+    // Xử lý chọn huyện trong modal thêm địa chỉ
+    const handleAddDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const code = parseInt(e.target.value);
+        setAddDistrictCode(isNaN(code) ? null : code);
+        setAddWardCode(null);
+        setAddWards([]);
+        if (!isNaN(code)) {
+            setAddLoadingWards(true);
+            fetch(`https://provinces.open-api.vn/api/d/${code}?depth=2`)
+                .then(res => res.json())
+                .then(data => setAddWards(data.wards || []))
+                .catch(() => setAddWards([]))
+                .finally(() => setAddLoadingWards(false));
+        }
+    };
+    // Xử lý chọn xã trong modal thêm địa chỉ
+    const handleAddWardChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const code = parseInt(e.target.value);
+        setAddWardCode(isNaN(code) ? null : code);
+    };
+    // Reset modal khi mở
+    useEffect(() => {
+        if (addAddressModalOpen) {
+            setNewAddress({ recipientName: '', phoneNumber: '', streetAddress: '', wardCommune: '', district: '', province: '' });
+            setAddProvinceCode(null);
+            setAddDistrictCode(null);
+            setAddWardCode(null);
+            setAddDistricts([]);
+            setAddWards([]);
+            setAddError(null);
+        }
+    }, [addAddressModalOpen]);
+    // Hàm xử lý thêm địa chỉ mới (có validate)
+    const handleAddAddress = async () => {
+        setAddError(null);
+        // Validate
+        if (!newAddress.recipientName.trim() || !newAddress.phoneNumber.trim() || !newAddress.streetAddress.trim() || !addProvinceCode || !addDistrictCode || !addWardCode) {
+            setAddError('Vui lòng nhập đầy đủ thông tin bắt buộc.');
+            return;
+        }
+        // Validate số điện thoại (10-11 số, bắt đầu bằng 0)
+        if (!/^0\d{9,10}$/.test(newAddress.phoneNumber.trim())) {
+            setAddError('Số điện thoại không hợp lệ.');
+            return;
+        }
+        // Lấy tên tỉnh/huyện/xã
+        const provinceName = provinces.find(p => p.code === addProvinceCode)?.name || '';
+        const districtName = addDistricts.find(d => d.code === addDistrictCode)?.name || '';
+        const wardName = addWards.find(w => w.code === addWardCode)?.name || '';
+        // Chuẩn bị payload
+        const payload = {
+            ...newAddress,
+            cityProvince: provinceName,
+            district: districtName,
+            wardCommune: wardName,
+            isDefault: false,
+            addressType: 'home',
+            country: 'Việt Nam'
+        };
+        const keycloakId = session?.user?.id;
+        try {
+            const res = await fetch(`http://localhost:8080/api/addresses/user/create/${keycloakId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                setAddAddressModalOpen(false);
+                setNewAddress({ recipientName: '', phoneNumber: '', streetAddress: '', wardCommune: '', district: '', province: '' });
+                fetchUserAddresses(); // Load lại danh sách địa chỉ đã lưu
+            } else {
+                setAddError(data.message || 'Không thể thêm địa chỉ');
+            }
+        } catch {
+            setAddError('Có lỗi xảy ra');
         }
     };
 
@@ -502,110 +618,113 @@ export default function CheckoutPage() {
                 <div className="lg:col-span-2 space-y-6">
                     <Card className="p-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
-                                <input
-                                    type="text"
-                                    id="fullName"
-                                    value={fullName}
-                                    onChange={(e) => {
-                                        setFullName(e.target.value);
-                                        setSelectedAddressText('');
-                                    }}
-                                    className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
-                                <input
-                                    type="text"
-                                    id="phone"
-                                    value={phone}
-                                    onChange={(e) => {
-                                        setPhone(e.target.value);
-                                        setSelectedAddressText('');
-                                    }}
-                                    className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label htmlFor="province" className="block text-sm font-medium text-gray-700 mb-1">Tỉnh/Thành phố</label>
-                                <select
-                                    id="province"
-                                    className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
-                                    onChange={(e) => {
-                                        handleProvinceChange(e);
-                                        setSelectedAddressText('');
-                                    }}
-                                    value={selectedProvinceCode || ''}
-                                    disabled={loadingProvinces}
-                                >
-                                    <option value="">Chọn Tỉnh/Thành phố</option>
-                                    {provinces.map(province => (
-                                        <option key={province.code} value={province.code}>
-                                            {province.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                {loadingProvinces && <p className="text-sm text-gray-500 mt-1">Đang tải tỉnh/thành phố...</p>}
-                            </div>
-                            <div>
-                                <label htmlFor="district" className="block text-sm font-medium text-gray-700 mb-1">Quận/Huyện</label>
-                                <select
-                                    id="district"
-                                    className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
-                                    onChange={(e) => {
-                                        handleDistrictChange(e);
-                                        setSelectedAddressText('');
-                                    }}
-                                    value={selectedDistrictCode || ''}
-                                    disabled={!selectedProvinceCode || loadingDistricts}
-                                >
-                                    <option value="">Chọn Quận/Huyện</option>
-                                    {districts.map(district => (
-                                        <option key={district.code} value={district.code}>
-                                            {district.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                {loadingDistricts && <p className="text-sm text-gray-500 mt-1">Đang tải quận/huyện...</p>}
-                            </div>
-                            <div>
-                                <label htmlFor="ward" className="block text-sm font-medium text-gray-700 mb-1">Xã/Phường</label>
-                                <select
-                                    id="ward"
-                                    className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
-                                    onChange={(e) => {
-                                        handleWardChange(e);
-                                        setSelectedAddressText('');
-                                    }}
-                                    value={selectedWardCode || ''}
-                                    disabled={!selectedDistrictCode || loadingWards}
-                                >
-                                    <option value="">Chọn Xã/Phường</option>
-                                    {wards.map(ward => (
-                                        <option key={ward.code} value={ward.code}>
-                                            {ward.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                {loadingWards && <p className="text-sm text-gray-500 mt-1">Đang tải xã/phường...</p>}
-                            </div>
-                            <div>
-                                <label htmlFor="addressDetail" className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ cụ thể</label>
-                                <input
-                                    type="text"
-                                    id="addressDetail"
-                                    placeholder="Số nhà, tên đường"
-                                    value={addressDetail}
-                                    onChange={(e) => {
-                                        setAddressDetail(e.target.value);
-                                        setSelectedAddressText('');
-                                    }}
-                                    className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
+                            {!session?.user && (
+                                <>
+                                    <div>
+                                        <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
+                                        <input
+                                            type="text"
+                                            id="fullName"
+                                            value={fullName}
+                                            onChange={(e) => {
+                                                setFullName(e.target.value);
+                                                setSelectedAddressText('');
+                                            }}
+                                            className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
+                                        <input
+                                            type="text"
+                                            id="phone"
+                                            value={phone}
+                                            onChange={(e) => {
+                                                setPhone(e.target.value);
+                                                setSelectedAddressText('');
+                                            }}
+                                            className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="province" className="block text-sm font-medium text-gray-700 mb-1">Tỉnh/Thành phố</label>
+                                        <select
+                                            id="province"
+                                            className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
+                                            onChange={(e) => {
+                                                handleProvinceChange(e);
+                                                setSelectedAddressText('');
+                                            }}
+                                            value={selectedProvinceCode || ''}
+                                            disabled={loadingProvinces}
+                                        >
+                                            <option value="">Chọn Tỉnh/Thành phố</option>
+                                            {provinces.map(province => (
+                                                <option key={province.code} value={province.code}>
+                                                    {province.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {loadingProvinces && <p className="text-sm text-gray-500 mt-1">Đang tải tỉnh/thành phố...</p>}
+                                    </div>
+                                    <div>
+                                        <label htmlFor="district" className="block text-sm font-medium text-gray-700 mb-1">Quận/Huyện</label>
+                                        <select
+                                            id="district"
+                                            className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
+                                            onChange={(e) => {
+                                                handleDistrictChange(e);
+                                                setSelectedAddressText('');
+                                            }}
+                                            value={selectedDistrictCode || ''}
+                                            disabled={!selectedProvinceCode || loadingDistricts}
+                                        >
+                                            <option value="">Chọn Quận/Huyện</option>
+                                            {districts.map(district => (
+                                                <option key={district.code} value={district.code}>
+                                                    {district.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {loadingDistricts && <p className="text-sm text-gray-500 mt-1">Đang tải quận/huyện...</p>}
+                                    </div>
+                                    <div>
+                                        <label htmlFor="ward" className="block text-sm font-medium text-gray-700 mb-1">Xã/Phường</label>
+                                        <select
+                                            id="ward"
+                                            className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
+                                            onChange={(e) => {
+                                                handleWardChange(e);
+                                                setSelectedAddressText('');
+                                            }}
+                                            value={selectedWardCode || ''}
+                                            disabled={!selectedDistrictCode || loadingWards}
+                                        >
+                                            <option value="">Chọn Xã/Phường</option>
+                                            {wards.map(ward => (
+                                                <option key={ward.code} value={ward.code}>
+                                                    {ward.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {loadingWards && <p className="text-sm text-gray-500 mt-1">Đang tải xã/phường...</p>}
+                                    </div>
+                                    <div>
+                                        <label htmlFor="addressDetail" className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ cụ thể</label>
+                                        <input
+                                            type="text"
+                                            id="addressDetail"
+                                            placeholder="Số nhà, tên đường"
+                                            value={addressDetail}
+                                            onChange={(e) => {
+                                                setAddressDetail(e.target.value);
+                                                setSelectedAddressText('');
+                                            }}
+                                            className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+                                </>
+                            )}
                             <div className="md:col-span-2">
                                 <label htmlFor="note" className="block text-sm font-medium text-gray-700 mb-1">Ghi chú</label>
                                 <textarea
@@ -625,6 +744,7 @@ export default function CheckoutPage() {
                                     onChange={e => setSelectedAddressText(e.target.value)}
                                     className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
                                     placeholder="Chưa chọn địa chỉ"
+                                    readOnly
                                 />
                             </div>
                         </div>
@@ -702,10 +822,11 @@ export default function CheckoutPage() {
                                         </div>
                                     )}
                                     <div className="flex-1">
-                                        <h3 className="text-md font-semibold text-gray-800">{item.name}</h3>
-                                        {item.productName !== item.name && (
-                                            <p className="text-sm text-gray-600">{item.productName}</p>
-                                        )}
+                                        <h3 className="text-md font-semibold text-gray-800">{item.productName}</h3>
+                                        <div className="flex gap-4 text-sm text-gray-700 mt-1">
+                                            <span>Màu sắc: <span className="font-semibold">{item.colorName || '-'}</span></span>
+                                            <span>Size: <span className="font-semibold">{item.sizeName || '-'}</span></span>
+                                        </div>
                                         <p className="text-sm text-gray-600">Số lượng: {item.quantity}</p>
                                         <p className="text-md font-bold text-red-600 mt-1">{formatPrice(item.price * item.quantity)}</p>
                                     </div>
@@ -785,6 +906,47 @@ export default function CheckoutPage() {
                     </ModalBody>
                     <ModalFooter>
                         <Button variant="light" onClick={handleCloseAddressModal}>Đóng</Button>
+                        <Button color="primary" onClick={() => setAddAddressModalOpen(true)}>Thêm địa chỉ</Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+
+            {/* Modal thêm địa chỉ mới */}
+            <Modal isOpen={addAddressModalOpen} onOpenChange={setAddAddressModalOpen} size="lg">
+                <ModalContent>
+                    <ModalHeader>Thêm địa chỉ mới</ModalHeader>
+                    <ModalBody>
+                        <div className="space-y-3">
+                            <input className="w-full p-2 border rounded" placeholder="Họ tên" value={newAddress.recipientName} onChange={e => setNewAddress({...newAddress, recipientName: e.target.value})} />
+                            <input className="w-full p-2 border rounded" placeholder="Số điện thoại" value={newAddress.phoneNumber} onChange={e => setNewAddress({...newAddress, phoneNumber: e.target.value})} />
+                            <input className="w-full p-2 border rounded" placeholder="Địa chỉ (số nhà, đường...)" value={newAddress.streetAddress} onChange={e => setNewAddress({...newAddress, streetAddress: e.target.value})} />
+                            {/* Select tỉnh */}
+                            <select className="w-full p-2 border rounded" value={addProvinceCode || ''} onChange={handleAddProvinceChange}>
+                                <option value="">Chọn Tỉnh/Thành phố</option>
+                                {provinces.map(province => (
+                                    <option key={province.code} value={province.code}>{province.name}</option>
+                                ))}
+                            </select>
+                            {/* Select huyện */}
+                            <select className="w-full p-2 border rounded" value={addDistrictCode || ''} onChange={handleAddDistrictChange} disabled={!addProvinceCode || addLoadingDistricts}>
+                                <option value="">Chọn Quận/Huyện</option>
+                                {addDistricts.map(district => (
+                                    <option key={district.code} value={district.code}>{district.name}</option>
+                                ))}
+                            </select>
+                            {/* Select xã */}
+                            <select className="w-full p-2 border rounded" value={addWardCode || ''} onChange={handleAddWardChange} disabled={!addDistrictCode || addLoadingWards}>
+                                <option value="">Chọn Xã/Phường</option>
+                                {addWards.map(ward => (
+                                    <option key={ward.code} value={ward.code}>{ward.name}</option>
+                                ))}
+                            </select>
+                            {addError && <div className="text-red-500 text-sm mt-2">{addError}</div>}
+                        </div>
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button variant="light" onClick={() => setAddAddressModalOpen(false)}>Hủy</Button>
+                        <Button color="primary" onClick={handleAddAddress}>Lưu</Button>
                     </ModalFooter>
                 </ModalContent>
             </Modal>

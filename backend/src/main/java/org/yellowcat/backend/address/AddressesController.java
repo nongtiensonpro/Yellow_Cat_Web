@@ -53,8 +53,13 @@ public class AddressesController {
 
     @PostMapping("/user/create/{keycloakId}")
     public ApiResponse create(@RequestBody AddressesDTO addressDTO, @PathVariable UUID  keycloakId) {
-        AddressesDTO createdAddress = addressService.create(addressDTO, keycloakId);
-        return ApiResponse.success(createdAddress);
+        try {
+            AddressesDTO createdAddress = addressService.create(addressDTO, keycloakId);
+            return ApiResponse.success(createdAddress);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ApiResponse.error(org.springframework.http.HttpStatus.BAD_REQUEST, "Lỗi khi thêm địa chỉ", e.getMessage());
+        }
     }
 
 

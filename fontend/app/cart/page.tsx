@@ -17,6 +17,8 @@ interface CartItem {
     sku: string;
     stockLevel: number;
     cartItemId?: number;
+    colorName?: string;
+    sizeName?: string;
 }
 
 export default function CartPage() {
@@ -42,15 +44,29 @@ export default function CartPage() {
             if (session?.user) {
                 await fetchCart();
             } else if (typeof window !== 'undefined') {
-            const storedCart = localStorage.getItem('cart');
-            if (storedCart) {
-                setCartItems(JSON.parse(storedCart));
+                const storedCart = localStorage.getItem('cart');
+                if (storedCart) {
+                    setCartItems(JSON.parse(storedCart));
+                }
             }
-        }
-        setLoading(false);
+            setLoading(false);
         };
         fetchInitialCart();
     }, [session]);
+
+    // Log ra thông tin sản phẩm trong giỏ hàng (bao gồm cả màu và size)
+    useEffect(() => {
+        if (!loading && cartItems.length > 0) {
+            console.log('Cart items:', cartItems.map((item: CartItem) => ({
+                id: item.id,
+                name: item.name,
+                color: item.colorName,
+                size: item.sizeName,
+                quantity: item.quantity,
+                price: item.price
+            })));
+        }
+    }, [loading, cartItems]);
 
     useEffect(() => {
         if (!loading && typeof window !== 'undefined' && !session?.user) {
@@ -207,13 +223,13 @@ export default function CartPage() {
                                                 />
                                             ) : (
                                                 <CldImage
-                                                src={item.imageUrl}
-                                                alt={item.name}
-                                                width={80}
-                                                height={80}
+                                                    src={item.imageUrl}
+                                                    alt={item.name}
+                                                    width={80}
+                                                    height={80}
                                                     crop="fill"
-                                                className="rounded-md object-cover"
-                                            />
+                                                    className="rounded-md object-cover"
+                                                />
                                             )
                                         ) : (
                                             <div className="w-20 h-20 bg-gray-200 rounded-md flex items-center justify-center text-gray-500 text-xs">
@@ -221,8 +237,12 @@ export default function CartPage() {
                                             </div>
                                         )}
                                         <div className="flex-1">
-                                            <h2 className="text-lg font-semibold">{item.name || item.productName || "Không có tên"}</h2>
-                                            <p className="text-gray-600">Giá: {formatPrice(item.price)}</p>
+                                            <h2 className="text-lg font-semibold">{item.productName || item.name || "Không có tên"}</h2>
+                                            <div className="flex gap-4 text-sm text-gray-700 mt-1">
+                                                <span>Màu sắc: <span className="font-semibold">{item.colorName || '-'}</span></span>
+                                                <span>Size: <span className="font-semibold">{item.sizeName || '-'}</span></span>
+                                            </div>
+                                            <p className="text-gray-600 mt-1">Giá: {formatPrice(item.price)}</p>
                                             <div className="flex items-center mt-2">
                                                 <Button
                                                     size="sm"

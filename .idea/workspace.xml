@@ -5,18 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f81662f5-da82-4a75-9d40-0998afea6bd8" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/025d34e0-4738-4cb9-a8b8-415d4bcbe060.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/025d34e0-4738-4cb9-a8b8-415d4bcbe060.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/025d34e0-4738-4cb9-a8b8-415d4bcbe060/storage_v2/_src_/database/postgres.edMnLQ/schema/public.abK9xQ.meta" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/025d34e0-4738-4cb9-a8b8-415d4bcbe060/storage_v2/_src_/database/postgres.edMnLQ/schema/public.abK9xQ.meta" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/93898032-b9f2-44d7-a698-44f9334a6f2e.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/93898032-b9f2-44d7-a698-44f9334a6f2e/storage_v2/_src_/database/postgres.edMnLQ.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/93898032-b9f2-44d7-a698-44f9334a6f2e/storage_v2/_src_/database/postgres.edMnLQ/schema/information_schema.FNRwLQ.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/93898032-b9f2-44d7-a698-44f9334a6f2e/storage_v2/_src_/database/postgres.edMnLQ/schema/pg_catalog.0S1ZNQ.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/93898032-b9f2-44d7-a698-44f9334a6f2e/storage_v2/_src_/database/postgres.edMnLQ/schema/public.abK9xQ.meta" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/resources/db/migration/V1__Initial_setup.sql" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/db/migration/V1__Initial_setup.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/address/AddressesController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/address/AddressesController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/online_selling/card_online/CartOnlineService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/online_selling/card_online/CartOnlineService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/online_selling/card_online/dto/ItemResponseDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/online_selling/card_online/dto/ItemResponseDTO.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/fontend/app/cart/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/cart/page.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/fontend/app/checkout/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/checkout/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fontend/app/checkout/success/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/checkout/success/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fontend/styles/globals.css" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/styles/globals.css" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -53,39 +49,39 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Docker.deployment: Compose Deployment.executor": "Run",
-    "Gradle.Build backend.executor": "Run",
-    "RequestMappingsPanelOrder0": "0",
-    "RequestMappingsPanelOrder1": "1",
-    "RequestMappingsPanelWidth0": "75",
-    "RequestMappingsPanelWidth1": "75",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "Spring Boot.BackendApplication.executor": "Run",
-    "git-widget-placeholder": "fe/online__selling",
-    "junie.onboarding.icon.badge.shown": "true",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/DuAn/Yellow_Cat_Web",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "npm.build.executor": "Run",
-    "npm.dev.executor": "Run",
-    "ts.external.directory.path": "C:\\YellowCatWeb\\Yellow_Cat_Web\\fontend\\node_modules\\typescript\\lib",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Docker.deployment: Compose Deployment.executor&quot;: &quot;Run&quot;,
+    &quot;Gradle.Build backend.executor&quot;: &quot;Run&quot;,
+    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
+    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
+    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
+    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;Spring Boot.BackendApplication.executor&quot;: &quot;Run&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;fe/online__selling&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/DuAn/Yellow_Cat_Web&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;npm.build.executor&quot;: &quot;Run&quot;,
+    &quot;npm.dev.executor&quot;: &quot;Run&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\YellowCatWeb\\Yellow_Cat_Web\\fontend\\node_modules\\typescript\\lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   },
-  "keyToStringList": {
-    "DatabaseDriversLRU": [
-      "postgresql"
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;postgresql&quot;
     ]
   }
-}]]></component>
-  <component name="RunManager" selected="Spring Boot.BackendApplication">
+}</component>
+  <component name="RunManager" selected="npm.dev">
     <configuration name="V1__Initial_setup.sql" type="DatabaseScript" editBeforeRun="true" temporary="true" nameIsGenerated="true">
       <script-file value="$PROJECT_DIR$/backend/src/main/resources/db/migration/V1__Initial_setup.sql" />
       <script-mode>FILE</script-mode>
@@ -163,6 +159,7 @@
       <workItem from="1751290672191" duration="5242000" />
       <workItem from="1751306157251" duration="20023000" />
       <workItem from="1751364030600" duration="9322000" />
+      <workItem from="1751432631125" duration="7364000" />
     </task>
     <servers />
   </component>
