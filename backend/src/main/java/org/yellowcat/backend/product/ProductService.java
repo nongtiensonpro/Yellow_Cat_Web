@@ -2,6 +2,8 @@ package org.yellowcat.backend.product;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.yellowcat.backend.product.brand.Brand;
@@ -20,9 +22,11 @@ import org.yellowcat.backend.product.size.SizeRepository;
 import org.yellowcat.backend.product.targetaudience.TargetAudience;
 import org.yellowcat.backend.product.targetaudience.TargetAudienceRepository;
 import org.yellowcat.backend.user.AppUser;
+import org.yellowcat.backend.user.AppUserRepository;
 
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +40,10 @@ public class ProductService {
     private final TargetAudienceRepository targetAudienceRepository;
     private final ColorRepository colorRepository;
     private final SizeRepository sizeRepository;
+    private final ProductMapper productMapper;
+    private final ProductHistoryRepository productHistoryRepository;
+    private final ProductVariantHistoryRepository productVariantHistoryRepository;
+    private final AppUserRepository appUserRepository;
 
 
     public Page<ProductListItemDTO> getProductsPaginated(Pageable pageable) {
@@ -160,98 +168,212 @@ public class ProductService {
     }
 
     @Transactional
-    public void updateProduct(ProductWithVariantsUpdateRequestDTO productDto, AppUser appUser) {
-        // 1. Tìm Product cũ
-        Product product = productRepository.findById(productDto.getProductId())
-                .orElseThrow(() -> new RuntimeException("Product not found with ID: " + productDto.getProductId()));
+    public void updateProduct(ProductWithVariantsUpdateRequestDTO dto, AppUser user) {
+        // 1. Load existing
+        Product product = productRepository.findById(dto.getProductId())
+                .orElseThrow(() -> new RuntimeException("Product not found #" + dto.getProductId()));
 
-        // 2. Tìm Brand & Category
-        Brand brand = brandRepository.findById(productDto.getBrandId())
+        // 2. Write product history
+        ProductsHistory ph = createProductHistory(product, user, 'U');
+        UUID groupId = ph.getHistoryGroupId();
+
+        // 3. Load associations
+        Brand brand = brandRepository.findById(dto.getBrandId())
                 .orElseThrow(() -> new RuntimeException("Brand not found"));
-        Category category = categoryRepository.findById(productDto.getCategoryId())
+        Category category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new RuntimeException("Category not found"));
-        Material material = materialRepository.findById(productDto.getMaterialId())
+        Material material = materialRepository.findById(dto.getMaterialId())
                 .orElseThrow(() -> new RuntimeException("Material not found"));
-        TargetAudience targetAudience = targetAudienceRepository.findById(productDto.getTargetAudienceId())
+        TargetAudience audience = targetAudienceRepository.findById(dto.getTargetAudienceId())
                 .orElseThrow(() -> new RuntimeException("Target Audience not found"));
 
-        // 3. Cập nhật thông tin sản phẩm
-        product.setProductName(productDto.getProductName());
-        product.setDescription(productDto.getDescription());
+        // 4. Update product fields
+        product.setProductName(dto.getProductName());
+        product.setDescription(dto.getDescription());
         product.setBrand(brand);
         product.setCategory(category);
         product.setMaterial(material);
-        product.setTargetAudience(targetAudience);
-        product.setThumbnail(productDto.getThumbnail());
-        product.setCreatedBy(appUser);
+        product.setTargetAudience(audience);
+        product.setThumbnail(dto.getThumbnail());
+        product.setCreatedBy(user);
         product = productRepository.save(product);
 
-        // 4. Xử lý biến thể
-        List<ProductVariant> existingVariants = productVariantRepository.findByProductId(product.getProductId());
+        // 5. Prefetch Color & Size
+        List<Integer> colorIds = dto.getVariants().stream()
+                .map(ProductWithVariantsUpdateRequestDTO.ProductVariantDTO::getColorId)
+                .distinct().toList();
+        Map<Integer, Color> colors = colorRepository.findAllById(colorIds)
+                .stream().collect(Collectors.toMap(Color::getId, c -> c));
 
-        // Tạo Map để dễ lookup theo sku
-        Map<String, ProductVariant> existingVariantsMap = new HashMap<>();
-        for (ProductVariant variant : existingVariants) {
-            existingVariantsMap.put(variant.getSku(), variant);
-        }
+        List<Integer> sizeIds = dto.getVariants().stream()
+                .map(ProductWithVariantsUpdateRequestDTO.ProductVariantDTO::getSizeId)
+                .distinct().toList();
+        Map<Integer, Size> sizes = sizeRepository.findAllById(sizeIds)
+                .stream().collect(Collectors.toMap(Size::getId, s -> s));
 
-        // SKU của biến thể mới trong request
-        Set<String> newVariantSkus = new HashSet<>();
+        // 6. Load existing variants
+        List<ProductVariant> existing = productVariantRepository.findByProductId(product.getProductId());
+        Map<String, ProductVariant> existingMap = existing.stream()
+                .collect(Collectors.toMap(ProductVariant::getSku, v -> v));
 
-        if (productDto.getVariants() != null) {
-            for (ProductWithVariantsUpdateRequestDTO.ProductVariantDTO variantDto : productDto.getVariants()) {
-                Color color = colorRepository.findById(variantDto.getColorId())
-                        .orElseThrow(() -> new RuntimeException("Color not found"));
-                Size size = sizeRepository.findById(variantDto.getSizeId())
-                        .orElseThrow(() -> new RuntimeException("Size not found"));
+        Set<String> newSkus = new HashSet<>();
+        List<ProductVariant> toSave = new ArrayList<>();
 
-                newVariantSkus.add(variantDto.getSku());
-                ProductVariant variant = existingVariantsMap.get(variantDto.getSku());
-
-                if (variant == null) {
-                    // Nếu biến thể mới chưa tồn tại thì tạo mới
-                    variant = new ProductVariant();
-                    variant.setProduct(product);
-                    variant.setSku(variantDto.getSku());
-                }
-
-                // Cập nhật thông tin biến thể
-                variant.setColor(color);
-                variant.setSize(size);
-                variant.setPrice(variantDto.getPrice());
-                variant.setQuantityInStock(variantDto.getStockLevel());
-                variant.setImageUrl(variantDto.getImageUrl());
-                variant.setWeight(variantDto.getWeight());
-                variant.setCreatedBy(appUser);
-                productVariantRepository.save(variant);
+        // 7. Process new & updated variants
+        for (var vDto : dto.getVariants()) {
+            newSkus.add(vDto.getSku());
+            ProductVariant v = existingMap.getOrDefault(vDto.getSku(), new ProductVariant());
+            if (v.getVariantId() != null) {
+                // history before update
+                createVariantHistory(v, user, 'U', groupId);
+            } else {
+                v.setProduct(product);
+                v.setSku(vDto.getSku());
+                v.setCreatedBy(user);
             }
+            v.setColor(colors.get(vDto.getColorId()));
+            v.setSize(sizes.get(vDto.getSizeId()));
+            v.setPrice(vDto.getPrice());
+            v.setQuantityInStock(vDto.getStockLevel());
+            v.setImageUrl(vDto.getImageUrl());
+            v.setWeight(vDto.getWeight());
+            v.setCreatedBy(user);
+            toSave.add(v);
         }
+        productVariantRepository.saveAll(toSave);
 
-        // 5 Xóa biến thể cũ không còn trong danh sách mới
-        for (ProductVariant oldVariant : existingVariants) {
-            if (!newVariantSkus.contains(oldVariant.getSku())) {
-                productVariantRepository.delete(oldVariant);
+        // 8. Delete removed variants
+        for (ProductVariant old : existing) {
+            if (!newSkus.contains(old.getSku())) {
+                createVariantHistory(old, user, 'D', groupId);
+                productVariantRepository.delete(old);
             }
         }
         productVariantRepository.flush();
     }
 
+    @Transactional
     public void deleteProduct(Integer productId) {
+        // Resolve current user
+        Jwt jwt = (Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String keycloakUserId = jwt.getClaim("sub");
+        AppUser user = appUserRepository.findByKeycloakId(UUID.fromString(keycloakUserId))
+                .orElseThrow(() -> new RuntimeException("User not found with Keycloak ID: " + keycloakUserId));
+
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found with ID: " + productId));
+                .orElseThrow(() -> new RuntimeException("Product not found #" + productId));
 
         if (product.getPurchases() > 0) {
-            // Chỉ đánh dấu là không còn hoạt động thay vì xóa
+            // soft-delete
+            createProductHistory(product, user, 'U');
             product.setIsActive(false);
             productRepository.save(product);
         } else {
-            // Nếu chưa được mua, có thể xóa hẳn
+            // hard-delete
+            ProductsHistory ph = createProductHistory(product, user, 'D');
+            UUID groupId = ph.getHistoryGroupId();
+
+            List<ProductVariant> existing = productVariantRepository.findByProductId(productId);
+            existing.forEach(v -> createVariantHistory(v, user, 'D', groupId));
+
             productRepository.delete(product);
         }
     }
 
-    public void activeornotactive(Integer productId){
+    @Transactional
+    public void rollback(Integer historyId) {
+        ProductsHistory ph = productHistoryRepository.findById(historyId)
+                .orElseThrow(() -> new RuntimeException("History not found #" + historyId));
+        UUID groupId = ph.getHistoryGroupId();
+
+        // resolve associations
+        Category cat = categoryRepository.findById(ph.getCategoryId())
+                .orElseThrow(() -> new RuntimeException("Category not found"));
+        Brand br = brandRepository.findById(ph.getBrandId())
+                .orElseThrow(() -> new RuntimeException("Brand not found"));
+        Material mat = materialRepository.findById(ph.getMaterialId())
+                .orElseThrow(() -> new RuntimeException("Material not found"));
+        TargetAudience ta = targetAudienceRepository.findById(ph.getTargetAudienceId())
+                .orElseThrow(() -> new RuntimeException("TargetAudience not found"));
+
+        if (ph.getOperation() == 'D') {
+            // recreate product
+            Product restored = productMapper.productHistoryToProduct(ph);
+            restored.setCategory(cat);
+            restored.setBrand(br);
+            restored.setMaterial(mat);
+            restored.setTargetAudience(ta);
+            productRepository.save(restored);
+
+            // recreate all variants from this group
+            productVariantHistoryRepository.findByHistoryGroupId(groupId).forEach(vh -> {
+                ProductVariant variant = productMapper.productVariantHistoryToProductVariant(vh);
+                variant.setColor(colorRepository.findById(vh.getColorId())
+                        .orElseThrow(() -> new RuntimeException("Color not found")));
+                variant.setSize(sizeRepository.findById(vh.getSizeId())
+                        .orElseThrow(() -> new RuntimeException("Size not found")));
+                variant.setProduct(restored);
+
+                productVariantRepository.save(variant);
+            });
+
+        } else if (ph.getOperation() == 'U') {
+            // revert product fields
+            Product existing = productRepository.findById(ph.getProductId())
+                    .orElseThrow(() -> new RuntimeException("Active product not found"));
+            existing.setCategory(cat);
+            existing.setBrand(br);
+            existing.setMaterial(mat);
+            existing.setTargetAudience(ta);
+
+            productMapper.updateProductHistoryToProduct(existing, ph);
+            productRepository.save(existing);
+
+            // delete any current variants not in this history group
+            Set<Integer> revertVariantIds = productVariantHistoryRepository
+                    .findByHistoryGroupId(groupId).stream()
+                    .map(ProductVariantsHistory::getVariantId).collect(Collectors.toSet());
+            productVariantRepository.findByProductId(existing.getProductId()).stream()
+                    .filter(v -> !revertVariantIds.contains(v.getVariantId()))
+                    .forEach(productVariantRepository::delete);
+
+            productVariantHistoryRepository.findByHistoryGroupId(groupId).forEach(vh -> {
+                ProductVariant variant = productVariantRepository
+                        .findById(vh.getVariantId())
+                        .orElse(new ProductVariant());
+                productMapper.updateProductVariantHistoryToProductVariant(variant, vh);
+                variant.setProduct(existing);
+                variant.setColor(colorRepository.findById(vh.getColorId())
+                        .orElseThrow(() -> new RuntimeException("Color not found")));
+                variant.setSize(sizeRepository.findById(vh.getSizeId())
+                        .orElseThrow(() -> new RuntimeException("Size not found")));
+
+                productVariantRepository.save(variant);
+            });
+        } else {
+            throw new IllegalArgumentException("Unsupported operation: " + ph.getOperation());
+        }
+    }
+
+
+
+    public void activeornotactive(Integer productId) {
         productRepository.activeornotactive(productId);
+    }
+
+    private ProductsHistory createProductHistory(Product product, AppUser user, char op) {
+        ProductsHistory hist = productMapper.toHistory(product);
+        hist.setChangedBy(user);
+        hist.setOperation(op);
+        return productHistoryRepository.save(hist);
+    }
+
+    private void createVariantHistory(ProductVariant var, AppUser user, char op, UUID groupId) {
+        ProductVariantsHistory vh = productMapper.toVariantsHistory(var);
+        vh.setChangedBy(user);
+        vh.setOperation(op);
+        vh.setHistoryGroupId(groupId);
+        productVariantHistoryRepository.save(vh);
     }
 
     private String generateUniqueSku(Integer productId) {
