@@ -38,7 +38,6 @@ public class OrderController {
 
 
 
-
     @GetMapping("/status-counts")
     @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
     public ResponseEntity<?> getOrderStatusCounts() {
