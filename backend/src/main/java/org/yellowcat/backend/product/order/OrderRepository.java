@@ -17,6 +17,11 @@ import java.util.List;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Integer> {
+
+    @Query("SELECT o.orderStatus, COUNT(o) FROM Order o GROUP BY o.orderStatus")
+    List<Object[]> countOrdersGroupByStatus();
+
+
     @Query("SELECT o FROM Order o WHERE o.orderId = :orderId")
     Order findByIdFetchAll(@Param("orderId") Integer orderId);
 

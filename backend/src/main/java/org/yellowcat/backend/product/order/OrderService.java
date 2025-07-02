@@ -39,6 +39,18 @@ public class OrderService {
     AppUserService appUserService;
 
 
+    public Map<String, Integer> getOrderStatusCounts() {
+        List<Object[]> raw = orderRepository.countOrdersGroupByStatus();
+        Map<String, Integer> result = new HashMap<>();
+        for (Object[] row : raw) {
+            String status = row[0] != null ? (String) row[0] : "Unknown";
+            Long countLong = (Long) row[1];
+            result.put(status, countLong.intValue());
+        }
+        return result;
+    }
+
+
     public Page<OrderResponse> getOrders(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
 

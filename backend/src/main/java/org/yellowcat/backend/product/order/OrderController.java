@@ -23,6 +23,7 @@ import org.yellowcat.backend.user.AppUserService;
 
 import java.util.List;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,6 +34,21 @@ import java.util.UUID;
 public class OrderController {
     OrderService orderService;
     AppUserService appUserService;
+
+    @GetMapping("/status-counts")
+    @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
+    public ResponseEntity<?> getOrderStatusCounts() {
+        try {
+            Map<String, Integer> counts = orderService.getOrderStatusCounts();
+            return ResponseEntityBuilder.success(counts);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to get status counts: ", e.getMessage());
+        }
+    }
+
+
+
 
     @GetMapping()
     @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
@@ -58,6 +74,8 @@ public class OrderController {
 
         return ResponseEntityBuilder.success(pageResponse);
     }
+
+
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
