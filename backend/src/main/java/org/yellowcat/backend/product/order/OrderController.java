@@ -35,7 +35,32 @@ public class OrderController {
     OrderService orderService;
     AppUserService appUserService;
 
+    @GetMapping("/detail/id/{orderId}")
+    @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
+    public ResponseEntity<?> getOrderDetailById(@PathVariable Integer orderId) {
+        System.out.println("=== GET /api/orders/detail/id/" + orderId + " called ===");
+        try {
+            Order order = orderService.findOrderById(orderId);
+            if (order == null) {
+                return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Order not found with ID: ", orderId.toString());
+            }
 
+            OrderDetailResponse dto = new OrderDetailResponse();
+            dto.setOrderId(order.getOrderId());
+            dto.setOrderCode(order.getOrderCode());
+            dto.setCustomerName(order.getCustomerName());
+            dto.setPhoneNumber(order.getPhoneNumber());
+            dto.setFinalAmount(order.getFinalAmount());
+            dto.setOrderStatus(order.getOrderStatus());
+            dto.setOrderDate(order.getOrderDate());
+
+            return ResponseEntityBuilder.success(dto);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to get order detail by ID: ", e.getMessage());
+        }
+    }
 
 
     @GetMapping("/status-counts")

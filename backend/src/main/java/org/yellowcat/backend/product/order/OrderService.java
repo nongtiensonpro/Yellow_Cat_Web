@@ -39,6 +39,9 @@ public class OrderService {
     AppUserService appUserService;
 
 
+    public Order findOrderById(Integer orderId) {
+        return orderRepository.findById(orderId).orElse(null);
+    }
 
     public Map<String, Integer> getOrderStatusCounts() {
         List<Object[]> raw = orderRepository.countOrdersGroupByStatus();
@@ -115,11 +118,11 @@ public class OrderService {
                     } else if ("CASH".equalsIgnoreCase(paymentReq.getPaymentMethod())) {
                         // Tiền mặt luôn là COMPLETED
                         payment.setPaymentStatus("COMPLETED");
-                    } else if ("VNPAY".equalsIgnoreCase(paymentReq.getPaymentMethod()) && 
+                    } else if ("VNPAY".equalsIgnoreCase(paymentReq.getPaymentMethod()) &&
                                paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
                         // VNPAY với transactionId có nghĩa là đã thanh toán thành công
                         payment.setPaymentStatus("COMPLETED");
-                    } else if ("BANK_TRANSFER".equalsIgnoreCase(paymentReq.getPaymentMethod()) && 
+                    } else if ("BANK_TRANSFER".equalsIgnoreCase(paymentReq.getPaymentMethod()) &&
                                paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
                         // Chuyển khoản với transactionId
                         payment.setPaymentStatus("COMPLETED");
@@ -137,16 +140,16 @@ public class OrderService {
                     existing.setAmount(paymentReq.getAmount());
                     existing.setPaymentMethod(paymentReq.getPaymentMethod());
                     existing.setTransactionId(paymentReq.getTransactionId());
-                    
+
                     // Update lại status - Cải thiện logic:
                     if (paymentReq.getPaymentStatus() != null && !paymentReq.getPaymentStatus().isEmpty()) {
                         existing.setPaymentStatus(paymentReq.getPaymentStatus());
                     } else if ("CASH".equalsIgnoreCase(paymentReq.getPaymentMethod())) {
                         existing.setPaymentStatus("COMPLETED");
-                    } else if ("VNPAY".equalsIgnoreCase(paymentReq.getPaymentMethod()) && 
+                    } else if ("VNPAY".equalsIgnoreCase(paymentReq.getPaymentMethod()) &&
                                paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
                         existing.setPaymentStatus("COMPLETED");
-                    } else if ("BANK_TRANSFER".equalsIgnoreCase(paymentReq.getPaymentMethod()) && 
+                    } else if ("BANK_TRANSFER".equalsIgnoreCase(paymentReq.getPaymentMethod()) &&
                                paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
                         existing.setPaymentStatus("COMPLETED");
                     } else if (paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
@@ -161,7 +164,7 @@ public class OrderService {
 
         // QUAN TRỌNG: Load lại danh sách payments từ database sau khi đã save
         List<Payment> updatedPayments = paymentRepository.findByOrder_OrderId(order.getOrderId());
-        
+
         // Tính tổng số tiền đã thanh toán (COMPLETED) từ danh sách mới nhất
         BigDecimal totalPaid = updatedPayments.stream()
                 .filter(p -> "COMPLETED".equalsIgnoreCase(p.getPaymentStatus()))
@@ -176,7 +179,7 @@ public class OrderService {
         } else {
             order.setOrderStatus("Pending"); // Chưa thanh toán gì
         }
-        
+
         // FIX: Không dùng setPayments() để tránh orphan deletion error
         // Thay vào đó, clear và add lại để giữ nguyên collection reference
         if (order.getPayments() == null) {
@@ -184,7 +187,7 @@ public class OrderService {
         }
         order.getPayments().clear();
         order.getPayments().addAll(updatedPayments);
-        
+
         // Debug log để kiểm tra
         logPaymentInfo(order, updatedPayments, totalPaid, finalAmount);
 
@@ -230,40 +233,40 @@ public class OrderService {
     OrderResponse findOrderByOrderCode (String orderCode) {
         return orderRepository.findOrderByOrderCodeOld(orderCode);
     }
-    
+
     // Method mới để lấy Order với payments cho endpoint status
     @Transactional(readOnly = true)
     public OrderUpdateResponse findOrderWithPaymentsByOrderCode(String orderCode) {
         System.out.println("🔍 findOrderWithPaymentsByOrderCode called with orderCode: " + orderCode);
-        
+
         OrderResponse orderResponse = orderRepository.findOrderByOrderCodeOld(orderCode);
         System.out.println("📊 orderRepository.findOrderByOrderCode result: " + orderResponse);
-        
+
         if (orderResponse == null) {
             System.out.println("❌ OrderResponse is null for orderCode: " + orderCode);
             return null;
         }
-        
+
         System.out.println("✅ Found order with ID: " + orderResponse.getOrderId());
-        
+
         // FIX: Sử dụng query với JOIN FETCH để load payments trong cùng session
         Order order = orderRepository.findByIdWithPayments(orderResponse.getOrderId());
-        
+
         if (order == null) {
             System.out.println("❌ Order entity is null for orderId: " + orderResponse.getOrderId());
             return null;
         }
-        
+
         System.out.println("✅ Found Order entity: " + order.getOrderCode());
         System.out.println("💳 Payments already loaded: " + (order.getPayments() != null ? order.getPayments().size() : 0));
-        
+
         // Convert to OrderUpdateResponse (có payments)
         OrderUpdateResponse response = orderMapper.toOrderUpdateResponse(order);
         System.out.println("🚀 Mapped to OrderUpdateResponse successfully");
-        
+
         return response;
     }
-    
+
     // Method tự động xác nhận thanh toán VNPay khi callback thành công
     @Transactional
     public OrderUpdateResponse confirmVNPayPayment(String orderCode, String transactionId) {
@@ -272,22 +275,22 @@ public class OrderService {
         if (orderResponse == null) {
             throw new IllegalArgumentException("Order not found with orderCode: " + orderCode);
         }
-        
+
         // FIX: Sử dụng query với JOIN FETCH để load payments trong cùng session
         Order order = orderRepository.findByIdWithPayments(orderResponse.getOrderId());
         if (order == null) {
             throw new IllegalArgumentException("Order not found with orderCode: " + orderCode);
         }
-        
+
         // Kiểm tra xem đã có payment VNPay với transactionId này chưa
         // FIX: Sử dụng payments đã được load để tránh query thêm
         List<Payment> existingPayments = order.getPayments() != null ? order.getPayments() : new ArrayList<>();
         Payment vnpayPayment = existingPayments.stream()
-                .filter(p -> "VNPAY".equalsIgnoreCase(p.getPaymentMethod()) && 
+                .filter(p -> "VNPAY".equalsIgnoreCase(p.getPaymentMethod()) &&
                            transactionId.equals(p.getTransactionId()))
                 .findFirst()
                 .orElse(null);
-        
+
         if (vnpayPayment == null) {
             // Tạo payment mới cho VNPay
             vnpayPayment = new Payment();
@@ -297,32 +300,32 @@ public class OrderService {
             vnpayPayment.setTransactionId(transactionId);
             vnpayPayment.setPaymentStatus("COMPLETED");
             paymentRepository.save(vnpayPayment);
-            
-            System.out.println("Created new VNPay payment for order: " + orderCode + 
-                             ", transactionId: " + transactionId + 
+
+            System.out.println("Created new VNPay payment for order: " + orderCode +
+                             ", transactionId: " + transactionId +
                              ", amount: " + order.getFinalAmount());
         } else if (!"COMPLETED".equalsIgnoreCase(vnpayPayment.getPaymentStatus())) {
             // Cập nhật payment đã tồn tại thành COMPLETED
             vnpayPayment.setPaymentStatus("COMPLETED");
             vnpayPayment.setAmount(order.getFinalAmount());
             paymentRepository.save(vnpayPayment);
-            
-            System.out.println("Updated existing VNPay payment to COMPLETED for order: " + orderCode + 
+
+            System.out.println("Updated existing VNPay payment to COMPLETED for order: " + orderCode +
                              ", transactionId: " + transactionId);
         } else {
-            System.out.println("VNPay payment already completed for order: " + orderCode + 
+            System.out.println("VNPay payment already completed for order: " + orderCode +
                              ", transactionId: " + transactionId);
         }
-        
+
         // Load lại danh sách payments từ database sau khi đã thêm/cập nhật
         List<Payment> updatedPayments = paymentRepository.findByOrder_OrderId(order.getOrderId());
-        
+
         // Tính tổng số tiền đã thanh toán (COMPLETED)
         BigDecimal totalPaid = updatedPayments.stream()
                 .filter(p -> "COMPLETED".equalsIgnoreCase(p.getPaymentStatus()))
                 .map(Payment::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
+
         // Cập nhật orderStatus
         if (totalPaid.compareTo(order.getFinalAmount()) >= 0) {
             order.setOrderStatus("Paid");
@@ -331,14 +334,14 @@ public class OrderService {
         } else {
             order.setOrderStatus("Pending");
         }
-        
+
         // FIX: Sync lại payments collection để đảm bảo consistency
         if (order.getPayments() == null) {
             order.setPayments(new ArrayList<>());
         }
         order.getPayments().clear();
         order.getPayments().addAll(updatedPayments);
-        
+
         // Log thông tin debug
         System.out.println("=== VNPAY PAYMENT CONFIRMATION ===");
         System.out.println("Order Code: " + orderCode);
@@ -347,65 +350,65 @@ public class OrderService {
         System.out.println("Total Paid: " + totalPaid);
         System.out.println("New Order Status: " + order.getOrderStatus());
         System.out.println("==================================");
-        
+
         // Lưu order đã cập nhật
         orderRepository.save(order);
-        
+
         // Trả về response
         return orderMapper.toOrderUpdateResponse(order);
     }
-    
+
     // Method để checkin thanh toán bằng tiền mặt tại quầy
     @Transactional
     public OrderUpdateResponse checkinCashPayment(String orderCode) {
         System.out.println("🏪 checkinCashPayment called with orderCode: " + orderCode);
-        
+
         // Tìm order theo orderCode
         OrderResponse orderResponse = orderRepository.findOrderByOrderCodeOld(orderCode);
         if (orderResponse == null) {
             System.out.println("❌ Order not found with orderCode: " + orderCode);
             throw new IllegalArgumentException("Order not found with orderCode: " + orderCode);
         }
-        
+
         // Load order với payments
         Order order = orderRepository.findByIdWithPayments(orderResponse.getOrderId());
         if (order == null) {
             System.out.println("❌ Order entity not found with orderCode: " + orderCode);
             throw new IllegalArgumentException("Order not found with orderCode: " + orderCode);
         }
-        
+
         // Kiểm tra trạng thái đơn hàng hiện tại
         if ("Paid".equalsIgnoreCase(order.getOrderStatus())) {
             System.out.println("ℹ️ Order already fully paid: " + orderCode);
             // Đơn hàng đã thanh toán đầy đủ, chỉ trả về thông tin hiện tại
             return orderMapper.toOrderUpdateResponse(order);
         }
-        
+
         // Lấy danh sách payments hiện tại
         List<Payment> existingPayments = order.getPayments() != null ? order.getPayments() : new ArrayList<>();
-        
+
         // Kiểm tra xem đã có payment bằng tiền mặt chưa
         Payment existingCashPayment = existingPayments.stream()
                 .filter(p -> "CASH".equalsIgnoreCase(p.getPaymentMethod()))
                 .findFirst()
                 .orElse(null);
-        
+
         // Tính tổng số tiền đã thanh toán trước đó (loại trừ CASH để tránh double count)
         BigDecimal totalPaidExcludeCash = existingPayments.stream()
-                .filter(p -> "COMPLETED".equalsIgnoreCase(p.getPaymentStatus()) && 
+                .filter(p -> "COMPLETED".equalsIgnoreCase(p.getPaymentStatus()) &&
                            !"CASH".equalsIgnoreCase(p.getPaymentMethod()))
                 .map(Payment::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
+
         // Tính số tiền còn lại cần thanh toán bằng tiền mặt
         BigDecimal remainingAmount = order.getFinalAmount().subtract(totalPaidExcludeCash);
-        
+
         if (remainingAmount.compareTo(BigDecimal.ZERO) <= 0) {
             System.out.println("ℹ️ No remaining amount to pay for order: " + orderCode);
             // Không còn tiền cần thanh toán
             return orderMapper.toOrderUpdateResponse(order);
         }
-        
+
         if (existingCashPayment == null) {
             // Tạo payment mới cho tiền mặt
             Payment cashPayment = new Payment();
@@ -415,8 +418,8 @@ public class OrderService {
             cashPayment.setTransactionId("CASH_" + System.currentTimeMillis()); // Transaction ID đơn giản cho tiền mặt
             cashPayment.setPaymentStatus("COMPLETED"); // Tiền mặt luôn là COMPLETED khi checkin
             paymentRepository.save(cashPayment);
-            
-            System.out.println("💰 Created new CASH payment for order: " + orderCode + 
+
+            System.out.println("💰 Created new CASH payment for order: " + orderCode +
                              ", amount: " + remainingAmount);
         } else {
             // Cập nhật payment tiền mặt đã tồn tại
@@ -424,20 +427,20 @@ public class OrderService {
             existingCashPayment.setPaymentStatus("COMPLETED");
             existingCashPayment.setTransactionId("CASH_" + System.currentTimeMillis());
             paymentRepository.save(existingCashPayment);
-            
-            System.out.println("💰 Updated existing CASH payment for order: " + orderCode + 
+
+            System.out.println("💰 Updated existing CASH payment for order: " + orderCode +
                              ", amount: " + remainingAmount);
         }
-        
+
         // Load lại danh sách payments từ database sau khi đã thêm/cập nhật
         List<Payment> updatedPayments = paymentRepository.findByOrder_OrderId(order.getOrderId());
-        
+
         // Tính tổng số tiền đã thanh toán (COMPLETED)
         BigDecimal totalPaid = updatedPayments.stream()
                 .filter(p -> "COMPLETED".equalsIgnoreCase(p.getPaymentStatus()))
                 .map(Payment::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
+
         // Cập nhật orderStatus
         if (totalPaid.compareTo(order.getFinalAmount()) >= 0) {
             order.setOrderStatus("Paid");
@@ -446,14 +449,14 @@ public class OrderService {
         } else {
             order.setOrderStatus("Pending");
         }
-        
+
         // Sync lại payments collection để đảm bảo consistency
         if (order.getPayments() == null) {
             order.setPayments(new ArrayList<>());
         }
         order.getPayments().clear();
         order.getPayments().addAll(updatedPayments);
-        
+
         // Log thông tin debug
         System.out.println("=== CASH PAYMENT CHECKIN ===");
         System.out.println("Order Code: " + orderCode);
@@ -462,10 +465,10 @@ public class OrderService {
         System.out.println("Cash Payment Amount: " + remainingAmount);
         System.out.println("New Order Status: " + order.getOrderStatus());
         System.out.println("===========================");
-        
+
         // Lưu order đã cập nhật
         orderRepository.save(order);
-        
+
         // Trả về response
         return orderMapper.toOrderUpdateResponse(order);
     }
@@ -508,14 +511,14 @@ public class OrderService {
     // Method để lấy order detail với order items theo order code
     public OrderDetailWithItemsResponse getOrderDetailWithItems(String orderCode) {
         System.out.println("🔍 Lấy chi tiết đơn hàng với order items cho orderCode: " + orderCode);
-        
+
         // Lấy thông tin order
         OrderDetailProjection orderProjection = orderRepository.findOrdersByPhoneNumberOrEmail(orderCode)
                 .stream()
                 .filter(order -> order.getOrderCode().equals(orderCode))
                 .findFirst()
                 .orElse(null);
-        
+
         if (orderProjection == null) {
             // Thử tìm theo cách khác nếu không tìm thấy
             List<OrderDetailProjection> allOrders = orderRepository.findOrdersByPhoneNumberOrEmail("");
@@ -524,19 +527,19 @@ public class OrderService {
                     .findFirst()
                     .orElseThrow(() -> new IllegalArgumentException("Order not found with orderCode: " + orderCode));
         }
-        
+
         // Lấy order items
         List<OrderItemDetailProjection> itemProjections = orderItemRepository.findOrderItemsDetailByOrderCode(orderCode);
         List<OrderItemDetailResponse> orderItems = itemProjections.stream()
                 .map(this::convertToOrderItemDetailResponse)
                 .toList();
-        
+
         // Tính toán thống kê
         Integer totalItems = orderItems.size();
         Integer totalQuantity = orderItems.stream()
                 .mapToInt(OrderItemDetailResponse::getQuantity)
                 .sum();
-        
+
         // Tạo response
         OrderDetailWithItemsResponse response = new OrderDetailWithItemsResponse();
         response.setOrderId(orderProjection.getOrderId());
@@ -558,41 +561,41 @@ public class OrderService {
         response.setOrderItems(orderItems);
         response.setTotalItems(totalItems);
         response.setTotalQuantity(totalQuantity);
-        
+
         System.out.println("✅ Tìm thấy đơn hàng với " + totalItems + " sản phẩm, tổng " + totalQuantity + " số lượng");
-        
+
         return response;
     }
-    
+
     // Method đơn giản hơn để lấy order detail với order items theo order code
     @Transactional(readOnly = true)
     public OrderDetailWithItemsResponse getOrderDetailByCode(String orderCode) {
         System.out.println("🔍 Lấy chi tiết đơn hàng cho orderCode: " + orderCode);
-        
+
         // Lấy thông tin order từ database
         OrderResponse orderResponse = (OrderResponse) orderRepository.findOrderByOrderCodeOld(orderCode);
         if (orderResponse == null) {
             throw new IllegalArgumentException("Order not found with orderCode: " + orderCode);
         }
-        
+
         // Lấy thông tin đầy đủ của order bằng cách query lại
         Order order = orderRepository.findByIdWithPayments(orderResponse.getOrderId());
         if (order == null) {
             throw new IllegalArgumentException("Order not found with orderCode: " + orderCode);
         }
-        
+
         // Lấy order items với chi tiết
         List<OrderItemDetailProjection> itemProjections = orderItemRepository.findOrderItemsDetailByOrderCode(orderCode);
         List<OrderItemDetailResponse> orderItems = itemProjections.stream()
                 .map(this::convertToOrderItemDetailResponse)
                 .toList();
-        
+
         // Tính toán thống kê
         Integer totalItems = orderItems.size();
         Integer totalQuantity = orderItems.stream()
                 .mapToInt(OrderItemDetailResponse::getQuantity)
                 .sum();
-        
+
         // Tạo response từ Order entity và order items
         OrderDetailWithItemsResponse response = new OrderDetailWithItemsResponse();
         response.setOrderId(order.getOrderId());
@@ -605,12 +608,12 @@ public class OrderService {
         response.setSubTotalAmount(order.getSubTotalAmount());
         response.setShippingFee(order.getShippingFee());
         response.setDiscountAmount(order.getDiscountAmount());
-        
+
         // Lấy thông tin từ relations
         response.setShippingMethod(order.getShippingMethod() != null ? order.getShippingMethod().getMethodName() : null);
         response.setRecipientName(order.getShippingAddress() != null ? order.getShippingAddress().getRecipientName() : null);
-        response.setFullAddress(order.getShippingAddress() != null ? 
-            String.format("%s, %s, %s, %s", 
+        response.setFullAddress(order.getShippingAddress() != null ?
+            String.format("%s, %s, %s, %s",
                 order.getShippingAddress().getStreetAddress(),
                 order.getShippingAddress().getWardCommune(),
                 order.getShippingAddress().getDistrict(),
@@ -618,13 +621,13 @@ public class OrderService {
         response.setEmail(order.getUser() != null ? order.getUser().getEmail() : null);
         response.setFullName(order.getUser() != null ? order.getUser().getFullName() : null);
         response.setCustomerNotes(order.getCustomerNotes());
-        
+
         response.setOrderItems(orderItems);
         response.setTotalItems(totalItems);
         response.setTotalQuantity(totalQuantity);
-        
+
         System.out.println("✅ Tìm thấy đơn hàng với " + totalItems + " sản phẩm, tổng " + totalQuantity + " số lượng");
-        
+
         return response;
     }
 
@@ -683,10 +686,10 @@ public class OrderService {
         System.out.println("Total Paid: " + totalPaid);
         System.out.println("Order Status: " + order.getOrderStatus());
         System.out.println("Payments count: " + (payments != null ? payments.size() : 0));
-        
+
         if (payments != null) {
             for (Payment payment : payments) {
-                System.out.println("Payment ID: " + payment.getPaymentId() + 
+                System.out.println("Payment ID: " + payment.getPaymentId() +
                                  ", Method: " + payment.getPaymentMethod() +
                                  ", Amount: " + payment.getAmount() +
                                  ", Status: " + payment.getPaymentStatus() +
