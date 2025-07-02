@@ -167,7 +167,7 @@ CREATE TABLE orders
     discount_amount     NUMERIC(12, 2)          DEFAULT 0,
     final_amount        NUMERIC(14, 2) NOT NULL,
     order_status        VARCHAR(50)    NOT NULL DEFAULT 'Pending',
-    payment_status      VARCHAR(20) ,
+    payment_status      VARCHAR(20),
     shipping_method_id  INT,
     customer_notes      TEXT,
     is_synced_to_ghtk   BOOLEAN                 DEFAULT FALSE, -- Ghi nhận đơn đã gửi lên GHTK chưa
@@ -190,14 +190,15 @@ CREATE TABLE order_items
     FOREIGN KEY (variant_id) REFERENCES product_variants (variant_id)
 );
 
-CREATE TABLE order_timelines (
-    id SERIAL PRIMARY KEY,
-    order_id INT NOT NULL,
+CREATE TABLE order_timelines
+(
+    id          SERIAL PRIMARY KEY,
+    order_id    INT         NOT NULL,
     from_status VARCHAR(50),
-    to_status VARCHAR(50) NOT NULL,
-    note TEXT,
-    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE
+    to_status   VARCHAR(50) NOT NULL,
+    note        TEXT,
+    changed_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders (order_id) ON DELETE CASCADE
 );
 
 -- Bảng Giao dịch thanh toán
@@ -316,10 +317,15 @@ CREATE TABLE cart_items
     UNIQUE (cart_id, variant_id)
 );
 
--- 1. Tạo bảng lịch sử cho products
+-- Cho PostgreSQL để sinh UUID
+CREATE
+EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- Bảng lịch sử product
 CREATE TABLE products_history
 (
     history_id         SERIAL PRIMARY KEY,
+    history_group_id   UUID      NOT NULL DEFAULT gen_random_uuid(),
     product_id         INT       NOT NULL,
     product_name       VARCHAR(255),
     description        TEXT,
@@ -336,14 +342,14 @@ CREATE TABLE products_history
     operation          CHAR(1)   NOT NULL, -- 'U' = UPDATE, 'D' = DELETE
     changed_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     changed_by         INT,
-
     FOREIGN KEY (changed_by) REFERENCES app_users (app_user_id) ON DELETE CASCADE
 );
 
--- 2. Tạo bảng lịch sử cho product_variants
+-- Bảng lịch sử variant, tham chiếu history_group_id
 CREATE TABLE product_variants_history
 (
     history_id        SERIAL PRIMARY KEY,
+    history_group_id  UUID      NOT NULL,
     variant_id        INT       NOT NULL,
     product_id        INT,
     sku               VARCHAR(50),
@@ -360,7 +366,6 @@ CREATE TABLE product_variants_history
     operation         CHAR(1)   NOT NULL, -- 'U' = UPDATE, 'D' = DELETE
     changed_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     changed_by        INT,
-
     FOREIGN KEY (changed_by) REFERENCES app_users (app_user_id) ON DELETE CASCADE
 );
 
@@ -443,36 +448,36 @@ INSERT INTO product_variants (product_id, sku, color_id, size_id, price, sale_pr
                               weight)
 VALUES
 -- Nike Revolution 6
-(1, 'NK-REV6-BLK-40', 3, 1, 1800000.00, 1620000.00, 50, 25, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.1),
-(1, 'NK-REV6-BLK-41', 1, 1, 1800000.00, 1620000.00, 45, 30, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.2),
-(1, 'NK-REV6-WHT-40', 2, 1, 1800000.00, NULL, 35, 15, 'YellowCatWeb/nike-rev6-white', 0.3),
-(1, 'NK-REV6-WHT-42', 2, 3, 1800000.00, NULL, 40, 20, 'YellowCatWeb/nike-rev6-white', 0.4),
+(1, 'NK-REV6-BLK-40', 3, 1, 1800000.00, 1620000.00, 50, 25, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 100),
+(1, 'NK-REV6-BLK-41', 1, 1, 1800000.00, 1620000.00, 45, 30, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 100),
+(1, 'NK-REV6-WHT-40', 2, 1, 1800000.00, NULL, 35, 15, 'YellowCatWeb/nike-rev6-white', 100),
+(1, 'NK-REV6-WHT-42', 2, 3, 1800000.00, NULL, 40, 20, 'YellowCatWeb/nike-rev6-white', 100),
 
 -- Adidas Duramo SL
-(2, 'AD-DURSL-WHT-41', 2, 2, 1650000.00, 1485000.00, 55, 35, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 0.1),
-(2, 'AD-DURSL-WHT-42', 2, 3, 1650000.00, 1485000.00, 65, 40, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 0.2),
-(2, 'AD-DURSL-NVY-43', 3, 4, 1650000.00, NULL, 40, 25, 'YellowCatWeb/adidas-duramo-navy', 0.3),
-(2, 'AD-DURSL-BLK-41', 1, 2, 1650000.00, NULL, 30, 18, 'YellowCatWeb/adidas-duramo-black', 0.4),
+(2, 'AD-DURSL-WHT-41', 2, 2, 1650000.00, 1485000.00, 55, 35, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 200),
+(2, 'AD-DURSL-WHT-42', 2, 3, 1650000.00, 1485000.00, 65, 40, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 200),
+(2, 'AD-DURSL-NVY-43', 3, 4, 1650000.00, NULL, 40, 25, 'YellowCatWeb/adidas-duramo-navy', 200),
+(2, 'AD-DURSL-BLK-41', 1, 2, 1650000.00, NULL, 30, 18, 'YellowCatWeb/adidas-duramo-black', 200),
 
 -- Under Armour Curry Flow 9
-(3, 'UA-CUR9-BLU-42', 4, 3, 3500000.00, 3150000.00, 30, 12, 'YellowCatWeb/ejzjv3cxkyyjtokkgh1t', 0.2),
-(3, 'UA-CUR9-GRY-44', 5, 5, 3500000.00, NULL, 22, 5, 'YellowCatWeb/ua-curry-grey', 0.3),
-(3, 'UA-CUR9-RED-43', 6, 4, 3550000.00, NULL, 25, 8, 'YellowCatWeb/bqttubnjqa5qzb64kjnm', 0.4),
-(3, 'UA-CUR9-BLK-41', 1, 2, 3500000.00, NULL, 20, 10, 'YellowCatWeb/ua-curry-black', 0.1),
+(3, 'UA-CUR9-BLU-42', 4, 3, 3500000.00, 3150000.00, 30, 12, 'YellowCatWeb/ejzjv3cxkyyjtokkgh1t', 200),
+(3, 'UA-CUR9-GRY-44', 5, 5, 3500000.00, NULL, 22, 5, 'YellowCatWeb/ua-curry-grey', 200),
+(3, 'UA-CUR9-RED-43', 6, 4, 3550000.00, NULL, 25, 8, 'YellowCatWeb/bqttubnjqa5qzb64kjnm', 200),
+(3, 'UA-CUR9-BLK-41', 1, 2, 3500000.00, NULL, 20, 10, 'YellowCatWeb/ua-curry-black', 200),
 
 -- Puma Suede Classic XXI
-(4, 'PU-SUED-BLK-40', 1, 1, 2200000.00, 1980000.00, 35, 22, 'YellowCatWeb/sx6bwsntnuwyfwx89tqt', 0.2),
-(4, 'PU-SUED-RED-41', 6, 2, 2200000.00, NULL, 30, 15, 'YellowCatWeb/lq1yqclrqebutga5pmrk', 0.3),
-(4, 'PU-SUED-GRY-42', 5, 3, 2200000.00, NULL, 28, 12, 'YellowCatWeb/puma-suede-grey', 0.2),
+(4, 'PU-SUED-BLK-40', 1, 1, 2200000.00, 1980000.00, 35, 22, 'YellowCatWeb/sx6bwsntnuwyfwx89tqt', 200),
+(4, 'PU-SUED-RED-41', 6, 2, 2200000.00, NULL, 30, 15, 'YellowCatWeb/lq1yqclrqebutga5pmrk', 200),
+(4, 'PU-SUED-GRY-42', 5, 3, 2200000.00, NULL, 28, 12, 'YellowCatWeb/puma-suede-grey', 200),
 
 -- Nike Air Zoom Pegasus 40
-(5, 'NK-PEG40-BLK-41', 1, 2, 3200000.00, 2880000.00, 50, 30, 'YellowCatWeb/byshsl4qboscrdnmuoix', 0.3),
-(5, 'NK-PEG40-WHT-42', 2, 3, 3200000.00, NULL, 55, 25, 'YellowCatWeb/acs7ki8v43lrjorsfnwb', 0.3),
-(5, 'NK-PEG40-GRY-43', 5, 4, 3200000.00, NULL, 40, 18, 'YellowCatWeb/nike-pegasus-grey', 0.1);
+(5, 'NK-PEG40-BLK-41', 1, 2, 3200000.00, 2880000.00, 50, 30, 'YellowCatWeb/byshsl4qboscrdnmuoix', 200),
+(5, 'NK-PEG40-WHT-42', 2, 3, 3200000.00, NULL, 55, 25, 'YellowCatWeb/acs7ki8v43lrjorsfnwb', 200),
+(5, 'NK-PEG40-GRY-43', 5, 4, 3200000.00, NULL, 40, 18, 'YellowCatWeb/nike-pegasus-grey', 200);
 
 -- 5. Dữ liệu cho bảng AppUsers
 INSERT INTO app_users (keycloak_id, email, full_name, phone_number, avatar_url)
-VALUES ('ab72419d-416b-4a75-8c49-f7ff012d01d9', 'nguyen.van.a@email.com', 'Nguyễn Văn A', '0901234567',
+VALUES ('ab72419d-416b-4a75-8c49-f7ff012d0424', 'nguyen.van.a@email.com', 'Nguyễn Văn A', '0901234567',
         'https://example.com/avatars/user1.jpg'),
        ('c56a4180-65aa-42ec-a945-5fd21dec0532', 'tran.thi.b@email.com', 'Trần Thị B', '0902345678',
         'https://example.com/avatars/user2.jpg'),
