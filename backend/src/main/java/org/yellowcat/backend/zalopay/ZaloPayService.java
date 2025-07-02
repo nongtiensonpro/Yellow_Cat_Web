@@ -11,7 +11,12 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.yellowcat.backend.online_selling.oder_online.OrderOnlineService;
+import org.yellowcat.backend.product.order.Order;
+import org.yellowcat.backend.product.payment.Payment;
+import org.yellowcat.backend.product.payment.PaymentRepository;
 import vn.zalopay.crypto.HMACUtil;
 
 import javax.crypto.Mac;
@@ -26,6 +31,9 @@ import java.util.*;
 public class ZaloPayService {
     private final Mac HmacSHA256;
     private final String KEY2 = "trMrHtvjo6myautxDUiAcYsVtaeQ8nhf"; // Key2 của bạn
+    PaymentRepository PaymentRepository;
+    @Autowired
+    OrderOnlineService orderOnlineService;
 
     private static final Map<String, String> config = new HashMap<String, String>() {{
         put("app_id", "2554");
@@ -34,6 +42,8 @@ public class ZaloPayService {
         put("endpoint", "https://sb-openapi.zalopay.vn/v2/create");
         put("endpoint2", "https://sb-openapi.zalopay.vn/v2/query");
     }};
+    @Autowired
+    private PaymentRepository paymentRepository;
 
     public ZaloPayService() throws Exception {
         HmacSHA256 = Mac.getInstance("HmacSHA256");
@@ -62,13 +72,17 @@ public class ZaloPayService {
 
         JSONObject embedData = new JSONObject(); // rỗng, có thể thêm dữ liệu nếu cần
 
+        String orderId = (String) request.get("orderId");
+        String appTransId = getCurrentTimeString("yyMMdd") + "_" + orderId + "_" + System.currentTimeMillis();
+        String description = "YellowCatShop - Thanh toan don hang #" + orderId;
+
         Map<String, Object> order = new HashMap<>();
         order.put("app_id", config.get("app_id"));
-        order.put("app_trans_id", getCurrentTimeString("yyMMdd") + "_" + random_id);
+        order.put("app_trans_id", appTransId);
         order.put("app_time", System.currentTimeMillis());
         order.put("app_user", request.get("userId"));
         order.put("amount", request.get("totalAmount"));
-        order.put("description",+ random_id);
+        order.put("description", description);
         order.put("bank_code", "");
         order.put("item", itemJSONArray.toString());
         order.put("embed_data", embedData.toString());
@@ -81,6 +95,12 @@ public class ZaloPayService {
         order.put("mac", HMACUtil.HMacHexStringEncode(HMACUtil.HMACSHA256, config.get("key1"), data));
 
         System.out.println("Payload sent to ZaloPay: " + order);
+
+        // gắn transaction_id vào payment
+        Order orderFromDB = orderOnlineService.getOrderByOrderCode(orderId);
+        Payment payment = paymentRepository.findByOrder(orderFromDB);
+        payment.setTransactionId(appTransId);
+        paymentRepository.save(payment);
 
         // Gửi request tới ZaloPay
         CloseableHttpClient client = HttpClients.createDefault();

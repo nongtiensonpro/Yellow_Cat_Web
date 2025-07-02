@@ -15,4 +15,5 @@ public interface OrderTimelineRepository extends JpaRepository<OrderTimeline, In
      Optional<OrderTimeline> findFirstByOrderIdAndToStatusOrderByChangedAtAsc(Integer orderId, String toStatus);
 
      List<OrderTimeline> findByToStatusAndChangedAtBefore(String toStatus, LocalDateTime changedAtBefore);
+
 }

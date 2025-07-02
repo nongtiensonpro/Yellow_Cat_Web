@@ -67,8 +67,8 @@ public class Order { // Tên class là Order (số ít)
     @JoinColumn(name = "shipping_method_id")
     private ShippingMethod shippingMethod;
 
-    @Lob // Hoặc @Column(columnDefinition = "TEXT")
-    @Column(name = "customer_notes")
+    @Column(name = "customer_notes", columnDefinition = "TEXT")
+//    @Column(name = "customer_notes")
     private String customerNotes;
 
     @Enumerated(EnumType.STRING)

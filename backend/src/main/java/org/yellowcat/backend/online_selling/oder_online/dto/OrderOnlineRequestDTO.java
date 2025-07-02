@@ -21,9 +21,8 @@ public class OrderOnlineRequestDTO {
     private String codeOrderInGHK;
     private Addresses shippingAddress;
     private BigDecimal shippingFee;
-    private Integer payment;
+    private String paymentMethod;
     private String note;
-    private PaymentStatus paymentStatus;
     private boolean isSyncedToGhtk;
     private Integer shippingMethodId;
 }
