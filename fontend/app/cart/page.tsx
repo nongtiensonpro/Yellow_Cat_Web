@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { CldImage } from 'next-cloudinary';
 import { useSession } from "next-auth/react";
+import { v4 as uuidv4 } from 'uuid';
 
 interface CartItem {
     id: number;
@@ -164,13 +165,49 @@ export default function CartPage() {
                     return;
                 }
                 // Nếu thành công, chuyển sang trang checkout
-        router.push('/checkout');
+                router.push('/checkout');
             } catch (err) {
                 alert('Lỗi xác nhận giỏ hàng!');
             }
         } else {
-            // Chưa đăng nhập: chuyển sang trang đăng nhập
-            router.push('/login');
+            // Chưa đăng nhập: random uuid, lưu vào localStorage, gọi API confirm
+            let guestId = '';
+            if (typeof window !== 'undefined') {
+                guestId = localStorage.getItem('guestId') || '';
+                if (!guestId) {
+                    guestId = uuidv4();
+                    localStorage.setItem('guestId', guestId);
+                }
+            }
+            const products = cartItems
+                .filter(item => item.id && item.quantity)
+                .map(item => ({
+                    variantId: item.id,
+                    quantity: item.quantity
+                }));
+            if (products.length === 0) {
+                alert('Không có sản phẩm hợp lệ trong giỏ hàng!');
+                return;
+            }
+            try {
+                const res = await fetch('http://localhost:8080/api/cart/confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        keycloakId: guestId,
+                        products
+                    })
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    alert(err.message || 'Lỗi xác nhận giỏ hàng!');
+                    return;
+                }
+                // Nếu thành công, chuyển sang trang checkout
+                router.push('/checkout');
+            } catch (err) {
+                alert('Lỗi xác nhận giỏ hàng!');
+            }
         }
     };
 

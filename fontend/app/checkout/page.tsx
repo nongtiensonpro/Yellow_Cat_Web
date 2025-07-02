@@ -245,14 +245,18 @@ export default function CheckoutPage() {
     const handleRevertStock = useCallback(async () => {
         if (revertedRef.current) return; // Đã revert rồi thì không gọi nữa
         revertedRef.current = true;
-        if (!session || !session.accessToken) return;
         let keycloakId = null;
-        try {
-            const tokenData = jwtDecode(session.accessToken);
-            keycloakId = tokenData.sub;
-        } catch {
-            return;
+        if (session?.user && session.accessToken) {
+            try {
+                const tokenData = jwtDecode(session.accessToken);
+                keycloakId = tokenData.sub;
+            } catch {
+                return;
+            }
+        } else if (typeof window !== 'undefined') {
+            keycloakId = localStorage.getItem('guestId') || null;
         }
+        if (!keycloakId) return;
         try {
             await fetch(`http://localhost:8080/api/cart/revert?keycloakId=${keycloakId}`, {
                 method: 'POST',
@@ -426,6 +430,78 @@ export default function CheckoutPage() {
     };
 
     const handleOrder = async () => {
+        if (!session?.user) {
+            // Validate các trường bắt buộc
+            if (!fullName.trim() || !phone.trim() || !selectedProvinceCode || !selectedDistrictCode || !selectedWardCode || !addressDetail.trim()) {
+                alert('Vui lòng nhập đầy đủ thông tin giao hàng!');
+                return;
+            }
+            if (!/^0\d{9,10}$/.test(phone.trim())) {
+                alert('Số điện thoại không hợp lệ.');
+                return;
+            }
+            // Lấy tên tỉnh/thành, quận/huyện, phường/xã từ dropdown
+            const selectedProvinceName = provinces.find(p => p.code === selectedProvinceCode)?.name || '';
+            const selectedDistrictName = districts.find(d => d.code === selectedDistrictCode)?.name || '';
+            const selectedWardName = wards.find(w => w.code === selectedWardCode)?.name || '';
+            // Lấy guestId từ localStorage
+            let guestId = '';
+            if (typeof window !== 'undefined') {
+                guestId = localStorage.getItem('guestId') || '';
+            }
+            // Chuẩn bị orderRequest cho khách chưa đăng nhập
+            const orderRequest = {
+                appUser: {
+                    keycloakId: guestId,
+                    username: fullName,
+                    phoneNumber: phone
+                },
+                shippingAddress: {
+                    recipientName: fullName,
+                    phoneNumber: phone,
+                    streetAddress: addressDetail,
+                    wardCommune: selectedWardName,
+                    district: selectedDistrictName,
+                    cityProvince: selectedProvinceName,
+                    country: 'Việt Nam',
+                    isDefault: true,
+                    addressType: 'guest'
+                },
+                shippingMethodId: 1,
+                shippingFee: shippingFee,
+                note: note,
+                paymentStatus: 'PENDING',
+                products: cartItems.map(item => ({
+                    id: item.id || item.productId,
+                    quantity: item.quantity
+                }))
+            };
+            try {
+                const response = await fetch('http://localhost:8080/api/orders/online', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(orderRequest),
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    revertedRef.current = true;
+                    if (!session?.user && typeof window !== 'undefined') {
+                        localStorage.removeItem('cart');
+                        localStorage.removeItem('guestId');
+                    }
+                    router.push('/checkout/success');
+                } else {
+                    console.error('Order API error:', data);
+                    alert(data.message || 'Đặt hàng thất bại');
+                }
+            } catch (err) {
+                alert('Có lỗi xảy ra khi đặt hàng');
+            }
+            return;
+        }
+
         if (session?.user && !selectedAddress) {
             alert('Vui lòng chọn địa chỉ giao hàng!');
             return;
@@ -495,6 +571,10 @@ export default function CheckoutPage() {
             const data = await response.json();
             if (response.ok) {
                 revertedRef.current = true;
+                if (!session?.user && typeof window !== 'undefined') {
+                    localStorage.removeItem('cart');
+                    localStorage.removeItem('guestId');
+                }
                 router.push('/checkout/success');
             } else {
                 console.error('Order API error:', data);
@@ -736,22 +816,27 @@ export default function CheckoutPage() {
                                     className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
                                 ></textarea>
                             </div>
-                            <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ đã chọn</label>
-                                <input
-                                    type="text"
-                                    value={selectedAddressText}
-                                    onChange={e => setSelectedAddressText(e.target.value)}
-                                    className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="Chưa chọn địa chỉ"
-                                    readOnly
-                                />
-                            </div>
+                            {/* Ẩn ô địa chỉ đã chọn với khách chưa đăng nhập */}
+                            {session?.user && (
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ đã chọn</label>
+                                    <input
+                                        type="text"
+                                        value={selectedAddressText}
+                                        onChange={e => setSelectedAddressText(e.target.value)}
+                                        className="p-3 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="Chưa chọn địa chỉ"
+                                        readOnly
+                                    />
+                                </div>
+                            )}
                         </div>
                         <div className="flex justify-end mt-4">
-                            <Button className="bg-white text-blue-600 border border-blue-600 hover:bg-blue-50 text-base py-2 px-6 rounded-md" onClick={handleOpenAddressModal}>
-                                CHỌN ĐỊA CHỈ ĐÃ LƯU
-                            </Button>
+                            {session?.user && (
+                                <Button className="bg-white text-blue-600 border border-blue-600 hover:bg-blue-50 text-base py-2 px-6 rounded-md" onClick={handleOpenAddressModal}>
+                                    CHỌN ĐỊA CHỈ ĐÃ LƯU
+                                </Button>
+                            )}
                         </div>
                     </Card>
 
@@ -848,17 +933,17 @@ export default function CheckoutPage() {
                                             ) : shippingError ? (
                                                 <span className="text-red-500">{shippingError}</span>
                                             ) : (
-                                                <span>{formatPrice(shippingFee)}</span>
+                                    <span>{formatPrice(shippingFee)}</span>
                                             )}
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span>Giảm giá:</span>
-                                            <span>- {formatPrice(discount)}</span>
-                                        </div>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>Giảm giá:</span>
+                                    <span>- {formatPrice(discount)}</span>
+                                </div>
                                         <div className="flex justify-between text-lg font-bold text-green-700">
-                                            <span>Tổng cộng:</span>
+                                    <span>Tổng cộng:</span>
                                             <span>{formatPrice(totalBeforeDiscount + (shippingFee || 0))}</span>
-                                        </div>
+                                </div>
                                     </>
                                 )}
                             </div>

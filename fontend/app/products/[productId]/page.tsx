@@ -1107,12 +1107,14 @@ export default function ProductDetailPage() {
                     localCart.push({
                         id: selectedVariant.variantId,
                         productId: product.productId,
-                        name: `${product.productName} - ${selectedVariant.colorName || ''} - ${selectedVariant.sizeName || ''}`,
+                        name: product.productName,
                         price: selectedVariant.price,
                         quantity: 1,
                         imageUrl: selectedVariant.imageUrl,
                         sku: selectedVariant.sku,
-                        stockLevel: selectedVariant.stockLevel
+                        stockLevel: selectedVariant.stockLevel,
+                        colorName: selectedVariant.colorName || selectedColorName || '',
+                        sizeName: selectedVariant.sizeName || selectedSizeName || ''
                     });
                 }
                 localStorage.setItem('cart', JSON.stringify(localCart));
