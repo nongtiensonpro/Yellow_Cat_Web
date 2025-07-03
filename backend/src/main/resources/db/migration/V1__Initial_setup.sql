@@ -326,7 +326,7 @@ CREATE TABLE cart_items
 
 -- Cho PostgreSQL để sinh UUID
 CREATE
-EXTENSION IF NOT EXISTS "pgcrypto";
+    EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Bảng lịch sử product
 CREATE TABLE products_history
@@ -622,3 +622,105 @@ VALUES
     (4, 3, 500000.00, NULL, NULL),
     -- SUMMER2024 cho đơn 1004 (tối thiểu 800K, 3 lần/người, tổng 5.000 lượt)
     (3, 4, 800000.00, 3, 5000);
+
+
+-- 1. Trigger function: xử lý sau khi INSERT
+CREATE
+    OR REPLACE FUNCTION trg_after_insert_order_item()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    -- 1.1 Cộng số lượng bán vào trường sold của variant
+    UPDATE product_variants
+    SET sold = sold + NEW.quantity
+    WHERE variant_id = NEW.variant_id;
+
+-- 1.2 Cộng số lượng bán vào trường purchases của product
+    UPDATE products
+    SET purchases = purchases + NEW.quantity
+    FROM product_variants pv
+    WHERE products.product_id = pv.product_id
+      AND pv.variant_id = NEW.variant_id;
+
+    RETURN NEW;
+END;
+$$
+    LANGUAGE plpgsql;
+
+-- 2. Tạo trigger AFTER INSERT trên order_items
+CREATE TRIGGER after_insert_order_item
+    AFTER INSERT
+    ON order_items
+    FOR EACH ROW
+EXECUTE FUNCTION trg_after_insert_order_item();
+
+
+-- 3. Trigger function: xử lý sau khi UPDATE (thay đổi quantity)
+CREATE
+    OR REPLACE FUNCTION trg_after_update_order_item()
+    RETURNS TRIGGER AS
+$$
+DECLARE
+    delta INT;
+BEGIN
+    -- Tính độ chênh giữa giá trị mới và cũ
+    delta
+        := NEW.quantity - OLD.quantity;
+
+    IF
+        delta <> 0 THEN
+        -- 3.1 Cập nhật sold của variant
+        UPDATE product_variants
+        SET sold = sold + delta
+        WHERE variant_id = NEW.variant_id;
+
+-- 3.2 Cập nhật purchases của product
+        UPDATE products
+        SET purchases = purchases + delta
+        FROM product_variants pv
+        WHERE products.product_id = pv.product_id
+          AND pv.variant_id = NEW.variant_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$
+    LANGUAGE plpgsql;
+
+-- 4. Tạo trigger AFTER UPDATE trên order_items
+CREATE TRIGGER after_update_order_item
+    AFTER UPDATE OF quantity, variant_id
+    ON order_items
+    FOR EACH ROW
+EXECUTE FUNCTION trg_after_update_order_item();
+
+
+-- 5. Trigger function: xử lý sau khi DELETE
+CREATE
+    OR REPLACE FUNCTION trg_after_delete_order_item()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    -- 5.1 Trừ số lượng đã xóa khỏi sold
+    UPDATE product_variants
+    SET sold = sold - OLD.quantity
+    WHERE variant_id = OLD.variant_id;
+
+-- 5.2 Trừ khỏi purchases của product
+    UPDATE products
+    SET purchases = purchases - OLD.quantity
+    FROM product_variants pv
+    WHERE products.product_id = pv.product_id
+      AND pv.variant_id = OLD.variant_id;
+
+    RETURN OLD;
+END;
+$$
+    LANGUAGE plpgsql;
+
+-- 6. Tạo trigger AFTER DELETE trên order_items
+CREATE TRIGGER after_delete_order_item
+    AFTER DELETE
+    ON order_items
+    FOR EACH ROW
+EXECUTE FUNCTION trg_after_delete_order_item();

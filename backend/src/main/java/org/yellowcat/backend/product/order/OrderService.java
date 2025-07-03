@@ -120,11 +120,11 @@ public class OrderService {
                         // Tiền mặt luôn là COMPLETED
                         payment.setPaymentStatus("COMPLETED");
                     } else if ("VNPAY".equalsIgnoreCase(paymentReq.getPaymentMethod()) &&
-                               paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
+                            paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
                         // VNPAY với transactionId có nghĩa là đã thanh toán thành công
                         payment.setPaymentStatus("COMPLETED");
                     } else if ("BANK_TRANSFER".equalsIgnoreCase(paymentReq.getPaymentMethod()) &&
-                               paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
+                            paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
                         // Chuyển khoản với transactionId
                         payment.setPaymentStatus("COMPLETED");
                     } else if (paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
@@ -148,10 +148,10 @@ public class OrderService {
                     } else if ("CASH".equalsIgnoreCase(paymentReq.getPaymentMethod())) {
                         existing.setPaymentStatus("COMPLETED");
                     } else if ("VNPAY".equalsIgnoreCase(paymentReq.getPaymentMethod()) &&
-                               paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
+                            paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
                         existing.setPaymentStatus("COMPLETED");
                     } else if ("BANK_TRANSFER".equalsIgnoreCase(paymentReq.getPaymentMethod()) &&
-                               paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
+                            paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
                         existing.setPaymentStatus("COMPLETED");
                     } else if (paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
                         existing.setPaymentStatus("COMPLETED");
@@ -288,7 +288,7 @@ public class OrderService {
         List<Payment> existingPayments = order.getPayments() != null ? order.getPayments() : new ArrayList<>();
         Payment vnpayPayment = existingPayments.stream()
                 .filter(p -> "VNPAY".equalsIgnoreCase(p.getPaymentMethod()) &&
-                           transactionId.equals(p.getTransactionId()))
+                        transactionId.equals(p.getTransactionId()))
                 .findFirst()
                 .orElse(null);
 
@@ -303,8 +303,8 @@ public class OrderService {
             paymentRepository.save(vnpayPayment);
 
             System.out.println("Created new VNPay payment for order: " + orderCode +
-                             ", transactionId: " + transactionId +
-                             ", amount: " + order.getFinalAmount());
+                    ", transactionId: " + transactionId +
+                    ", amount: " + order.getFinalAmount());
         } else if (!"COMPLETED".equalsIgnoreCase(vnpayPayment.getPaymentStatus())) {
             // Cập nhật payment đã tồn tại thành COMPLETED
             vnpayPayment.setPaymentStatus("COMPLETED");
@@ -312,10 +312,10 @@ public class OrderService {
             paymentRepository.save(vnpayPayment);
 
             System.out.println("Updated existing VNPay payment to COMPLETED for order: " + orderCode +
-                             ", transactionId: " + transactionId);
+                    ", transactionId: " + transactionId);
         } else {
             System.out.println("VNPay payment already completed for order: " + orderCode +
-                             ", transactionId: " + transactionId);
+                    ", transactionId: " + transactionId);
         }
 
         // Load lại danh sách payments từ database sau khi đã thêm/cập nhật
@@ -397,7 +397,7 @@ public class OrderService {
         // Tính tổng số tiền đã thanh toán trước đó (loại trừ CASH để tránh double count)
         BigDecimal totalPaidExcludeCash = existingPayments.stream()
                 .filter(p -> "COMPLETED".equalsIgnoreCase(p.getPaymentStatus()) &&
-                           !"CASH".equalsIgnoreCase(p.getPaymentMethod()))
+                        !"CASH".equalsIgnoreCase(p.getPaymentMethod()))
                 .map(Payment::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -421,7 +421,7 @@ public class OrderService {
             paymentRepository.save(cashPayment);
 
             System.out.println("💰 Created new CASH payment for order: " + orderCode +
-                             ", amount: " + remainingAmount);
+                    ", amount: " + remainingAmount);
         } else {
             // Cập nhật payment tiền mặt đã tồn tại
             existingCashPayment.setAmount(remainingAmount);
@@ -430,7 +430,7 @@ public class OrderService {
             paymentRepository.save(existingCashPayment);
 
             System.out.println("💰 Updated existing CASH payment for order: " + orderCode +
-                             ", amount: " + remainingAmount);
+                    ", amount: " + remainingAmount);
         }
 
         // Load lại danh sách payments từ database sau khi đã thêm/cập nhật
@@ -614,11 +614,11 @@ public class OrderService {
         response.setShippingMethod(order.getShippingMethod() != null ? order.getShippingMethod().getMethodName() : null);
         response.setRecipientName(order.getShippingAddress() != null ? order.getShippingAddress().getRecipientName() : null);
         response.setFullAddress(order.getShippingAddress() != null ?
-            String.format("%s, %s, %s, %s",
-                order.getShippingAddress().getStreetAddress(),
-                order.getShippingAddress().getWardCommune(),
-                order.getShippingAddress().getDistrict(),
-                order.getShippingAddress().getCityProvince()) : null);
+                String.format("%s, %s, %s, %s",
+                        order.getShippingAddress().getStreetAddress(),
+                        order.getShippingAddress().getWardCommune(),
+                        order.getShippingAddress().getDistrict(),
+                        order.getShippingAddress().getCityProvince()) : null);
         response.setEmail(order.getUser() != null ? order.getUser().getEmail() : null);
         response.setFullName(order.getUser() != null ? order.getUser().getFullName() : null);
         response.setCustomerNotes(order.getCustomerNotes());
@@ -635,47 +635,47 @@ public class OrderService {
     // Helper method để convert từ projection sang DTO
     private OrderDetailResponse convertToOrderDetailResponse(OrderDetailProjection projection) {
         return new OrderDetailResponse(
-            projection.getOrderId(),
-            projection.getOrderCode(),
-            projection.getOrderDate(),
-            projection.getOrderStatus(),
-            projection.getCustomerName(),
-            projection.getPhoneNumber(),
-            projection.getFinalAmount(),
-            projection.getSubTotalAmount(),
-            projection.getShippingFee(),
-            projection.getDiscountAmount(),
-            projection.getShippingMethod(),
-            projection.getRecipientName(),
-            projection.getFullAddress(),
-            projection.getEmail(),
-            projection.getFullName(),
-            projection.getCustomerNotes()
+                projection.getOrderId(),
+                projection.getOrderCode(),
+                projection.getOrderDate(),
+                projection.getOrderStatus(),
+                projection.getCustomerName(),
+                projection.getPhoneNumber(),
+                projection.getFinalAmount(),
+                projection.getSubTotalAmount(),
+                projection.getShippingFee(),
+                projection.getDiscountAmount(),
+                projection.getShippingMethod(),
+                projection.getRecipientName(),
+                projection.getFullAddress(),
+                projection.getEmail(),
+                projection.getFullName(),
+                projection.getCustomerNotes()
         );
     }
 
     // Helper method để convert OrderItemDetailProjection sang OrderItemDetailResponse
     private OrderItemDetailResponse convertToOrderItemDetailResponse(OrderItemDetailProjection projection) {
         return new OrderItemDetailResponse(
-            projection.getOrderItemId(),
-            projection.getOrderId(),
-            projection.getQuantity(),
-            projection.getPriceAtPurchase(),
-            projection.getTotalPrice(),
-            projection.getVariantId(),
-            projection.getSku(),
-            projection.getProductName(),
-            projection.getColorName(),
-            projection.getSizeName(),
-            projection.getMaterialName(),
-            projection.getBrandName(),
-            projection.getCategoryName(),
-            projection.getTargetAudienceName(),
-            projection.getCurrentPrice(),
-            projection.getSalePrice(),
-            projection.getImageUrl(),
-            projection.getWeight(),
-            projection.getQuantityInStock()
+                projection.getOrderItemId(),
+                projection.getOrderId(),
+                projection.getQuantity(),
+                projection.getPriceAtPurchase(),
+                projection.getTotalPrice(),
+                projection.getVariantId(),
+                projection.getSku(),
+                projection.getProductName(),
+                projection.getColorName(),
+                projection.getSizeName(),
+                projection.getMaterialName(),
+                projection.getBrandName(),
+                projection.getCategoryName(),
+                projection.getTargetAudienceName(),
+                projection.getCurrentPrice(),
+                projection.getSalePrice(),
+                projection.getImageUrl(),
+                projection.getWeight(),
+                projection.getQuantityInStock()
         );
     }
 
@@ -691,10 +691,10 @@ public class OrderService {
         if (payments != null) {
             for (Payment payment : payments) {
                 System.out.println("Payment ID: " + payment.getPaymentId() +
-                                 ", Method: " + payment.getPaymentMethod() +
-                                 ", Amount: " + payment.getAmount() +
-                                 ", Status: " + payment.getPaymentStatus() +
-                                 ", TransactionId: " + payment.getTransactionId());
+                        ", Method: " + payment.getPaymentMethod() +
+                        ", Amount: " + payment.getAmount() +
+                        ", Status: " + payment.getPaymentStatus() +
+                        ", TransactionId: " + payment.getTransactionId());
             }
         }
         System.out.println("=========================");
