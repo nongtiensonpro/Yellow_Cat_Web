@@ -9,7 +9,6 @@ import {
 
 const MENU_ITEMS = [
     { label: 'Thông tin tài khoản', href: '/user_info', icon: <User size={18} /> },
-    // { label: 'Xếp hạng thành viên', href: '/user_info/rank', icon: <Star size={18} /> },
     { label: 'Quản lý đơn hàng', href: '/user_info/order', icon: <ShoppingCart size={18} /> },
     { label: 'Mã giảm giá', href: '/user_info/vouchers', icon: <Percent size={18} /> },
     { label: 'Sản phẩm yêu thích', href: '/wishlist', icon: <Heart size={18} /> },
