@@ -355,7 +355,106 @@ public class ProductService {
         }
     }
 
+    @Transactional
+    public Page<ProductHistoryDto> findAllProductHistory(int size, int page) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("changedAt").descending());
+        Page<ProductsHistory> historyPage = productHistoryRepository.findAll(pageable);
+        List<ProductsHistory> histories = historyPage.getContent();
+        if (histories.isEmpty()) {
+            return new PageImpl<>(List.of(), pageable, historyPage.getTotalElements());
+        }
 
+        // build maps
+        Map<Integer, String> categoryMap = categoryRepository.findAllById(
+                histories.stream().map(ProductsHistory::getCategoryId)
+                        .filter(Objects::nonNull).collect(Collectors.toSet())
+        ).stream().collect(Collectors.toMap(Category::getId, Category::getName));
+
+        Map<Integer, String> brandMap = brandRepository.findAllById(
+                histories.stream().map(ProductsHistory::getBrandId)
+                        .filter(Objects::nonNull).collect(Collectors.toSet())
+        ).stream().collect(Collectors.toMap(Brand::getId, Brand::getBrandName));
+
+        Map<Integer, String> materialMap = materialRepository.findAllById(
+                histories.stream().map(ProductsHistory::getMaterialId)
+                        .filter(Objects::nonNull).collect(Collectors.toSet())
+        ).stream().collect(Collectors.toMap(Material::getId, Material::getName));
+
+        Map<Integer, String> targetAudienceMap = targetAudienceRepository.findAllById(
+                histories.stream().map(ProductsHistory::getTargetAudienceId)
+                        .filter(Objects::nonNull).collect(Collectors.toSet())
+        ).stream().collect(Collectors.toMap(TargetAudience::getId, TargetAudience::getName));
+
+        NameMaps maps = new NameMaps(categoryMap, brandMap, materialMap, targetAudienceMap);
+
+        List<ProductHistoryDto> dtos = histories.stream()
+                .map(h -> productMapper.toProductHistoryDto(h, maps))
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(dtos, pageable, historyPage.getTotalElements());
+    }
+
+    public Page<ProductVariantHistoryDTO> findAllByHistoryGroupId(
+            UUID historyGroupId,
+            int size,
+            int page
+    ) {
+        // 1. Tạo pageable với sort by changedAt desc
+        Pageable pageable = PageRequest.of(page, size, Sort.by("changedAt").descending());
+
+        // 2. Lấy page của history
+        Page<ProductVariantsHistory> historyPage =
+                productVariantHistoryRepository.findAllByHistoryGroupId(historyGroupId, pageable);
+        List<ProductVariantsHistory> histories = historyPage.getContent();
+
+        if (histories.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(),
+                    pageable,
+                    historyPage.getTotalElements());
+        }
+
+        // 3. Thu thập tất cả colorId và sizeId
+        Set<Integer> colorIds = histories.stream()
+                .map(ProductVariantsHistory::getColorId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Set<Integer> sizeIds = histories.stream()
+                .map(ProductVariantsHistory::getSizeId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        // 4. Load tên color & size 1 lần và build map
+        Map<Integer, String> colorMap = colorRepository.findAllById(colorIds).stream()
+                .collect(Collectors.toMap(Color::getId, Color::getName));
+        Map<Integer, String> sizeMap = sizeRepository.findAllById(sizeIds).stream()
+                .collect(Collectors.toMap(Size::getId, Size::getName));
+
+        // 5. Map vào DTO
+        List<ProductVariantHistoryDTO> dtos = histories.stream()
+                .map(h -> {
+                    ProductVariantHistoryDTO dto = new ProductVariantHistoryDTO();
+                    dto.setHistoryId(h.getHistoryId());
+                    dto.setHistoryGroupId(h.getHistoryGroupId());
+                    dto.setSku(h.getSku());
+                    dto.setColor(colorMap.get(h.getColorId()));
+                    dto.setSize(sizeMap.get(h.getSizeId()));
+                    dto.setQuantityInStock(h.getQuantityInStock());
+                    dto.setImageUrl(h.getImageUrl());
+                    dto.setWeight(h.getWeight());
+                    dto.setOperation(h.getOperation().toString());
+                    dto.setChangedAt(h.getChangedAt());
+                    dto.setChangedBy(h.getChangedBy().getEmail());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+
+        // 6. Trả về PageImpl
+        return new PageImpl<>(
+                dtos,
+                pageable,
+                historyPage.getTotalElements()
+        );
+    }
 
     public void activeornotactive(Integer productId) {
         productRepository.activeornotactive(productId);

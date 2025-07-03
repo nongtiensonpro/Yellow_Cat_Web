@@ -133,4 +133,33 @@ public class ProductController {
 
         return ResponseEntityBuilder.success("Rollback Product successfully!");
     }
+
+    @GetMapping("/product-history")
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    public ResponseEntity<?> getAllProductHistory(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        try {
+            Page<ProductHistoryDto> productHistoryPage = productService.findAllProductHistory(size, page);
+            return ResponseEntityBuilder.success(productHistoryPage);
+        } catch (Exception e) {
+            return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Error retrieving product history", "Error retrieving product history");
+        }
+    }
+
+    @GetMapping("/variant-history")
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    public ResponseEntity<?> getAllProductVariantHistoryByHistoryGroupId(
+            @RequestParam("historyGroupId") UUID historyGroupId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        try {
+            Page<ProductVariantHistoryDTO> productHistoryPage = productService.findAllByHistoryGroupId(historyGroupId, size, page);
+            return ResponseEntityBuilder.success(productHistoryPage);
+        } catch (Exception e) {
+            return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Error retrieving product history", "Error retrieving product history");
+        }
+    }
 }
