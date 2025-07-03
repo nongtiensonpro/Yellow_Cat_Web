@@ -224,37 +224,24 @@ Nhấn OK để xác nhận xóa, Cancel để hủy bỏ.`
                 </div>
             </div>
 
-            {/* Info Card */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                    <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <div>
-                        <h3 className="font-medium text-blue-800 mb-1">💡 Giảm giá Sản phẩm hoạt động như thế nào?</h3>
-                        <p className="text-sm text-blue-700 mb-2">
-                            Chọn sản phẩm cụ thể → Đặt % hoặc số tiền giảm → Giá sản phẩm tự động cập nhật trên website
-                        </p>
-                        <div className="text-xs text-blue-600 space-y-1">
-                            <p><strong>Ví dụ:</strong> Áo thun 500k → Giảm 20% → Customer thấy 400k ngay trên web</p>
-                            <p><strong>Phù hợp:</strong> Flash Sale, Sale thanh lý, Sale theo danh mục sản phẩm</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {/*/!* Info Card *!/*/}
+            {/*<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">*/}
+            {/*    <div className="flex items-start gap-3">*/}
+            {/*        <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />*/}
+            {/*        <div>*/}
+            {/*            <h3 className="font-medium text-blue-800 mb-1">💡 Giảm giá Sản phẩm hoạt động như thế nào?</h3>*/}
+            {/*            <p className="text-sm text-blue-700 mb-2">*/}
+            {/*                Chọn sản phẩm cụ thể → Đặt % hoặc số tiền giảm → Giá sản phẩm tự động cập nhật trên website*/}
+            {/*            </p>*/}
+            {/*            <div className="text-xs text-blue-600 space-y-1">*/}
+            {/*                <p><strong>Ví dụ:</strong> Áo thun 500k → Giảm 20% → Customer thấy 400k ngay trên web</p>*/}
+            {/*                <p><strong>Phù hợp:</strong> Flash Sale, Sale thanh lý, Sale theo danh mục sản phẩm</p>*/}
+            {/*            </div>*/}
+            {/*        </div>*/}
+            {/*    </div>*/}
+            {/*</div>*/}
 
-            {/* Delete Warning */}
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                    <Trash2 className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
-                    <div>
-                        <h3 className="font-medium text-orange-800 mb-1">⚠️ Lưu ý về việc xóa đợt giảm giá</h3>
-                        <div className="text-sm text-orange-700 space-y-1">
-                            <p>• <strong>Không thể xóa</strong> đợt giảm giá đang hoạt động (trạng thái "Đang diễn ra")</p>
-                            <p>• <strong>Chỉ người tạo</strong> mới có quyền xóa đợt giảm giá của mình</p>
-                            <p>• <strong>Xóa vĩnh viễn:</strong> Toàn bộ dữ liệu sẽ mất và không thể khôi phục</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {/*Bộ lọc tìm kiếm*/}
 
             {/* Statistics */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
@@ -285,7 +272,7 @@ Nhấn OK để xác nhận xóa, Cancel để hủy bỏ.`
             </div>
 
             <div className="bg-white rounded border p-4 shadow-sm">
-                <h3 className="font-medium text-gray-800 mb-3">🔍 Bộ lọc tìm kiếm</h3>
+                <h3 className="font-medium text-gray-800 mb-3"> Bộ lọc tìm kiếm</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                     <input
                         type="text"
