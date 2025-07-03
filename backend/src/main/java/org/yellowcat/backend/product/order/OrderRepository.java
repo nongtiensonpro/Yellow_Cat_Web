@@ -9,13 +9,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.yellowcat.backend.product.order.dto.OrderDetailProjection;
-import org.yellowcat.backend.product.order.dto.OrderDetailResponse;
 import org.yellowcat.backend.product.order.dto.OrderResponse;
-import org.yellowcat.backend.product.order.dto.OrderWithStaffProjection;
-import org.yellowcat.backend.product.orderItem.dto.OrderItemDetailProjection;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Integer> {
@@ -31,11 +27,11 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
     Order findByIdFetchAll(@Param("orderId") Integer orderId);
 
     @Query("SELECT o FROM Order o " +
-           "LEFT JOIN FETCH o.payments " +
-           "LEFT JOIN FETCH o.user " +
-           "LEFT JOIN FETCH o.shippingAddress " +
-           "LEFT JOIN FETCH o.shippingMethod " +
-           "WHERE o.orderId = :orderId")
+            "LEFT JOIN FETCH o.payments " +
+            "LEFT JOIN FETCH o.user " +
+            "LEFT JOIN FETCH o.shippingAddress " +
+            "LEFT JOIN FETCH o.shippingMethod " +
+            "WHERE o.orderId = :orderId")
     Order findByIdWithPayments(@Param("orderId") Integer orderId);
 
     @Query(nativeQuery = true,
