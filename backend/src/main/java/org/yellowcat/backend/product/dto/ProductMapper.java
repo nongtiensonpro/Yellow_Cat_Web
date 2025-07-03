@@ -6,6 +6,8 @@ import org.yellowcat.backend.product.ProductVariantsHistory;
 import org.yellowcat.backend.product.ProductsHistory;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
 
+import java.util.Map;
+
 
 @Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE, componentModel = MappingConstants.ComponentModel.SPRING)
 public interface ProductMapper {
@@ -64,4 +66,24 @@ public interface ProductMapper {
             @MappingTarget ProductVariant variant,
             ProductVariantsHistory history
     );
+
+    @Mapping(target = "changedBy", source = "changedBy.email")
+    @Mapping(target = "category", ignore = true)
+    @Mapping(target = "brand",    ignore = true)
+    @Mapping(target = "material", ignore = true)
+    @Mapping(target = "targetAudience", ignore = true)
+    ProductHistoryDto toProductHistoryDto(
+            ProductsHistory history,
+            @Context NameMaps maps
+    );
+
+    @AfterMapping
+    default void fillNames(ProductsHistory history,
+                           @MappingTarget ProductHistoryDto dto,
+                           @Context NameMaps maps) {
+        dto.setCategory      (maps.getCategoryName(history.getCategoryId()));
+        dto.setBrand         (maps.getBrandName   (history.getBrandId()));
+        dto.setMaterial      (maps.getMaterialName(history.getMaterialId()));
+        dto.setTargetAudience(maps.getTargetAudienceName(history.getTargetAudienceId()));
+    }
 }

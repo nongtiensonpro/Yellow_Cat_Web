@@ -6,16 +6,16 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
-public class ProductHistoryDto {
+public class ProductVariantHistoryDTO {
     private int historyId;
     private UUID historyGroupId;
-    private String productName;
-    private String description;
-    private String category;
-    private String brand;
-    private String material;
-    private String targetAudience;
-    private String thumbnail;
+    private String sku;
+    private String color;
+    private String size;
+    private Integer quantityInStock;
+    private String imageUrl;
+    private Float weight;
+    private String operation;
     private LocalDateTime changedAt;
     private String changedBy;
 }
