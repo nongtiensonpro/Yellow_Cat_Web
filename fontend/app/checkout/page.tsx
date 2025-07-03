@@ -1,6 +1,5 @@
-
-
 'use client';
+
 import { Card, Button } from "@heroui/react"; // Simplified imports
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react"; // Import useCallback for memoization

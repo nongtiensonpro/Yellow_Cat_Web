@@ -191,14 +191,15 @@ CREATE TABLE order_items
     FOREIGN KEY (variant_id) REFERENCES product_variants (variant_id)
 );
 
-CREATE TABLE order_timelines (
-    id SERIAL PRIMARY KEY,
-    order_id INT NOT NULL,
+CREATE TABLE order_timelines
+(
+    id          SERIAL PRIMARY KEY,
+    order_id    INT         NOT NULL,
     from_status VARCHAR(50),
-    to_status VARCHAR(50) NOT NULL,
-    note TEXT,
-    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE
+    to_status   VARCHAR(50) NOT NULL,
+    note        TEXT,
+    changed_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders (order_id) ON DELETE CASCADE
 );
 
 -- Bảng Giao dịch thanh toán
@@ -323,10 +324,15 @@ CREATE TABLE cart_items
     UNIQUE (cart_id, variant_id)
 );
 
--- 1. Tạo bảng lịch sử cho products
+-- Cho PostgreSQL để sinh UUID
+CREATE
+EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- Bảng lịch sử product
 CREATE TABLE products_history
 (
     history_id         SERIAL PRIMARY KEY,
+    history_group_id   UUID      NOT NULL DEFAULT gen_random_uuid(),
     product_id         INT       NOT NULL,
     product_name       VARCHAR(255),
     description        TEXT,
@@ -343,14 +349,14 @@ CREATE TABLE products_history
     operation          CHAR(1)   NOT NULL, -- 'U' = UPDATE, 'D' = DELETE
     changed_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     changed_by         INT,
-
     FOREIGN KEY (changed_by) REFERENCES app_users (app_user_id) ON DELETE CASCADE
 );
 
--- 2. Tạo bảng lịch sử cho product_variants
+-- Bảng lịch sử variant, tham chiếu history_group_id
 CREATE TABLE product_variants_history
 (
     history_id        SERIAL PRIMARY KEY,
+    history_group_id  UUID      NOT NULL,
     variant_id        INT       NOT NULL,
     product_id        INT,
     sku               VARCHAR(50),
@@ -367,7 +373,6 @@ CREATE TABLE product_variants_history
     operation         CHAR(1)   NOT NULL, -- 'U' = UPDATE, 'D' = DELETE
     changed_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     changed_by        INT,
-
     FOREIGN KEY (changed_by) REFERENCES app_users (app_user_id) ON DELETE CASCADE
 );
 
@@ -450,6 +455,7 @@ INSERT INTO product_variants (product_id, sku, color_id, size_id, price, sale_pr
                               weight,quantity_in_stock_online,sold_online)
 VALUES
 -- Nike Revolution 6
+
 (1, 'NK-REV6-BLK-40', 3, 1, 1800000.00, 1620000.00, 50, 25, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.1,100,5),
 (1, 'NK-REV6-BLK-41', 1, 1, 1800000.00, 1620000.00, 45, 30, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.2,100,5),
 (1, 'NK-REV6-WHT-40', 2, 1, 1800000.00, NULL, 35, 15, 'YellowCatWeb/nike-rev6-white', 0.3,100,5),
@@ -479,7 +485,7 @@ VALUES
 
 -- 5. Dữ liệu cho bảng AppUsers
 INSERT INTO app_users (keycloak_id, email, full_name, phone_number, avatar_url)
-VALUES ('ab72419d-416b-4a75-8c49-f7ff012d01d9', 'nguyen.van.a@email.com', 'Nguyễn Văn A', '0901234567',
+VALUES ('ab72419d-416b-4a75-8c49-f7ff012d0424', 'nguyen.van.a@email.com', 'Nguyễn Văn A', '0901234567',
         'https://example.com/avatars/user1.jpg'),
        ('c56a4180-65aa-42ec-a945-5fd21dec0532', 'tran.thi.b@email.com', 'Trần Thị B', '0902345678',
         'https://example.com/avatars/user2.jpg'),

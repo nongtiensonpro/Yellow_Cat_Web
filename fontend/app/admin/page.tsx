@@ -15,7 +15,8 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useSession } from 'next-auth/react';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import StatisticsByDay from '@/components/statistics/StatisticsByDay'
+import StatisticsByDay from '@/components/statistics/StatisticsByDay';
+import QuickStartGuide from '@/components/promotion/QuickStartGuide';
 
 import { jwtDecode } from 'jwt-decode';
 import {IconBasket} from "@tabler/icons-react";
@@ -65,12 +66,46 @@ interface ProductStats {
     outOfStock: number;
 }
 
-// Define a new interface for PromotionStats
+// Define a new interface for PromotionStats to match backend PromotionStatistics
 interface PromotionStats {
-    total: number;
-    active: number;
-    expired: number;
-    upcoming: number;
+    // Thống kê đợt khuyến mãi (promotions table)
+    totalPromotions: number;
+    activePromotions: number;
+    expiredPromotions: number;
+    upcomingPromotions: number;
+    inactivePromotions: number;
+    
+    // Thống kê sản phẩm được khuyến mãi (promotion_products table)
+    totalPromotionProducts: number;
+    activePromotionProducts: number;
+    expiredPromotionProducts: number;
+    upcomingPromotionProducts: number;
+    
+    // Statistics by discount type
+    percentageDiscounts: number;
+    fixedAmountDiscounts: number;
+    freeShippingDiscounts: number;
+    
+    // Overall value statistics (meaningful comparisons only)
+    totalDiscountValue: number;
+    averageDiscountValue: number;
+    maxDiscountValue: number;
+    minDiscountValue: number;
+    
+    // Detailed statistics for percentage discounts (%)
+    maxPercentageDiscount?: number;
+    minPercentageDiscount?: number;
+    avgPercentageDiscount?: number;
+    
+    // Detailed statistics for fixed amount discounts (VND)
+    maxFixedAmountDiscount?: number;
+    minFixedAmountDiscount?: number;
+    avgFixedAmountDiscount?: number;
+    totalFixedAmountDiscount?: number;
+    
+    // Additional insights
+    mostCommonDiscountValue?: number;
+    mostPopularDiscountType?: string;
 }
 
 
@@ -213,40 +248,66 @@ export default function AdminDashboard() {
 
     // New state for promotion stats
     const [promotionStats, setPromotionStats] = useState<PromotionStats>({
-        total: 0,
-        active: 0,
-        expired: 0,
-        upcoming: 0,
+        totalPromotions: 0,
+        activePromotions: 0,
+        expiredPromotions: 0,
+        upcomingPromotions: 0,
+        inactivePromotions: 0,
+        totalPromotionProducts: 0,
+        activePromotionProducts: 0,
+        expiredPromotionProducts: 0,
+        upcomingPromotionProducts: 0,
+        percentageDiscounts: 0,
+        fixedAmountDiscounts: 0,
+        freeShippingDiscounts: 0,
+        totalDiscountValue: 0,
+        averageDiscountValue: 0,
+        maxDiscountValue: 0,
+        minDiscountValue: 0,
+        // Optional fields can be undefined initially
     });
+    const [promotionLoading, setPromotionLoading] = useState(true);
 
     // New useEffect for fetching promotion stats
     useEffect(() => {
         const fetchPromotionStats = async () => {
+            if (status === "loading") return;
+            
+            setPromotionLoading(true);
             try {
                 const accessToken = session?.accessToken;
-                // Assuming an API endpoint for promotions, adjust as needed
-                const response = await fetch('http://localhost:8080/api/promotions', {
+                // Use the new promotion statistics API
+                const response = await fetch('http://localhost:8080/api/promotion-statistics/overview', {
                     headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 });
                 if (!response.ok) throw new Error("Không thể lấy dữ liệu khuyến mãi");
-                const data = await response.json();
-                const promotions = data || []; // Assuming the API returns an array of promotions
-
-                const now = new Date();
-                setPromotionStats({
-                    total: promotions.length,
-                    active: promotions.filter((p: any) => new Date(p.startDate) <= now && new Date(p.endDate) >= now).length,
-                    expired: promotions.filter((p: any) => new Date(p.endDate) < now).length,
-                    upcoming: promotions.filter((p: any) => new Date(p.startDate) > now).length,
-                });
+                const data: PromotionStats = await response.json();
+                
+                // Use the data directly from the new API
+                setPromotionStats(data);
             } catch (e) {
                 console.error("Lỗi khi lấy thống kê khuyến mãi:", e);
                 setPromotionStats({
-                    total: 0,
-                    active: 0,
-                    expired: 0,
-                    upcoming: 0,
+                    totalPromotions: 0,
+                    activePromotions: 0,
+                    expiredPromotions: 0,
+                    upcomingPromotions: 0,
+                    inactivePromotions: 0,
+                    totalPromotionProducts: 0,
+                    activePromotionProducts: 0,
+                    expiredPromotionProducts: 0,
+                    upcomingPromotionProducts: 0,
+                    percentageDiscounts: 0,
+                    fixedAmountDiscounts: 0,
+                    freeShippingDiscounts: 0,
+                    totalDiscountValue: 0,
+                    averageDiscountValue: 0,
+                    maxDiscountValue: 0,
+                    minDiscountValue: 0,
+                    // Optional fields remain undefined on error
                 });
+            } finally {
+                setPromotionLoading(false);
             }
         };
         if (status === "authenticated") fetchPromotionStats();
@@ -398,43 +459,273 @@ export default function AdminDashboard() {
                 {/* New Card for Promotion Management */}
                 <Card className="shadow-lg">
                     <CardHeader className="flex items-center gap-3">
-                        <Avatar icon={<Percent size={24} />} /> {/* Using Percent icon */}
+                        <Avatar icon={<Percent size={24} />} />
                         <div className="flex-1">
-                            <p className="text-lg font-semibold text-gray-700 dark:text-white">Khuyến mãi</p>
-                            <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-300">{promotionStats.total}</p>
+                            <p className="text-lg font-semibold text-gray-700 dark:text-white">Quản lý Khuyến mãi</p>
+                            {promotionLoading ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-cyan-600"></div>
+                                    <span className="text-sm text-gray-500">Đang tải...</span>
+                                </div>
+                            ) : (
+                                <div className="text-xs text-gray-500">
+                                    Tổng quan hệ thống khuyến mãi
+                                </div>
+                            )}
                         </div>
                     </CardHeader>
-                    <CardBody className="pt-0">
-                        <div className="space-y-2">
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-600 dark:text-gray-300">Đang hoạt động</span>
-                                <Chip size="sm" color="success" variant="flat">
-                                    {promotionStats.active}
-                                </Chip>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-600 dark:text-gray-300">Đã kết thúc</span>
-                                <Chip size="sm" color="danger" variant="flat">
-                                    {promotionStats.expired}
-                                </Chip>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-600 dark:text-gray-300">Sắp diễn ra</span>
-                                <Chip size="sm" color="warning" variant="flat">
-                                    {promotionStats.upcoming}
-                                </Chip>
-                            </div>
-                        </div>
+                    <CardBody>
+
                     </CardBody>
-                    <CardFooter>
-                        <Button as={Link} href="/admin/promotion_management"  variant="flat" size="sm">
-                            Quản lý khuyến mãi
-                        </Button>
+                    <CardFooter className="pt-2">
+                        <div className="flex gap-2 w-full">
+                            <Button as={Link} href="/admin/promotion_management/vouchers" variant="flat" size="sm" className="flex-1">
+                                KM chung
+                            </Button>
+                            <Button as={Link} href="/admin/promotion_products" color="primary" size="sm" className="flex-1">
+                                KM theo sản phẩm
+                            </Button>
+                        </div>
                     </CardFooter>
                 </Card>
             </div>
 
             <Divider className="mb-8" />
+
+            {/* Promotion Insights Section */}
+            {!promotionLoading && promotionStats.totalPromotions > 0 && (
+                <div className="mb-8">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">📈 Thống kê Khuyến mãi chi tiết</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                        <Card className="shadow-md bg-gradient-to-br from-blue-50 to-cyan-50 border-l-4 border-blue-500">
+                            <CardHeader className="pb-2">
+                                <h3 className="text-sm font-semibold text-blue-700 flex items-center gap-2">
+                                    📋 Khuyến mãi chung
+                                    <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">
+                                        Campaigns
+                                    </span>
+                                </h3>
+                            </CardHeader>
+                            <CardBody className="pt-0">
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                            <span className="text-sm">Đang chạy</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-lg font-bold text-green-600">{promotionStats.activePromotions}</div>
+                                            <div className="text-xs text-gray-500">
+                                                {promotionStats.totalPromotions > 0 
+                                                    ? Math.round((promotionStats.activePromotions / promotionStats.totalPromotions) * 100)
+                                                    : 0}%
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                                            <span className="text-sm">Sắp tới</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-lg font-bold text-orange-600">{promotionStats.upcomingPromotions}</div>
+                                            <div className="text-xs text-gray-500">
+                                                {promotionStats.totalPromotions > 0 
+                                                    ? Math.round((promotionStats.upcomingPromotions / promotionStats.totalPromotions) * 100)
+                                                    : 0}%
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                                            <span className="text-sm">Đã kết thúc</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-lg font-bold text-red-600">{promotionStats.expiredPromotions}</div>
+                                            <div className="text-xs text-gray-500">
+                                                {promotionStats.totalPromotions > 0 
+                                                    ? Math.round((promotionStats.expiredPromotions / promotionStats.totalPromotions) * 100)
+                                                    : 0}%
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </CardBody>
+                            <CardFooter>
+                                <div className="w-full text-center border-t border-blue-200">
+                                    <div className="text-2xl font-bold text-blue-600">{promotionStats.totalPromotions}</div>
+                                    <div className="text-xs text-gray-500">Tổng đợt KM</div>
+                                </div>
+                            </CardFooter>
+                        </Card>
+
+                        <Card className="shadow-md bg-gradient-to-br from-emerald-50 to-green-50 border-l-4 border-emerald-500">
+                            <CardHeader className="pb-2">
+                                <h3 className="text-sm font-semibold text-emerald-700 flex items-center gap-2">
+                                    🛍️ Sản phẩm khuyến mãi
+                                    <span className="text-xs bg-emerald-100 text-emerald-600 px-2 py-1 rounded-full">
+                                        Products
+                                    </span>
+                                </h3>
+                            </CardHeader>
+                            <CardBody className="pt-0">
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                            <span className="text-sm">Đang giảm giá</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-lg font-bold text-green-600">{promotionStats.activePromotionProducts}</div>
+                                            <div className="text-xs text-gray-500">sản phẩm</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                                            <span className="text-sm">Sắp giảm giá</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-lg font-bold text-blue-600">{promotionStats.upcomingPromotionProducts}</div>
+                                            <div className="text-xs text-gray-500">sản phẩm</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+                                            <span className="text-sm">Đã hết giảm</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-lg font-bold text-gray-600">{promotionStats.expiredPromotionProducts}</div>
+                                            <div className="text-xs text-gray-500">sản phẩm</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardBody>
+                            <CardFooter>
+                                <div className="w-full text-center pt-2 border-t border-emerald-200">
+                                    <div className="text-2xl font-bold text-emerald-600">{promotionStats.totalPromotionProducts}</div>
+                                    <div className="text-xs text-gray-500">Tổng SP được KM</div>
+                                </div>
+                            </CardFooter>
+                        </Card>
+
+                        <Card className="shadow-md bg-gradient-to-br from-purple-50 to-pink-50 border-l-4 border-purple-500">
+                            <CardHeader className="pb-2">
+                                <h3 className="text-sm font-semibold text-purple-700">🎯 Phân loại giảm giá</h3>
+                            </CardHeader>
+                            <CardBody className="pt-0">
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Percent size={16} className="text-blue-500" />
+                                            <span className="text-sm">Giảm %</span>
+                                        </div>
+                                        <div className="text-lg font-bold text-blue-600">{promotionStats.percentageDiscounts}</div>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-green-500 font-bold text-sm">₫</span>
+                                            <span className="text-sm">Giảm tiền</span>
+                                        </div>
+                                        <div className="text-lg font-bold text-green-600">{promotionStats.fixedAmountDiscounts}</div>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Package size={16} className="text-orange-500" />
+                                            <span className="text-sm">Free ship</span>
+                                        </div>
+                                        <div className="text-lg font-bold text-orange-600">{promotionStats.freeShippingDiscounts}</div>
+                                    </div>
+
+                                </div>
+                            </CardBody>
+                            <CardFooter>
+                                {promotionStats.totalPromotions > 0 && (
+                                    <div className="w-full text-center pt-2 border-t border-purple-200">
+                                        <div className="text-lg font-bold text-purple-600">
+                                            {Math.round((promotionStats.totalPromotionProducts / promotionStats.totalPromotions) * 10) / 10}
+                                        </div>
+                                        <div className="text-xs text-gray-500">SP/Đợt</div>
+                                    </div>
+                                )}
+                            </CardFooter>
+                        </Card>
+                        <Card className="shadow-md bg-gradient-to-br from-indigo-50 to-blue-50 border-l-4 border-indigo-500">
+                            <CardHeader className="pb-2">
+                                <h3 className="text-sm font-semibold text-indigo-700">💰 Giá trị khuyến mãi</h3>
+                            </CardHeader>
+                            <CardBody className="pt-0">
+                                <div className="space-y-4">
+                                    {/* Percentage Discounts Section */}
+                                    {promotionStats.percentageDiscounts > 0 && (
+                                        <div className="border-l-3 border-blue-500 pl-3">
+                                            <div className="text-xs font-semibold text-blue-600 mb-2">
+                                                📊 Giảm % ({promotionStats.percentageDiscounts})
+                                            </div>
+                                            <div className="space-y-2">
+                                                {promotionStats.maxPercentageDiscount && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-xs text-gray-500">Max</span>
+                                                        <span className="text-sm font-bold text-blue-600">
+                                                            {promotionStats.maxPercentageDiscount}%
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {promotionStats.minPercentageDiscount && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-xs text-gray-500">Min</span>
+                                                        <span className="text-sm font-medium text-blue-500">
+                                                            {promotionStats.minPercentageDiscount}%
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Fixed Amount Discounts Section */}
+                                    {promotionStats.fixedAmountDiscounts > 0 && (
+                                        <div className="border-l-3 border-green-500 pl-3">
+                                            <div className="text-xs font-semibold text-green-600 mb-2">
+                                                💸 Giảm tiền ({promotionStats.fixedAmountDiscounts})
+                                            </div>
+                                            <div className="space-y-2">
+                                                {promotionStats.maxFixedAmountDiscount && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-xs text-gray-500">Max</span>
+                                                        <span className="text-sm font-bold text-green-600">
+                                                            {new Intl.NumberFormat('vi-VN', { notation: 'compact' }).format(promotionStats.maxFixedAmountDiscount)}₫
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {promotionStats.minFixedAmountDiscount && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-xs text-gray-500">Min</span>
+                                                        <span className="text-sm font-medium text-green-500">
+                                                            {new Intl.NumberFormat('vi-VN', { notation: 'compact' }).format(promotionStats.minFixedAmountDiscount)}₫
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {promotionStats.percentageDiscounts === 0 && promotionStats.fixedAmountDiscounts === 0 && (
+                                        <div className="text-center py-2">
+                                            <div className="text-gray-400 text-xs">
+                                                Chỉ có khuyến mãi miễn phí ship
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </CardBody>
+                        </Card>
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
                 <StatisticsByDay/>
