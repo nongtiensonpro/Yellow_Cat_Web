@@ -36,7 +36,7 @@ public class CartItem {
     @Column(nullable = false)
     private int quantity;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "added_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at", nullable = false)

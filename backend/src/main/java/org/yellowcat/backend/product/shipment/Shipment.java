@@ -49,7 +49,7 @@ public class Shipment {
     @Column(name = "shipping_cost", precision = 10, scale = 2)
     private BigDecimal shippingCost;
 
-    @Lob // Hoặc @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String notes;
 
     @Column(name = "ghtk_order_code")
