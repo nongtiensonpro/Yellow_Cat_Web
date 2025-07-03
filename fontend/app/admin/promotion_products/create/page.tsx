@@ -186,21 +186,21 @@ export default function CreatePromotionPage() {
         <div className="max-w-6xl mx-auto p-6 bg-white rounded-xl shadow mt-6">
             <div className="mb-6">
                 <h2 className="text-2xl font-bold mb-2">Thêm đợt giảm giá</h2>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                        <div>
-                            <h3 className="font-medium text-blue-800 mb-1">💡 Cách hoạt động của Giảm giá Sản phẩm</h3>
-                            <p className="text-sm text-blue-700 mb-2">
-                                Chọn sản phẩm → Đặt giá trị giảm → Giá sản phẩm tự động cập nhật trên website ngay lập tức
-                            </p>
-                            <div className="text-xs text-blue-600 space-y-1">
-                                <p><strong>⚡ Khác biệt:</strong> Không cần mã giảm giá, customer thấy giá đã giảm ngay</p>
-                                <p><strong>🎯 Phù hợp:</strong> Flash Sale, Sale theo danh mục, Thanh lý hàng tồn kho</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                {/*<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">*/}
+                {/*    <div className="flex items-start gap-3">*/}
+                {/*        <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />*/}
+                {/*        <div>*/}
+                {/*            <h3 className="font-medium text-blue-800 mb-1">💡 Cách hoạt động của Giảm giá Sản phẩm</h3>*/}
+                {/*            <p className="text-sm text-blue-700 mb-2">*/}
+                {/*                Chọn sản phẩm → Đặt giá trị giảm → Giá sản phẩm tự động cập nhật trên website ngay lập tức*/}
+                {/*            </p>*/}
+                {/*            <div className="text-xs text-blue-600 space-y-1">*/}
+                {/*                <p><strong>⚡ Khác biệt:</strong> Không cần mã giảm giá, customer thấy giá đã giảm ngay</p>*/}
+                {/*                <p><strong>🎯 Phù hợp:</strong> Flash Sale, Sale theo danh mục, Thanh lý hàng tồn kho</p>*/}
+                {/*            </div>*/}
+                {/*        </div>*/}
+                {/*    </div>*/}
+                {/*</div>*/}
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -235,7 +235,7 @@ export default function CreatePromotionPage() {
                         <div>
                             <label className="block mb-1 font-medium flex items-center">
                                 Loại giảm <span className="text-red-500">*</span>
-                                <HelpTooltip text="Chọn loại giảm giá: % giảm trên giá gốc, số tiền cố định, hoặc miễn phí ship" />
+                                {/*<HelpTooltip text="Chọn loại giảm giá: % giảm trên giá gốc, số tiền cố định, hoặc miễn phí ship" />*/}
                             </label>
                             <select
                                 name="discountType"
@@ -248,7 +248,7 @@ export default function CreatePromotionPage() {
                                 <option value="free_shipping">Miễn phí vận chuyển</option>
                             </select>
                             <p className="text-xs text-gray-500 mt-1">
-                                💡 <strong>Percentage:</strong> Giảm % trên giá gốc | <strong>Fixed:</strong> Giảm số tiền cụ thể
+                                {/*💡 <strong>Percentage:</strong> Giảm % trên giá gốc | <strong>Fixed:</strong> Giảm số tiền cụ thể*/}
                             </p>
                         </div>
 
