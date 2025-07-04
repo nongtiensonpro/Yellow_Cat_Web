@@ -16,7 +16,22 @@ import java.util.List;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Integer> {
 
-
+    @Query(nativeQuery = true,
+            value = "SELECT " +
+                    "o.order_id AS orderId, " +
+                    "o.order_code AS orderCode, " +
+                    "o.order_date AS orderDate, " +
+                    "o.order_type AS orderType, " +
+                    "o.customer_name AS customerName, " +
+                    "o.phone_number AS phoneNumber, " +
+                    "o.final_amount AS finalAmount, " +
+                    "o.order_status AS orderStatus " +
+                    "FROM orders o " +
+                    "WHERE o.order_code LIKE CONCAT('%', :keyword, '%') " +
+                    "OR o.phone_number LIKE CONCAT('%', :keyword, '%') " +
+                    "OR o.customer_name LIKE CONCAT('%', :keyword, '%') " +
+                    "ORDER BY o.order_date DESC")
+    Page<OrderResponse> findAllByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
 
     @Query("SELECT o.orderStatus, COUNT(o) FROM Order o GROUP BY o.orderStatus")

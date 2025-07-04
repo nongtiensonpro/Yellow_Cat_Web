@@ -65,9 +65,9 @@ export default function PromotionManagementPage() {
                 },
             })
             const data = await response.json()
-            
+
             console.log('API Response:', data) // Debug log
-            
+
             // Kiểm tra và xử lý response structure
             let dataArray = data
             if (data && typeof data === 'object') {
@@ -80,13 +80,13 @@ export default function PromotionManagementPage() {
                     dataArray = []
                 }
             }
-            
+
             // Đảm bảo dataArray là array
             if (!Array.isArray(dataArray)) {
                 console.warn('API response is not an array:', dataArray)
                 dataArray = []
             }
-            
+
             const mapped: Promotion[] = dataArray.map((item: any) => ({
                 id: item.promotionProductId || item.id,
                 promotionName: item.promotionName || '',
@@ -108,29 +108,13 @@ export default function PromotionManagementPage() {
     const handleDelete = async (promotion: Promotion) => {
         const now = new Date()
         const isActive = now >= new Date(promotion.startDate) && now <= new Date(promotion.endDate)
-        
+
         if (isActive) {
             alert('❌ Không thể xóa đợt giảm giá đang hoạt động!')
             return
         }
 
-        const confirmMessage = `⚠️ BẠN CHẮC CHẮN MUỐN XÓA ĐỢT GIẢM GIÁ NÀY?
-
-📋 Tên: ${promotion.promotionName}
-💰 Giảm: ${formatDiscount(promotion.discountValue, promotion.discountType)}
-📅 Từ: ${formatDateTime(promotion.startDate)}
-📅 Đến: ${formatDateTime(promotion.endDate)}
-
-❗ CẢNH BÁO: 
-• Toàn bộ đợt giảm giá sẽ bị xóa vĩnh viễn
-• Tất cả sản phẩm trong đợt này sẽ không còn giảm giá
-• Hành động này KHÔNG THỂ HOÀN TÁC
-
-Nhấn OK để xác nhận xóa, Cancel để hủy bỏ.`
-
-        if (!window.confirm(confirmMessage)) {
-            return
-        }
+//
 
         setDeletingId(promotion.id)
 
@@ -142,10 +126,10 @@ Nhấn OK để xác nhận xóa, Cancel để hủy bỏ.`
             })
 
             alert('✅ Xóa đợt giảm giá thành công!')
-            
+
             // Reload data
             await loadData()
-            
+
             // Reset page if current page becomes empty
             const newTotalItems = promotions.length - 1
             const newPageCount = Math.ceil(newTotalItems / itemsPerPage)
@@ -154,13 +138,13 @@ Nhấn OK để xác nhận xóa, Cancel để hủy bỏ.`
             }
         } catch (err: any) {
             console.error('Lỗi khi xóa:', err)
-            
-            const errorMessage = err?.response?.data?.message || 
+
+            const errorMessage = err?.response?.data?.message ||
                                err?.response?.data?.error ||
                                err?.response?.data ||
                                err.message ||
                                'Lỗi không xác định'
-                               
+
             if (errorMessage.includes('không có quyền') || errorMessage.includes('unauthorized')) {
                 alert('❌ Lỗi quyền truy cập: Bạn không có quyền xóa đợt giảm giá này. Chỉ người tạo ra đợt giảm giá mới có quyền xóa.')
             } else if (err?.response?.status === 404) {
@@ -199,10 +183,10 @@ Nhấn OK để xác nhận xóa, Cancel để hủy bỏ.`
 
     // Statistics
     const now = new Date()
-    const activePromotions = promotions.filter(p => 
+    const activePromotions = promotions.filter(p =>
         now >= new Date(p.startDate) && now <= new Date(p.endDate)
     ).length
-    const expiredPromotions = promotions.filter(p => 
+    const expiredPromotions = promotions.filter(p =>
         now > new Date(p.endDate)
     ).length
 
@@ -211,7 +195,6 @@ Nhấn OK để xác nhận xóa, Cancel để hủy bỏ.`
             <div className="flex items-center justify-between mb-4">
                 <div>
                     <h2 className="text-xl font-semibold text-gray-800">Danh sách Đợt giảm giá</h2>
-                    <p className="text-sm text-gray-600 mt-1">Quản lý giảm giá áp dụng trực tiếp lên sản phẩm cụ thể</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <PromotionGuide type="PRODUCT" />
@@ -266,7 +249,7 @@ Nhấn OK để xác nhận xóa, Cancel để hủy bỏ.`
                 <div className="bg-white rounded border p-3 shadow-sm">
                     <div className="text-center">
                         <div className="text-2xl font-bold text-red-600">{deletingId ? '1' : '0'}</div>
-                        <div className="text-sm text-gray-600">Đang xóa</div>
+                        <div className="text-sm text-gray-600">Đã xóa</div>
                     </div>
                 </div>
             </div>
@@ -310,7 +293,7 @@ Nhấn OK để xác nhận xóa, Cancel để hủy bỏ.`
                         <option value="fixed_amount">Giảm số tiền</option>
                         <option value="free_shipping">Miễn phí vận chuyển</option>
                     </select>
-                    
+
                     {filters.discountType && filters.discountType !== 'free_shipping' && (
                         <input
                             type="number"
@@ -378,8 +361,8 @@ Nhấn OK để xác nhận xóa, Cancel để hủy bỏ.`
                         const isDeleting = deletingId === promo.id
 
                         return (
-                            <tr 
-                                key={promo.id} 
+                            <tr
+                                key={promo.id}
                                 className={`border-b ${
                                     isDeleting 
                                         ? 'bg-red-50 opacity-60' 

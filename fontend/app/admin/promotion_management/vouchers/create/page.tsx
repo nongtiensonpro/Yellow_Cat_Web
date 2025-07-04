@@ -16,7 +16,7 @@ export default function CreateVoucherPage() {
         discountValue: 0,
         startDate: '',
         endDate: '',
-        isActive: true, // ✅ Luôn có mặc định
+        isActive: true,
     });
 
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -113,18 +113,6 @@ export default function CreateVoucherPage() {
                 </div>
 
                 <div>
-                    <Label text="Mô tả" />
-                    <textarea
-                        name="description"
-                        value={form.description}
-                        onChange={handleChange}
-                        rows={3}
-                        className="w-full border px-3 py-2 rounded"
-                        placeholder="Nhập mô tả chi tiết về chương trình khuyến mãi..."
-                    />
-                </div>
-
-                <div>
                     <Label text="Loại giảm" required />
                     <select
                         name="discountType"
@@ -185,7 +173,7 @@ export default function CreateVoucherPage() {
                     <input
                         type="checkbox"
                         name="isActive"
-                        checked={!!form.isActive} // ✅ Luôn boolean
+                        checked={!!form.isActive}
                         onChange={handleChange}
                         className="w-5 h-5"
                     />
