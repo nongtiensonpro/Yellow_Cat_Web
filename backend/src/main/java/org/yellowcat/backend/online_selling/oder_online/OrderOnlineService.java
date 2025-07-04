@@ -195,10 +195,10 @@ public class OrderOnlineService {
             throw new RuntimeException("Chỉ được huỷ đơn hàng ở trạng thái 'Pending'");
         }
 
-        // Hoàn kho
+        // Hoàn kho - chỉ cập nhật quantity_in_stock thông thường
         for (OrderItem item : order.getOrderItems()) {
             ProductVariant variant = item.getVariant();
-            variant.setQuantityInStockOnline(variant.getQuantityInStockOnline() + item.getQuantity());
+            variant.setQuantityInStock(variant.getQuantityInStock() + item.getQuantity());
             productVariantRepository.save(variant);
         }
 
@@ -295,7 +295,7 @@ public class OrderOnlineService {
                 .build()).toList();
 
         Addresses address = addressRepository.findByAddressId(order.getShippingAddress().getAddressId());
-        Payment payment= paymentRepository.findByOrder(order);
+        Payment payment = paymentRepository.findByOrder(order);
 
         return OrderOnlineDetailDTO.builder()
                 .orderId(order.getOrderId())
@@ -303,17 +303,17 @@ public class OrderOnlineService {
                 .orderStatus(order.getOrderStatus())
                 .customerName(order.getCustomerName())
                 .phoneNumber(order.getPhoneNumber())
-                .wardCommune(address.getWardCommune())
-                .streetAddress(address.getStreetAddress())
-                .district(address.getDistrict())
-                .cityProvince(address.getCityProvince())
-                .country(address.getCountry())
+                .wardCommune(address != null ? address.getWardCommune() : "")
+                .streetAddress(address != null ? address.getStreetAddress() : "")
+                .district(address != null ? address.getDistrict() : "")
+                .cityProvince(address != null ? address.getCityProvince() : "")
+                .country(address != null ? address.getCountry() : "")
                 .orderDate(order.getOrderDate())
                 .subTotal(order.getSubTotalAmount())
                 .shippingFee(order.getShippingFee())
                 .finalAmount(order.getFinalAmount())
-                .paymentStatus(payment.getPaymentStatus())
-                .paymentMethod(payment.getPaymentMethod())
+                .paymentStatus(payment != null ? payment.getPaymentStatus() : "Pending")
+                .paymentMethod(payment != null ? payment.getPaymentMethod() : "")
                 .items(itemDTOs)
                 .build();
     }
