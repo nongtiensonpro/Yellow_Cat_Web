@@ -34,7 +34,11 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                 pv.color_id as colorId,
                 pv.size_id as sizeId,
                 pv.price as price,
+                pv.sale_price as salePrice,
                 pv.quantity_in_stock AS stockLevel,
+                pv.quantity_in_stock_online AS stockLevelOnline,
+                pv.sold AS sold,
+                pv.sold_online AS soldOnline,
                 pv.image_url AS variantImageUrl,
                 pv.weight as weight
             FROM
@@ -70,7 +74,8 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                     "    b.logo_public_id, " +
                     "    (SELECT MIN(pv.price) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS min_price, " +
                     "    (SELECT SUM(pv.quantity_in_stock) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS total_stock, " +
-                    "    p.thumbnail " +  // Thêm dấu phẩy phía trước
+                    "    (SELECT SUM(pv.quantity_in_stock_online) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS total_stock_online, " +
+                    "    p.thumbnail " +
                     "FROM Products p " +
                     "LEFT JOIN Categories c ON p.category_id = c.category_id " +
                     "LEFT JOIN Brands b ON p.brand_id = b.brand_id " +
@@ -97,6 +102,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                     "    b.logo_public_id, " +
                     "    (SELECT MIN(pv.price) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS min_price, " +
                     "    (SELECT SUM(pv.quantity_in_stock) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS total_stock, " +
+                    "    (SELECT SUM(pv.quantity_in_stock_online) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS total_stock_online, " +
                     "    (SELECT pv.image_url " +
                     "     FROM Product_Variants pv " +
                     "     WHERE pv.product_id = p.product_id AND pv.image_url IS NOT NULL " +

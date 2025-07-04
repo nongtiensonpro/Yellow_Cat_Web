@@ -724,3 +724,43 @@ CREATE TRIGGER after_delete_order_item
     ON order_items
     FOR EACH ROW
 EXECUTE FUNCTION trg_after_delete_order_item();
+
+-- Migration để thêm các cột thiếu vào bảng product_variants
+-- Thực hiện: 2025-07-03
+
+-- Thêm cột sale_price nếu chưa có
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'product_variants' AND column_name = 'sale_price') THEN
+        ALTER TABLE product_variants ADD COLUMN sale_price NUMERIC(12, 2);
+    END IF;
+END $$;
+
+-- Thêm cột quantity_in_stock_online nếu chưa có  
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'product_variants' AND column_name = 'quantity_in_stock_online') THEN
+        ALTER TABLE product_variants ADD COLUMN quantity_in_stock_online INT NOT NULL DEFAULT 0;
+    END IF;
+END $$;
+
+-- Thêm cột sold_online nếu chưa có
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'product_variants' AND column_name = 'sold_online') THEN
+        ALTER TABLE product_variants ADD COLUMN sold_online INT NOT NULL DEFAULT 0;
+    END IF;
+END $$;
+
+-- Cập nhật quantity_in_stock_online = quantity_in_stock cho các record hiện có
+UPDATE product_variants 
+SET quantity_in_stock_online = quantity_in_stock 
+WHERE quantity_in_stock_online = 0 OR quantity_in_stock_online IS NULL;
+
+-- Đảm bảo sold_online có giá trị mặc định
+UPDATE product_variants 
+SET sold_online = 0 
+WHERE sold_online IS NULL;
