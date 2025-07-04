@@ -5,21 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f81662f5-da82-4a75-9d40-0998afea6bd8" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/cb446801-133e-42a7-b23b-923934d1638e.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/cb446801-133e-42a7-b23b-923934d1638e/storage_v2/_src_/database/postgres.edMnLQ.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/cb446801-133e-42a7-b23b-923934d1638e/storage_v2/_src_/database/postgres.edMnLQ/schema/information_schema.FNRwLQ.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/cb446801-133e-42a7-b23b-923934d1638e/storage_v2/_src_/database/postgres.edMnLQ/schema/pg_catalog.0S1ZNQ.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/cb446801-133e-42a7-b23b-923934d1638e/storage_v2/_src_/database/postgres.edMnLQ/schema/public.abK9xQ.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/online_selling/oder_online/OrderOnlineService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/yellowcat/backend/online_selling/oder_online/OrderOnlineService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/application.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fontend/.env" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/.env" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fontend/app/admin/order/officesales/[orderId]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/admin/order/officesales/[orderId]/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fontend/app/admin/order/officesales/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/app/admin/order/officesales/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fontend/next.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/fontend/next.config.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -90,7 +76,7 @@
     ]
   }
 }</component>
-  <component name="RunManager" selected="npm.dev">
+  <component name="RunManager" selected="Spring Boot.BackendApplication">
     <configuration name="BackendApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <module name="backend.main" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="org.yellowcat.backend.BackendApplication" />
@@ -179,6 +165,8 @@
       <workItem from="1751465994775" duration="16495000" />
       <workItem from="1751549112499" duration="7923000" />
       <workItem from="1751590297597" duration="1124000" />
+      <workItem from="1751592546933" duration="211000" />
+      <workItem from="1751612967926" duration="331000" />
     </task>
     <servers />
   </component>
