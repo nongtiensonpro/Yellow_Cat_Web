@@ -36,6 +36,8 @@ public class OrderController {
     AppUserService appUserService;
 
 
+
+
     @GetMapping("/detail/id/{orderId}/with-items")
     @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
     public ResponseEntity<?> getOrderDetailByIdWithItems(@PathVariable Integer orderId) {
@@ -90,17 +92,36 @@ public class OrderController {
 
 
 
+//    @GetMapping()
+//    @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
+//    public ResponseEntity<?> getOrders(
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "10") int size
+//    ) {
+//        Page<OrderResponse> orders = orderService.getOrders(page, size);
+//        PageResponse<OrderResponse> pageResponse = new PageResponse<>(orders);
+//
+//        return ResponseEntityBuilder.success(pageResponse);
+//    }
+
     @GetMapping()
     @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
     public ResponseEntity<?> getOrders(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword
     ) {
-        Page<OrderResponse> orders = orderService.getOrders(page, size);
+        Page<OrderResponse> orders;
+        if (keyword != null && !keyword.isEmpty()) {
+            orders = orderService.getOrdersByKeyword(page, size, keyword);
+        } else {
+            orders = orderService.getOrders(page, size);
+        }
         PageResponse<OrderResponse> pageResponse = new PageResponse<>(orders);
-
         return ResponseEntityBuilder.success(pageResponse);
     }
+
+
 
     @GetMapping("/status")
     @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")

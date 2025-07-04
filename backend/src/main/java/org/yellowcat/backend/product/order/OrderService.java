@@ -26,6 +26,7 @@ import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserService;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -37,6 +38,12 @@ public class OrderService {
     PaymentRepository paymentRepository;
     OrderMapper orderMapper;
     AppUserService appUserService;
+
+    public Page<OrderResponse> getOrdersByKeyword(int page, int size, String keyword) {
+        Pageable pageable = PageRequest.of(page, size);
+        return orderRepository.findAllByKeyword(keyword, pageable);
+    }
+
 
 
 
@@ -204,6 +211,7 @@ public class OrderService {
         // Logic to create a new order
         Order order = Order.builder()
                 .orderCode(generateOrderCode())
+                .orderDate(LocalDateTime.now()) // Thêm dòng này
                 .subTotalAmount(BigDecimal.ZERO)
                 .shippingFee(BigDecimal.ZERO)
                 .discountAmount(BigDecimal.ZERO)

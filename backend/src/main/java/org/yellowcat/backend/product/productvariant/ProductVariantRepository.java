@@ -16,6 +16,8 @@ import java.util.List;
 @Repository
 public interface ProductVariantRepository extends JpaRepository<ProductVariant, Integer>,
         JpaSpecificationExecutor<ProductVariant> {
+
+
     @Query("select p from ProductVariant p where p.product.productId = ?1")
     List<ProductVariant> findByProductId(Integer productId);
 
@@ -47,20 +49,6 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     @Query(nativeQuery = true, value = "SELECT COUNT(DISTINCT variant_id) FROM product_variants")
     long countTotalProductVariants();
 
-//    @Query("""
-//        SELECT DISTINCT new org.yellowcat.backend.product.promotionproduct.dto.ProductVariantSelectionResponse(
-//            v.variantId,
-//            v.sku,
-//            v.price,
-//            v.salePrice,
-//            v.imageUrl,
-//            p.productName
-//        )
-//        FROM ProductVariant v
-//        JOIN v.product p
-//    """)
-//    List<ProductVariantSelectionResponse> getAllVariantWithProductName();
-
     @Query("""
     SELECT new org.yellowcat.backend.product.promotionproduct.dto.ProductVariantSelectionResponse(
         v.variantId,
@@ -76,47 +64,6 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     GROUP BY v.variantId, v.sku, v.price, v.salePrice, v.imageUrl, p.productName
 """)
     Page<ProductVariantSelectionResponse> searchVariantsByKeyword(@Param("keyword") String keyword, Pageable pageable);
-
-//    // ✅ Dùng để lấy chi tiết nhiều variant khi chọn ở UI tạo khuyến mãi
-//    @Query("""
-//        SELECT new org.yellowcat.backend.product.productvariant.dto.ProductVariantDetailDTO(
-//            v.variantId,
-//            p.productName,
-//            b.brandName,
-//            c.name,
-//            s.name,
-//            v.price,
-//            v.salePrice
-//        )
-//        FROM ProductVariant v
-//        JOIN v.product p
-//        LEFT JOIN p.brand b
-//        LEFT JOIN v.color c
-//        LEFT JOIN v.size s
-//        WHERE v.variantId IN :ids
-//    """)
-//    List<ProductVariantDetailDTO> findDetailsByVariantIds(@Param("ids") List<Integer> ids);
-
-
-//    @Query("""
-//    SELECT new org.yellowcat.backend.product.productvariant.dto.ProductVariantDetailDTO(
-//        v.variantId,
-//        p.productName,
-//        b.brandName,
-//        c.name,
-//        s.name,
-//        v.price,
-//        v.salePrice
-//    )
-//    FROM ProductVariant v
-//    JOIN v.product p
-//    LEFT JOIN p.brand b
-//    LEFT JOIN v.color c
-//    LEFT JOIN v.size s
-//    WHERE v.variantId IN :ids
-//""")
-//    List<ProductVariantDetailDTO> findDetailsByVariantIds(@Param("ids") List<Integer> ids);
-//
 
     @Query("""
     SELECT new org.yellowcat.backend.product.productvariant.dto.ProductVariantDetailDTO(
