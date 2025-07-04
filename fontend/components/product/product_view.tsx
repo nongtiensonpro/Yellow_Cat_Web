@@ -44,6 +44,7 @@ interface Product {
     minPrice: number | null;
     totalStock: number | null;
     thumbnail: string | null;
+    totalStockOnline?: number | null;
 }
 
 interface ApiResponse {
@@ -253,6 +254,7 @@ export default function Page() {
                             <TableColumn>Thương hiệu</TableColumn>
                             <TableColumn>Giá</TableColumn>
                             <TableColumn>Tồn kho</TableColumn>
+                            <TableColumn>Tồn kho Online</TableColumn>
                             <TableColumn>Đã bán</TableColumn>
                             <TableColumn>Trạng thái</TableColumn>
                             <TableColumn>Cập nhật</TableColumn>
@@ -281,6 +283,16 @@ export default function Page() {
                                                 <Badge
                                                     color={product.totalStock > 50 ? "success" : product.totalStock > 10 ? "warning" : "danger"}>
                                                     {product.totalStock}
+                                                </Badge>
+                                            ) : (
+                                                <span className="text-gray-400">N/A</span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            {/* Hiển thị tồn kho online nếu có */}
+                                            {product.totalStockOnline !== undefined && product.totalStockOnline !== null ? (
+                                                <Badge color={product.totalStockOnline > 50 ? "success" : product.totalStockOnline > 10 ? "warning" : "danger"}>
+                                                    {product.totalStockOnline}
                                                 </Badge>
                                             ) : (
                                                 <span className="text-gray-400">N/A</span>
@@ -332,7 +344,7 @@ export default function Page() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={10} className="text-center">
+                                    <TableCell colSpan={11} className="text-center">
                                         Không tìm thấy sản phẩm phù hợp.
                                     </TableCell>
                                 </TableRow>

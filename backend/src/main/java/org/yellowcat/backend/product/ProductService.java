@@ -103,10 +103,14 @@ public class ProductService {
                 variantDTO.setSku((String) row[15]);
                 variantDTO.setColorId((Integer) row[16]);
                 variantDTO.setSizeId((Integer) row[17]);
-                variantDTO.setPrice((BigDecimal) row[18]); // Ensure correct type casting
-                variantDTO.setStockLevel((Integer) row[19]);
-                variantDTO.setImageUrl((String) row[20]);
-                variantDTO.setWeight((Double) row[21]); // Ensure correct type casting
+                variantDTO.setPrice((BigDecimal) row[18]);
+                variantDTO.setSalePrice((BigDecimal) row[19]);
+                variantDTO.setStockLevel((Integer) row[20]);
+                variantDTO.setStockLevelOnline((Integer) row[21]);
+                variantDTO.setSold((Integer) row[22]);
+                variantDTO.setSoldOnline((Integer) row[23]);
+                variantDTO.setImageUrl((String) row[24]);
+                variantDTO.setWeight((Double) row[25]);
                 variants.add(variantDTO);
             }
         }
@@ -150,16 +154,18 @@ public class ProductService {
             ProductVariant variant = new ProductVariant();
             variant.setProduct(product);
 
-            // Tự sinh SKU nếu thiếu
-            String sku = (variantDto.getSku() == null || variantDto.getSku().isBlank())
-                    ? generateUniqueSku(product.getProductId())
-                    : variantDto.getSku();
+            // Tự động sinh SKU dựa trên tên sản phẩm, màu sắc và size
+            String sku = generateProfessionalSku(product.getProductId(), color.getId(), size.getId());
             variant.setSku(sku);
 
             variant.setColor(color);
             variant.setSize(size);
             variant.setPrice(variantDto.getPrice());
+            variant.setSalePrice(variantDto.getSalePrice());
             variant.setQuantityInStock(variantDto.getStockLevel());
+            variant.setQuantityInStockOnline(variantDto.getStockLevelOnline() != null ? variantDto.getStockLevelOnline() : variantDto.getStockLevel());
+            variant.setSold(variantDto.getSold() != null ? variantDto.getSold() : 0);
+            variant.setSoldOnline(variantDto.getSoldOnline() != null ? variantDto.getSoldOnline() : 0);
             variant.setImageUrl(variantDto.getImageUrl());
             variant.setWeight(variantDto.getWeight());
             variant.setCreatedBy(appUser);
@@ -213,38 +219,69 @@ public class ProductService {
 
         // 6. Load existing variants
         List<ProductVariant> existing = productVariantRepository.findByProductId(product.getProductId());
-        Map<String, ProductVariant> existingMap = existing.stream()
-                .collect(Collectors.toMap(ProductVariant::getSku, v -> v));
+        Map<Integer, ProductVariant> existingMap = existing.stream()
+                .filter(v -> v.getVariantId() != null)
+                .collect(Collectors.toMap(ProductVariant::getVariantId, v -> v));
 
-        Set<String> newSkus = new HashSet<>();
+        Set<Integer> processedVariantIds = new HashSet<>();
         List<ProductVariant> toSave = new ArrayList<>();
 
         // 7. Process new & updated variants
         for (var vDto : dto.getVariants()) {
-            newSkus.add(vDto.getSku());
-            ProductVariant v = existingMap.getOrDefault(vDto.getSku(), new ProductVariant());
-            if (v.getVariantId() != null) {
-                // history before update
-                createVariantHistory(v, user, 'U', groupId);
-            } else {
+            ProductVariant v;
+            boolean isNewVariant = (vDto.getVariantId() == null);
+            
+            if (isNewVariant) {
+                // Tạo variant mới
+                v = new ProductVariant();
                 v.setProduct(product);
-                v.setSku(vDto.getSku());
                 v.setCreatedBy(user);
+                
+                // Tự động sinh SKU cho variant mới
+                Color variantColor = colors.get(vDto.getColorId());
+                Size variantSize = sizes.get(vDto.getSizeId());
+                String autoSku = generateProfessionalSku(product.getProductId(), variantColor.getId(), variantSize.getId());
+                v.setSku(autoSku);
+            } else {
+                // Cập nhật variant hiện có
+                v = existingMap.get(vDto.getVariantId());
+                if (v == null) {
+                    throw new RuntimeException("Variant not found with ID: " + vDto.getVariantId());
+                }
+                processedVariantIds.add(vDto.getVariantId());
+                
+                // History before update
+                createVariantHistory(v, user, 'U', groupId);
+                
+                // Giữ nguyên SKU hiện tại hoặc generate lại nếu color/size thay đổi
+                boolean colorChanged = !v.getColor().getId().equals(vDto.getColorId());
+                boolean sizeChanged = !v.getSize().getId().equals(vDto.getSizeId());
+                
+                if (colorChanged || sizeChanged) {
+                    Color variantColor = colors.get(vDto.getColorId());
+                    Size variantSize = sizes.get(vDto.getSizeId());
+                    String newSku = generateProfessionalSku(product.getProductId(), variantColor.getId(), variantSize.getId());
+                    v.setSku(newSku);
+                }
             }
+            
             v.setColor(colors.get(vDto.getColorId()));
             v.setSize(sizes.get(vDto.getSizeId()));
             v.setPrice(vDto.getPrice());
+            v.setSalePrice(vDto.getSalePrice());
             v.setQuantityInStock(vDto.getStockLevel());
+            v.setQuantityInStockOnline(vDto.getStockLevelOnline() != null ? vDto.getStockLevelOnline() : vDto.getStockLevel());
+            v.setSold(vDto.getSold() != null ? vDto.getSold() : 0);
+            v.setSoldOnline(vDto.getSoldOnline() != null ? vDto.getSoldOnline() : 0);
             v.setImageUrl(vDto.getImageUrl());
             v.setWeight(vDto.getWeight());
-            v.setCreatedBy(user);
             toSave.add(v);
         }
         productVariantRepository.saveAll(toSave);
 
-        // 8. Delete removed variants
+        // 8. Delete removed variants (những variant không có trong request)
         for (ProductVariant old : existing) {
-            if (!newSkus.contains(old.getSku())) {
+            if (!processedVariantIds.contains(old.getVariantId())) {
                 createVariantHistory(old, user, 'D', groupId);
                 productVariantRepository.delete(old);
             }
@@ -475,11 +512,22 @@ public class ProductService {
         productVariantHistoryRepository.save(vh);
     }
 
-    private String generateUniqueSku(Integer productId) {
-        String sku;
-        do {
-            sku = "SKU-" + productId + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
-        } while (productVariantRepository.existsBySku(sku));
-        return sku;
+    /**
+     * Tạo SKU chuyên nghiệp dựa trên ID thay vì tên tiếng Việt
+     * Format: P{ProductID}-C{ColorID}-S{SizeID}
+     * Ví dụ: P123-C5-S2, P123-C5-S2-01 (nếu trùng)
+     */
+    private String generateProfessionalSku(Integer productId, Integer colorId, Integer sizeId) {
+        String baseSku = String.format("P%d-C%d-S%d", productId, colorId, sizeId);
+        
+        // Kiểm tra unique và thêm suffix nếu cần
+        String finalSku = baseSku;
+        int counter = 1;
+        while (productVariantRepository.existsBySku(finalSku)) {
+            finalSku = baseSku + "-" + String.format("%02d", counter);
+            counter++;
+        }
+        
+        return finalSku;
     }
 }

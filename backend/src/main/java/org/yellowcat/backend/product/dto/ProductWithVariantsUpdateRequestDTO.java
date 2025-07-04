@@ -24,7 +24,11 @@ public class ProductWithVariantsUpdateRequestDTO {
         private Integer colorId;
         private Integer sizeId;
         private BigDecimal price;
+        private BigDecimal salePrice;
         private Integer stockLevel;
+        private Integer stockLevelOnline;
+        private Integer sold;
+        private Integer soldOnline;
         private String imageUrl;
         private Double weight;
     }
