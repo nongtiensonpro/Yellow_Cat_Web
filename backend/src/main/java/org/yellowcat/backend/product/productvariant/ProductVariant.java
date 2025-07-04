@@ -51,16 +51,16 @@ public class ProductVariant {
     private BigDecimal salePrice;
 
     @Column(name = "quantity_in_stock", nullable = false, columnDefinition = "INT DEFAULT 0")
-    private Integer quantityInStock;
+    private Integer quantityInStock = 0;
 
     @Column(name = "quantity_in_stock_online", nullable = false, columnDefinition = "INT DEFAULT 0")
-    private Integer quantityInStockOnline;
+    private Integer quantityInStockOnline = 0;
 
     @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
-    private Integer sold;
+    private Integer sold = 0;
 
     @Column(name = "sold_online", nullable = false, columnDefinition = "INT DEFAULT 0")
-    private Integer soldOnline;
+    private Integer soldOnline = 0;
 
     @Column(name = "image_url", nullable = false)
     private String imageUrl;
@@ -82,8 +82,6 @@ public class ProductVariant {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        if (quantityInStock == null) quantityInStock = 0;
-        if (sold == null) sold = 0;
     }
 
     @PreUpdate
