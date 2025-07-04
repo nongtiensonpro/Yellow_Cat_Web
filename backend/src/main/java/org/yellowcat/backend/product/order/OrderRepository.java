@@ -140,7 +140,7 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
                     "LEFT JOIN app_users u ON o.app_user_id = u.app_user_id " +
                     "LEFT JOIN shipping_methods sm ON o.shipping_method_id = sm.shipping_method_id " +
                     "LEFT JOIN addresses a ON o.shipping_address_id = a.address_id " +
-                    "WHERE o.phone_number = :phoneNumber " +
+                    "WHERE o.phone_number LIKE CONCAT('%', :phoneNumber, '%') " +
                     "ORDER BY o.order_date DESC")
     List<OrderDetailProjection> findOrdersByPhoneNumber(@Param("phoneNumber") String phoneNumber);
 
@@ -168,7 +168,7 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
                     "LEFT JOIN app_users u ON o.app_user_id = u.app_user_id " +
                     "LEFT JOIN shipping_methods sm ON o.shipping_method_id = sm.shipping_method_id " +
                     "LEFT JOIN addresses a ON o.shipping_address_id = a.address_id " +
-                    "WHERE u.email = :email " +
+                    "WHERE u.email LIKE CONCAT('%', :email, '%') " +
                     "ORDER BY o.order_date DESC")
     List<OrderDetailProjection> findOrdersByEmail(@Param("email") String email);
 
@@ -196,7 +196,7 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
                     "LEFT JOIN app_users u ON o.app_user_id = u.app_user_id " +
                     "LEFT JOIN shipping_methods sm ON o.shipping_method_id = sm.shipping_method_id " +
                     "LEFT JOIN addresses a ON o.shipping_address_id = a.address_id " +
-                    "WHERE (o.phone_number = :searchValue OR u.email = :searchValue) " +
+                    "WHERE (o.phone_number LIKE CONCAT('%', :searchValue, '%') OR u.email LIKE CONCAT('%', :searchValue, '%')) " +
                     "ORDER BY o.order_date DESC")
     List<OrderDetailProjection> findOrdersByPhoneNumberOrEmail(@Param("searchValue") String searchValue);
 }

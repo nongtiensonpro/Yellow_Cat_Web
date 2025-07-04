@@ -98,6 +98,7 @@ public class Order { // Tên class là Order (số ít)
         if (discountAmount == null) discountAmount = BigDecimal.ZERO;
         if (orderStatus == null) orderStatus = "Pending";
         if (isSyncedToGhtk == null) isSyncedToGhtk = false;
+        if (paymentStatus == null) paymentStatus = PaymentStatus.UNPAID;
     }
 
     @PreUpdate
