@@ -2,6 +2,7 @@
 package org.yellowcat.backend.product.promotionproduct;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.yellowcat.backend.product.promotionproduct.dto.ProductVariantSelectionResponse;
@@ -84,11 +85,13 @@ public interface PromotionProductRepository extends JpaRepository<PromotionProdu
       AND (:status IS NULL OR 
            (:status = 'active' AND CURRENT_TIMESTAMP BETWEEN p.startDate AND p.endDate)
            OR (:status = 'inactive' AND CURRENT_TIMESTAMP NOT BETWEEN p.startDate AND p.endDate))
+      AND (:discountType IS NULL OR p.discountType = :discountType)
       AND (:discountValue IS NULL OR p.discountValue = :discountValue)
 """)
     List<PromotionProductResponse> findAllWithFilters(
             @Param("keyword") String keyword,
             @Param("status") String status,
+            @Param("discountType") String discountType,
             @Param("discountValue") Double discountValue
     );
 
@@ -122,6 +125,13 @@ public interface PromotionProductRepository extends JpaRepository<PromotionProdu
         WHERE LOWER(p.productName) LIKE LOWER(CONCAT('%', :keyword, '%'))
     """)
     List<ProductVariantSelectionResponse> searchVariantsByKeyword(@Param("keyword") String keyword);
+
+    @Modifying
+    @Query("DELETE FROM PromotionProduct pp WHERE pp.promotion.id = :promotionId")
+    void deleteByPromotionId(@Param("promotionId") Integer promotionId);
+
+    @Query("SELECT pp.productVariant.variantId FROM PromotionProduct pp WHERE pp.promotion.id = :promotionId")
+    List<Integer> findVariantIdsByPromotionId(@Param("promotionId") Integer promotionId);
 
 
 

@@ -238,10 +238,10 @@ CREATE TABLE shipments
 );
 
 CREATE TABLE order_timeline_images (
-                                       id SERIAL PRIMARY KEY,
-                                       image_url TEXT,
-                                       timeline_id INT,
-                                       FOREIGN KEY (timeline_id) REFERENCES order_timelines (id)
+    id SERIAL PRIMARY KEY,
+    image_url TEXT,
+    timeline_id INT,
+    FOREIGN KEY (timeline_id) REFERENCES order_timelines (id)
 );
 -- Bảng Đánh giá sản phẩm
 CREATE TABLE reviews

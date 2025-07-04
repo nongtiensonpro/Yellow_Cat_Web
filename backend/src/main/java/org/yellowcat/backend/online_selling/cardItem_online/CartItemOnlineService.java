@@ -48,8 +48,8 @@ public class CartItemOnlineService {
             newQuantity += existingItem.get().getQuantity();
         }
 
-        if (variant.getQuantityInStock() < newQuantity) {
-            throw new RuntimeException("Số lượng yêu cầu vượt quá số lượng tồn kho. Còn lại: " + variant.getQuantityInStock());
+        if (variant.getQuantityInStockOnline() < newQuantity) {
+            throw new RuntimeException("Số lượng yêu cầu vượt quá số lượng tồn kho. Còn lại: " + variant.getQuantityInStockOnline());
         }
 
         if (existingItem.isPresent()) {
@@ -70,8 +70,8 @@ public class CartItemOnlineService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy item"));
 
         ProductVariant variant = item.getVariant();
-        if (variant.getQuantityInStock() < dto.getQuantity()) {
-            throw new RuntimeException("Số lượng yêu cầu vượt quá số lượng tồn kho. Còn lại: " + variant.getQuantityInStock());
+        if (variant.getQuantityInStockOnline() < dto.getQuantity()) {
+            throw new RuntimeException("Số lượng yêu cầu vượt quá số lượng tồn kho. Còn lại: " + variant.getQuantityInStockOnline());
         }
 
         item.setQuantity(dto.getQuantity());

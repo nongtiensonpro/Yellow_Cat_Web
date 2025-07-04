@@ -53,8 +53,14 @@ public class ProductVariant {
     @Column(name = "quantity_in_stock", nullable = false, columnDefinition = "INT DEFAULT 0")
     private Integer quantityInStock;
 
+    @Column(name = "quantity_in_stock_online", nullable = false, columnDefinition = "INT DEFAULT 0")
+    private Integer quantityInStockOnline;
+
     @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
     private Integer sold;
+
+    @Column(name = "sold_online", nullable = false, columnDefinition = "INT DEFAULT 0")
+    private Integer soldOnline;
 
     @Column(name = "image_url", nullable = false)
     private String imageUrl;

@@ -1,4 +1,3 @@
-
 package org.yellowcat.backend.product.promotion;
 
 import lombok.AccessLevel;
@@ -8,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -44,6 +44,16 @@ public class PromotionController {
     ) {
         Page<Promotion> result = promotionService.findWithBasicFilters(keyword, status, discountType, pageable);
         return ResponseEntity.ok(Map.of("data", result));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getPromotionById(@PathVariable Integer id) {
+        try {
+            PromotionResponse promotion = promotionService.getById(id);
+            return ResponseEntityBuilder.success(promotion);
+        } catch (Exception e) {
+            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST,"Không tìm thấy promotion với ID: " + id,"Không tìm thấy promotion với ID: " + id);
+        }
     }
 
 

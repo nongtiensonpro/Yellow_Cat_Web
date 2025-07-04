@@ -10,15 +10,19 @@ import org.yellowcat.backend.address.Addresses;
 import org.yellowcat.backend.online_selling.PaymentStatus;
 import org.yellowcat.backend.online_selling.cardItem_online.CartItemOnlineRepository;
 import org.yellowcat.backend.online_selling.card_online.CartOnlineRepository;
+import org.yellowcat.backend.online_selling.oder_online.dto.OrderOnlineDetailDTO;
 import org.yellowcat.backend.online_selling.oder_online.dto.OrderOnlineRequestDTO;
+import org.yellowcat.backend.online_selling.oder_online.dto.OrderSummaryDTO;
 import org.yellowcat.backend.online_selling.oder_online.dto.ProductOnlineDTO;
 import org.yellowcat.backend.online_selling.orderTimeline.OrderTimeline;
 import org.yellowcat.backend.online_selling.orderTimeline.OrderTimelineRepository;
 import org.yellowcat.backend.online_selling.orderTimeline.OrderTimelineService;
+import org.yellowcat.backend.online_selling.order_item_online.OrderItemOnlineDTO;
 import org.yellowcat.backend.product.cartItem.CartItem;
 import org.yellowcat.backend.product.order.Order;
 import org.yellowcat.backend.product.orderItem.OrderItem;
 import org.yellowcat.backend.product.orderItem.OrderItemRepository;
+import org.yellowcat.backend.product.payment.Payment;
 import org.yellowcat.backend.product.payment.PaymentRepository;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
 import org.yellowcat.backend.product.productvariant.ProductVariantRepository;
@@ -44,9 +48,13 @@ public class OrderOnlineService {
     private final ShippingMethodRepository shippingMethodIdRepository;
     private final PaymentRepository paymentRepository;
     private final OrderTimelineRepository orderTimelineRepository;
+    private final ShippingMethodRepository shippingMethodRepository;
 
     @Autowired
     OrderTimelineService orderTimelineService;
+
+    @Autowired
+    OderOnlineRepository orderOnlineRepository;
 
     /**
      * Tạo đơn hàng từ yêu cầu đặt hàng
@@ -95,10 +103,10 @@ public class OrderOnlineService {
                     .orElseThrow(() -> new RuntimeException("Địa chỉ không tồn tại"));
         }
 
-        PaymentStatus paymentStatus = request.getPaymentStatus();
-        if (paymentStatus == null) {
-            paymentStatus = PaymentStatus.UNPAID; // fallback nếu không truyền
-        }
+//        PaymentStatus paymentStatus = request.getPaymentStatus();
+//        if (paymentStatus == null) {
+//            paymentStatus = PaymentStatus.UNPAID; // fallback nếu không truyền
+//        }
 
         System.out.println("shipping methot được chuyền vào: "+ request.getShippingMethodId());
         ShippingMethod shippingOption = shippingMethodIdRepository.findById(request.getShippingMethodId())
@@ -120,8 +128,9 @@ public class OrderOnlineService {
                 .orderItems(orderItems)
                 .orderDate(LocalDateTime.now())
                 .orderStatus("Pending")
+                .paymentStatus(PaymentStatus.PENDING)
                 .isSyncedToGhtk(false)
-                .paymentStatus(paymentStatus)
+//                .paymentStatus(paymentStatus)
                 .shippingMethod(shippingOption)
                 .build();
 
@@ -134,11 +143,19 @@ public class OrderOnlineService {
         // Tạo timeline
         OrderTimeline timeline = new OrderTimeline();
         timeline.setNote(request.getNote());
-        timeline.setFromStatus("");
+        timeline.setFromStatus("Pending");
         timeline.setToStatus("Pending");
         timeline.setChangedAt(LocalDateTime.now());
         timeline.setOrderId(savedOrder.getOrderId()); // Dùng savedOrder mới có ID
         orderTimelineRepository.save(timeline);
+
+        //Lưu phương thức thanh toán
+        Payment payment = new Payment();
+        payment.setAmount(subTotal);
+        payment.setOrder(order);
+        payment.setPaymentMethod(request.getPaymentMethod());
+        payment.setPaymentStatus("Pending");
+        paymentRepository.save(payment);
 
         // Xóa sản phẩm khỏi giỏ hàng nếu user đăng nhập
         if (user != null) {
@@ -181,12 +198,125 @@ public class OrderOnlineService {
         // Hoàn kho
         for (OrderItem item : order.getOrderItems()) {
             ProductVariant variant = item.getVariant();
-            variant.setQuantityInStock(variant.getQuantityInStock() + item.getQuantity());
+            variant.setQuantityInStockOnline(variant.getQuantityInStockOnline() + item.getQuantity());
             productVariantRepository.save(variant);
         }
 
         order.setOrderStatus("Cancelled");
         return orderRepository.save(order);
     }
+
+    public Order getOrderByOrderCode(String orderCode) {
+        Order order = orderRepository.findByOrderCode(orderCode);
+        return order;
+    }
+
+    @Transactional
+    public List<OrderSummaryDTO> getAllOnlineOrdersWithShipping() {
+        List<Order> orders = orderRepository.findByShippingAddressIsNotNullOrderByUpdatedAtDesc();
+
+        return orders.stream().map(order -> OrderSummaryDTO.builder()
+                .orderId(order.getOrderId())
+                .orderCode(order.getOrderCode())
+                .orderStatus(order.getOrderStatus())
+                .customerName(order.getCustomerName())
+                .finalAmount(order.getFinalAmount())
+                .createdAt(order.getOrderDate())
+                .updatedAt(order.getUpdatedAt())
+                .build()
+        ).toList();
+    }
+
+    @Transactional
+    public List<OrderSummaryDTO> getOnlineOrdersByStatus(String orderStatus) {
+        List<Order> orders = orderRepository.findByShippingAddressIsNotNullAndOrderStatusOrderByUpdatedAtDesc(orderStatus);
+
+        return orders.stream().map(order -> OrderSummaryDTO.builder()
+                .orderId(order.getOrderId())
+                .orderCode(order.getOrderCode())
+                .customerName(order.getCustomerName())
+                .orderStatus(order.getOrderStatus())
+                .finalAmount(order.getFinalAmount())
+                .createdAt(order.getOrderDate())
+                .updatedAt(order.getUpdatedAt())
+                .build()
+        ).toList();
+    }
+
+    @Transactional
+    public List<OrderSummaryDTO> getOrdersByStatusGroup(String groupKey) {
+        List<String> statuses;
+
+        switch (groupKey) {
+            case "userRequestStatuses" -> statuses = List.of(
+                    "Cancelled", "ReturnRequested", "NotReceivedReported", "Dispute", "CustomerReceived");
+            case "adminProcessingStatuses" -> statuses = List.of(
+                    "Pending", "Confirmed", "Processing", "Investigation",
+                    "DeliveryFailed1", "DeliveryFailed2", "DeliveryFailed3", "IncidentReported", "LostOrDamaged",
+                    "CustomerDecisionPending", "ReturnApproved", "ReturnRejected", "ReturnedToWarehouse",
+                    "ReturnedToSeller", "Refunded", "FinalRejected");
+            case "userTrackingStatuses" -> statuses = List.of(
+                    "Confirmed", "Processing", "Shipping", "Delivered", "ReturningInProgress");
+            case "completedStatuses" -> statuses = List.of(
+                    "Completed", "Refunded", "FinalRejected", "ReturnedToSeller", "Cancelled");
+            default -> throw new IllegalArgumentException("Nhóm trạng thái không hợp lệ: " + groupKey);
+        }
+
+        return orderRepository.findByOrderStatusIn(statuses)
+                .stream()
+                .map(this::convertToSummary)
+                .toList();
+    }
+
+
+    private OrderSummaryDTO convertToSummary(Order order) {
+        return OrderSummaryDTO.builder()
+                .orderId(order.getOrderId())
+                .orderCode(order.getOrderCode())
+                .customerName(order.getCustomerName())
+                .orderStatus(order.getOrderStatus())
+                .finalAmount(order.getFinalAmount())
+                .createdAt(order.getOrderDate())
+                .updatedAt(order.getUpdatedAt())
+                .build();
+    }
+
+    @Transactional
+    public OrderOnlineDetailDTO getOrderDetail(Integer orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
+
+        List<OrderItemOnlineDTO> itemDTOs = order.getOrderItems().stream().map(item -> OrderItemOnlineDTO.builder()
+                .productName(item.getVariant().getProduct().getProductName())
+                .variantName(item.getVariant().getProduct().getProductName()) // hoặc getVariantName() nếu có sẵn
+                .quantity(item.getQuantity())
+                .unitPrice(item.getPriceAtPurchase())
+                .totalPrice(item.getTotalPrice())
+                .build()).toList();
+
+        Addresses address = addressRepository.findByAddressId(order.getShippingAddress().getAddressId());
+        Payment payment= paymentRepository.findByOrder(order);
+
+        return OrderOnlineDetailDTO.builder()
+                .orderId(order.getOrderId())
+                .orderCode(order.getOrderCode())
+                .orderStatus(order.getOrderStatus())
+                .customerName(order.getCustomerName())
+                .phoneNumber(order.getPhoneNumber())
+                .wardCommune(address.getWardCommune())
+                .streetAddress(address.getStreetAddress())
+                .district(address.getDistrict())
+                .cityProvince(address.getCityProvince())
+                .country(address.getCountry())
+                .orderDate(order.getOrderDate())
+                .subTotal(order.getSubTotalAmount())
+                .shippingFee(order.getShippingFee())
+                .finalAmount(order.getFinalAmount())
+                .paymentStatus(payment.getPaymentStatus())
+                .paymentMethod(payment.getPaymentMethod())
+                .items(itemDTOs)
+                .build();
+    }
+
 
 }

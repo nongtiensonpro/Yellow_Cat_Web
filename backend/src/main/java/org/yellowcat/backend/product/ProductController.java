@@ -10,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Pageable;
+import org.yellowcat.backend.common.config_api.response.ApiResponse;
 import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
 import org.yellowcat.backend.product.dto.*;
 import org.yellowcat.backend.user.AppUser;
@@ -87,30 +88,30 @@ public class ProductController {
         UUID userId = UUID.fromString(jwt.getSubject());
         Optional<AppUser> appUser = appUserService.findByKeycloakId(userId);
         AppUser user;
-        if (appUser.isEmpty()){
+        if (appUser.isEmpty()) {
             return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "User not found", "User not found");
-        }else {
+        } else {
             user = appUser.get();
         }
-        productService.createProduct(productDto,user);
+        productService.createProduct(productDto, user);
         return ResponseEntityBuilder.success("Product created successfully!");
     }
 
     @PutMapping
     @PreAuthorize("hasAnyAuthority('Admin_Web')")
     public ResponseEntity<?> updateProduct(@RequestBody ProductWithVariantsUpdateRequestDTO productDto,
-                                            @AuthenticationPrincipal Jwt jwt) {
+                                           @AuthenticationPrincipal Jwt jwt) {
         UUID userId = UUID.fromString(jwt.getSubject());
 
         Optional<AppUser> appUser = appUserService.findByKeycloakId(userId);
         AppUser user;
-        if (appUser.isEmpty()){
+        if (appUser.isEmpty()) {
             return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "User not found", "User not found");
-        }else {
+        } else {
             user = appUser.get();
         }
 
-        productService.updateProduct(productDto,user);
+        productService.updateProduct(productDto, user);
 
         return ResponseEntityBuilder.success("Product updated successfully!");
     }
@@ -120,5 +121,45 @@ public class ProductController {
     public ResponseEntity<?> getActiveornotactive(@PathVariable("id") Integer productId) {
         productService.activeornotactive(productId);
         return ResponseEntityBuilder.success("Product active successfully!");
+    }
+
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    @PostMapping("/rollback/{historyId}")
+    public ResponseEntity<?> rollbackProduct(
+            @PathVariable("historyId") Integer historyId
+    ) {
+        // Thực hiện rollback
+        productService.rollback(historyId);
+
+        return ResponseEntityBuilder.success("Rollback Product successfully!");
+    }
+
+    @GetMapping("/product-history")
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    public ResponseEntity<?> getAllProductHistory(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        try {
+            Page<ProductHistoryDto> productHistoryPage = productService.findAllProductHistory(size, page);
+            return ResponseEntityBuilder.success(productHistoryPage);
+        } catch (Exception e) {
+            return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Error retrieving product history", "Error retrieving product history");
+        }
+    }
+
+    @GetMapping("/variant-history")
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    public ResponseEntity<?> getAllProductVariantHistoryByHistoryGroupId(
+            @RequestParam("historyGroupId") UUID historyGroupId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        try {
+            Page<ProductVariantHistoryDTO> productHistoryPage = productService.findAllByHistoryGroupId(historyGroupId, size, page);
+            return ResponseEntityBuilder.success(productHistoryPage);
+        } catch (Exception e) {
+            return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Error retrieving product history", "Error retrieving product history");
+        }
     }
 }

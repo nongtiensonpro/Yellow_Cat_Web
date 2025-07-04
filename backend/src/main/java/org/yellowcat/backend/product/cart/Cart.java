@@ -9,6 +9,7 @@ import org.yellowcat.backend.product.cartItem.CartItem;
 import org.yellowcat.backend.user.AppUser;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -29,7 +30,7 @@ public class Cart {
     private AppUser appUser;
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CartItem> cartItems;
+    private List<CartItem> cartItems = new ArrayList<>();
 
     private LocalDateTime createdAt = LocalDateTime.now();
 

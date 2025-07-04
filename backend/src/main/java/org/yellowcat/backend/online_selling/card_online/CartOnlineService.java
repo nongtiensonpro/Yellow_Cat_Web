@@ -48,9 +48,9 @@ public class CartOnlineService {
                 ProductVariant variant = variantRepository.findById(variantId)
                         .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm ID: " + variantId));
 
-                if (variant.getQuantityInStock() < quantity) {
+                if (variant.getQuantityInStockOnline() < quantity) {
                     throw new RuntimeException("Sản phẩm '" + variant.getProduct().getProductName()
-                            + "' không đủ hàng (còn " + variant.getQuantityInStock()
+                            + "' không đủ hàng (còn " + variant.getQuantityInStockOnline()
                             + ", yêu cầu: " + quantity + ").");
                 }
 
@@ -76,7 +76,10 @@ public class CartOnlineService {
             // Sau khi đảm bảo tất cả đủ hàng → mới thực hiện trừ và lưu
             for (ProductVariant variant : variantsToUpdate) {
                 Integer quantity = deductedMap.get(variant.getVariantId());
-                variant.setQuantityInStock(variant.getQuantityInStock() - quantity);
+                variant.setQuantityInStockOnline(variant.getQuantityInStockOnline() - quantity);
+                System.out.println("Số lượng trong kho"+ variant.getQuantityInStockOnline());
+                System.out.println("Số lượng trừ đi"+ quantity);
+                System.out.println("Số lượng còn lại"+ variant.getQuantityInStockOnline());
                 variantRepository.save(variant);
             }
 
@@ -105,7 +108,7 @@ public class CartOnlineService {
             throw new RuntimeException("Không có sản phẩm nào cần hoàn lại kho.");
         }
 
-        // Trước tiên: kiểm tra tất cả sản phẩm có tồn tại không
+        //kiểm tra tất cả sản phẩm có tồn tại không
         Map<ProductVariant, Integer> variantToRestoreMap = new HashMap<>();
 
         for (Map.Entry<Integer, Integer> entry : deductedMap.entrySet()) {
@@ -123,7 +126,7 @@ public class CartOnlineService {
             ProductVariant variant = entry.getKey();
             Integer quantity = entry.getValue();
 
-            variant.setQuantityInStock(variant.getQuantityInStock() + quantity);
+            variant.setQuantityInStockOnline(variant.getQuantityInStockOnline() + quantity);
             variantRepository.save(variant);
         }
 
@@ -142,7 +145,7 @@ public class CartOnlineService {
             ProductVariant variant = variantRepository.findById(variantId)
                     .orElse(null);
             if (variant != null) {
-                variant.setQuantityInStock(variant.getQuantityInStock() + quantity);
+                variant.setQuantityInStockOnline(variant.getQuantityInStockOnline() + quantity);
                 variantRepository.save(variant);
             }
         }

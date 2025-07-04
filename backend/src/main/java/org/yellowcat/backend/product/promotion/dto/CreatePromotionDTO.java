@@ -11,8 +11,10 @@ import java.util.List;
 @Setter
 public class CreatePromotionDTO {
     private String promotionName;
+    private String description;
+    private String discountType;
     private BigDecimal discountValue;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
-    private List<Integer> productIds;
+    private List<Integer> variantIds;
 }

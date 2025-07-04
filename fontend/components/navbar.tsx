@@ -12,16 +12,16 @@ import { Button, Badge } from "@heroui/react";
 import { Link } from "@heroui/link";
 import NextLink from "next/link";
 import clsx from "clsx";
-import { ThemeSwitch } from "./theme-switch"; // Cùng cấp với navbar.tsx
+import { ThemeSwitch } from "./theme-switch";
 import { Avatar } from "@heroui/react";
 import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/dropdown";
 import { Popover, PopoverTrigger, PopoverContent } from "@heroui/popover";
-import { WishlistDropdown } from "./WishListDropdown"; // CHỈNH SỬA ĐƯỜNG DẪN IMPORT TƯƠNG ĐỐI
+import { WishlistDropdown } from "./WishListDropdown";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { jwtDecode } from 'jwt-decode';
-import BadgeVisibility from "@/components/user/BadgeVisibility"; // Điều chỉnh import path nếu cần (hoặc từ home/user/BadgeVisibility)
+import BadgeVisibility from "@/components/user/BadgeVisibility";
 import { HeartIcon } from "@heroicons/react/24/solid";
 import CheckoutUser from "./checkoutuser";
 import { CldImage } from 'next-cloudinary';
@@ -153,7 +153,7 @@ export const Navbar = () => {
                     setIsTokenValid(false);
                     setIsAdmin(false);
                     setUserProfile(null);
-                    handleLogout(); // Log out if token expired
+                    handleLogout();
                     return;
                 }
 

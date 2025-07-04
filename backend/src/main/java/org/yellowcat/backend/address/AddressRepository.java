@@ -12,4 +12,6 @@ public interface AddressRepository extends JpaRepository<Addresses,Integer> {
     Page<Addresses> findAllByAppUserKeycloakId(UUID appUserKeycloakId, Pageable pageable);
     
     List<Addresses> findAllByAppUserKeycloakId(UUID appUserKeycloakId);
+
+    Addresses findByAddressId(Integer addressId);
 }
