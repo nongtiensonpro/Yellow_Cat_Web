@@ -110,7 +110,9 @@ CREATE TABLE product_variants
     price             NUMERIC(12, 2) NOT NULL,
     sale_price        NUMERIC(12, 2),
     quantity_in_stock INT            NOT NULL DEFAULT 0,
+    quantity_in_stock_online  INT            NOT NULL DEFAULT 0,
     sold              INT            NOT NULL DEFAULT 0,
+    sold_online       INT            NOT NULL DEFAULT 0,
     image_url         VARCHAR(255)   NOT NULL,
     weight            FLOAT,
     created_at        TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
@@ -127,7 +129,7 @@ CREATE TABLE product_variants
 CREATE TABLE addresses
 (
     address_id     SERIAL PRIMARY KEY,
-    app_user_id    INT          ,
+    app_user_id    INT,
     recipient_name VARCHAR(255) NOT NULL,
     phone_number   VARCHAR(20)  NOT NULL,
     street_address VARCHAR(255) NOT NULL,
@@ -167,7 +169,6 @@ CREATE TABLE orders
     discount_amount     NUMERIC(12, 2)          DEFAULT 0,
     final_amount        NUMERIC(14, 2) NOT NULL,
     order_status        VARCHAR(50)    NOT NULL DEFAULT 'Pending',
-    payment_status      VARCHAR(20) ,
     shipping_method_id  INT,
     customer_notes      TEXT,
     is_synced_to_ghtk   BOOLEAN                 DEFAULT FALSE, -- Ghi nhận đơn đã gửi lên GHTK chưa
@@ -190,14 +191,15 @@ CREATE TABLE order_items
     FOREIGN KEY (variant_id) REFERENCES product_variants (variant_id)
 );
 
-CREATE TABLE order_timelines (
-    id SERIAL PRIMARY KEY,
-    order_id INT NOT NULL,
+CREATE TABLE order_timelines
+(
+    id          SERIAL PRIMARY KEY,
+    order_id    INT         NOT NULL,
     from_status VARCHAR(50),
-    to_status VARCHAR(50) NOT NULL,
-    note TEXT,
-    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE
+    to_status   VARCHAR(50) NOT NULL,
+    note        TEXT,
+    changed_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders (order_id) ON DELETE CASCADE
 );
 
 -- Bảng Giao dịch thanh toán
@@ -235,6 +237,12 @@ CREATE TABLE shipments
     FOREIGN KEY (shipping_method_id) REFERENCES shipping_methods (shipping_method_id)
 );
 
+CREATE TABLE order_timeline_images (
+                                       id SERIAL PRIMARY KEY,
+                                       image_url TEXT,
+                                       timeline_id INT,
+                                       FOREIGN KEY (timeline_id) REFERENCES order_timelines (id)
+);
 -- Bảng Đánh giá sản phẩm
 CREATE TABLE reviews
 (
@@ -309,17 +317,22 @@ CREATE TABLE cart_items
     cart_id      INT NOT NULL,
     variant_id   INT NOT NULL,
     quantity     INT NOT NULL CHECK (quantity > 0),
-    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    added_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (cart_id) REFERENCES carts (cart_id) ON DELETE CASCADE,
     FOREIGN KEY (variant_id) REFERENCES product_variants (variant_id) ON DELETE CASCADE,
     UNIQUE (cart_id, variant_id)
 );
 
--- 1. Tạo bảng lịch sử cho products
+-- Cho PostgreSQL để sinh UUID
+CREATE
+    EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- Bảng lịch sử product
 CREATE TABLE products_history
 (
     history_id         SERIAL PRIMARY KEY,
+    history_group_id   UUID      NOT NULL DEFAULT gen_random_uuid(),
     product_id         INT       NOT NULL,
     product_name       VARCHAR(255),
     description        TEXT,
@@ -336,14 +349,14 @@ CREATE TABLE products_history
     operation          CHAR(1)   NOT NULL, -- 'U' = UPDATE, 'D' = DELETE
     changed_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     changed_by         INT,
-
     FOREIGN KEY (changed_by) REFERENCES app_users (app_user_id) ON DELETE CASCADE
 );
 
--- 2. Tạo bảng lịch sử cho product_variants
+-- Bảng lịch sử variant, tham chiếu history_group_id
 CREATE TABLE product_variants_history
 (
     history_id        SERIAL PRIMARY KEY,
+    history_group_id  UUID      NOT NULL,
     variant_id        INT       NOT NULL,
     product_id        INT,
     sku               VARCHAR(50),
@@ -360,7 +373,6 @@ CREATE TABLE product_variants_history
     operation         CHAR(1)   NOT NULL, -- 'U' = UPDATE, 'D' = DELETE
     changed_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     changed_by        INT,
-
     FOREIGN KEY (changed_by) REFERENCES app_users (app_user_id) ON DELETE CASCADE
 );
 
@@ -440,39 +452,40 @@ VALUES ('Nike Revolution 6 Nam',
 
 -- 4. Dữ liệu cho bảng ProductVariants
 INSERT INTO product_variants (product_id, sku, color_id, size_id, price, sale_price, quantity_in_stock, sold, image_url,
-                              weight)
+                              weight,quantity_in_stock_online,sold_online)
 VALUES
 -- Nike Revolution 6
-(1, 'NK-REV6-BLK-40', 3, 1, 1800000.00, 1620000.00, 50, 25, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.1),
-(1, 'NK-REV6-BLK-41', 1, 1, 1800000.00, 1620000.00, 45, 30, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.2),
-(1, 'NK-REV6-WHT-40', 2, 1, 1800000.00, NULL, 35, 15, 'YellowCatWeb/nike-rev6-white', 0.3),
-(1, 'NK-REV6-WHT-42', 2, 3, 1800000.00, NULL, 40, 20, 'YellowCatWeb/nike-rev6-white', 0.4),
+
+(1, 'NK-REV6-BLK-40', 3, 1, 1800000.00, 1620000.00, 50, 25, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.1,100,5),
+(1, 'NK-REV6-BLK-41', 1, 1, 1800000.00, 1620000.00, 45, 30, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.2,100,5),
+(1, 'NK-REV6-WHT-40', 2, 1, 1800000.00, NULL, 35, 15, 'YellowCatWeb/nike-rev6-white', 0.3,100,5),
+(1, 'NK-REV6-WHT-42', 2, 3, 1800000.00, NULL, 40, 20, 'YellowCatWeb/nike-rev6-white', 0.4,100,5),
 
 -- Adidas Duramo SL
-(2, 'AD-DURSL-WHT-41', 2, 2, 1650000.00, 1485000.00, 55, 35, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 0.1),
-(2, 'AD-DURSL-WHT-42', 2, 3, 1650000.00, 1485000.00, 65, 40, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 0.2),
-(2, 'AD-DURSL-NVY-43', 3, 4, 1650000.00, NULL, 40, 25, 'YellowCatWeb/adidas-duramo-navy', 0.3),
-(2, 'AD-DURSL-BLK-41', 1, 2, 1650000.00, NULL, 30, 18, 'YellowCatWeb/adidas-duramo-black', 0.4),
+(2, 'AD-DURSL-WHT-41', 2, 2, 1650000.00, 1485000.00, 55, 35, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 0.1,100,5),
+(2, 'AD-DURSL-WHT-42', 2, 3, 1650000.00, 1485000.00, 65, 40, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 0.2,100,5),
+(2, 'AD-DURSL-NVY-43', 3, 4, 1650000.00, NULL, 40, 25, 'YellowCatWeb/adidas-duramo-navy', 0.3,100,5),
+(2, 'AD-DURSL-BLK-41', 1, 2, 1650000.00, NULL, 30, 18, 'YellowCatWeb/adidas-duramo-black', 0.4,100,5),
 
 -- Under Armour Curry Flow 9
-(3, 'UA-CUR9-BLU-42', 4, 3, 3500000.00, 3150000.00, 30, 12, 'YellowCatWeb/ejzjv3cxkyyjtokkgh1t', 0.2),
-(3, 'UA-CUR9-GRY-44', 5, 5, 3500000.00, NULL, 22, 5, 'YellowCatWeb/ua-curry-grey', 0.3),
-(3, 'UA-CUR9-RED-43', 6, 4, 3550000.00, NULL, 25, 8, 'YellowCatWeb/bqttubnjqa5qzb64kjnm', 0.4),
-(3, 'UA-CUR9-BLK-41', 1, 2, 3500000.00, NULL, 20, 10, 'YellowCatWeb/ua-curry-black', 0.1),
+(3, 'UA-CUR9-BLU-42', 4, 3, 3500000.00, 3150000.00, 30, 12, 'YellowCatWeb/ejzjv3cxkyyjtokkgh1t', 0.2,100,5),
+(3, 'UA-CUR9-GRY-44', 5, 5, 3500000.00, NULL, 22, 5, 'YellowCatWeb/ua-curry-grey', 0.3,100,5),
+(3, 'UA-CUR9-RED-43', 6, 4, 3550000.00, NULL, 25, 8, 'YellowCatWeb/bqttubnjqa5qzb64kjnm', 0.4,100,5),
+(3, 'UA-CUR9-BLK-41', 1, 2, 3500000.00, NULL, 20, 10, 'YellowCatWeb/ua-curry-black', 0.1,100,5),
 
 -- Puma Suede Classic XXI
-(4, 'PU-SUED-BLK-40', 1, 1, 2200000.00, 1980000.00, 35, 22, 'YellowCatWeb/sx6bwsntnuwyfwx89tqt', 0.2),
-(4, 'PU-SUED-RED-41', 6, 2, 2200000.00, NULL, 30, 15, 'YellowCatWeb/lq1yqclrqebutga5pmrk', 0.3),
-(4, 'PU-SUED-GRY-42', 5, 3, 2200000.00, NULL, 28, 12, 'YellowCatWeb/puma-suede-grey', 0.2),
+(4, 'PU-SUED-BLK-40', 1, 1, 2200000.00, 1980000.00, 35, 22, 'YellowCatWeb/sx6bwsntnuwyfwx89tqt', 0.2,100,5),
+(4, 'PU-SUED-RED-41', 6, 2, 2200000.00, NULL, 30, 15, 'YellowCatWeb/lq1yqclrqebutga5pmrk', 0.3,100,5),
+(4, 'PU-SUED-GRY-42', 5, 3, 2200000.00, NULL, 28, 12, 'YellowCatWeb/puma-suede-grey', 0.2,100,5),
 
 -- Nike Air Zoom Pegasus 40
-(5, 'NK-PEG40-BLK-41', 1, 2, 3200000.00, 2880000.00, 50, 30, 'YellowCatWeb/byshsl4qboscrdnmuoix', 0.3),
-(5, 'NK-PEG40-WHT-42', 2, 3, 3200000.00, NULL, 55, 25, 'YellowCatWeb/acs7ki8v43lrjorsfnwb', 0.3),
-(5, 'NK-PEG40-GRY-43', 5, 4, 3200000.00, NULL, 40, 18, 'YellowCatWeb/nike-pegasus-grey', 0.1);
+(5, 'NK-PEG40-BLK-41', 1, 2, 3200000.00, 2880000.00, 50, 30, 'YellowCatWeb/byshsl4qboscrdnmuoix', 0.3,100,5),
+(5, 'NK-PEG40-WHT-42', 2, 3, 3200000.00, NULL, 55, 25, 'YellowCatWeb/acs7ki8v43lrjorsfnwb', 0.3,100,5),
+(5, 'NK-PEG40-GRY-43', 5, 4, 3200000.00, NULL, 40, 18, 'YellowCatWeb/nike-pegasus-grey', 0.1,100,5);
 
 -- 5. Dữ liệu cho bảng AppUsers
 INSERT INTO app_users (keycloak_id, email, full_name, phone_number, avatar_url)
-VALUES ('ab72419d-416b-4a75-8c49-f7ff012d01d9', 'nguyen.van.a@email.com', 'Nguyễn Văn A', '0901234567',
+VALUES ('ab72419d-416b-4a75-8c49-f7ff012d0424', 'nguyen.van.a@email.com', 'Nguyễn Văn A', '0901234567',
         'https://example.com/avatars/user1.jpg'),
        ('c56a4180-65aa-42ec-a945-5fd21dec0532', 'tran.thi.b@email.com', 'Trần Thị B', '0902345678',
         'https://example.com/avatars/user2.jpg'),
@@ -585,7 +598,7 @@ VALUES (1, 'NEWUSER10', 'Giảm giá 10% cho khách hàng mới', 'Chào mừng 
 -- 2. Dữ liệu cho bảng promotion_products
 -- Giả sử các product_variant_id có sẵn lần lượt là 1,2,3,4
 INSERT INTO promotion_products
-    (promotion_id, variant_id)
+(promotion_id, variant_id)
 VALUES
     -- NEWUSER10 áp dụng cho variant 1 và 2
     (1, 1),
@@ -609,3 +622,105 @@ VALUES
     (4, 3, 500000.00, NULL, NULL),
     -- SUMMER2024 cho đơn 1004 (tối thiểu 800K, 3 lần/người, tổng 5.000 lượt)
     (3, 4, 800000.00, 3, 5000);
+
+
+-- 1. Trigger function: xử lý sau khi INSERT
+CREATE
+    OR REPLACE FUNCTION trg_after_insert_order_item()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    -- 1.1 Cộng số lượng bán vào trường sold của variant
+    UPDATE product_variants
+    SET sold = sold + NEW.quantity
+    WHERE variant_id = NEW.variant_id;
+
+-- 1.2 Cộng số lượng bán vào trường purchases của product
+    UPDATE products
+    SET purchases = purchases + NEW.quantity
+    FROM product_variants pv
+    WHERE products.product_id = pv.product_id
+      AND pv.variant_id = NEW.variant_id;
+
+    RETURN NEW;
+END;
+$$
+    LANGUAGE plpgsql;
+
+-- 2. Tạo trigger AFTER INSERT trên order_items
+CREATE TRIGGER after_insert_order_item
+    AFTER INSERT
+    ON order_items
+    FOR EACH ROW
+EXECUTE FUNCTION trg_after_insert_order_item();
+
+
+-- 3. Trigger function: xử lý sau khi UPDATE (thay đổi quantity)
+CREATE
+    OR REPLACE FUNCTION trg_after_update_order_item()
+    RETURNS TRIGGER AS
+$$
+DECLARE
+    delta INT;
+BEGIN
+    -- Tính độ chênh giữa giá trị mới và cũ
+    delta
+        := NEW.quantity - OLD.quantity;
+
+    IF
+        delta <> 0 THEN
+        -- 3.1 Cập nhật sold của variant
+        UPDATE product_variants
+        SET sold = sold + delta
+        WHERE variant_id = NEW.variant_id;
+
+-- 3.2 Cập nhật purchases của product
+        UPDATE products
+        SET purchases = purchases + delta
+        FROM product_variants pv
+        WHERE products.product_id = pv.product_id
+          AND pv.variant_id = NEW.variant_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$
+    LANGUAGE plpgsql;
+
+-- 4. Tạo trigger AFTER UPDATE trên order_items
+CREATE TRIGGER after_update_order_item
+    AFTER UPDATE OF quantity, variant_id
+    ON order_items
+    FOR EACH ROW
+EXECUTE FUNCTION trg_after_update_order_item();
+
+
+-- 5. Trigger function: xử lý sau khi DELETE
+CREATE
+    OR REPLACE FUNCTION trg_after_delete_order_item()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    -- 5.1 Trừ số lượng đã xóa khỏi sold
+    UPDATE product_variants
+    SET sold = sold - OLD.quantity
+    WHERE variant_id = OLD.variant_id;
+
+-- 5.2 Trừ khỏi purchases của product
+    UPDATE products
+    SET purchases = purchases - OLD.quantity
+    FROM product_variants pv
+    WHERE products.product_id = pv.product_id
+      AND pv.variant_id = OLD.variant_id;
+
+    RETURN OLD;
+END;
+$$
+    LANGUAGE plpgsql;
+
+-- 6. Tạo trigger AFTER DELETE trên order_items
+CREATE TRIGGER after_delete_order_item
+    AFTER DELETE
+    ON order_items
+    FOR EACH ROW
+EXECUTE FUNCTION trg_after_delete_order_item();

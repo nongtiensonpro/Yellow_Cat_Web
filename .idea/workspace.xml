@@ -6,6 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="f81662f5-da82-4a75-9d40-0998afea6bd8" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/resources/db/migration/V1__Initial_setup.sql" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/db/migration/V1__Initial_setup.sql" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -157,6 +158,7 @@
       <workItem from="1751470673212" duration="4447000" />
       <workItem from="1751529014715" duration="3868000" />
       <workItem from="1751549246714" duration="5604000" />
+      <workItem from="1751613613217" duration="923000" />
     </task>
     <servers />
   </component>
