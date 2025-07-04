@@ -1166,6 +1166,7 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import type { ReadonlyURLSearchParams } from 'next/navigation';
 import { EyeIcon } from '@heroicons/react/24/outline';
 
 interface OrderDTO {
@@ -1203,7 +1204,7 @@ const TABS = [
 export default function OrderListPage() {
     const { data: session } = useSession();
     const searchParams = useSearchParams();
-    const newOrderCode = searchParams.get('newOrderCode');
+    const newOrderCode = searchParams?.get('newOrderCode') || null;
 
     const [orders, setOrders] = useState<OrderDTO[]>([]);
     const [status, setStatus] = useState('');

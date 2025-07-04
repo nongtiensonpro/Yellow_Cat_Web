@@ -1,45 +1,33 @@
-// "use client";
-//
-// import type { ThemeProviderProps } from "next-themes";
-//
-// import * as React from "react";
-// import { HeroUIProvider } from "@heroui/system";
-// import { useRouter } from "next/navigation";
-// import { ThemeProvider as NextThemesProvider } from "next-themes";
-// import { SessionProvider } from "next-auth/react";
-//
-// export interface ProvidersProps {
-//   children: React.ReactNode;
-//   themeProps?: ThemeProviderProps;
-// }
-//
-// declare module "@react-types/shared" {
-//   interface RouterConfig {
-//     routerOptions: NonNullable<
-//       Parameters<ReturnType<typeof useRouter>["push"]>[1]
-//     >;
-//   }
-// }
-//
-// export default function Providers({ children, themeProps }: ProvidersProps) {
-//   const router = useRouter();
-//
-//   return (
-//     <SessionProvider>
-//       <HeroUIProvider navigate={router.push}>
-//         <NextThemesProvider {...themeProps}>{children}</NextThemesProvider>
-//       </HeroUIProvider>
-//     </SessionProvider>
-//   );
-// }
-//
-
-
-// app/providers.tsx
 "use client";
 
 import { SessionProvider } from "next-auth/react";
+import { HeroUIProvider, ToastProvider } from "@heroui/react";
+import { useRouter } from "next/navigation";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
+
+declare module "@react-types/shared" {
+  interface RouterConfig {
+    routerOptions: NonNullable<
+      Parameters<ReturnType<typeof useRouter>["push"]>[1]
+    >;
+  }
+}
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  return <SessionProvider>{children}</SessionProvider>;
+  const router = useRouter();
+
+  return (
+    <SessionProvider>
+      <HeroUIProvider navigate={router.push}>
+        <NextThemesProvider attribute="class" defaultTheme="system">
+          {children}
+          <ToastProvider 
+            placement="top-right"
+            maxVisibleToasts={5}
+            disableAnimation={false}
+          />
+        </NextThemesProvider>
+      </HeroUIProvider>
+    </SessionProvider>
+  );
 }
