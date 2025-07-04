@@ -60,10 +60,11 @@ export default function EditVoucherPage() {
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
     ) => {
-        const { name, type, value } = e.target;
+        const { name, type, value,  } = e.target;
+        let checked: any;
         setForm(prev => ({
             ...prev,
-            [name]: type === 'checkbox' && e.target instanceof HTMLInputElement ? e.target.checked : value,
+            [name]: type === 'checkbox' ? checked : value,
         }));
         setErrors(prev => ({ ...prev, [name]: '' }));
     };

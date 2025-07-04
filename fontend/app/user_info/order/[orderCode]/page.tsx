@@ -10,14 +10,7 @@ import {
     CardHeader,
     Button,
     Chip,
-    Table,
-    TableHeader,
-    TableColumn,
-    TableBody,
-    TableRow,
-    TableCell,
     Divider,
-    Avatar,
     Image
 } from "@heroui/react";
 import { 
@@ -91,19 +84,33 @@ export default function OrderDetailPage() {
     const { data: session, status } = useSession();
     const params = useParams();
     const router = useRouter();
-    const orderCode = params?.orderCode as string;
-    
+
     const [orderDetail, setOrderDetail] = useState<OrderDetailWithItems | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Kiểm tra orderCode sớm
+    const orderCode = params?.orderCode as string | undefined;
+
+    // Xử lý redirect nếu không có orderCode
+    useEffect(() => {
+        if (params && !orderCode) {
+            router.push("http://localhost:3000/user_info/order");
+        }
+    }, [params, orderCode, router]);
+
     // Hàm lấy chi tiết đơn hàng
     const fetchOrderDetail = async (orderCode: string): Promise<OrderDetailWithItems> => {
+        // Kiểm tra accessToken trước khi gọi API
+        if (!session?.accessToken) {
+            throw new Error('Bạn cần đăng nhập để xem chi tiết đơn hàng');
+        }
+
         const response = await fetch(`http://localhost:8080/api/orders/public/detail/${orderCode}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session?.accessToken}`,
+                'Authorization': `Bearer ${session.accessToken}`,
             },
         });
 
@@ -137,18 +144,21 @@ export default function OrderDetailPage() {
     // Lấy chi tiết đơn hàng khi component mount
     useEffect(() => {
         const getOrderDetail = async () => {
+            // Kiểm tra trạng thái loading
             if (status === 'loading') {
                 return;
             }
 
-            if (status === 'unauthenticated' || !session) {
-                setError("Người dùng chưa đăng nhập");
+            // Kiểm tra xem có orderCode không
+            if (!orderCode) {
+                // Không cần set error vì đã xử lý redirect ở useEffect trước
                 setLoading(false);
                 return;
             }
 
-            if (!orderCode) {
-                setError("Không tìm thấy mã đơn hàng");
+            // Kiểm tra đăng nhập
+            if (status === 'unauthenticated' || !session) {
+                setError("Người dùng chưa đăng nhập");
                 setLoading(false);
                 return;
             }
@@ -165,7 +175,7 @@ export default function OrderDetailPage() {
         };
 
         getOrderDetail();
-    }, [session, status, orderCode]);
+    }, [session, status, orderCode, router]);
 
     // Hàm format tiền tệ
     const formatCurrency = (amount: number) => {
@@ -203,7 +213,8 @@ export default function OrderDetailPage() {
         router.back();
     };
 
-    if (status === 'loading' || loading) {
+    // Nếu không có orderCode và chưa redirect, hiển thị loading
+    if (!orderCode || status === 'loading' || loading) {
         return <LoadingSpinner />;
     }
 
