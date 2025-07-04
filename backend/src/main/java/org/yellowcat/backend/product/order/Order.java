@@ -15,13 +15,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Table(name = "Orders") // Tên bảng vẫn là "Orders"
+@Table(name = "orders")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Order { // Tên class là Order (số ít)
+public class Order {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,7 +32,7 @@ public class Order { // Tên class là Order (số ít)
     private String orderCode;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "app_user_id") // Allow NULL as per ON DELETE SET NULL
+    @JoinColumn(name = "app_user_id")
     private AppUser user;
 
     @ManyToOne(fetch = FetchType.LAZY)

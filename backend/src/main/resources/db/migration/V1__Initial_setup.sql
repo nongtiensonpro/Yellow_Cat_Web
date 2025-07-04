@@ -102,22 +102,22 @@ CREATE TABLE products
 -- Bảng Biến thể sản phẩm
 CREATE TABLE product_variants
 (
-    variant_id        SERIAL PRIMARY KEY,
-    product_id        INT            NOT NULL,
-    sku               VARCHAR(50)    NOT NULL,
-    color_id          INT,
-    size_id           INT,
-    price             NUMERIC(12, 2) NOT NULL,
-    sale_price        NUMERIC(12, 2),
-    quantity_in_stock INT            NOT NULL DEFAULT 0,
-    quantity_in_stock_online  INT            NOT NULL DEFAULT 0,
-    sold              INT            NOT NULL DEFAULT 0,
-    sold_online       INT            NOT NULL DEFAULT 0,
-    image_url         VARCHAR(255)   NOT NULL,
-    weight            FLOAT,
-    created_at        TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
-    updated_at        TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
-    created_by        INT,
+    variant_id               SERIAL PRIMARY KEY,
+    product_id               INT            NOT NULL,
+    sku                      VARCHAR(50)    NOT NULL,
+    color_id                 INT,
+    size_id                  INT,
+    price                    NUMERIC(12, 2) NOT NULL,
+    sale_price               NUMERIC(12, 2),
+    quantity_in_stock        INT            NOT NULL DEFAULT 0,
+    quantity_in_stock_online INT            NOT NULL DEFAULT 0,
+    sold                     INT            NOT NULL DEFAULT 0,
+    sold_online              INT            NOT NULL DEFAULT 0,
+    image_url                VARCHAR(255)   NOT NULL,
+    weight                   FLOAT,
+    created_at               TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
+    updated_at               TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
+    created_by               INT,
     UNIQUE (product_id, color_id, size_id),
     FOREIGN KEY (product_id) REFERENCES products (product_id) ON DELETE CASCADE,
     FOREIGN KEY (color_id) REFERENCES colors (color_id) ON DELETE SET NULL,
@@ -169,6 +169,7 @@ CREATE TABLE orders
     discount_amount     NUMERIC(12, 2)          DEFAULT 0,
     final_amount        NUMERIC(14, 2) NOT NULL,
     order_status        VARCHAR(50)    NOT NULL DEFAULT 'Pending',
+    payment_status      VARCHAR(20) ,
     shipping_method_id  INT,
     customer_notes      TEXT,
     is_synced_to_ghtk   BOOLEAN                 DEFAULT FALSE, -- Ghi nhận đơn đã gửi lên GHTK chưa
@@ -237,9 +238,10 @@ CREATE TABLE shipments
     FOREIGN KEY (shipping_method_id) REFERENCES shipping_methods (shipping_method_id)
 );
 
-CREATE TABLE order_timeline_images (
-    id SERIAL PRIMARY KEY,
-    image_url TEXT,
+CREATE TABLE order_timeline_images
+(
+    id          SERIAL PRIMARY KEY,
+    image_url   TEXT,
     timeline_id INT,
     FOREIGN KEY (timeline_id) REFERENCES order_timelines (id)
 );
@@ -452,36 +454,36 @@ VALUES ('Nike Revolution 6 Nam',
 
 -- 4. Dữ liệu cho bảng ProductVariants
 INSERT INTO product_variants (product_id, sku, color_id, size_id, price, sale_price, quantity_in_stock, sold, image_url,
-                              weight,quantity_in_stock_online,sold_online)
+                              weight, quantity_in_stock_online, sold_online)
 VALUES
 -- Nike Revolution 6
 
-(1, 'NK-REV6-BLK-40', 3, 1, 1800000.00, 1620000.00, 50, 25, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.1,100,5),
-(1, 'NK-REV6-BLK-41', 1, 1, 1800000.00, 1620000.00, 45, 30, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.2,100,5),
-(1, 'NK-REV6-WHT-40', 2, 1, 1800000.00, NULL, 35, 15, 'YellowCatWeb/nike-rev6-white', 0.3,100,5),
-(1, 'NK-REV6-WHT-42', 2, 3, 1800000.00, NULL, 40, 20, 'YellowCatWeb/nike-rev6-white', 0.4,100,5),
+(1, 'NK-REV6-BLK-40', 3, 1, 1800000.00, 1620000.00, 50, 25, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.1, 100, 5),
+(1, 'NK-REV6-BLK-41', 1, 1, 1800000.00, 1620000.00, 45, 30, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.2, 100, 5),
+(1, 'NK-REV6-WHT-40', 2, 1, 1800000.00, NULL, 35, 15, 'YellowCatWeb/nike-rev6-white', 0.3, 100, 5),
+(1, 'NK-REV6-WHT-42', 2, 3, 1800000.00, NULL, 40, 20, 'YellowCatWeb/nike-rev6-white', 0.4, 100, 5),
 
 -- Adidas Duramo SL
-(2, 'AD-DURSL-WHT-41', 2, 2, 1650000.00, 1485000.00, 55, 35, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 0.1,100,5),
-(2, 'AD-DURSL-WHT-42', 2, 3, 1650000.00, 1485000.00, 65, 40, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 0.2,100,5),
-(2, 'AD-DURSL-NVY-43', 3, 4, 1650000.00, NULL, 40, 25, 'YellowCatWeb/adidas-duramo-navy', 0.3,100,5),
-(2, 'AD-DURSL-BLK-41', 1, 2, 1650000.00, NULL, 30, 18, 'YellowCatWeb/adidas-duramo-black', 0.4,100,5),
+(2, 'AD-DURSL-WHT-41', 2, 2, 1650000.00, 1485000.00, 55, 35, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 0.1, 100, 5),
+(2, 'AD-DURSL-WHT-42', 2, 3, 1650000.00, 1485000.00, 65, 40, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 0.2, 100, 5),
+(2, 'AD-DURSL-NVY-43', 3, 4, 1650000.00, NULL, 40, 25, 'YellowCatWeb/adidas-duramo-navy', 0.3, 100, 5),
+(2, 'AD-DURSL-BLK-41', 1, 2, 1650000.00, NULL, 30, 18, 'YellowCatWeb/adidas-duramo-black', 0.4, 100, 5),
 
 -- Under Armour Curry Flow 9
-(3, 'UA-CUR9-BLU-42', 4, 3, 3500000.00, 3150000.00, 30, 12, 'YellowCatWeb/ejzjv3cxkyyjtokkgh1t', 0.2,100,5),
-(3, 'UA-CUR9-GRY-44', 5, 5, 3500000.00, NULL, 22, 5, 'YellowCatWeb/ua-curry-grey', 0.3,100,5),
-(3, 'UA-CUR9-RED-43', 6, 4, 3550000.00, NULL, 25, 8, 'YellowCatWeb/bqttubnjqa5qzb64kjnm', 0.4,100,5),
-(3, 'UA-CUR9-BLK-41', 1, 2, 3500000.00, NULL, 20, 10, 'YellowCatWeb/ua-curry-black', 0.1,100,5),
+(3, 'UA-CUR9-BLU-42', 4, 3, 3500000.00, 3150000.00, 30, 12, 'YellowCatWeb/ejzjv3cxkyyjtokkgh1t', 0.2, 100, 5),
+(3, 'UA-CUR9-GRY-44', 5, 5, 3500000.00, NULL, 22, 5, 'YellowCatWeb/ua-curry-grey', 0.3, 100, 5),
+(3, 'UA-CUR9-RED-43', 6, 4, 3550000.00, NULL, 25, 8, 'YellowCatWeb/bqttubnjqa5qzb64kjnm', 0.4, 100, 5),
+(3, 'UA-CUR9-BLK-41', 1, 2, 3500000.00, NULL, 20, 10, 'YellowCatWeb/ua-curry-black', 0.1, 100, 5),
 
 -- Puma Suede Classic XXI
-(4, 'PU-SUED-BLK-40', 1, 1, 2200000.00, 1980000.00, 35, 22, 'YellowCatWeb/sx6bwsntnuwyfwx89tqt', 0.2,100,5),
-(4, 'PU-SUED-RED-41', 6, 2, 2200000.00, NULL, 30, 15, 'YellowCatWeb/lq1yqclrqebutga5pmrk', 0.3,100,5),
-(4, 'PU-SUED-GRY-42', 5, 3, 2200000.00, NULL, 28, 12, 'YellowCatWeb/puma-suede-grey', 0.2,100,5),
+(4, 'PU-SUED-BLK-40', 1, 1, 2200000.00, 1980000.00, 35, 22, 'YellowCatWeb/sx6bwsntnuwyfwx89tqt', 0.2, 100, 5),
+(4, 'PU-SUED-RED-41', 6, 2, 2200000.00, NULL, 30, 15, 'YellowCatWeb/lq1yqclrqebutga5pmrk', 0.3, 100, 5),
+(4, 'PU-SUED-GRY-42', 5, 3, 2200000.00, NULL, 28, 12, 'YellowCatWeb/puma-suede-grey', 0.2, 100, 5),
 
 -- Nike Air Zoom Pegasus 40
-(5, 'NK-PEG40-BLK-41', 1, 2, 3200000.00, 2880000.00, 50, 30, 'YellowCatWeb/byshsl4qboscrdnmuoix', 0.3,100,5),
-(5, 'NK-PEG40-WHT-42', 2, 3, 3200000.00, NULL, 55, 25, 'YellowCatWeb/acs7ki8v43lrjorsfnwb', 0.3,100,5),
-(5, 'NK-PEG40-GRY-43', 5, 4, 3200000.00, NULL, 40, 18, 'YellowCatWeb/nike-pegasus-grey', 0.1,100,5);
+(5, 'NK-PEG40-BLK-41', 1, 2, 3200000.00, 2880000.00, 50, 30, 'YellowCatWeb/byshsl4qboscrdnmuoix', 0.3, 100, 5),
+(5, 'NK-PEG40-WHT-42', 2, 3, 3200000.00, NULL, 55, 25, 'YellowCatWeb/acs7ki8v43lrjorsfnwb', 0.3, 100, 5),
+(5, 'NK-PEG40-GRY-43', 5, 4, 3200000.00, NULL, 40, 18, 'YellowCatWeb/nike-pegasus-grey', 0.1, 100, 5);
 
 -- 5. Dữ liệu cho bảng AppUsers
 INSERT INTO app_users (keycloak_id, email, full_name, phone_number, avatar_url)
@@ -598,7 +600,7 @@ VALUES (1, 'NEWUSER10', 'Giảm giá 10% cho khách hàng mới', 'Chào mừng 
 -- 2. Dữ liệu cho bảng promotion_products
 -- Giả sử các product_variant_id có sẵn lần lượt là 1,2,3,4
 INSERT INTO promotion_products
-(promotion_id, variant_id)
+    (promotion_id, variant_id)
 VALUES
     -- NEWUSER10 áp dụng cho variant 1 và 2
     (1, 1),
@@ -729,38 +731,54 @@ EXECUTE FUNCTION trg_after_delete_order_item();
 -- Thực hiện: 2025-07-03
 
 -- Thêm cột sale_price nếu chưa có
-DO $$ 
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                   WHERE table_name = 'product_variants' AND column_name = 'sale_price') THEN
-        ALTER TABLE product_variants ADD COLUMN sale_price NUMERIC(12, 2);
-    END IF;
-END $$;
+DO
+$$
+    BEGIN
+        IF NOT EXISTS (SELECT 1
+                       FROM information_schema.columns
+                       WHERE table_name = 'product_variants'
+                         AND column_name = 'sale_price') THEN
+            ALTER TABLE product_variants
+                ADD COLUMN sale_price NUMERIC(12, 2);
+        END IF;
+    END
+$$;
 
 -- Thêm cột quantity_in_stock_online nếu chưa có  
-DO $$ 
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                   WHERE table_name = 'product_variants' AND column_name = 'quantity_in_stock_online') THEN
-        ALTER TABLE product_variants ADD COLUMN quantity_in_stock_online INT NOT NULL DEFAULT 0;
-    END IF;
-END $$;
+DO
+$$
+    BEGIN
+        IF NOT EXISTS (SELECT 1
+                       FROM information_schema.columns
+                       WHERE table_name = 'product_variants'
+                         AND column_name = 'quantity_in_stock_online') THEN
+            ALTER TABLE product_variants
+                ADD COLUMN quantity_in_stock_online INT NOT NULL DEFAULT 0;
+        END IF;
+    END
+$$;
 
 -- Thêm cột sold_online nếu chưa có
-DO $$ 
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                   WHERE table_name = 'product_variants' AND column_name = 'sold_online') THEN
-        ALTER TABLE product_variants ADD COLUMN sold_online INT NOT NULL DEFAULT 0;
-    END IF;
-END $$;
+DO
+$$
+    BEGIN
+        IF NOT EXISTS (SELECT 1
+                       FROM information_schema.columns
+                       WHERE table_name = 'product_variants'
+                         AND column_name = 'sold_online') THEN
+            ALTER TABLE product_variants
+                ADD COLUMN sold_online INT NOT NULL DEFAULT 0;
+        END IF;
+    END
+$$;
 
 -- Cập nhật quantity_in_stock_online = quantity_in_stock cho các record hiện có
-UPDATE product_variants 
-SET quantity_in_stock_online = quantity_in_stock 
-WHERE quantity_in_stock_online = 0 OR quantity_in_stock_online IS NULL;
+UPDATE product_variants
+SET quantity_in_stock_online = quantity_in_stock
+WHERE quantity_in_stock_online = 0
+   OR quantity_in_stock_online IS NULL;
 
 -- Đảm bảo sold_online có giá trị mặc định
-UPDATE product_variants 
-SET sold_online = 0 
+UPDATE product_variants
+SET sold_online = 0
 WHERE sold_online IS NULL;

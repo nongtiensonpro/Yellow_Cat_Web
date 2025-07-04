@@ -45,8 +45,6 @@ public class OrderService {
     }
 
 
-
-
     public Order findOrderById(Integer orderId) {
         return orderRepository.findById(orderId).orElse(null);
     }
@@ -239,7 +237,7 @@ public class OrderService {
         orderRepository.delete(order);
     }
 
-    OrderResponse findOrderByOrderCode (String orderCode) {
+    OrderResponse findOrderByOrderCode(String orderCode) {
         return orderRepository.findOrderByOrderCodeOld(orderCode);
     }
 
@@ -481,7 +479,6 @@ public class OrderService {
         // Trả về response
         return orderMapper.toOrderUpdateResponse(order);
     }
-
 
 
     @Transactional

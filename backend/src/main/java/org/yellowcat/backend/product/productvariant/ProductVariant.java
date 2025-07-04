@@ -82,6 +82,10 @@ public class ProductVariant {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (quantityInStock == null) quantityInStock = 0;
+        if (quantityInStockOnline == null) quantityInStockOnline = 0;
+        if (sold == null) sold = 0;
+        if (soldOnline == null) soldOnline = 0;
     }
 
     @PreUpdate
