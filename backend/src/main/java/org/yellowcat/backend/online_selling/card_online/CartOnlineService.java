@@ -162,15 +162,21 @@ public class CartOnlineService {
         Cart cart = cartRepository.findByAppUser(user)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy giỏ hàng"));
 
-        List<ItemResponseDTO> itemDTOs = cart.getCartItems().stream().map(item ->
-                ItemResponseDTO.builder()
-                        .cartItemId(item.getCartItemId())
-                        .variantId(item.getVariant().getVariantId())
-                        .productName(item.getVariant().getProduct().getProductName())
-                        .quantity(item.getQuantity())
-                        .price(item.getVariant().getPrice())
-                        .build()
-        ).toList();
+        List<ItemResponseDTO> itemDTOs = cart.getCartItems().stream().map(item -> {
+            String productName = item.getVariant().getProduct().getProductName();
+            String colorName = item.getVariant().getColor() != null ? item.getVariant().getColor().getName() : "";
+            String sizeName = item.getVariant().getSize() != null ? item.getVariant().getSize().getName() : "";
+            return ItemResponseDTO.builder()
+                    .cartItemId(item.getCartItemId())
+                    .variantId(item.getVariant().getVariantId())
+                    .productName(productName)
+                    .quantity(item.getQuantity())
+                    .price(item.getVariant().getPrice())
+                    .colorName(colorName)
+                    .sizeName(sizeName)
+                    .name(productName + " - " + colorName + " - " + sizeName)
+                    .build();
+        }).toList();
 
         return CartResponseDTO.builder()
                 .cartId(cart.getCartId())

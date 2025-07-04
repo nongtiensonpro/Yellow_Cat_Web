@@ -598,7 +598,7 @@ VALUES (1, 'NEWUSER10', 'Giảm giá 10% cho khách hàng mới', 'Chào mừng 
 -- 2. Dữ liệu cho bảng promotion_products
 -- Giả sử các product_variant_id có sẵn lần lượt là 1,2,3,4
 INSERT INTO promotion_products
-    (promotion_id, variant_id)
+(promotion_id, variant_id)
 VALUES
     -- NEWUSER10 áp dụng cho variant 1 và 2
     (1, 1),
