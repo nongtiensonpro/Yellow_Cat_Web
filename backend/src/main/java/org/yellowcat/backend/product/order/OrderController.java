@@ -297,7 +297,6 @@ public class OrderController {
 
     // Endpoint để tìm kiếm đơn hàng theo số điện thoại hoặc email (linh hoạt)
     @GetMapping("/search")
-    @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
     public ResponseEntity<?> getOrdersByPhoneNumberOrEmail(@RequestParam String searchValue) {
         System.out.println("=== GET /api/orders/search called with searchValue: " + searchValue + " ===");
         try {
@@ -347,16 +346,25 @@ public class OrderController {
                 return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng với mã: ", orderCode);
             }
             
-            // Kiểm tra xem user hiện tại có quyền xem đơn hàng này không (optional - có thể bỏ qua nếu muốn public)
+            // Kiểm tra xem user hiện tại có quyền xem đơn hàng này không
             if (jwt != null) {
-                String userEmail = jwt.getClaimAsString("email");
-                String userPhone = jwt.getClaimAsString("phone_number");
-                
-                // Kiểm tra xem order có thuộc về user hiện tại không
-                boolean hasAccess = (orderDetail.getEmail() != null && orderDetail.getEmail().equals(userEmail)) ||
-                                  (orderDetail.getPhoneNumber() != null && orderDetail.getPhoneNumber().equals(userPhone));
-                
-                if (!hasAccess) {
+                try {
+                    // Lấy keycloakId từ token (subject)
+                    UUID keycloakId = UUID.fromString(jwt.getSubject());
+
+                    // Truy vấn AppUser để lấy số điện thoại
+                    String userPhone = appUserService.findByKeycloakId(keycloakId)
+                            .map(AppUser::getPhoneNumber)
+                            .orElse(null);
+
+                    // Chỉ kiểm tra theo số điện thoại, nới lỏng điều kiện truy cập
+                    boolean hasAccess = (orderDetail.getPhoneNumber() != null && orderDetail.getPhoneNumber().equals(userPhone));
+
+                    if (!hasAccess) {
+                        return ResponseEntityBuilder.error(HttpStatus.FORBIDDEN, "Bạn không có quyền xem đơn hàng này", "");
+                    }
+                } catch (IllegalArgumentException e) {
+                    // Trường hợp subject không phải UUID hợp lệ / user không tồn tại → cấm truy cập
                     return ResponseEntityBuilder.error(HttpStatus.FORBIDDEN, "Bạn không có quyền xem đơn hàng này", "");
                 }
             }

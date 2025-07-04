@@ -169,6 +169,7 @@ CREATE TABLE orders
     discount_amount     NUMERIC(12, 2)          DEFAULT 0,
     final_amount        NUMERIC(14, 2) NOT NULL,
     order_status        VARCHAR(50)    NOT NULL DEFAULT 'Pending',
+    payment_status VARCHAR(50) NOT NULL DEFAULT 'UNPAID',
     shipping_method_id  INT,
     customer_notes      TEXT,
     is_synced_to_ghtk   BOOLEAN                 DEFAULT FALSE, -- Ghi nhận đơn đã gửi lên GHTK chưa

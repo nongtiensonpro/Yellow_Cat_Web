@@ -24,6 +24,7 @@ import org.yellowcat.backend.product.payment.Payment;
 import org.yellowcat.backend.product.payment.PaymentRepository;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserService;
+import org.yellowcat.backend.online_selling.PaymentStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -216,6 +217,7 @@ public class OrderService {
                 .shippingFee(BigDecimal.ZERO)
                 .discountAmount(BigDecimal.ZERO)
                 .finalAmount(BigDecimal.ZERO)
+                .paymentStatus(PaymentStatus.UNPAID)
                 .build();
 
         // Save the order to the repository
