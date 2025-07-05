@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -13,7 +12,7 @@ type ProductVariant = {
     productName: string;
 };
 
-type ProductVariantDetail = {
+type ProductVariantDetail ={
     variantId: number;
     productName: string;
     brandName: string;
