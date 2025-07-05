@@ -19,6 +19,7 @@ public class ProductListItemDTO {
     private String brandName;
     private String logoPublicId;
     private BigDecimal minPrice;
+    private BigDecimal minSalePrice; // ⬅️ Thêm dòng này
     private Long totalStock;
     private Long totalStockOnline;
     private String thumbnail;
