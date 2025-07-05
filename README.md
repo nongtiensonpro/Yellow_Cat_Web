@@ -1,4 +1,4 @@
-[![Dependabot Updates](https://github.com/nongtiensonpro/Yellow_Cat_Web/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/nongtiensonpro/Yellow_Cat_Web/actions/workflows/dependabot/dependabot-updates) [![Build Check (FE & BE)](https://github.com/nongtiensonpro/Yellow_Cat_Web/actions/workflows/build-check.yml/badge.svg)](https://github.com/nongtiensonpro/Yellow_Cat_Web/actions/workflows/build-check.yml)
+[![Dependabot Updates](https://github.com/nongtiensonpro/Yellow_Cat_Web/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/nongtiensonpro/Yellow_Cat_Web/actions/workflows/dependabot/dependabot-updates) [![Build Check (FE & BE)](https://github.com/nongtiensonpro/Yellow_Cat_Web/actions/workflows/build-check.yml/badge.svg)](https://github.com/nongtiensonpro/Yellow_Cat_Web/actions/workflows/build-check.yml)[![CodeQL Advanced](https://github.com/nongtiensonpro/Yellow_Cat_Web/actions/workflows/codeql.yml/badge.svg)](https://github.com/nongtiensonpro/Yellow_Cat_Web/actions/workflows/codeql.yml)
 
 
 # Sneak_Peak
