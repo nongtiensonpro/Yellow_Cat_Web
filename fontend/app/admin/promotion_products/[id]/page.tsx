@@ -298,17 +298,7 @@ export default function EditPromotionProductPage() {
                             )}
                         </div>
 
-                        <div>
-                            <label className="block mb-1 font-medium">Mô tả</label>
-                            <textarea
-                                name="description"
-                                value={form.description}
-                                onChange={handleChange}
-                                rows={3}
-                                className="w-full border px-3 py-2 rounded"
-                                placeholder="Nhập mô tả chi tiết về đợt giảm giá..."
-                            />
-                        </div>
+
 
                         <div>
                             <label className="block mb-1 font-medium">
@@ -405,7 +395,7 @@ export default function EditPromotionProductPage() {
                         {/* Search input */}
                         <input
                             type="text"
-                            placeholder="🔍 Tìm kiếm tên sản phẩm..."
+                            placeholder="Tìm kiếm tên sản phẩm..."
                             value={searchTerm}
                             onChange={(e) => {
                                 setSearchTerm(e.target.value)
