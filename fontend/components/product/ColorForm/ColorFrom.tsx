@@ -5,6 +5,16 @@ import { Input } from "@heroui/input";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 
+// Extend Session type để có accessToken
+interface ExtendedSession {
+    accessToken: string;
+    user?: {
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+    };
+}
+
 export interface Color {
     name: string;
     description: string;
@@ -12,35 +22,31 @@ export interface Color {
 
 interface ColorsFormProps {
     onSuccess?: () => void;
-    onCancel?: () => void;
 }
 
-const createColor = async (data: Color, token: string | undefined) => {
-    if (!token) throw new Error("Yêu cầu chưa được xác thực. Vui lòng đăng nhập lại.");
-    try {
-        const response = await fetch("http://localhost:8080/api/colors", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify(data)
-        });
-        if (!response.ok) {
-            let errorBody = "Lỗi không xác định từ máy chủ.";
-            try {
-                const errorData = await response.json();
-                errorBody = errorData.message || errorData.error || JSON.stringify(errorData);
-            } catch (e) { errorBody = response.statusText; }
-            throw new Error(`Không thể tạo Màu: ${errorBody} (Status: ${response.status})`);
+const createColor = async (data: Color, token: string) => {
+    const response = await fetch("http://localhost:8080/api/colors", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+    });
+    if (!response.ok) {
+        let errorBody = "Lỗi không xác định từ máy chủ.";
+        try {
+            const errorData = await response.json();
+            errorBody = errorData.message || errorData.error || JSON.stringify(errorData);
+        } catch { 
+            errorBody = response.statusText; 
         }
-        return await response.json();
-    } catch (error) {
-        throw error instanceof Error ? error : new Error("Đã xảy ra lỗi mạng hoặc hệ thống.");
+        throw new Error(`Không thể tạo Màu: ${errorBody} (Status: ${response.status})`);
     }
+    return await response.json();
 };
 
-export default function ColorsForm({ onSuccess, onCancel }: ColorsFormProps) {
+export default function ColorsForm({ onSuccess }: ColorsFormProps) {
     const { data: session, status } = useSession();
     const [formError, setFormError] = useState<string | null>(null);
     const [name, setName] = useState("");
@@ -63,13 +69,17 @@ export default function ColorsForm({ onSuccess, onCancel }: ColorsFormProps) {
         event.preventDefault();
         setFormError(null);
         if (!validateForm() || isSubmitting) return;
-        if (status !== "authenticated") {
+        if (status !== "authenticated" || !session) {
             setFormError("Bạn cần đăng nhập để thực hiện hành động này.");
             return;
         }
         setIsSubmitting(true);
         try {
-            const token = session?.accessToken;
+            const extendedSession = session as unknown as ExtendedSession;
+            const token = extendedSession.accessToken;
+            if (!token) {
+                throw new Error("Phiên đăng nhập hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.");
+            }
             await createColor(
                 { name: name.trim(), description: description.trim() },
                 token
@@ -83,7 +93,7 @@ export default function ColorsForm({ onSuccess, onCancel }: ColorsFormProps) {
             setDescription("");
             setFormError(null);
             if (onSuccess) onSuccess();
-        } catch (err: any) {
+        } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : "Không thể tạo Màu. Đã xảy ra lỗi không mong muốn.";
             setFormError(errorMessage);
             addToast({

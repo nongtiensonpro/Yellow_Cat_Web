@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react";
-import { Input, Spinner, Chip, Button } from "@heroui/react";
+import { Input, Spinner, Button } from "@heroui/react";
 import { OptimizedProductItem } from "./OptimizedProductItem";
 
 
@@ -11,8 +11,8 @@ interface BaseEntity {
     description?: string;
 }
 
-interface ColorInfo extends BaseEntity {}
-interface SizeInfo extends BaseEntity {}
+type ColorInfo = BaseEntity;
+type SizeInfo = BaseEntity;
 
 interface PaginatedResponse<T> {
     content: T[];
@@ -123,9 +123,10 @@ export default function ProductListSaleOffice() {
                 ]);
                 // Sau đó tải danh sách sản phẩm chính
                 await fetchProductsManagement();
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error("Error during initial data fetch:", err);
-                setError(err.message || "Lỗi tải dữ liệu");
+                const errorMessage = err instanceof Error ? err.message : "Lỗi tải dữ liệu";
+                setError(errorMessage);
             } finally {
                 setLoading(false);
             }
@@ -164,8 +165,9 @@ export default function ProductListSaleOffice() {
             } else {
                 throw new Error(apiResponse.message || 'Failed to fetch products');
             }
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Lỗi tải danh sách sản phẩm';
+            setError(errorMessage);
         }
     };
 

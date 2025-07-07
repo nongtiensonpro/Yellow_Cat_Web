@@ -1,18 +1,22 @@
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import axios from 'axios';
+import { Session } from 'next-auth';
+import axios, { AxiosError } from 'axios';
 import HelpTooltip from '../../../../components/promotion/HelpTooltip';
+
+interface CustomSession extends Session {
+    accessToken?: string;
+}
 
 type ProductVariant = {
     variantId: number;
     productName: string;
 };
 
-type ProductVariantDetail ={
+type ProductVariantDetail = {
     variantId: number;
     productName: string;
     brandName: string;
@@ -25,7 +29,7 @@ type ProductVariantDetail ={
 
 export default function CreatePromotionPage() {
     const router = useRouter();
-    const { data: session } = useSession();
+    const { data: session } = useSession() as { data: CustomSession | null };
     const [loading, setLoading] = useState(false);
 
     const [form, setForm] = useState({
@@ -96,8 +100,10 @@ export default function CreatePromotionPage() {
             }
         };
 
-        fetchDetails();
-    }, [selectedVariants]);
+        if (session?.accessToken) {
+            fetchDetails();
+        }
+    }, [selectedVariants, session?.accessToken]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -157,8 +163,11 @@ export default function CreatePromotionPage() {
             );
             alert('✅ Tạo đợt giảm giá thành công!');
             router.push('/admin/promotion_products');
-        } catch (err: any) {
-            alert('❌ Lỗi: ' + (err?.response?.data?.message || err.message));
+        } catch (error) {
+            const errorMessage = error instanceof AxiosError 
+                ? error.response?.data?.message || error.message
+                : 'Đã xảy ra lỗi không xác định';
+            alert('❌ Lỗi: ' + errorMessage);
         } finally {
             setLoading(false);
         }

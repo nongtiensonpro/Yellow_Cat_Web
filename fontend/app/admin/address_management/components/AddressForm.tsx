@@ -44,11 +44,25 @@ interface Ward {
     name: string;
 }
 
+// Định nghĩa type dữ liệu địa chỉ
+export interface AddressFormData {
+    addressId?: string | number;
+    recipientName: string;
+    phoneNumber: string;
+    streetAddress: string;
+    cityProvince: string;
+    district: string;
+    wardCommune: string;
+    addressType: 'HOME' | 'OFFICE' | 'OTHER' | string;
+    isDefault: boolean;
+    country: string;
+}
+
 interface AddressFormProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: any) => void;
-    initialData?: any;
+    onSubmit: (data: AddressFormData) => void;
+    initialData?: AddressFormData;
     mode: 'create' | 'edit';
 }
 

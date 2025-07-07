@@ -10,13 +10,13 @@ import {
     Chip,
     Avatar,
 } from "@heroui/react";
-import {Users, Package, BarChart2, Moon, Sun, UserCheck, UserX, Shield, User, ActivityIcon, Percent} from "lucide-react"; 
+import {Users, Package, UserCheck, UserX, Shield, User, Percent} from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useSession } from 'next-auth/react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import StatisticsByDay from '@/components/statistics/StatisticsByDay';
-import QuickStartGuide from '@/components/promotion/QuickStartGuide';
+
 
 import { jwtDecode } from 'jwt-decode';
 import {IconBasket} from "@tabler/icons-react";
@@ -35,7 +35,7 @@ interface DecodedToken {
             roles: string[];
         };
     };
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface UserStats {
@@ -123,14 +123,10 @@ export default function AdminDashboard() {
     });
 
     // Các thống kê khác
-    const [stats] = useState({
-        products: 342,
-        orders: 55555555555,
-        revenue: 55555555555,
-    });
+
 
     // Dark mode toggle
-    const [darkMode, setDarkMode] = useState(false);
+    const [darkMode] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -230,11 +226,11 @@ export default function AdminDashboard() {
                 const products = data?.data?.content || [];
                 setProductStats({
                     total: products.length,
-                    active: products.filter((p: any) => p.isActive).length,
-                    inactive: products.filter((p: any) => !p.isActive).length,
-                    outOfStock: products.filter((p: any) => p.totalStock === 0).length,
+                    active: products.filter((p: { isActive: boolean }) => p.isActive).length,
+                    inactive: products.filter((p: { isActive: boolean }) => !p.isActive).length,
+                    outOfStock: products.filter((p: { totalStock: number }) => p.totalStock === 0).length,
                 });
-            } catch (e) {
+            } catch {
                 setProductStats({
                     total: 0,
                     active: 0,

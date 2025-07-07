@@ -1,11 +1,23 @@
 import {CldUploadButton, CldImage} from 'next-cloudinary';
 import {useState} from 'react';
 
+// Interface cho thông tin resource sau khi upload
+interface ResourceInfo {
+    public_id: string;
+    [key: string]: unknown;
+}
+
+// Interface cho upload result
+interface UploadResult {
+    event: string;
+    info: ResourceInfo;
+}
+
 export default function UploadPage() {
-    const [resource, setResource] = useState<any>(null);
+    const [resource, setResource] = useState<ResourceInfo | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    const handleUpload = (result: any) => {
+    const handleUpload = (result: UploadResult) => {
         if (result.event === "success") {
             console.log("Upload thành công:", result.info);
             setResource(result.info);
@@ -22,9 +34,8 @@ export default function UploadPage() {
                 className="inline-block w-fit cursor-pointer transition-all bg-blue-500 text-white px-6 py-2 rounded-lg border-blue-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]">
                 <CldUploadButton
                     uploadPreset="YellowCatWeb"
-                    onSuccess={(result, {widget}) => {
-                        handleUpload(result);
-                        widget.close();
+                    onSuccess={(result) => {
+                        handleUpload(result as UploadResult);
                     }}
                 >
                     Chọn ảnh để upload

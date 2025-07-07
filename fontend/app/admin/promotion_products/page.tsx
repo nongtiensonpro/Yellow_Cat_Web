@@ -2,10 +2,15 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Eye, Edit, Info, Trash2 } from 'lucide-react'
+import { Edit, Trash2 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
-import axios from 'axios'
+import { Session } from 'next-auth'
+import axios, { AxiosError } from 'axios'
 import PromotionGuide from '../../../components/promotion/PromotionGuide'
+
+interface CustomSession extends Session {
+    accessToken?: string;
+}
 
 interface Promotion {
     id: number
@@ -14,6 +19,21 @@ interface Promotion {
     discountType: string
     startDate: string
     endDate: string
+}
+
+interface APIResponse {
+    data?: Promotion[] | { content: Promotion[] }
+    content?: Promotion[]
+}
+
+interface RawPromotion {
+    promotionProductId?: number
+    id?: number
+    promotionName?: string
+    discountValue?: number
+    discountType?: string
+    startDate?: string
+    endDate?: string
 }
 
 // Hàm format discount chuẩn
@@ -33,7 +53,7 @@ export default function PromotionManagementPage() {
         discountType: '',
         discountValue: '',
     })
-    const { data: session, status } = useSession()
+    const { data: session, status } = useSession() as { data: CustomSession | null, status: string }
     const [loading, setLoading] = useState(false)
     const [deletingId, setDeletingId] = useState<number | null>(null)
 
@@ -64,31 +84,24 @@ export default function PromotionManagementPage() {
                     Authorization: `Bearer ${token}`,
                 },
             })
-            const data = await response.json()
+            const data: APIResponse = await response.json()
 
             console.log('API Response:', data) // Debug log
 
             // Kiểm tra và xử lý response structure
-            let dataArray = data
+            let dataArray: RawPromotion[] = []
             if (data && typeof data === 'object') {
-                // Nếu data có structure { data: [...] } hoặc { content: [...] }
                 if (data.data && Array.isArray(data.data)) {
                     dataArray = data.data
                 } else if (data.content && Array.isArray(data.content)) {
                     dataArray = data.content
-                } else if (!Array.isArray(data)) {
-                    dataArray = []
+                } else if (Array.isArray(data)) {
+                    dataArray = data
                 }
             }
 
-            // Đảm bảo dataArray là array
-            if (!Array.isArray(dataArray)) {
-                console.warn('API response is not an array:', dataArray)
-                dataArray = []
-            }
-
-            const mapped: Promotion[] = dataArray.map((item: any) => ({
-                id: item.promotionProductId || item.id,
+            const mapped: Promotion[] = dataArray.map((item) => ({
+                id: item.promotionProductId || item.id || 0,
                 promotionName: item.promotionName || '',
                 discountValue: item.discountValue || 0,
                 discountType: item.discountType || '',
@@ -114,14 +127,17 @@ export default function PromotionManagementPage() {
             return
         }
 
-//
+        if (!session?.accessToken) {
+            alert('❌ Bạn cần đăng nhập để thực hiện thao tác này!')
+            return
+        }
 
         setDeletingId(promotion.id)
 
         try {
             await axios.delete(`${API_URL}/api/promotion-products/${promotion.id}`, {
                 headers: {
-                    Authorization: `Bearer ${session?.accessToken}`,
+                    Authorization: `Bearer ${session.accessToken}`,
                 },
             })
 
@@ -136,23 +152,27 @@ export default function PromotionManagementPage() {
             if (currentPage > newPageCount && newPageCount > 0) {
                 setCurrentPage(newPageCount)
             }
-        } catch (err: any) {
-            console.error('Lỗi khi xóa:', err)
+        } catch (error) {
+            console.error('Lỗi khi xóa:', error)
 
-            const errorMessage = err?.response?.data?.message ||
-                               err?.response?.data?.error ||
-                               err?.response?.data ||
-                               err.message ||
-                               'Lỗi không xác định'
+            if (error instanceof AxiosError) {
+                const errorMessage = error.response?.data?.message ||
+                    error.response?.data?.error ||
+                    error.response?.data ||
+                    error.message ||
+                    'Lỗi không xác định'
 
-            if (errorMessage.includes('không có quyền') || errorMessage.includes('unauthorized')) {
-                alert('❌ Lỗi quyền truy cập: Bạn không có quyền xóa đợt giảm giá này. Chỉ người tạo ra đợt giảm giá mới có quyền xóa.')
-            } else if (err?.response?.status === 404) {
-                alert('❌ Không tìm thấy đợt giảm giá cần xóa.')
-            } else if (err?.response?.status === 401) {
-                alert('❌ Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+                if (errorMessage.includes('không có quyền') || errorMessage.includes('unauthorized')) {
+                    alert('❌ Lỗi quyền truy cập: Bạn không có quyền xóa đợt giảm giá này. Chỉ người tạo ra đợt giảm giá mới có quyền xóa.')
+                } else if (error.response?.status === 404) {
+                    alert('❌ Không tìm thấy đợt giảm giá cần xóa.')
+                } else if (error.response?.status === 401) {
+                    alert('❌ Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+                } else {
+                    alert('❌ Lỗi khi xóa: ' + errorMessage)
+                }
             } else {
-                alert('❌ Lỗi khi xóa: ' + errorMessage)
+                alert('❌ Đã xảy ra lỗi không xác định khi xóa đợt giảm giá.')
             }
         } finally {
             setDeletingId(null)

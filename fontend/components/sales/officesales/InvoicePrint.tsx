@@ -1,8 +1,13 @@
 "use client"
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Button, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Spinner } from "@heroui/react";
 import { useSession } from "next-auth/react";
+import type { Session } from "next-auth";
+
+interface SessionWithToken extends Session {
+  accessToken?: string;
+}
 
 interface StaffInfo {
   appUserId: number;
@@ -15,9 +20,35 @@ interface StaffInfo {
   avatarUrl: string;
 }
 
+interface Payment {
+  paymentId?: number | string;
+  paymentMethod: string;
+  amount: number;
+  paymentStatus: string;
+  transactionId?: string;
+}
+
+interface Order {
+  customerName?: string;
+  phoneNumber?: string;
+  orderCode: string;
+  staffName?: string;
+  discountAmount: number;
+  payments?: Payment[];
+}
+
+interface OrderItem {
+  orderItemId: number | string;
+  productName?: string;
+  variantInfo?: string;
+  quantity: number;
+  priceAtPurchase: number;
+  totalPrice: number;
+}
+
 interface InvoiceProps {
-  order: any;
-  orderItems: any[];
+  order: Order;
+  orderItems: OrderItem[];
   totals: {
     subTotalAmount: number;
     finalAmount: number;
@@ -81,8 +112,8 @@ const InvoiceContent: React.FC<InvoiceProps> = ({ order, orderItems, totals, sta
             <tr key={item.orderItemId}>
               <td className="border border-gray-300 p-2 text-center">{index + 1}</td>
               <td className="border border-gray-300 p-2">
-                <div>{item.productName}</div>
-                <div className="text-xs text-gray-500">{item.variantInfo}</div>
+                <div>{item.productName ?? 'Tên sản phẩm không xác định'}</div>
+                <div className="text-xs text-gray-500">{item.variantInfo ?? ''}</div>
               </td>
               <td className="border border-gray-300 p-2 text-center">{item.quantity}</td>
               <td className="border border-gray-300 p-2 text-right">
@@ -117,7 +148,7 @@ const InvoiceContent: React.FC<InvoiceProps> = ({ order, orderItems, totals, sta
     {order.payments && order.payments.length > 0 && (
       <div className="bg-gray-50 p-4 border border-gray-300 mb-6 text-sm">
         <h3 className="font-bold mb-2">Thông tin thanh toán:</h3>
-        {order.payments.map((payment: any, index: number) => (
+        {order.payments.map((payment: Payment, index: number) => (
           <div key={payment.paymentId || index} className="mb-2">
             <p>• {payment.paymentMethod}: {payment.amount.toLocaleString('vi-VN')} VND</p>
             <p className="text-xs text-gray-600">
@@ -138,8 +169,8 @@ const InvoiceContent: React.FC<InvoiceProps> = ({ order, orderItems, totals, sta
 );
 
 interface InvoicePrintProps {
-  order: any;
-  orderItems: any[];
+  order: Order;
+  orderItems: OrderItem[];
   totals: {
     subTotalAmount: number;
     finalAmount: number;
@@ -156,8 +187,9 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order, orderItems, totals, 
   const [staffLoading, setStaffLoading] = useState<boolean>(false);
 
   // Fetch thông tin nhân viên đơn giản theo order code
-  const fetchStaffInfo = async () => {
-    if (!order?.orderCode || !session?.accessToken) {
+  const fetchStaffInfo = useCallback(async () => {
+    const sessionWithToken = session as SessionWithToken;
+    if (!order?.orderCode || !sessionWithToken?.accessToken) {
       console.warn('⚠️ No order code or session token available');
       return;
     }
@@ -168,7 +200,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order, orderItems, totals, 
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.accessToken}`,
+          'Authorization': `Bearer ${sessionWithToken.accessToken}`,
         },
       });
 
@@ -189,14 +221,14 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order, orderItems, totals, 
     } finally {
       setStaffLoading(false);
     }
-  };
+  }, [order?.orderCode, session]);
 
   // Fetch staff info khi modal mở
   useEffect(() => {
     if (isOpen && !staffInfo) {
       fetchStaffInfo();
     }
-  }, [isOpen, order?.orderCode, session]);
+  }, [isOpen, staffInfo, fetchStaffInfo]);
 
   const handlePrint = () => {
     if (printRef.current) {

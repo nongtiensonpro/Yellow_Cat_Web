@@ -2,15 +2,14 @@
 
 import React, {useEffect, useState, useMemo} from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import {CldImage} from "next-cloudinary";
 import {
     Card, CardBody, CardHeader, CardFooter,
-    Button, Chip, Skeleton, Divider, Badge, Input, CheckboxGroup, Checkbox, Select, SelectItem, cn, Avatar
+    Button, Chip, Skeleton, Divider, Badge, Input, CheckboxGroup, Checkbox, Select, SelectItem
 } from "@heroui/react";
 import {
     BuildingStorefrontIcon, MagnifyingGlassIcon, AdjustmentsHorizontalIcon, XMarkIcon,
-    ExclamationTriangleIcon, InboxIcon, StarIcon, ShoppingCartIcon, CheckIcon
+    ExclamationTriangleIcon, InboxIcon, StarIcon, ShoppingCartIcon
 } from "@heroicons/react/24/outline";
 import {Selection} from "@react-types/shared";
 
@@ -98,21 +97,6 @@ const SORT_OPTIONS = [
     {key: 'name-asc', label: 'Tên: A-Z'},
     {key: 'name-desc', label: 'Tên: Z-A'},
 ];
-
-
-const ColorSwatch: React.FC<{ color: Color }> = ({color}) => (
-    <div className="relative flex items-center justify-center" title={color.name}>
-        <div
-            className={cn(
-                "w-7 h-7 rounded-full border-2 peer-data-[selected=true]:border-primary transition-transform-colors",
-            
-                color.tailwindClass || 'bg-transparent border-dashed'
-            )}
-        />
-        <CheckIcon
-            className="w-4 h-4 text-white absolute pointer-events-none opacity-0 peer-data-[selected=true]:opacity-100"/>
-    </div>
-);
 
 const ProductCard: React.FC<{ product: Product }> = ({product}) => {
     const stockStatus = getStockStatus(product.totalStock);

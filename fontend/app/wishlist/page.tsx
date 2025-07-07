@@ -1,10 +1,7 @@
-
-
-
 "use client";
 
 import {useEffect, useState} from "react";
-import {Card, CardBody, Divider, Badge, Button} from "@heroui/react";
+import {Card, CardBody, Button} from "@heroui/react";
 import {CldImage} from "next-cloudinary";
 import {BuildingStorefrontIcon, TrashIcon} from "@heroicons/react/24/outline";
 import Link from "next/link";

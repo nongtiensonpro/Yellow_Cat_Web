@@ -198,13 +198,13 @@ export default function OrdersManagementPage() {
         }
 
         setFilteredOrders(filtered);
-        setCurrentPage(1); // Reset to first page when filters change
+        setCurrentPage(1);
     }, [orders, dateFilter]);
 
-    // Handle search with debounce
+
     useEffect(() => {
         if (debouncedSearchTerm) {
-            // Apply search filter on client-side for better UX
+
             const term = debouncedSearchTerm.toLowerCase();
             const filtered = orders.filter(order => {
                 const orderCode = order.orderCode?.toLowerCase() || '';
@@ -254,7 +254,7 @@ export default function OrdersManagementPage() {
                 alert('Cập nhật trạng thái thất bại');
             }
         } catch (error) {
-            alert('Lỗi khi cập nhật trạng thái');
+            alert('Lỗi khi cập nhật trạng thái' + error);
         } finally {
             setActionLoading(null);
         }
@@ -287,7 +287,7 @@ export default function OrdersManagementPage() {
                 alert(`Hủy đơn hàng thất bại: ${errorData.message || 'Lỗi không xác định'}`);
             }
         } catch (error) {
-            alert('Lỗi khi hủy đơn hàng');
+            alert('Lỗi khi hủy đơn hàng' +  error);
         } finally {
             setActionLoading(null);
         }
@@ -360,7 +360,7 @@ export default function OrdersManagementPage() {
                                 Hai loại filter này không thể sử dụng đồng thời.
                             </p>
                             <p className="text-sm text-blue-800 mt-1">
-                                <strong>⚠️ Lưu ý:</strong> Chỉ có thể hủy đơn hàng ở trạng thái "Chờ xác nhận" (Pending). 
+                                <strong>⚠️ Lưu ý:</strong> Chỉ có thể hủy đơn hàng ở trạng thái Chờ xác nhận (Pending).
                                 Khi hủy đơn hàng, hệ thống sẽ tự động hoàn kho.
                             </p>
                         </div>
@@ -462,7 +462,7 @@ export default function OrdersManagementPage() {
                             </div>
                             {searchTerm && (
                                 <p className="text-xs text-gray-500 mt-1">
-                                    Tìm kiếm: "{searchTerm}" - {debouncedSearchTerm ? 'Đang áp dụng...' : 'Chờ nhập...'}
+                                    Tìm kiếm: {searchTerm} - {debouncedSearchTerm ? 'Đang áp dụng...' : 'Chờ nhập...'}
                                 </p>
                             )}
                         </div>
@@ -570,7 +570,7 @@ export default function OrdersManagementPage() {
                             )}
                             {debouncedSearchTerm && (
                                 <div>
-                                    Kết quả tìm kiếm cho: <strong>"{debouncedSearchTerm}"</strong>
+                                    Kết quả tìm kiếm cho: <strong>{debouncedSearchTerm} </strong>
                                 </div>
                             )}
                         </div>

@@ -36,7 +36,7 @@ export default function AboutPage() {
                 Tại <span className="font-bold text-red-600">SneakerPeak</span>, chúng tôi không chỉ bán giày; chúng tôi kiến tạo phong cách, thổi bùng đam mê và đồng hành cùng bạn trên mọi nẻo đường. Từ những bước chân đầu tiên vào năm 2025, SneakerPeak đã lớn mạnh trở thành điểm đến tin cậy cho những tín đồ sneaker tại Việt Nam, mang đến bộ sưu tập giày chính hãng đa dạng và độc đáo nhất.
               </p>
               <p className="text-lg leading-relaxed text-gray-700 max-w-prose mx-auto md:mx-0">
-                Chúng tôi tự hào là cầu nối giữa bạn và những đôi giày mơ ước, từ những phiên bản kinh điển vượt thời gian đến những mẫu phát hành giới hạn "hot" nhất thị trường.
+                Chúng tôi tự hào là cầu nối giữa bạn và những đôi giày mơ ước, từ những phiên bản kinh điển vượt thời gian đến những mẫu phát hành giới hạn hot nhất thị trường.
               </p>
             </div>
           </div>

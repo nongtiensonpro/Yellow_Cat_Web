@@ -12,7 +12,6 @@ export interface Size {
 
 interface SizeFormProps {
     onSuccess?: () => void;
-    onCancel?: () => void;
 }
 
 const createSize = async (data: Size, token: string | undefined) => {
@@ -31,7 +30,7 @@ const createSize = async (data: Size, token: string | undefined) => {
             try {
                 const errorData = await response.json();
                 errorBody = errorData.message || errorData.error || JSON.stringify(errorData);
-            } catch (e) { errorBody = response.statusText; }
+            } catch { errorBody = response.statusText; }
             throw new Error(`Không thể tạo Kích cỡ: ${errorBody} (Status: ${response.status})`);
         }
         return await response.json();
@@ -40,7 +39,7 @@ const createSize = async (data: Size, token: string | undefined) => {
     }
 };
 
-export default function SizeForm({ onSuccess, onCancel }: SizeFormProps) {
+export default function SizeForm({ onSuccess }: SizeFormProps) {
     const { data: session, status } = useSession();
     const [formError, setFormError] = useState<string | null>(null);
     const [name, setName] = useState("");
@@ -101,8 +100,8 @@ export default function SizeForm({ onSuccess, onCancel }: SizeFormProps) {
             setDescription("");
             setFormError(null);
             if (onSuccess) onSuccess();
-        } catch (err: any) {
-            const errorMessage = err instanceof Error ? err.message : "Không thể tạo Kích cỡ. Đã xảy ra lỗi không mong muốn.";
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Không thể tạo Kích cỡ. Đã xảy ra lỗi không mong muốn.";
             setFormError(errorMessage);
             addToast({
                 title: "Lỗi",

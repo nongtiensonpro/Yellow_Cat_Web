@@ -1,4 +1,5 @@
-import NextAuth, {
+import NextAuth from "next-auth";
+import type {
     NextAuthOptions,
     User as NextAuthUser,
     Session as NextAuthSession,
@@ -27,7 +28,7 @@ interface DecodedToken {
     email?: string;
     name?: string;
 
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface CustomToken {
@@ -41,9 +42,9 @@ interface CustomToken {
     name?: string;
     error?: string;
     sub?: string;
-    decodedToken?: any;
+    decodedToken?: DecodedToken;
 
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface CustomUser extends Omit<NextAuthUser, 'id'> {
@@ -53,7 +54,6 @@ interface CustomUser extends Omit<NextAuthUser, 'id'> {
     name?: string;
 }
 
-// @ts-ignore
 interface CustomSession extends NextAuthSession {
     user?: CustomUser;
     accessToken?: string;
@@ -62,7 +62,7 @@ interface CustomSession extends NextAuthSession {
     error?: string;
     expiresAt?: number;
     decodedToken?: DecodedToken;
-    resource_access?: ResourceAccess;
+    resource_access?: ResourceAccess | undefined;
 }
 
 const ENV = {
@@ -206,10 +206,11 @@ const authOptions: NextAuthOptions = {
                     } catch (decodeError) {
                         console.error("Error decoding refreshed token:", decodeError);
                     }
-                } catch (error: any) {
+                } catch (error: unknown) {
+                    const errObj = error as { error?: string } | undefined;
                     console.error("Lỗi khi refresh token:", error);
                     // Nếu lỗi là 'invalid_grant', hủy phiên làm việc
-                    if (error?.error === 'invalid_grant') {
+                    if (errObj?.error === 'invalid_grant') {
                         console.log("Refresh token không hợp lệ hoặc đã hết hạn. Hủy phiên.");
                         // Trả về token với lỗi và xóa thông tin nhạy cảm để NextAuth hủy session
                         return {
@@ -227,7 +228,7 @@ const authOptions: NextAuthOptions = {
 
             return customToken as JWT;
         },
-        async session({session, token}) {
+        async session({ session, token }: { session: NextAuthSession; token: JWT }) {
             const customSession = session as CustomSession;
             const customToken = token as CustomToken;
 
@@ -243,7 +244,7 @@ const authOptions: NextAuthOptions = {
             customSession.error = customToken.error;
             customSession.expiresAt = customToken.expiresAt;
             customSession.decodedToken = customToken.decodedToken;
-            customSession.resource_access = customToken.resource_access;
+            customSession.resource_access = customToken.resource_access as ResourceAccess | undefined;
 
             return customSession;
         }

@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
-import { useTheme } from "next-themes";
+
 import { useSearchParams } from 'next/navigation';
 import {
     Search,
@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import LoadingSpinner from '@/components/LoadingSpinner';
 import AddressForm from './components/AddressForm';
+import type { AddressFormData } from './components/AddressForm';
 import {
     Button,
     Checkbox,
@@ -62,19 +63,17 @@ export default function AddressManagement() {
     const [addresses, setAddresses] = useState<Address[]>([]);
     const [filteredData, setFilteredData] = useState<Address[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [itemsPerPage] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
-    const [totalItems, setTotalItems] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const { theme, setTheme } = useTheme();
     const { isOpen, onOpen, onClose } = useDisclosure();
     const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
     const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
     const [selectedAddresses, setSelectedAddresses] = useState<number[]>([]);
 
-    const fetchAddresses = async () => {
+    const fetchAddresses = useCallback(async () => {
         if (!userId) {
             console.log('No userId provided');
             return;
@@ -129,7 +128,6 @@ export default function AddressManagement() {
                 setAddresses(formattedData);
                 setFilteredData(formattedData);
                 setTotalPages(apiResponse.data.totalPages);
-                setTotalItems(apiResponse.data.totalItems);
             } else {
                 console.error('Invalid API response format:', apiResponse);
             }
@@ -139,13 +137,13 @@ export default function AddressManagement() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [userId, currentPage, itemsPerPage]);
 
     useEffect(() => {
         if (userId) {
             fetchAddresses();
         }
-    }, [userId, currentPage, itemsPerPage]);
+    }, [userId, currentPage, itemsPerPage, fetchAddresses]);
 
     useEffect(() => {
         let filtered = [...addresses];
@@ -185,24 +183,7 @@ export default function AddressManagement() {
         onOpen();
     };
 
-    const handleDelete = async (addressId: number) => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa địa chỉ này?')) {
-            try {
-                const response = await fetch(`http://localhost:8080/api/addresses/${addressId}`, {
-                    method: 'DELETE',
-                });
-                if (response.ok) {
-                    fetchAddresses();
-                } else {
-                    console.error('Error deleting address:', response);
-                }
-            } catch (error) {
-                console.error('Error deleting address:', error);
-            }
-        }
-    };
-
-    const handleSubmit = async (formData: any) => {
+    const handleSubmit = async (formData: AddressFormData) => {
         try {
             const url = formMode === 'create' 
                 ? `http://localhost:8080/api/addresses/user/create/${userId}`
@@ -488,17 +469,9 @@ export default function AddressManagement() {
                 isOpen={isOpen}
                 onClose={onClose}
                 onSubmit={handleSubmit}
-                initialData={selectedAddress}
+                initialData={selectedAddress || undefined}
                 mode={formMode}
             />
-
-            {/*<div className="flex justify-center mt-4">*/}
-            {/*    <Pagination*/}
-            {/*        total={totalPages}*/}
-            {/*        page={currentPage}*/}
-            {/*        onChange={setCurrentPage}*/}
-            {/*    />*/}
-            {/*</div>*/}
 
             <div className="flex justify-center mt-4">
                 <Button 

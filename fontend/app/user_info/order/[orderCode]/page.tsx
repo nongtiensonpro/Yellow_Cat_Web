@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useParams, useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -15,7 +15,6 @@ import {
 } from "@heroui/react";
 import { 
     ArrowLeft,
-    Calendar, 
     Phone, 
     Mail, 
     MapPin, 
@@ -26,6 +25,16 @@ import {
     User,
     FileText
 } from "lucide-react";
+
+// Extend Session type để có accessToken
+interface ExtendedSession {
+    accessToken: string;
+    user?: {
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+    };
+}
 
 interface OrderItemDetail {
     orderItemId: number;
@@ -100,17 +109,22 @@ export default function OrderDetailPage() {
     }, [params, orderCode, router]);
 
     // Hàm lấy chi tiết đơn hàng
-    const fetchOrderDetail = async (orderCode: string): Promise<OrderDetailWithItems> => {
+    const fetchOrderDetail = useCallback(async (orderCode: string): Promise<OrderDetailWithItems> => {
         // Kiểm tra accessToken trước khi gọi API
-        if (!session?.accessToken) {
+        if (!session) {
             throw new Error('Bạn cần đăng nhập để xem chi tiết đơn hàng');
+        }
+        
+        const extendedSession = session as unknown as ExtendedSession;
+        if (!extendedSession.accessToken) {
+            throw new Error('Không tìm thấy access token');
         }
 
         const response = await fetch(`http://localhost:8080/api/orders/public/detail/${orderCode}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.accessToken}`,
+                'Authorization': `Bearer ${extendedSession.accessToken}`,
             },
         });
 
@@ -139,7 +153,7 @@ export default function OrderDetailPage() {
         }
         
         return apiResponse.data;
-    };
+    }, [session]);
 
     // Lấy chi tiết đơn hàng khi component mount
     useEffect(() => {
@@ -166,16 +180,17 @@ export default function OrderDetailPage() {
             try {
                 const orderData = await fetchOrderDetail(orderCode);
                 setOrderDetail(orderData);
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const errorMessage = err instanceof Error ? err.message : "Không thể lấy thông tin đơn hàng. Vui lòng thử lại sau.";
                 console.error("Lỗi khi lấy chi tiết đơn hàng:", err);
-                setError(err.message || "Không thể lấy thông tin đơn hàng. Vui lòng thử lại sau.");
+                setError(errorMessage);
             } finally {
                 setLoading(false);
             }
         };
 
         getOrderDetail();
-    }, [session, status, orderCode, router]);
+    }, [session, status, orderCode, fetchOrderDetail]);
 
     // Hàm format tiền tệ
     const formatCurrency = (amount: number) => {
