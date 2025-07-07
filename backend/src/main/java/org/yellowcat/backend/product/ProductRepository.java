@@ -95,7 +95,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                     "    b.brand_name, " +
                     "    b.logo_public_id, " +
                     "    (SELECT MIN(pv.price) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS min_price, " +
-                    "    (SELECT MIN(pv.sale_price) FROM Product_Variants pv WHERE pv.product_id = p.product_id AND pv.sale_price IS NOT NULL) AS min_sale_price, " +  // ✅ thêm dòng này
+                    "    (SELECT MIN(pv.sale_price) FROM Product_Variants pv WHERE pv.product_id = p.product_id AND pv.sale_price > 0.00 AND pv.sale_price IS NOT NULL) AS min_sale_price, " +  // ✅ thêm dòng này
                     "    (SELECT SUM(pv.quantity_in_stock) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS total_stock, " +
                     "    (SELECT SUM(pv.quantity_in_stock_online) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS total_stock_online, " +
                     "    p.thumbnail " +

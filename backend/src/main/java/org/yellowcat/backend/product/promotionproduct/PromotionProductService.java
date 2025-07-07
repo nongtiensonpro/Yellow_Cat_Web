@@ -205,6 +205,7 @@ import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserRepository;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
@@ -366,15 +367,25 @@ public class PromotionProductService {
 
     // ✅ ÁP GIẢM GIÁ
     private void applyDiscountToVariant(ProductVariant variant, CreatePromotionDTO dto) {
+        LocalDateTime now = LocalDateTime.now();
+
+        // Nếu khuyến mãi chưa bắt đầu hoặc đã kết thúc → không áp dụng, salePrice = 0
+        if ((dto.getStartDate() != null && dto.getStartDate().isAfter(now)) ||
+                (dto.getEndDate() != null && dto.getEndDate().isBefore(now))) {
+            variant.setSalePrice(BigDecimal.ZERO);
+            return;
+        }
+
+        // Áp dụng khuyến mãi nếu còn hiệu lực
         if ("percentage".equalsIgnoreCase(dto.getDiscountType())) {
             double discount = dto.getDiscountValue().doubleValue() / 100.0;
             double newPrice = variant.getPrice().doubleValue() * (1.0 - discount);
             variant.setSalePrice(BigDecimal.valueOf(newPrice));
         } else if ("fixed_amount".equalsIgnoreCase(dto.getDiscountType())) {
             double newPrice = variant.getPrice().doubleValue() - dto.getDiscountValue().doubleValue();
-            variant.setSalePrice(BigDecimal.valueOf(newPrice > 0 ? newPrice : 0));
+            variant.setSalePrice(BigDecimal.valueOf(Math.max(newPrice, 0)));
         } else if ("free_shipping".equalsIgnoreCase(dto.getDiscountType())) {
-            // free_shipping không thay đổi giá
+            // Miễn phí vận chuyển – không thay đổi giá
         }
     }
 
