@@ -195,26 +195,40 @@ export default function AddProductPage() {
                 ]);
 
                 // Trích xuất dữ liệu từ cấu trúc phản hồi backend
-                const extractData = (response: any) => {
-                    if (response?.data?.content && Array.isArray(response.data.content)) {
-                        return response.data.content;
-                    } else if (response?.data?.data && Array.isArray(response.data.data)) {
-                        return response.data.data;
-                    } else if (response?.data && Array.isArray(response.data)) {
-                        return response.data;
-                    } else if (Array.isArray(response)) {
-                        return response;
-                    } else {
-                        return [];
+                const extractData = <T,>(response: unknown): T[] => {
+                    if (Array.isArray(response)) {
+                        return response as T[];
                     }
+
+                    if (typeof response === "object" && response !== null) {
+                        const respObj = response as Record<string, unknown>;
+
+                        const dataField = respObj.data;
+
+                        if (Array.isArray(dataField)) {
+                            return dataField as unknown[] as T[];
+                        }
+
+                        if (typeof dataField === "object" && dataField !== null) {
+                            const inner = dataField as Record<string, unknown>;
+                            if (Array.isArray(inner.content)) {
+                                return inner.content as unknown[] as T[];
+                            }
+                            if (Array.isArray(inner.data)) {
+                                return inner.data as unknown[] as T[];
+                            }
+                        }
+                    }
+
+                    return [] as T[];
                 };
 
-                const extractedBrands = extractData(brandsData);
-                const extractedCategories = extractData(categoriesData);
-                const extractedMaterials = extractData(materialsData);
-                const extractedAudiences = extractData(audiencesData);
-                const extractedColors = extractData(colorsData);
-                const extractedSizes = extractData(sizesData);
+                const extractedBrands = extractData<BrandOption>(brandsData);
+                const extractedCategories = extractData<DropdownOption>(categoriesData);
+                const extractedMaterials = extractData<DropdownOption>(materialsData);
+                const extractedAudiences = extractData<DropdownOption>(audiencesData);
+                const extractedColors = extractData<DropdownOption>(colorsData);
+                const extractedSizes = extractData<DropdownOption>(sizesData);
 
                 setBrands(extractedBrands);
                 setCategories(extractedCategories);
@@ -311,7 +325,7 @@ export default function AddProductPage() {
         }
 
         // Validate từng variant
-        enabledVariants.forEach((variant, index) => {
+        enabledVariants.forEach((variant) => {
             const priceError = validatePrice(variant.price, "Giá gốc");
             if (priceError) newErrors[`variant_${variant.id}_price`] = priceError;
 
@@ -377,7 +391,7 @@ export default function AddProductPage() {
 
     // Helper function để validate và clean input value
     const handleNumberInput = (value: string, min: number = 0, max: number = Infinity): number => {
-        let numValue = parseFloat(value);
+        const numValue = parseFloat(value);
 
         // Nếu NaN hoặc nhỏ hơn min, return min
         if (isNaN(numValue) || numValue < min) {
@@ -394,7 +408,7 @@ export default function AddProductPage() {
 
     // Helper function cho integer input
     const handleIntegerInput = (value: string, min: number = 0, max: number = Infinity): number => {
-        let numValue = parseInt(value);
+        const numValue = parseInt(value);
 
         // Nếu NaN hoặc nhỏ hơn min, return min
         if (isNaN(numValue) || numValue < min) {
@@ -433,7 +447,7 @@ export default function AddProductPage() {
         }
     };
 
-    const handleInputChange = (field: keyof ProductFormData, value: any) => {
+    const handleInputChange = <K extends keyof ProductFormData>(field: K, value: ProductFormData[K]) => {
         setFormData(prev => ({
             ...prev,
             [field]: value
@@ -444,7 +458,7 @@ export default function AddProductPage() {
 
         // Validate realtime cho một số trường
         if (field === 'productName') {
-            const error = validateProductName(value);
+            const error = validateProductName(value as string);
             if (error) {
                 setErrors(prev => ({ ...prev, [field]: error }));
             }
@@ -505,14 +519,14 @@ export default function AddProductPage() {
     };
 
     // Cập nhật biến thể cụ thể
-    const updateVariant = (variantId: string, field: keyof ProductVariant, value: any) => {
+    const updateVariant = <K extends keyof ProductVariant>(variantId: string, field: K, value: ProductVariant[K]) => {
         const currentVariant = formData.variants.find(v => v.id === variantId);
         if (!currentVariant) return;
 
         // Validate giá real-time
         if (field === 'price' || field === 'salePrice') {
-            const newPrice = field === 'price' ? value : currentVariant.price;
-            const newSalePrice = field === 'salePrice' ? value : currentVariant.salePrice;
+            const newPrice = field === 'price' ? (value as number) : currentVariant.price;
+            const newSalePrice = field === 'salePrice' ? (value as number) : currentVariant.salePrice;
             
             // Validate và hiển thị toast nếu có lỗi
             if (!validatePriceWithToast(newPrice, newSalePrice, variantId)) {
@@ -666,6 +680,7 @@ export default function AddProductPage() {
                 );
             }
         } catch (error) {
+            console.error("Lỗi khi thêm sản phẩm:", error);
             showErrorToast(
                 "Lỗi kết nối",
                 "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng và thử lại."
@@ -711,8 +726,8 @@ export default function AddProductPage() {
         );
     }
 
-            return (
-            <div className="container mx-auto p-6 max-w-7xl">
+    return (
+        <div className="container mx-auto p-6 max-w-7xl">
             {/* Phần đầu trang */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
@@ -1163,7 +1178,7 @@ export default function AddProductPage() {
                             <div className="text-center py-12 text-gray-500">
                                 <div className="text-4xl mb-4">🎯</div>
                                 <h3 className="text-lg font-medium mb-2">Chưa có biến thể nào</h3>
-                                <p className="text-sm">Chọn màu sắc và kích thước, sau đó nhấn "Tạo Biến Thể" để bắt đầu</p>
+                                <p className="text-sm">Chọn màu sắc và kích thước, sau đó nhấn &quot;Tạo Biến Thể&quot; để bắt đầu</p>
                             </div>
                         )}
                     </CardBody>

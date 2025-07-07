@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react"; // Import useCallback for memoization
 import { useSession } from "next-auth/react";
 import { jwtDecode } from "jwt-decode";
+import {CldImage} from "next-cloudinary";
+import Image from "next/image";
 
 interface CartItem {
     id: number;
@@ -47,6 +49,50 @@ interface Ward {
     short_codename: string;
 }
 
+// Interface for Address
+interface Address {
+    addressId?: string;
+    recipientName: string;
+    phoneNumber: string;
+    streetAddress: string;
+    wardCommune?: string;
+    district?: string;
+    province?: string;
+    cityProvince?: string;
+    country?: string;
+    isDefault?: boolean;
+    addressType?: string;
+}
+
+// Interface for Cart Response
+interface CartResponse {
+    items: CartItem[];
+}
+
+// Interface for Address Response
+interface AddressResponse {
+    data: {
+        content: Address[];
+    };
+}
+
+// Interface for Extended Session
+interface ExtendedSession {
+    user?: {
+        id: string;
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+    };
+    accessToken?: string;
+}
+
+// Interface for JWT Token Data
+interface JWTTokenData {
+    sub: string;
+    [key: string]: unknown;
+}
+
 export default function CheckoutPage() {
     const router = useRouter();
     const [paymentMethod, setPaymentMethod] = useState('cod');
@@ -71,7 +117,7 @@ export default function CheckoutPage() {
     const [loadingDistricts, setLoadingDistricts] = useState(false);
     const [loadingWards, setLoadingWards] = useState(false);
 
-    const { data: session } = useSession();
+    const { data: session } = useSession() as { data: ExtendedSession | null };
     const revertedRef = useRef(false);
 
     const [shippingFee, setShippingFee] = useState<number>(0);
@@ -79,9 +125,9 @@ export default function CheckoutPage() {
     const [shippingError, setShippingError] = useState<string | null>(null);
 
     const [addressModalOpen, setAddressModalOpen] = useState(false);
-    const [userAddresses, setUserAddresses] = useState<any[]>([]);
+    const [userAddresses, setUserAddresses] = useState<Address[]>([]);
     const [selectedAddressText, setSelectedAddressText] = useState('');
-    const [selectedAddress, setSelectedAddress] = useState<any>(null);
+    const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
     const [addAddressModalOpen, setAddAddressModalOpen] = useState(false);
     const [newAddress, setNewAddress] = useState({
         recipientName: '',
@@ -105,9 +151,9 @@ export default function CheckoutPage() {
             // Lấy từ backend
             fetch(`http://localhost:8080/api/cart?keycloakId=${session.user.id}`)
                 .then(res => res.json())
-                .then(data => setCartItems((data.items || []).map((item: any) => ({
+                .then((data: CartResponse) => setCartItems((data.items || []).map((item: CartItem) => ({
                     ...item,
-                    id: item.id || item.variantId
+                    id: item.id || item.productId
                 }))));
         } else if (typeof window !== 'undefined') {
             // Lấy từ localStorage
@@ -241,15 +287,14 @@ export default function CheckoutPage() {
     // Calculate totals without shipping fee and discount
     const totalBeforeDiscount = calculateSubtotal();
     const discount = 0; // Set discount to 0
-    const finalTotal = totalBeforeDiscount + shippingFee - discount; // The final total is now just the subtotal
 
     const handleRevertStock = useCallback(async () => {
         if (revertedRef.current) return; // Đã revert rồi thì không gọi nữa
         revertedRef.current = true;
-        let keycloakId = null;
+        let keycloakId: string | null = null;
         if (session?.user && session.accessToken) {
             try {
-                const tokenData = jwtDecode(session.accessToken);
+                const tokenData: JWTTokenData = jwtDecode(session.accessToken);
                 keycloakId = tokenData.sub;
             } catch {
                 return;
@@ -300,18 +345,18 @@ export default function CheckoutPage() {
         };
         const pushState = window.history.pushState;
         const replaceState = window.history.replaceState;
-        function patchHistory(method: any) {
-            return function(this: any) {
-                const url = arguments[2];
+        function patchHistory(method: (state: unknown, title: string, url?: string | URL | null) => void) {
+            return function(this: unknown, ...args: [unknown, string, string | URL | null | undefined]) {
+                const url = args[2];
                 if (typeof url === 'string') {
                     handleRouteChange(url);
                 }
-                return method.apply(this, arguments);
+                return method.apply(this, args);
             };
         }
         window.history.pushState = patchHistory(pushState);
         window.history.replaceState = patchHistory(replaceState);
-        const popHandler = (e: any) => {
+        const popHandler = () => {
             handleRouteChange(window.location.pathname);
         };
         window.addEventListener('popstate', popHandler);
@@ -338,7 +383,7 @@ export default function CheckoutPage() {
                 setShippingFee(0);
                 setShippingError("Không lấy được phí vận chuyển");
             }
-        } catch (err) {
+        } catch {
             setShippingFee(0);
             setShippingError("Không lấy được phí vận chuyển");
         } finally {
@@ -370,9 +415,9 @@ export default function CheckoutPage() {
     // Hàm lấy danh sách địa chỉ user (giả sử đã có API, có thể cần sửa lại endpoint cho đúng)
     const fetchUserAddresses = async () => {
         if (!session || !session.accessToken) return;
-        let keycloakId = null;
+        let keycloakId: string | null = null;
         try {
-            const tokenData = jwtDecode(session.accessToken);
+            const tokenData: JWTTokenData = jwtDecode(session.accessToken);
             keycloakId = tokenData.sub;
         } catch {
             return;
@@ -380,7 +425,7 @@ export default function CheckoutPage() {
         try {
             const res = await fetch(`http://localhost:8080/api/addresses/user/${keycloakId}?page=0&size=100`);
             if (!res.ok) throw new Error('Không thể lấy địa chỉ');
-            const data = await res.json();
+            const data: AddressResponse = await res.json();
             if (data && data.data && data.data.content) {
                 setUserAddresses(data.data.content);
             } else {
@@ -398,7 +443,7 @@ export default function CheckoutPage() {
 
     const handleCloseAddressModal = () => setAddressModalOpen(false);
 
-    const handleSelectAddress = (address: any) => {
+    const handleSelectAddress = (address: Address) => {
         if (session?.user) {
             setSelectedAddress(address);
             const text = `${address.recipientName || ''} - ${address.phoneNumber || ''} - ${address.streetAddress || ''}${address.wardCommune ? ', ' + address.wardCommune : ''}${address.district ? ', ' + address.district : ''}${address.province || address.cityProvince ? ', ' + (address.province || address.cityProvince) : ''}`;
@@ -497,7 +542,7 @@ export default function CheckoutPage() {
                     console.error('Order API error:', data);
                     alert(data.message || 'Đặt hàng thất bại');
                 }
-            } catch (err) {
+            } catch {
                 alert('Có lỗi xảy ra khi đặt hàng');
             }
             return;
@@ -508,30 +553,7 @@ export default function CheckoutPage() {
             return;
         }
 
-        // Lấy tên tỉnh/thành, quận/huyện, phường/xã từ dropdown
-        const selectedProvinceName = provinces.find(p => p.code === selectedProvinceCode)?.name || '';
-        const selectedDistrictName = districts.find(d => d.code === selectedDistrictCode)?.name || '';
-        const selectedWardName = wards.find(w => w.code === selectedWardCode)?.name || '';
-
-        // Nếu user đăng nhập, lấy keycloakId và username từ session
-        const keycloakId = session?.user?.id || '';
-
-        // Nếu chọn địa chỉ đã lưu, lấy addressId, còn không thì để rỗng
-        const addressId = userAddresses.find(addr =>
-            addr.recipientName === fullName &&
-            addr.phoneNumber === phone &&
-            addr.streetAddress === addressDetail
-        )?.addressId || '';
-
-        // Lấy thông tin từ selectedAddress nếu có, ưu tiên selectedAddress
-        const recipientName = selectedAddress?.recipientName || fullName;
-        const phoneNumber = selectedAddress?.phoneNumber || phone;
-        const streetAddress = selectedAddress?.streetAddress || addressDetail;
-        const wardCommune = selectedAddress?.wardCommune || selectedWardName;
-        const district = selectedAddress?.district || selectedDistrictName;
-        const cityProvince = selectedAddress?.province || selectedProvinceName || selectedAddress?.cityProvince;
-        const isDefault = selectedAddress?.isDefault ?? true;
-        const addressType = selectedAddress?.addressType || 'home';
+        // This data will be used in the orderRequest below
 
         const orderRequest = {
             appUser: {
@@ -581,7 +603,7 @@ export default function CheckoutPage() {
                 console.error('Order API error:', data);
                 alert(data.message || 'Đặt hàng thất bại');
             }
-        } catch (err) {
+        } catch {
             alert('Có lỗi xảy ra khi đặt hàng');
         }
     };
@@ -874,7 +896,7 @@ export default function CheckoutPage() {
                                 className="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
                             />
                             <div className="ml-3 text-gray-700 font-medium flex items-center">
-                                <img src="/images/vnpay.png" alt="VNPay" className="h-6 w-auto mr-2" />
+                                <Image src="/images/vnpay.png" alt="VNPay" width={24} height={24} className="h-6 w-auto mr-2" />
                                 Thanh toán qua VNPay
                             </div>
                         </label>
@@ -895,12 +917,13 @@ export default function CheckoutPage() {
                             {cartItems.map(item => (
                                 <div key={item.id} className="flex items-start mb-6 border-b pb-4 last:border-b-0 last:pb-0">
                                     {item.imageUrl ? (
-                                        <img
-                                            src={item.imageUrl}
-                                            alt={item.name}
+                                        <CldImage
                                             width={80}
                                             height={80}
-                                            className="rounded-md object-cover mr-4"
+                                            src={item.imageUrl}
+                                            alt={item.name}
+                                            sizes="80px"
+                                            className="w-20 h-20 object-cover mr-4 rounded-md"
                                         />
                                     ) : (
                                         <div className="w-20 h-20 bg-gray-200 rounded-md flex items-center justify-center text-gray-500 text-xs mr-4">

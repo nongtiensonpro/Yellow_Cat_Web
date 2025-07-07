@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import {
     Card, CardHeader, CardBody, CardFooter, Button, Spinner,
@@ -70,8 +70,29 @@ const getStatusDisplay = (status: string): string => {
     return status;
 };
 
+// --------------------
+// Type definitions
+// --------------------
+type EditableOrderInfo = {
+    customerName: string;
+    phoneNumber: string;
+};
+
+type ValidationErrors = {
+    customerName: string;
+    phoneNumber: string;
+};
+
+type SessionWithToken = {
+    accessToken?: string;
+};
+
 // Function validate thông tin khách hàng với regex chính xác
-const validateCustomerInfoWithPhoneRegex = (editableOrder: any, orderItems: any[], setValidationErrors: any): boolean => {
+const validateCustomerInfoWithPhoneRegex = (
+    editableOrder: EditableOrderInfo,
+    orderItems: unknown[],
+    setValidationErrors: (errors: ValidationErrors) => void
+): boolean => {
     const errors = {
         customerName: '',
         phoneNumber: '',
@@ -130,7 +151,6 @@ export default function EditFromOrder() {
         orderItems,
         itemsLoading,
         itemsError,
-        products,
         filteredProducts,
         productsLoading,
         productsError,
@@ -157,15 +177,13 @@ export default function EditFromOrder() {
         cashPayment,
 
         // Utils
-        validateCustomerInfo,
-        isPaid,
         calculateOrderTotals,
         forceUpdateCurrentOrder,
     } = useOrderStore();
 
     // Initialize data when currentOrder changes
     useEffect(() => {
-        if (currentOrder && session?.accessToken) {
+        if (currentOrder && (session as SessionWithToken | null)?.accessToken) {
             initializeProductData();
             fetchOrderItems(session);
         }
@@ -191,7 +209,7 @@ export default function EditFromOrder() {
 
     // Effect to refresh data when forceRefresh changes
     useEffect(() => {
-        if (forceRefresh > 0 && currentOrder && session?.accessToken) {
+        if (forceRefresh > 0 && currentOrder && (session as SessionWithToken | null)?.accessToken) {
             console.log('🔄 Force refresh triggered:', forceRefresh);
             // Small delay to ensure backend has processed the payment
             setTimeout(async () => {
@@ -203,32 +221,9 @@ export default function EditFromOrder() {
         }
     }, [forceRefresh, currentOrder, session, fetchOrderItems]);
 
-    // Cash payment countdown logic
-    useEffect(() => {
-        let interval: NodeJS.Timeout;
-
-        if (isCashPaymentOpen && cashPaymentCountdown > 0) {
-            interval = setInterval(() => {
-                setCashPaymentCountdown(prev => {
-                    const newCount = prev - 1;
-                    if (newCount === 0) {
-                        handleConfirmCashPayment();
-                    }
-                    return newCount;
-                });
-            }, 1000);
-        }
-
-        return () => {
-            if (interval) {
-                clearInterval(interval);
-            }
-        };
-    }, [isCashPaymentOpen, cashPaymentCountdown]);
-
     // Handlers using store functions
     const handleUpdateOrder = async () => {
-        if (!currentOrder || !session?.accessToken) return;
+        if (!currentOrder || !(session as SessionWithToken | null)?.accessToken) return;
 
         try {
             const requestBody = {
@@ -241,7 +236,7 @@ export default function EditFromOrder() {
 
             await updateOrder(requestBody, session);
 
-        } catch (err: any) {
+        } catch {
             // Error đã được handle trong store
         }
     };
@@ -270,8 +265,8 @@ export default function EditFromOrder() {
         onCashPaymentOpen();
     };
 
-    const handleConfirmCashPayment = async () => {
-        if (!currentOrder || !session?.accessToken) return;
+    const handleConfirmCashPayment = useCallback(async () => {
+        if (!currentOrder || !(session as SessionWithToken | null)?.accessToken) return;
 
         setIsCashPaymentProcessing(true);
 
@@ -291,7 +286,7 @@ export default function EditFromOrder() {
                 console.log('🔄 Payment modal closed, UI should reflect new status');
             }, 2000);
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('❌ Cash payment failed:', error);
             setTimeout(() => {
                 onCashPaymentOpenChange();
@@ -299,7 +294,30 @@ export default function EditFromOrder() {
         } finally {
             setIsCashPaymentProcessing(false);
         }
-    };
+    }, [currentOrder, session, cashPayment, setForceRefresh, forceUpdateCurrentOrder, onCashPaymentOpenChange]);
+
+    // Cash payment countdown logic
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+
+        if (isCashPaymentOpen && cashPaymentCountdown > 0) {
+            interval = setInterval(() => {
+                setCashPaymentCountdown(prev => {
+                    const newCount = prev - 1;
+                    if (newCount === 0) {
+                        handleConfirmCashPayment();
+                    }
+                    return newCount;
+                });
+            }, 1000);
+        }
+
+        return () => {
+            if (interval) {
+                clearInterval(interval);
+            }
+        };
+    }, [isCashPaymentOpen, cashPaymentCountdown, handleConfirmCashPayment]);
 
     const handlePaymentOpen = async () => {
         setValidationErrors({ customerName: '', phoneNumber: '' });
@@ -563,7 +581,7 @@ export default function EditFromOrder() {
                                     {currentOrder.payments && currentOrder.payments.length > 0 && (
                                         <div className="mt-3 pt-3 border-t">
                                             <p className="font-bold mb-2">Thông tin thanh toán:</p>
-                                            {currentOrder.payments.map((payment: any, index: number) => (
+                                            {currentOrder.payments.map((payment, index) => (
                                                 <div key={payment.paymentId || index} className="text-sm mb-2 p-2 bg-gray-50 rounded">
                                                     <p><strong>Phương thức:</strong> {payment.paymentMethod}</p>
                                                     <p><strong>Số tiền:</strong> {payment.amount.toLocaleString('vi-VN')} VND</p>
@@ -623,7 +641,7 @@ export default function EditFromOrder() {
                                             {(item) => (
                                                 <TableRow key={item.orderItemId}>
                                                     <TableCell>
-                                                        <div>{item.productName}</div>
+                                                        <div>{item.productName ?? 'Tên sản phẩm không xác định'}</div>
                                                         <div className="text-xs text-gray-500">{item.variantInfo}</div>
                                                     </TableCell>
                                                     <TableCell>

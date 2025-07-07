@@ -57,7 +57,7 @@ const updateSize = async (
     id: string | number,
     data: Omit<Size, "id" | "createdAt" | "updatedAt">,
     token: string | undefined
-): Promise<any> => {
+): Promise<ApiResponse<Size> | null> => {
     if (!token) throw new Error("Chưa xác thực.");
     try {
         const nowISO = new Date().toISOString();
@@ -75,7 +75,7 @@ const updateSize = async (
             try {
                 const errorData = await response.json();
                 errorBody = errorData.message || errorData.error || JSON.stringify(errorData);
-            } catch (e) { }
+            } catch { }
             throw new Error(errorBody);
         }
         const contentType = response.headers.get("content-type");
@@ -208,8 +208,8 @@ export default function EditSizeModal({
             });
             if (onSuccess) onSuccess();
             onOpenChange(false);
-        } catch (err: any) {
-            const errorMessage = err.message || "Không thể cập nhật Kích cỡ.";
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Không thể cập nhật Kích cỡ.";
             setFormError(errorMessage);
             addToast({
                 title: "Lỗi Cập Nhật",
@@ -239,7 +239,7 @@ export default function EditSizeModal({
             isKeyboardDismissDisabled={isSubmitting}
         >
             <ModalContent>
-                {(onClose) => (
+                {() => (
                     <>
                         <ModalHeader className="flex flex-col gap-1 px-6 py-4 border-b">
                             <h2 className="text-xl font-semibold">Chỉnh sửa Kích cỡ (ID: {sizeId})</h2>

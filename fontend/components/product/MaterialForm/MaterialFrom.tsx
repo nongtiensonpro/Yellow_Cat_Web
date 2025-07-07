@@ -23,7 +23,7 @@ const createMaterial = async (data: Material, token: string | undefined) => {
     }
 
     try {
-        const response = await fetch("http://localhost:8080/api/materials", { // đổi endpoint
+        const response = await fetch("http://localhost:8080/api/materials", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -37,7 +37,7 @@ const createMaterial = async (data: Material, token: string | undefined) => {
             try {
                 const errorData = await response.json();
                 errorBody = errorData.message || errorData.error || JSON.stringify(errorData);
-            } catch (e) {
+            } catch {
                 errorBody = response.statusText;
             }
             console.error("Lỗi API:", response.status, errorBody);
@@ -51,7 +51,7 @@ const createMaterial = async (data: Material, token: string | undefined) => {
     }
 };
 
-export default function MaterialForm({ onSuccess, onCancel }: MaterialFormProps) {
+export default function MaterialForm({ onSuccess}: MaterialFormProps) {
     const { data: session, status } = useSession();
     const [formError, setFormError] = useState<string | null>(null);
     const [materialName, setMaterialName] = useState("");
@@ -91,7 +91,7 @@ export default function MaterialForm({ onSuccess, onCancel }: MaterialFormProps)
                 throw new Error("Phiên đăng nhập hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.");
             }
 
-            const response = await createMaterial(
+            await createMaterial(
                 {
                     name: materialName.trim(),
                     description: description.trim()
@@ -113,9 +113,9 @@ export default function MaterialForm({ onSuccess, onCancel }: MaterialFormProps)
                 onSuccess();
             }
 
-        } catch (err: any) {
-            const errorMessage = err instanceof Error ? err.message : "Không thể tạo Material. Đã xảy ra lỗi không mong muốn.";
-            console.error("Lỗi khi submit:", err);
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Không thể tạo Material. Đã xảy ra lỗi không mong muốn.";
+            console.error("Lỗi khi submit:", error);
             setFormError(errorMessage);
             addToast({
                 title: "Lỗi",

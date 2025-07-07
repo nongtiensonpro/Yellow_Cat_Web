@@ -3,20 +3,16 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
-    BarChart2,
     Package,
     Percent,
     User,
     LayoutDashboard,
     RotateCcw,
     FileText,
-    Layers,
-    Shirt,
     Box,
     Tag,
     Palette,
     Ruler,
-    Target,
     Store,
     ListOrdered
 } from "lucide-react";

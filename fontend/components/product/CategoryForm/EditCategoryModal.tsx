@@ -14,6 +14,16 @@ import {
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 
+// Extend Session type để có accessToken
+interface ExtendedSession {
+    accessToken: string;
+    user?: {
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+    };
+}
+
 export interface Category {
     id: number | string;
     name: string;
@@ -29,6 +39,12 @@ interface ApiResponse<T> {
     data: T;
 }
 
+interface UpdateCategoryResponse {
+    success: boolean;
+    message?: string;
+    data?: Category;
+}
+
 interface EditCategoryModalProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
@@ -36,61 +52,45 @@ interface EditCategoryModalProps {
     onSuccess?: () => void;
 }
 
-const fetchCategoryById = async (id: string | number, token: string | undefined): Promise<ApiResponse<Category>> => {
-    if (!token) {
-        throw new Error("Chưa xác thực.");
-    }
-    try {
-        const response = await fetch(`http://localhost:8080/api/categories/${id}`, {
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
-        });
-        if (!response.ok) {
-            if (response.status === 404) throw new Error("Không tìm thấy Category.");
-            const errorData = await response.json().catch(() => ({ message: `Lỗi không xác định (Status: ${response.status})` }));
-            throw new Error(errorData.message || `Failed to fetch category (Status: ${response.status})`);
+const fetchCategoryById = async (id: string | number, token: string): Promise<ApiResponse<Category>> => {
+    const response = await fetch(`http://localhost:8080/api/categories/${id}`, {
+        headers: {
+            "Authorization": `Bearer ${token}`
         }
-        return await response.json();
-    } catch (error) {
-        console.error("Error fetching category by ID:", error);
-        throw error;
+    });
+    if (!response.ok) {
+        if (response.status === 404) throw new Error("Không tìm thấy Category.");
+        const errorData = await response.json().catch(() => ({ message: `Lỗi không xác định (Status: ${response.status})` }));
+        throw new Error(errorData.message || `Failed to fetch category (Status: ${response.status})`);
     }
+    return await response.json();
 };
 
-const updateCategory = async (id: string | number, data: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>, token: string | undefined): Promise<any> => {
-    if (!token) {
-        throw new Error("Chưa xác thực.");
-    }
-    try {
-        console.log("Sending update data:", JSON.stringify(data));
-        const response = await fetch(`http://localhost:8080/api/categories/${id}`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify(data)
-        });
+const updateCategory = async (id: string | number, data: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>, token: string): Promise<UpdateCategoryResponse> => {
+    console.log("Sending update data:", JSON.stringify(data));
+    const response = await fetch(`http://localhost:8080/api/categories/${id}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+    });
 
-        if (!response.ok) {
-            let errorBody = `Lỗi cập nhật (Status: ${response.status})`;
-            try {
-                const errorData = await response.json();
-                errorBody = errorData.message || errorData.error || JSON.stringify(errorData);
-            } catch (e) { /* Ignore parsing error */ }
-            console.error("API Update Error:", response.status, errorBody);
-            throw new Error(errorBody);
-        }
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-            return await response.json();
-        } else {
-            return null;
-        }
-    } catch (error) {
-        console.error("Error updating category:", error);
-        throw error instanceof Error ? error : new Error("Đã xảy ra lỗi khi cập nhật.");
+    if (!response.ok) {
+        let errorBody = `Lỗi cập nhật (Status: ${response.status})`;
+        try {
+            const errorData = await response.json();
+            errorBody = errorData.message || errorData.error || JSON.stringify(errorData);
+        } catch { /* Ignore parsing error */ }
+        console.error("API Update Error:", response.status, errorBody);
+        throw new Error(errorBody);
+    }
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.indexOf("application/json") !== -1) {
+        return await response.json();
+    } else {
+        return { success: true };
     }
 };
 
@@ -106,7 +106,7 @@ export default function EditCategoryModal({ isOpen, onOpenChange, categoryId, on
     const [dataLoaded, setDataLoaded] = useState(false); // Track if data has been loaded
 
     // Lấy token từ session của NextAuth
-    const authToken = session?.accessToken;
+    const authToken = session ? (session as unknown as ExtendedSession).accessToken : undefined;
 
     // Reset form khi modal đóng
     useEffect(() => {
@@ -144,7 +144,7 @@ export default function EditCategoryModal({ isOpen, onOpenChange, categoryId, on
                 })
                 .catch(err => {
                     console.error("Error in fetch useEffect:", err);
-                    const errorMsg = err.message || "Không thể tải dữ liệu Category.";
+                    const errorMsg = err instanceof Error ? err.message : "Không thể tải dữ liệu Category.";
                     setFormError(errorMsg);
                     addToast({ title: "Lỗi", description: errorMsg, color: "danger" });
                 })
@@ -219,8 +219,8 @@ export default function EditCategoryModal({ isOpen, onOpenChange, categoryId, on
             // Đóng modal
             onOpenChange(false);
 
-        } catch (err: any) {
-            const errorMessage = err.message || "Không thể cập nhật Category.";
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : "Không thể cập nhật Category.";
             console.error("Lỗi khi submit update:", err);
             setFormError(errorMessage);
             addToast({
@@ -254,7 +254,7 @@ export default function EditCategoryModal({ isOpen, onOpenChange, categoryId, on
             isKeyboardDismissDisabled={isSubmitting}
         >
             <ModalContent>
-                {(onClose) => (
+                {() => (
                     <>
                         <ModalHeader className="flex flex-col gap-1 px-6 py-4 border-b">
                             <h2 className="text-xl font-semibold">Chỉnh sửa danh mục (ID: {categoryId})</h2>

@@ -1,10 +1,9 @@
-// components/UserSidebar.tsx
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-    User, Star, ShoppingCart, Percent, Heart, MapPin, Home
+    User, ShoppingCart, Percent, Heart, MapPin, Home
 } from 'lucide-react';
 
 const MENU_ITEMS = [

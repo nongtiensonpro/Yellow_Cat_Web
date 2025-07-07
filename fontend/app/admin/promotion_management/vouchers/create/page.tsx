@@ -84,8 +84,8 @@ export default function CreateVoucherPage() {
 
             alert('✅ Tạo khuyến mãi thành công!');
             router.push('/admin/promotion_management/vouchers');
-        } catch (err: any) {
-            alert('❌ Lỗi: ' + err.message);
+        } catch (e) {
+            alert('❌ Lỗi: ' + e);
         } finally {
             setLoading(false);
         }

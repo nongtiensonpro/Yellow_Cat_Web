@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CldImage } from 'next-cloudinary';
-import { Chip, Spinner } from "@heroui/react";
+import { Spinner } from "@heroui/react";
 import { ChevronDownIcon } from '@heroicons/react/24/solid';
 import { OptimizedVariantRow } from './OptimizedVariantRow';
 import type { ProductWithVariants, ProductVariant, ProductManagement } from './ProductListSaleOffice';

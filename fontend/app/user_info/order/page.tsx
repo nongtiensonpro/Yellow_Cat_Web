@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -16,8 +16,7 @@ import {
     TableColumn,
     TableBody,
     TableRow,
-    TableCell,
-    useDisclosure
+    TableCell
 } from "@heroui/react";
 import { 
     ShoppingCart, 
@@ -27,6 +26,16 @@ import {
     Package,
 } from "lucide-react";
 import {CldImage} from "next-cloudinary";
+
+// Extend Session type để có accessToken
+interface ExtendedSession {
+    accessToken: string;
+    user?: {
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+    };
+}
 
 interface AppUser {
     appUserId: number;
@@ -75,7 +84,7 @@ interface DecodedToken {
             roles: string[];
         };
     };
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface ApiResponse<T> {
@@ -95,16 +104,19 @@ export default function OrderPage() {
     const [loading, setLoading] = useState<boolean>(true);
     const [loadingOrders, setLoadingOrders] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [selectedOrder, setSelectedOrder] = useState<OrderDetail | null>(null);
-    const { isOpen, onOpen, onClose } = useDisclosure();
 
     // Hàm lấy thông tin user
-    const fetchUserByKeycloakId = async (keycloakId: string): Promise<AppUser> => {
+    const fetchUserByKeycloakId = useCallback(async (keycloakId: string): Promise<AppUser> => {
+        if (!session) {
+            throw new Error('Session không tồn tại');
+        }
+        
+        const extendedSession = session as unknown as ExtendedSession;
         const response = await fetch(`http://localhost:8080/api/users/keycloak-user/${keycloakId}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session?.accessToken}`,
+                'Authorization': `Bearer ${extendedSession.accessToken}`,
             },
         });
 
@@ -127,15 +139,20 @@ export default function OrderPage() {
         }
         
         return apiResponse.data;
-    };
+    }, [session]);
 
     // Hàm lấy đơn hàng theo số điện thoại hoặc email
-    const fetchOrdersByContact = async (searchValue: string): Promise<OrderDetail[]> => {
+    const fetchOrdersByContact = useCallback(async (searchValue: string): Promise<OrderDetail[]> => {
+        if (!session) {
+            throw new Error('Session không tồn tại');
+        }
+        
+        const extendedSession = session as unknown as ExtendedSession;
         const response = await fetch(`http://localhost:8080/api/orders/search?searchValue=${encodeURIComponent(searchValue)}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session?.accessToken}`,
+                'Authorization': `Bearer ${extendedSession.accessToken}`,
             },
         });
 
@@ -160,7 +177,7 @@ export default function OrderPage() {
         }
 
         return apiResponse.data || [];
-    };
+    }, [session]);
 
     // Lấy thông tin user và orders
     useEffect(() => {
@@ -176,7 +193,8 @@ export default function OrderPage() {
             }
 
             try {
-                const accessToken = session.accessToken as string;
+                const extendedSession = session as unknown as ExtendedSession;
+                const accessToken = extendedSession.accessToken;
                 if (!accessToken) {
                     throw new Error("Không tìm thấy access token hợp lệ");
                 }
@@ -199,9 +217,10 @@ export default function OrderPage() {
                     setOrders(ordersData);
                 }
 
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const errorMessage = err instanceof Error ? err.message : "Không thể lấy thông tin. Vui lòng thử lại sau.";
                 console.error("Lỗi khi lấy thông tin:", err);
-                setError(err.message || "Không thể lấy thông tin. Vui lòng thử lại sau.");
+                setError(errorMessage);
             } finally {
                 setLoading(false);
                 setLoadingOrders(false);
@@ -209,7 +228,7 @@ export default function OrderPage() {
         };
 
         getUserAndOrders();
-    }, [session, status]);
+    }, [session, status, fetchUserByKeycloakId, fetchOrdersByContact]);
 
     // Hàm format tiền tệ
     const formatCurrency = (amount: number) => {
@@ -240,12 +259,6 @@ export default function OrderPage() {
             case 'cancelled': return 'danger';
             default: return 'default';
         }
-    };
-
-    // Hàm mở modal chi tiết (giữ lại cho backward compatibility)
-    const handleViewDetails = (order: OrderDetail) => {
-        setSelectedOrder(order);
-        onOpen();
     };
 
     // Hàm điều hướng đến trang chi tiết mới

@@ -1,15 +1,21 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { jwtDecode } from 'jwt-decode';
 import { CldImage, CldUploadButton } from 'next-cloudinary';
-import {MapPin} from "lucide-react";
 import {Button} from "@heroui/react";
 import { useRouter } from 'next/navigation';
 
-
+interface ExtendedSession {
+    accessToken: string;
+    user?: {
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+    };
+}
 
 interface AppUser {
     appUserId: number;
@@ -39,7 +45,7 @@ interface DecodedToken {
             roles: string[];
         };
     };
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface ApiResponse {
@@ -62,13 +68,21 @@ interface UserUpdateData {
     avatarUrl: string;
 }
 
+// Interface cho upload result
+interface UploadResult {
+    event: string;
+    info: {
+        public_id: string;
+        [key: string]: unknown;
+    };
+}
+
 export default function Page() {
     const router = useRouter();
     const { data: session, status } = useSession();
     const [user, setUser] = useState<AppUser | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const [decodedAccessToken, setDecodedAccessToken] = useState<any>(null);
     const [isEditing, setIsEditing] = useState<boolean>(false);
     const [editData, setEditData] = useState<UserUpdateData | null>(null);
     const [updating, setUpdating] = useState<boolean>(false);
@@ -79,12 +93,12 @@ export default function Page() {
     // Regex pattern cho số điện thoại Việt Nam
     const PHONE_REGEX = /^(0|\+84)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$/;
 
-    const fetchUserByKeycloakId = async (keycloakId: string): Promise<AppUser> => {
+    const fetchUserByKeycloakId = useCallback(async (keycloakId: string, accessToken: string): Promise<AppUser> => {
         const response = await fetch(`http://localhost:8080/api/users/keycloak-user/${keycloakId}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session?.accessToken}`,
+                'Authorization': `Bearer ${accessToken}`,
             },
         });
 
@@ -111,14 +125,14 @@ export default function Page() {
         }
         
         return apiResponse.data;
-    };
+    }, []);
 
-    const updateUserProfile = async (updateData: UserUpdateData): Promise<AppUser> => {
+    const updateUserProfile = useCallback(async (updateData: UserUpdateData, accessToken: string): Promise<AppUser> => {
         const response = await fetch(`http://localhost:8080/api/users/update-profile/${updateData.appUserId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session?.accessToken}`,
+                'Authorization': `Bearer ${accessToken}`,
             },
             body: JSON.stringify(updateData),
         });
@@ -127,7 +141,7 @@ export default function Page() {
         
         try {
             apiResponse = await response.json();
-        } catch (parseError) {
+        } catch {
             // Nếu không parse được JSON, tạo response lỗi
             throw new Error(`Lỗi API: ${response.status} - ${response.statusText}`);
         }
@@ -164,7 +178,7 @@ export default function Page() {
         }
         
         return apiResponse.data;
-    };
+    }, []);
 
     useEffect(() => {
         const getUserInfo = async () => {
@@ -179,13 +193,13 @@ export default function Page() {
             }
 
             try {
-                const accessToken = session.accessToken as string;
+                const extendedSession = session as unknown as ExtendedSession;
+                const accessToken = extendedSession.accessToken;
                 if (!accessToken) {
                     throw new Error("Không tìm thấy access token hợp lệ");
                 }
 
                 const tokenData = jwtDecode<DecodedToken>(accessToken);
-                setDecodedAccessToken(tokenData);
 
                 const keycloakId = tokenData.sub;
                 if (!keycloakId) {
@@ -193,19 +207,20 @@ export default function Page() {
                 }
 
                 // Gọi API để lấy thông tin user từ backend
-                const userData = await fetchUserByKeycloakId(keycloakId);
+                const userData = await fetchUserByKeycloakId(keycloakId, accessToken);
                 setUser(userData);
 
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const errorMessage = err instanceof Error ? err.message : "Không thể lấy thông tin người dùng. Vui lòng thử lại sau.";
                 console.error("Lỗi khi lấy thông tin người dùng:", err);
-                setError(err.message || "Không thể lấy thông tin người dùng. Vui lòng thử lại sau.");
+                setError(errorMessage);
             } finally {
                 setLoading(false);
             }
         };
 
         getUserInfo();
-    }, [session, status]);
+    }, [session, status, fetchUserByKeycloakId]);
 
     const handleRetry = () => {
         setLoading(true);
@@ -238,7 +253,7 @@ export default function Page() {
     };
 
     const handleSaveEdit = async () => {
-        if (!editData) return;
+        if (!editData || !session) return;
 
         // Validate số điện thoại trước khi lưu
         if (editData.phoneNumber && editData.phoneNumber.trim() !== '' && !validatePhoneNumber(editData.phoneNumber)) {
@@ -249,16 +264,18 @@ export default function Page() {
         setUpdating(true);
         setUpdateError(null);
         try {
-            const updatedUser = await updateUserProfile(editData);
+            const extendedSession = session as unknown as ExtendedSession;
+            const updatedUser = await updateUserProfile(editData, extendedSession.accessToken);
             setUser(updatedUser);
             setIsEditing(false);
             setEditData(null);
             setUploadError(null);
             setPhoneError(null);
             setUpdateError(null);
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : "Không thể cập nhật thông tin. Vui lòng thử lại.";
             console.error("Lỗi khi cập nhật:", err);
-            setUpdateError(err.message || "Không thể cập nhật thông tin. Vui lòng thử lại.");
+            setUpdateError(errorMessage);
         } finally {
             setUpdating(false);
         }
@@ -286,7 +303,7 @@ export default function Page() {
         }
     };
 
-    const handleAvatarUpload = (result: any) => {
+    const handleAvatarUpload = (result: UploadResult) => {
         if (result.event === "success") {
             console.log("Upload thành công:", result.info);
             const newAvatarUrl = result.info.public_id;
@@ -469,9 +486,8 @@ export default function Page() {
                             <div className="inline-block w-fit cursor-pointer transition-all bg-blue-500 text-white px-4 py-2 rounded-lg border-blue-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px] mb-2">
                                 <CldUploadButton
                                     uploadPreset="YellowCatWeb"
-                                    onSuccess={(result, {widget}) => {
-                                        handleAvatarUpload(result);
-                                        widget.close();
+                                    onSuccess={(result) => {
+                                        handleAvatarUpload(result as UploadResult);
                                     }}
                                 >
                                     Cập nhật ảnh đại diện

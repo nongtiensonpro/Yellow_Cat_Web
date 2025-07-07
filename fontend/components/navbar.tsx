@@ -8,9 +8,10 @@ import {
     NavbarItem,
     NavbarMenuItem,
 } from "@heroui/navbar";
-import { Button, Badge } from "@heroui/react";
+import { Button } from "@heroui/react";
 import { Link } from "@heroui/link";
 import NextLink from "next/link";
+import Image from "next/image";
 import clsx from "clsx";
 import { ThemeSwitch } from "./theme-switch";
 import { Avatar } from "@heroui/react";
@@ -18,7 +19,7 @@ import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/d
 import { Popover, PopoverTrigger, PopoverContent } from "@heroui/popover";
 import { WishlistDropdown } from "./WishListDropdown";
 import { useSession, signIn, signOut } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { jwtDecode } from 'jwt-decode';
 import BadgeVisibility from "@/components/user/BadgeVisibility";
@@ -26,6 +27,15 @@ import { HeartIcon } from "@heroicons/react/24/solid";
 import CheckoutUser from "./checkoutuser";
 import { CldImage } from 'next-cloudinary';
 
+// Extend Session type để có accessToken
+interface ExtendedSession {
+    accessToken: string;
+    user?: {
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+    };
+}
 
 interface DecodedToken {
     sub?: string;
@@ -42,7 +52,7 @@ interface DecodedToken {
         };
     };
     exp?: number;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface AppUser {
@@ -78,13 +88,16 @@ export const Navbar = () => {
     const router = useRouter();
     const pathname = usePathname();
 
-    const fetchUserProfile = async (keycloakId: string) => {
+    const fetchUserProfile = useCallback(async (keycloakId: string) => {
+        if (!session) return;
+        
         try {
+            const extendedSession = session as unknown as ExtendedSession;
             const response = await fetch(`http://localhost:8080/api/users/keycloak-user/${keycloakId}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.accessToken}`,
+                    'Authorization': `Bearer ${extendedSession.accessToken}`,
                 },
             });
 
@@ -101,7 +114,27 @@ export const Navbar = () => {
         } catch (error) {
             console.error('Error fetching user profile:', error);
         }
-    };
+    }, [session]);
+
+    const handleLogout = useCallback(async () => {
+        try {
+            const homeUrl = process.env.NEXT_PUBLIC_HOME_URL || "http://localhost:3000";
+            const issuer = process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
+            const clientId = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID;
+            if (!issuer || !clientId) {
+                await signOut({ redirect: false });
+                router.push(homeUrl);
+                return;
+            }
+            const keycloakLogoutUrl = `${issuer}/protocol/openid-connect/logout?post_logout_redirect_uri=${encodeURIComponent(homeUrl)}&client_id=${clientId}`;
+            await signOut({ redirect: false });
+            window.location.href = keycloakLogoutUrl;
+        } catch (error) {
+            console.error("Error during logout:", error);
+            const homeUrl = process.env.NEXT_PUBLIC_HOME_URL || "http://localhost:3000";
+            window.location.href = homeUrl;
+        }
+    }, [router]);
 
     useEffect(() => {
         const updateWishlistCount = () => {
@@ -139,7 +172,8 @@ export const Navbar = () => {
             }
 
             try {
-                const accessToken = session.accessToken as string;
+                const extendedSession = session as unknown as ExtendedSession;
+                const accessToken = extendedSession.accessToken;
                 if (!accessToken) {
                     setIsTokenValid(false);
                     setIsAdmin(false);
@@ -181,27 +215,7 @@ export const Navbar = () => {
         };
 
         checkTokenAndAdminStatus();
-    }, [session, status]);
-
-    const handleLogout = async () => {
-        try {
-            const homeUrl = process.env.NEXT_PUBLIC_HOME_URL || "http://localhost:3000";
-            const issuer = process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
-            const clientId = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID;
-            if (!issuer || !clientId) {
-                await signOut({ redirect: false });
-                router.push(homeUrl);
-                return;
-            }
-            const keycloakLogoutUrl = `${issuer}/protocol/openid-connect/logout?post_logout_redirect_uri=${encodeURIComponent(homeUrl)}&client_id=${clientId}`;
-            await signOut({ redirect: false });
-            window.location.href = keycloakLogoutUrl;
-        } catch (error) {
-            console.error("Error during logout:", error);
-            const homeUrl = process.env.NEXT_PUBLIC_HOME_URL || "http://localhost:3000";
-            window.location.href = homeUrl;
-        }
-    };
+    }, [session, status, fetchUserProfile, handleLogout]);
 
     const handleLogin = () => {
         signIn("keycloak", { callbackUrl: window.location.href });
@@ -215,8 +229,6 @@ export const Navbar = () => {
             return <Button onClick={handleLogin} className="bg-primary-500/20 text-primary">Login</Button>;
         }
 
-        // Tính toán avatar src và name
-        const avatarSrc = userProfile?.avatarUrl || session.user?.image;
         const userName = userProfile?.fullName || session.user?.name || session.user?.email || "User";
 
         return (
@@ -267,7 +279,14 @@ export const Navbar = () => {
             <CheckoutUser />
             
             <div className="w-24 h-auto relative transform translate-x-20">
-                <img src="/images/img_1.png" alt="Logo" className="object-contain w-full h-full" />
+                <Image 
+                    src="/images/img_1.png" 
+                    alt="Logo" 
+                    width={96}
+                    height={96}
+                    className="object-contain w-full h-full" 
+                    priority
+                />
             </div>
 
             <NavbarContent className="hidden sm:flex basis-full justify-center" justify="center">

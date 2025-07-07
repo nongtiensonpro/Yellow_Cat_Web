@@ -26,6 +26,19 @@ import { Calendar } from "@heroui/react";
 import { today, getLocalTimeZone, CalendarDate } from "@internationalized/date";
 import { useRevenue } from "@/hooks/useRevenue"; // Giả định hook này tồn tại và hoạt động đúng
 
+// --- Types ---
+interface ProductRevenueAggregated {
+  productId: number;
+  productName: string;
+  categoryName: string;
+  brandName: string;
+  totalRevenue: number;
+  totalUnitsSold: number;
+  ordersCount: number;
+}
+
+type SortableKey = keyof ProductRevenueAggregated;
+
 // --- Helper Functions (Không thay đổi) ---
 const formatDateForApi = (date: CalendarDate): string =>
     `${date.year}-${String(date.month).padStart(2, "0")}-${String(
@@ -59,7 +72,7 @@ export default function StatisticsByDay() {
   const [startDate, setStartDate] = useState<CalendarDate>(firstOfMonth);
   const [endDate, setEndDate] = useState<CalendarDate>(todayDate);
 
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' }>({
+  const [sortConfig, setSortConfig] = useState<{ key: SortableKey; direction: 'ascending' | 'descending' }>({
     key: 'totalRevenue',
     direction: 'descending',
   });
@@ -156,15 +169,22 @@ export default function StatisticsByDay() {
       acc[item.productId].totalUnitsSold += item.totalUnitsSold;
       acc[item.productId].ordersCount += item.ordersCount;
       return acc;
-    }, {} as any);
+    }, {} as Record<string, ProductRevenueAggregated>);
 
-    let sortableItems = Object.values(aggregated);
+    const sortableItems = Object.values(aggregated);
     if (sortConfig !== null) {
-      sortableItems.sort((a: any, b: any) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
+      sortableItems.sort((a: ProductRevenueAggregated, b: ProductRevenueAggregated) => {
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+        
+        // Convert to string for consistent comparison
+        const aStr = String(aValue);
+        const bStr = String(bValue);
+        
+        if (aStr < bStr) {
           return sortConfig.direction === 'ascending' ? -1 : 1;
         }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
+        if (aStr > bStr) {
           return sortConfig.direction === 'ascending' ? 1 : -1;
         }
         return 0;
@@ -173,7 +193,7 @@ export default function StatisticsByDay() {
     return sortableItems;
   }, [productRevenueDetail, sortConfig]);
 
-  const requestSort = (key: string) => {
+  const requestSort = (key: SortableKey) => {
     let direction: 'ascending' | 'descending' = 'descending';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'descending') {
       direction = 'ascending';
@@ -181,7 +201,7 @@ export default function StatisticsByDay() {
     setSortConfig({ key, direction });
   };
 
-  const getSortIndicator = (key: string) => {
+  const getSortIndicator = (key: SortableKey) => {
     if (!sortConfig || sortConfig.key !== key) return null;
     return sortConfig.direction === 'descending' ? '▼' : '▲';
   };
@@ -311,7 +331,7 @@ export default function StatisticsByDay() {
                             <TableColumn className="text-center">Số Đơn Hàng</TableColumn>
                           </TableHeader>
                           <TableBody items={aggregatedProductData}>
-                            {(item: any) => (
+                            {(item: ProductRevenueAggregated) => (
                                 <TableRow key={item.productId}>
                                   <TableCell>
                                     <div className="flex flex-col">

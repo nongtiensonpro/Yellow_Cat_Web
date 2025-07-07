@@ -3,7 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import axios from 'axios'
+import { Session } from 'next-auth'
+import axios, { AxiosError } from 'axios'
+
+interface CustomSession extends Session {
+    accessToken?: string;
+}
 
 interface ProductVariant {
     variantId: number
@@ -25,29 +30,12 @@ interface ProductVariantDetail {
     salePrice: number
 }
 
-interface PromotionData {
-    promotionId: number
-    promotionName: string
-    description: string
-    discountType: string
-    discountValue: number
-    startDate: string
-    endDate: string
-    variantIds: number[]
-}
-
 export default function EditPromotionProductPage() {
     const router = useRouter()
     const params = useParams()
-    const { data: session, status } = useSession()
+    const { data: session, status } = useSession() as { data: CustomSession | null, status: string }
     const [loading, setLoading] = useState(false)
     const [submitting, setSubmitting] = useState(false)
-
-    // Kiểm tra params để tránh lỗi TypeScript
-    const id = params?.id
-    if (!id || Array.isArray(id)) {
-        return <div className="text-center py-8">ID không hợp lệ</div>
-    }
 
     const [form, setForm] = useState({
         promotionName: '',
@@ -63,25 +51,25 @@ export default function EditPromotionProductPage() {
     const [selectedVariants, setSelectedVariants] = useState<number[]>([])
     const [details, setDetails] = useState<ProductVariantDetail[]>([])
     const [currentPage, setCurrentPage] = useState(1)
-    const itemsPerPage = 5
-
     const [detailPage, setDetailPage] = useState(1)
-    const detailPerPage = 5
-
-    // Search state
     const [searchTerm, setSearchTerm] = useState('')
 
+    const itemsPerPage = 5
+    const detailPerPage = 5
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+
+    // Kiểm tra params để tránh lỗi TypeScript
+    const id = params?.id
+    const isValidId = id && !Array.isArray(id)
 
     // Load promotion data
     useEffect(() => {
-        if (status !== 'authenticated' || !session?.accessToken) return
+        if (!isValidId || status !== 'authenticated' || !session?.accessToken) return
 
         setLoading(true)
 
-        // Load promotion data
         fetch(`${API_URL}/api/promotion-products/${id}/edit`, {
-            headers: { Authorization: `Bearer ${session.accessToken}` },
+            headers: { Authorization: `Bearer ${session?.accessToken}` },
         })
             .then((res) => res.json())
             .then((response) => {
@@ -101,11 +89,13 @@ export default function EditPromotionProductPage() {
                 alert('Không thể tải dữ liệu đợt giảm giá')
             })
             .finally(() => setLoading(false))
-    }, [session, status, id])
+    }, [session, status, id, API_URL, isValidId])
 
     // Load all variants for selection
     useEffect(() => {
         const fetchVariants = async () => {
+            if (!isValidId || !session?.accessToken) return;
+            
             try {
                 const res = await axios.get(`${API_URL}/api/product-variants/for-selection`, {
                     headers: {
@@ -122,18 +112,17 @@ export default function EditPromotionProductPage() {
             }
         }
 
-        if (session?.accessToken) {
-            fetchVariants()
-        }
-    }, [session?.accessToken])
+        fetchVariants()
+    }, [session?.accessToken, API_URL, isValidId])
 
     // Load selected variant details
     useEffect(() => {
         const fetchDetails = async () => {
-            if (selectedVariants.length === 0) {
+            if (!isValidId || !session?.accessToken || selectedVariants.length === 0) {
                 setDetails([])
                 return
             }
+
             try {
                 const res = await axios.post(
                     `${API_URL}/api/product-variants/details`,
@@ -152,10 +141,8 @@ export default function EditPromotionProductPage() {
             }
         }
 
-        if (session?.accessToken) {
-            fetchDetails()
-        }
-    }, [selectedVariants, session?.accessToken])
+        fetchDetails()
+    }, [selectedVariants, session?.accessToken, API_URL, isValidId])
 
     const formatDateTimeLocal = (dateStr: string) => {
         const date = new Date(dateStr)
@@ -225,8 +212,11 @@ export default function EditPromotionProductPage() {
             )
             alert('✅ Cập nhật đợt giảm giá thành công!')
             router.push('/admin/promotion_products')
-        } catch (err: any) {
-            alert('❌ Lỗi: ' + (err?.response?.data?.message || err.message))
+        } catch (error) {
+            const errorMessage = error instanceof AxiosError 
+                ? error.response?.data?.message || error.message
+                : 'Đã xảy ra lỗi không xác định';
+            alert('❌ Lỗi: ' + errorMessage)
         } finally {
             setSubmitting(false)
         }
@@ -248,6 +238,10 @@ export default function EditPromotionProductPage() {
         (detailPage - 1) * detailPerPage,
         detailPage * detailPerPage
     )
+
+    if (!isValidId) {
+        return <div className="text-center py-8">ID không hợp lệ</div>
+    }
 
     if (status === 'loading' || loading) {
         return (

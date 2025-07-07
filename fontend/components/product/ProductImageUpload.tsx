@@ -3,6 +3,13 @@ import { useState } from 'react';
 import { Button } from "@heroui/react";
 import { Upload, X } from "lucide-react";
 
+interface CloudinaryResource {
+    public_id: string;
+    secure_url?: string;
+    url?: string;
+    asset_id?: string;
+    version?: number;
+}
 interface ProductImageUploadProps {
     onUpload: (imageUrl: string) => void;
     currentImage?: string;
@@ -22,16 +29,20 @@ export default function ProductImageUpload({
     showPreview = true,
     onRemove 
 }: ProductImageUploadProps) {
-    const [resource, setResource] = useState<any>(currentImage ? { public_id: currentImage } : null);
+    const [resource, setResource] = useState<CloudinaryResource | null>(
+        currentImage ? { public_id: currentImage } : null
+    );
     const [error, setError] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
 
-    const handleUpload = (result: any) => {
-        if (result.event === "success") {
-            console.log("Upload thành công:", result.info);
-            setResource(result.info);
+    const handleUpload = (result: unknown) => {
+        const uploadResult = result as { event: string; info: CloudinaryResource };
+        
+        if (uploadResult.event === "success" && uploadResult.info) {
+            console.log("Upload thành công:", uploadResult.info);
+            setResource(uploadResult.info);
             setError(null);
-            onUpload(result.info.public_id);
+            onUpload(uploadResult.info.public_id);
             setIsUploading(false);
         } else {
             setError("Có lỗi xảy ra trong quá trình upload");

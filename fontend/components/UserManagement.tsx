@@ -97,7 +97,6 @@ function UserManagement() {
                     <th className="border px-4 py-2">Họ tên</th>
                     <th className="border px-4 py-2">Email</th>
                     <th className="border px-4 py-2">SĐT</th>
-                    <th className="border px-4 py-2">Avatar</th>
                     <th className="border px-4 py-2">Hành động</th>
                 </tr>
                 </thead>
@@ -108,9 +107,6 @@ function UserManagement() {
                         <td className="border px-4 py-2">{user.name}</td>
                         <td className="border px-4 py-2">{user.email}</td>
                         <td className="border px-4 py-2">{user.phone}</td>
-                        <td className="border px-4 py-2">
-                            {user.avatar && <img src={user.avatar} alt="avatar" className="w-10 h-10 rounded-full" />}
-                        </td>
                         <td className="border px-4 py-2">
                             <button className="text-blue-500 mr-2" onClick={() => handleEdit(user)}>Sửa</button>
                             <button className="text-red-500" onClick={() => handleDelete(user.id)}>Xóa</button>

@@ -10,7 +10,7 @@ import {
     Chip,
     Avatar,
 } from "@heroui/react";
-import {Users, Package, BarChart2, Moon, Sun, UserCheck, UserX, Shield, User, ActivityIcon, Percent} from "lucide-react";
+import {Users, Package, UserCheck, UserX, Shield, User, Percent} from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useSession } from 'next-auth/react';
@@ -34,7 +34,17 @@ interface DecodedToken {
             roles: string[];
         };
     };
-    [key: string]: any;
+    [key: string]: unknown;
+}
+
+// Extend Session type để có accessToken
+interface ExtendedSession {
+    accessToken: string;
+    user?: {
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+    };
 }
 
 interface UserStats {
@@ -65,6 +75,26 @@ interface ProductStats {
     outOfStock: number;
 }
 
+// Interface cho Product từ API
+interface Product {
+    id: string;
+    name: string;
+    isActive: boolean;
+    totalStock: number;
+    price: number;
+    description?: string;
+}
+
+// Interface cho Promotion từ API  
+interface Promotion {
+    id: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    discountPercentage?: number;
+    isActive: boolean;
+}
+
 // Define a new interface for PromotionStats
 interface PromotionStats {
     total: number;
@@ -87,15 +117,9 @@ export default function AdminDashboard() {
         defaultUsers: 0,
     });
 
-    // Các thống kê khác
-    const [stats] = useState({
-        products: 342,
-        orders: 55555555555,
-        revenue: 55555555555,
-    });
 
     // Dark mode toggle
-    const [darkMode, setDarkMode] = useState(false);
+    const [darkMode] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -112,7 +136,8 @@ export default function AdminDashboard() {
             }
 
             try {
-                const accessToken = session.accessToken as string;
+                const extendedSession = session as unknown as ExtendedSession;
+                const accessToken = extendedSession.accessToken;
                 if (!accessToken) {
                     throw new Error("Không tìm thấy access token hợp lệ");
                 }
@@ -135,7 +160,7 @@ export default function AdminDashboard() {
                 });
 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
+                    console.log(`HTTP error! Status: ${response.status}`);
                 }
 
                 const users: Users[] = await response.json();
@@ -186,20 +211,22 @@ export default function AdminDashboard() {
     useEffect(() => {
         const fetchProductStats = async () => {
             try {
-                const accessToken = session?.accessToken;
+                const extendedSession = session as unknown as ExtendedSession | null;
+                const accessToken = extendedSession?.accessToken;
                 const response = await fetch('http://localhost:8080/api/products/management?page=0&size=1000', {
                     headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 });
                 if (!response.ok) throw new Error("Không thể lấy dữ liệu sản phẩm");
                 const data = await response.json();
-                const products = data?.data?.content || [];
+                const products: Product[] = data?.data?.content || [];
                 setProductStats({
                     total: products.length,
-                    active: products.filter((p: any) => p.isActive).length,
-                    inactive: products.filter((p: any) => !p.isActive).length,
-                    outOfStock: products.filter((p: any) => p.totalStock === 0).length,
+                    active: products.filter((p: Product) => p.isActive).length,
+                    inactive: products.filter((p: Product) => !p.isActive).length,
+                    outOfStock: products.filter((p: Product) => p.totalStock === 0).length,
                 });
-            } catch (e) {
+            } catch (error) {
+                console.error("Lỗi khi lấy thống kê sản phẩm:", error);
                 setProductStats({
                     total: 0,
                     active: 0,
@@ -223,24 +250,25 @@ export default function AdminDashboard() {
     useEffect(() => {
         const fetchPromotionStats = async () => {
             try {
-                const accessToken = session?.accessToken;
+                const extendedSession = session as unknown as ExtendedSession | null;
+                const accessToken = extendedSession?.accessToken;
                 // Assuming an API endpoint for promotions, adjust as needed
                 const response = await fetch('http://localhost:8080/api/promotions', {
                     headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 });
                 if (!response.ok) throw new Error("Không thể lấy dữ liệu khuyến mãi");
                 const data = await response.json();
-                const promotions = data || []; // Assuming the API returns an array of promotions
+                const promotions: Promotion[] = data || []; // Assuming the API returns an array of promotions
 
                 const now = new Date();
                 setPromotionStats({
                     total: promotions.length,
-                    active: promotions.filter((p: any) => new Date(p.startDate) <= now && new Date(p.endDate) >= now).length,
-                    expired: promotions.filter((p: any) => new Date(p.endDate) < now).length,
-                    upcoming: promotions.filter((p: any) => new Date(p.startDate) > now).length,
+                    active: promotions.filter((p: Promotion) => new Date(p.startDate) <= now && new Date(p.endDate) >= now).length,
+                    expired: promotions.filter((p: Promotion) => new Date(p.endDate) < now).length,
+                    upcoming: promotions.filter((p: Promotion) => new Date(p.startDate) > now).length,
                 });
-            } catch (e) {
-                console.error("Lỗi khi lấy thống kê khuyến mãi:", e);
+            } catch (error) {
+                console.error("Lỗi khi lấy thống kê khuyến mãi:", error);
                 setPromotionStats({
                     total: 0,
                     active: 0,

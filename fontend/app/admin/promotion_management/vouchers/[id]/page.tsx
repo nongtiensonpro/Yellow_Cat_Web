@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { Session } from 'next-auth';
 
 const formatDateForInput = (dateString: string) => {
     if (!dateString) return '';
@@ -10,10 +11,14 @@ const formatDateForInput = (dateString: string) => {
     return date.toISOString().slice(0, 16);
 };
 
+interface CustomSession extends Session {
+    accessToken?: string;
+}
+
 export default function EditVoucherPage() {
     const router = useRouter();
     const params = useParams();
-    const { data: session } = useSession();
+    const { data: session } = useSession() as { data: CustomSession | null };
 
     const idRaw = params?.id;
     const id = Array.isArray(idRaw) ? idRaw[0] : idRaw;
@@ -49,8 +54,9 @@ export default function EditVoucherPage() {
                     startDate: formatDateForInput(data.startDate),
                     endDate: formatDateForInput(data.endDate),
                 });
-            } catch (error) {
-                alert('Không lấy được dữ liệu!');
+            } catch (error: unknown) {
+                const errorMessage = error instanceof Error ? error.message : 'Không lấy được dữ liệu!';
+                alert(errorMessage);
             }
         };
 
@@ -60,8 +66,9 @@ export default function EditVoucherPage() {
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
     ) => {
-        const { name, type, value,  } = e.target;
-        let checked: any;
+        const { name, type, value } = e.target;
+        const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
+        
         setForm(prev => ({
             ...prev,
             [name]: type === 'checkbox' ? checked : value,
@@ -123,8 +130,9 @@ export default function EditVoucherPage() {
 
             alert('✅ Cập nhật thành công!');
             router.push('/admin/promotion_management/vouchers');
-        } catch (err: any) {
-            alert('❌ Lỗi: ' + err.message);
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Đã xảy ra lỗi không xác định';
+            alert('❌ Lỗi: ' + errorMessage);
         } finally {
             setLoading(false);
         }

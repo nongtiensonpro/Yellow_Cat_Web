@@ -62,11 +62,10 @@ const updateMaterial = async (
     id: string | number,
     data: Omit<Material, "id" | "createdAt" | "updatedAt">,
     token: string | undefined
-): Promise<any> => {
+): Promise<ApiResponse<Material> | null> => {
     if (!token) throw new Error("Chưa xác thực.");
     try {
         const nowISO = new Date().toISOString();
-        // Gửi đủ các trường theo API, chỉ dùng name và description, id, createdAt, updatedAt
         const fullData = {
             id,
             ...data,
@@ -87,7 +86,7 @@ const updateMaterial = async (
             try {
                 const errorData = await response.json();
                 errorBody = errorData.message || errorData.error || JSON.stringify(errorData);
-            } catch (e) { /* Ignore parsing error */ }
+            } catch { /* Ignore parsing error */ }
             console.error("API Update Error:", response.status, errorBody);
             throw new Error(errorBody);
         }
@@ -208,8 +207,8 @@ export default function EditMaterialModal({ isOpen, onOpenChange, materialId, on
 
             if (onSuccess) onSuccess();
             onOpenChange(false);
-        } catch (err: any) {
-            const errorMessage = err.message || "Không thể cập nhật Material.";
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Không thể cập nhật Material.";
             setFormError(errorMessage);
             addToast({
                 title: "Lỗi Cập Nhật",
@@ -241,7 +240,7 @@ export default function EditMaterialModal({ isOpen, onOpenChange, materialId, on
             isKeyboardDismissDisabled={isSubmitting}
         >
             <ModalContent>
-                {(onClose) => (
+                {() => (
                     <>
                         <ModalHeader className="flex flex-col gap-1 px-6 py-4 border-b">
                             <h2 className="text-xl font-semibold">Chỉnh sửa Material (ID: {materialId})</h2>

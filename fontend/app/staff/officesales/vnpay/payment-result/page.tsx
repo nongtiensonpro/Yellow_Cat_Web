@@ -23,6 +23,23 @@ interface OrderDetailResponse {
     payments: PaymentResponse[];
 }
 
+// Interface cho VNPay payment result
+interface VNPayResult {
+    success: boolean;
+    amount: number;
+    orderInfo: string | null;
+    transactionNo: string | null;
+}
+
+// Extend Session type để có accessToken
+interface ExtendedSession {
+    accessToken: string;
+    user?: {
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+    };
+}
 
 const POLLING_INTERVAL = 2000;
 const MAX_POLLING_ATTEMPTS = 6;
@@ -32,7 +49,7 @@ export default function PaymentResultPage() {
     const router = useRouter();
     const { data: session } = useSession();
 
-    const [result, setResult] = useState<any>(null);
+    const [result, setResult] = useState<VNPayResult | null>(null);
     const [orderData, setOrderData] = useState<OrderDetailResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -141,12 +158,12 @@ export default function PaymentResultPage() {
             console.log('💥 All polling attempts failed - throwing timeout error');
             throw new Error('Hệ thống chưa cập nhật trạng thái thanh toán. Vui lòng kiểm tra lại sau hoặc liên hệ hỗ trợ.');
 
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Có lỗi xảy ra khi xử lý thanh toán với hệ thống.';
             console.error('❌ Lỗi trong quá trình xử lý thanh toán:', err);
-            console.error('❌ Error stack:', err.stack);
             console.error('❌ Error type:', typeof err);
-            console.error('❌ Error message:', err.message);
-            setError(err.message || 'Có lỗi xảy ra khi xử lý thanh toán với hệ thống.');
+            console.error('❌ Error message:', errorMessage);
+            setError(errorMessage);
         } finally {
             // Dù thành công hay thất bại, đều phải kết thúc luồng xác nhận
             console.log('🏁 Payment confirmation process finished');
@@ -157,7 +174,9 @@ export default function PaymentResultPage() {
 
     // **FIXED: useEffect chính để khởi chạy logic**
     useEffect(() => {
-        if (hasInitiated || !searchParams || !session?.accessToken) {
+        const extendedSession = session as ExtendedSession | null;
+        
+        if (hasInitiated || !searchParams || !extendedSession?.accessToken) {
             if (!session) setIsLoading(true);
             else setIsLoading(false);
             return;
@@ -171,7 +190,7 @@ export default function PaymentResultPage() {
 
         console.log('VNPay callback params:', { responseCode, amount, orderInfo, transactionNo });
 
-        const paymentResult = {
+        const paymentResult: VNPayResult = {
             success: responseCode === '00',
             amount: amount ? parseInt(amount) / 100 : 0,
             orderInfo,
@@ -182,7 +201,7 @@ export default function PaymentResultPage() {
         if (paymentResult.success && orderInfo && transactionNo) {
             // Giao dịch VNPay thành công → Bắt đầu quá trình xác nhận với backend
             console.log('✅ VNPay callback thành công, bắt đầu xác nhận với backend...');
-            handlePaymentConfirmation(orderInfo, transactionNo, session.accessToken);
+            handlePaymentConfirmation(orderInfo, transactionNo, extendedSession.accessToken);
         } else {
             // Giao dịch tại VNPay thất bại hoặc thiếu thông tin
             console.log('❌ VNPay callback thất bại hoặc thiếu thông tin');
