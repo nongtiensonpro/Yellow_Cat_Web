@@ -1,8 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { jwtDecode } from "jwt-decode";
 import { getToken } from "next-auth/jwt";
 
-export async function middleware(request: any) {
+// Kiểu cho accessToken sau khi decode
+type KeycloakToken = {
+    resource_access?: Record<string, { roles?: string[] }>;
+};
+
+export async function middleware(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
 
     // Kiểm tra quyền truy cập vào trang quản trị
@@ -26,11 +31,11 @@ export async function middleware(request: any) {
 
             if (!hasAdminRole && token.accessToken) {
                 try {
-                    const decodedAccessToken = jwtDecode<any>(token.accessToken as string);
+                    const decodedAccessToken = jwtDecode<KeycloakToken>(token.accessToken as string);
                     const clientRoles = decodedAccessToken?.resource_access?.["YellowCatCompanyWeb"]?.roles || [];
                     hasAdminRole = clientRoles.includes("Admin_Web");
-                } catch (decodeError) {
-                    console.error("Error decoding access token:", decodeError);
+                } catch {
+                    console.error("Error decoding access token:");
                 }
             }
 
@@ -40,7 +45,7 @@ export async function middleware(request: any) {
             }
 
             return NextResponse.next();
-        } catch (error) {
+        } catch {
             return NextResponse.redirect(new URL("/login", request.url));
         }
     }
@@ -68,11 +73,11 @@ export async function middleware(request: any) {
             // Nếu chưa tìm thấy quyền, kiểm tra trong accessToken
             if (!hasStaffAccess && token.accessToken) {
                 try {
-                    const decodedAccessToken = jwtDecode<any>(token.accessToken as string);
+                    const decodedAccessToken = jwtDecode<KeycloakToken>(token.accessToken as string);
                     const clientRoles = decodedAccessToken?.resource_access?.["YellowCatCompanyWeb"]?.roles || [];
                     hasStaffAccess = clientRoles.includes("Admin_Web") || clientRoles.includes("Staff_Web");
-                } catch (decodeError) {
-                    console.error("Error decoding access token:", decodeError);
+                } catch {
+                    console.error("Error decoding access token:");
                 }
             }
 
@@ -82,7 +87,7 @@ export async function middleware(request: any) {
             }
 
             return NextResponse.next();
-        } catch (error) {
+        } catch {
             return NextResponse.redirect(new URL("/login", request.url));
         }
     }

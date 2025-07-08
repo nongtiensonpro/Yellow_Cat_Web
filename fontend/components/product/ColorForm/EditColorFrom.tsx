@@ -14,6 +14,16 @@ import {
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 
+// Extend Session type để có accessToken
+interface ExtendedSession {
+    accessToken: string;
+    user?: {
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+    };
+}
+
 export interface Color {
     id: number | string;
     name: string;
@@ -29,6 +39,12 @@ interface ApiResponse<T> {
     data: T;
 }
 
+interface UpdateColorResponse {
+    success: boolean;
+    message?: string;
+    data?: Color;
+}
+
 interface EditColorModalProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
@@ -36,56 +52,46 @@ interface EditColorModalProps {
     onSuccess?: () => void;
 }
 
-const fetchColorById = async (id: string | number, token: string | undefined): Promise<ApiResponse<Color>> => {
-    if (!token) throw new Error("Chưa xác thực.");
-    try {
-        const response = await fetch(`http://localhost:8080/api/colors/${id}`, {
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (!response.ok) {
-            if (response.status === 404) throw new Error("Không tìm thấy Màu.");
-            const errorData = await response.json().catch(() => ({ message: `Lỗi không xác định (Status: ${response.status})` }));
-            throw new Error(errorData.message || `Failed to fetch color (Status: ${response.status})`);
-        }
-        return await response.json();
-    } catch (error) {
-        throw error;
+const fetchColorById = async (id: string | number, token: string): Promise<ApiResponse<Color>> => {
+    const response = await fetch(`http://localhost:8080/api/colors/${id}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!response.ok) {
+        if (response.status === 404) throw new Error("Không tìm thấy Màu.");
+        const errorData = await response.json().catch(() => ({ message: `Lỗi không xác định (Status: ${response.status})` }));
+        throw new Error(errorData.message || `Failed to fetch color (Status: ${response.status})`);
     }
+    return await response.json();
 };
 
 const updateColor = async (
     id: string | number,
     data: Omit<Color, "id" | "createdAt" | "updatedAt">,
-    token: string | undefined
-): Promise<any> => {
-    if (!token) throw new Error("Chưa xác thực.");
-    try {
-        const nowISO = new Date().toISOString();
-        const fullData = { id, ...data, createdAt: nowISO, updatedAt: nowISO };
-        const response = await fetch(`http://localhost:8080/api/colors/${id}`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify(fullData)
-        });
-        if (!response.ok) {
-            let errorBody = `Lỗi cập nhật (Status: ${response.status})`;
-            try {
-                const errorData = await response.json();
-                errorBody = errorData.message || errorData.error || JSON.stringify(errorData);
-            } catch (e) { }
-            throw new Error(errorBody);
-        }
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-            return await response.json();
-        }
-        return null;
-    } catch (error) {
-        throw error instanceof Error ? error : new Error("Đã xảy ra lỗi khi cập nhật.");
+    token: string
+): Promise<UpdateColorResponse> => {
+    const nowISO = new Date().toISOString();
+    const fullData = { id, ...data, createdAt: nowISO, updatedAt: nowISO };
+    const response = await fetch(`http://localhost:8080/api/colors/${id}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(fullData)
+    });
+    if (!response.ok) {
+        let errorBody = `Lỗi cập nhật (Status: ${response.status})`;
+        try {
+            const errorData = await response.json();
+            errorBody = errorData.message || errorData.error || JSON.stringify(errorData);
+        } catch { /* Ignore parsing error */ }
+        throw new Error(errorBody);
     }
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.indexOf("application/json") !== -1) {
+        return await response.json();
+    }
+    return { success: true };
 };
 
 export default function EditColorModal({
@@ -103,7 +109,7 @@ export default function EditColorModal({
     const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [dataLoaded, setDataLoaded] = useState(false);
-    const authToken = session?.accessToken;
+    const authToken = session ? (session as unknown as ExtendedSession).accessToken : undefined;
 
     useEffect(() => {
         if (!isOpen) {
@@ -129,7 +135,7 @@ export default function EditColorModal({
                     setDataLoaded(true);
                 })
                 .catch(err => {
-                    const errorMsg = err.message || "Không thể tải dữ liệu Màu.";
+                    const errorMsg = err instanceof Error ? err.message : "Không thể tải dữ liệu Màu.";
                     setFormError(errorMsg);
                     addToast({ title: "Lỗi", description: errorMsg, color: "danger" });
                 })
@@ -187,8 +193,8 @@ export default function EditColorModal({
             });
             if (onSuccess) onSuccess();
             onOpenChange(false);
-        } catch (err: any) {
-            const errorMessage = err.message || "Không thể cập nhật Màu.";
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : "Không thể cập nhật Màu.";
             setFormError(errorMessage);
             addToast({
                 title: "Lỗi Cập Nhật",
@@ -218,7 +224,7 @@ export default function EditColorModal({
             isKeyboardDismissDisabled={isSubmitting}
         >
             <ModalContent>
-                {(onClose) => (
+                {() => (
                     <>
                         <ModalHeader className="flex flex-col gap-1 px-6 py-4 border-b">
                             <h2 className="text-xl font-semibold">Chỉnh sửa Màu (ID: {colorId})</h2>

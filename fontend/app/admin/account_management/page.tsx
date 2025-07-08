@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import {
     Card,
@@ -89,6 +89,29 @@ interface ApiResponse {
     path?: string;
 }
 
+const fetchUserProfile = async (keycloakId: string, token?: string): Promise<AppUser | null> => {
+    try {
+        const response = await fetch(`http://localhost:8080/api/users/keycloak-user/${keycloakId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+        if (!response.ok) {
+            return null;
+        }
+        const apiResponse: ApiResponse = await response.json();
+        if (apiResponse.status >= 200 && apiResponse.status < 300 && apiResponse.data) {
+            return apiResponse.data;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error fetching user profile for', keycloakId, error);
+        return null;
+    }
+};
+
 export default function Page() {
     const { data: session, status } = useSession();
     const [demoData, setDemoData] = useState<EnhancedUser[]>([]);
@@ -124,12 +147,76 @@ export default function Page() {
     const [editLoading, setEditLoading] = useState<boolean>(false);
     const [editForm, setEditForm] = useState<{fullName: string, phoneNumber: string}>({fullName: '', phoneNumber: ''});
 
-    const { theme, setTheme } = useTheme();
     const router = useRouter();
     const {isOpen, onOpen, onClose} = useDisclosure();
     const {isOpen: isRoleModalOpen, onOpen: onRoleModalOpen, onClose: onRoleModalClose} = useDisclosure();
     const {isOpen: isRoleConfirmModalOpen, onOpen: onRoleConfirmModalOpen, onClose: onRoleConfirmModalClose} = useDisclosure();
     const {isOpen: isEditProfileModalOpen, onOpen: onEditProfileModalOpen, onClose: onEditProfileModalClose} = useDisclosure();
+
+    const { theme } = useTheme();
+
+    const getUserTypeIcon = (user: Users) => {
+        if (user.roles.includes('Admin_Web') || user.clientRoles.includes('Admin_Web')) {
+            return <Shield size={16} className="text-purple-500" />;
+        } else if (user.roles.includes('Staff_Web') || user.clientRoles.includes('Staff_Web')) {
+            return <UserIcon size={16} className="text-yellow-500" />;
+        }
+        return <Users size={16} className="text-gray-500" />;
+    };
+
+    const fetchDemoData = useCallback(async () => {
+        try {
+            setLoading(true);
+
+            const token = session?.accessToken;
+
+            if (!token) {
+                console.log('Không có token xác thực');
+            }
+
+            const response = await fetch('http://localhost:8080/api/admin/users', {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorMessage = `Lỗi HTTP! Trạng thái: ${response.status}`;
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    errorMessage += ` - ${errorJson.message || errorJson.error || errorText}`;
+                } catch {
+                    errorMessage += errorText ? ` - ${errorText}` : '';
+                }
+                console.error(errorMessage);
+                console.log(errorMessage);
+            }
+
+            const keycloakUsers: Users[] = await response.json();
+
+            const enhancedUsers: EnhancedUser[] = await Promise.all(
+                keycloakUsers.map(async (user) => {
+                    const profileData = await fetchUserProfile(user.id, token);
+                    return {
+                        ...user,
+                        profileData
+                    };
+                })
+            );
+
+            setDemoData(enhancedUsers);
+            setError(null);
+        } catch (err) {
+            const errorMessage = err instanceof Error
+                ? `Không thể tải dữ liệu: ${err.message}`
+                : 'Không thể tải dữ liệu. Vui lòng thử lại sau.';
+            setError(errorMessage);
+            console.error('Lỗi khi tải dữ liệu:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, [session]);
 
     useEffect(() => {
         if (status === 'authenticated' && session) {
@@ -137,7 +224,7 @@ export default function Page() {
         } else if (status !== 'loading') {
             setLoading(false);
         }
-    }, [status, session]);
+    }, [status, session, fetchDemoData]);
 
     // Filter data based on search and filters
     useEffect(() => {
@@ -182,101 +269,11 @@ export default function Page() {
         signIn('keycloak');
     };
 
-    const fetchDemoData = async () => {
-        try {
-            setLoading(true);
-
-            const token = session?.accessToken;
-
-            if (!token) {
-                console.log('Không có token xác thực');
-            }
-
-            const response = await fetch('http://localhost:8080/api/admin/users', {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                let errorMessage = `Lỗi HTTP! Trạng thái: ${response.status}`;
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    errorMessage += ` - ${errorJson.message || errorJson.error || errorText}`;
-                } catch {
-                    errorMessage += errorText ? ` - ${errorText}` : '';
-                }
-                console.error(errorMessage);
-                console.log(errorMessage);
-            }
-
-            const keycloakUsers: Users[] = await response.json();
-            
-            // Fetch profile data from database for each user
-            const enhancedUsers: EnhancedUser[] = await Promise.all(
-                keycloakUsers.map(async (user) => {
-                    const profileData = await fetchUserProfile(user.id);
-                    return {
-                        ...user,
-                        profileData
-                    };
-                })
-            );
-
-            setDemoData(enhancedUsers);
-            setError(null);
-        } catch (err) {
-            const errorMessage = err instanceof Error
-                ? `Không thể tải dữ liệu: ${err.message}`
-                : 'Không thể tải dữ liệu. Vui lòng thử lại sau.';
-            setError(errorMessage);
-            console.error('Lỗi khi tải dữ liệu:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     // Get current items for pagination
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
     const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-    const getUserTypeIcon = (user: Users) => {
-        if (user.roles.includes('Admin_Web') || user.clientRoles.includes('Admin_Web')) {
-            return <Shield size={16} className="text-purple-500" />;
-        } else if (user.roles.includes('Staff_Web') || user.clientRoles.includes('Staff_Web')) {
-            return <UserIcon size={16} className="text-yellow-500" />;
-        }
-        return <Users size={16} className="text-gray-500" />;
-    };
-
-    // Function to fetch user profile from database
-    const fetchUserProfile = async (keycloakId: string): Promise<AppUser | null> => {
-        try {
-            const response = await fetch(`http://localhost:8080/api/users/keycloak-user/${keycloakId}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.accessToken}`,
-                },
-            });
-
-            if (!response.ok) {
-                return null;
-            }
-
-            const apiResponse: ApiResponse = await response.json();
-            
-            if (apiResponse.status >= 200 && apiResponse.status < 300 && apiResponse.data) {
-                return apiResponse.data;
-            }
-            return null;
-        } catch (error) {
-            console.error('Error fetching user profile for', keycloakId, error);
-            return null;
-        }
-    };
 
     // Handle enable/disable user actions
     const handleUserAction = (user: EnhancedUser, action: 'enable' | 'disable') => {

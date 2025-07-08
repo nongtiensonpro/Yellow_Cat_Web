@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import OrderTimeline from '@/components/order/OrderTimeline';
+import {CldImage} from "next-cloudinary";
 
 interface OrderItem {
     orderItemId: number;
@@ -138,11 +139,14 @@ export default function OrderDetailPage() {
                                 <td className="px-4 py-3 border text-center">{idx + 1}</td>
                                 <td className="px-4 py-3 border text-center">
                                     {item.imageUrl ? (
-                                        <img
-                                            src={item.imageUrl}
-                                            alt={item.productName}
-                                            className="w-16 h-16 object-cover rounded border mx-auto"
-                                        />
+                                            <CldImage
+                                                width={100}
+                                                height={100}
+                                                src={item.imageUrl}
+                                                alt={item.productName}
+                                                sizes="100vw"
+                                                className="w-full h-full object-cover"
+                                            />
                                     ) : (
                                         <span className="text-gray-400 italic">Không ảnh</span>
                                     )}

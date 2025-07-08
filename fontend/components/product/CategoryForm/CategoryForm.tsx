@@ -5,6 +5,16 @@ import { Input } from "@heroui/input";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 
+// Extend Session type để có accessToken
+interface ExtendedSession {
+    accessToken: string;
+    user?: {
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+    };
+}
+
 export interface Category {
     name: string;
     description: string;
@@ -12,45 +22,34 @@ export interface Category {
 
 interface CategoryFormProps {
     onSuccess?: () => void; // Callback khi tạo thành công
-    onCancel?: () => void;  // Callback khi hủy
 }
 
-const createCategory = async (data: Category, token: string | undefined) => {
-    if (!token) {
-        console.error("Lỗi: Không tìm thấy token xác thực.");
-        throw new Error("Yêu cầu chưa được xác thực. Vui lòng đăng nhập lại.");
-    }
+const createCategory = async (data: Category, token: string) => {
+    const response = await fetch("http://localhost:8080/api/categories", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+    });
 
-    try {
-        const response = await fetch("http://localhost:8080/api/categories", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify(data)
-        });
-
-        if (!response.ok) {
-            let errorBody = "Lỗi không xác định từ máy chủ.";
-            try {
-                const errorData = await response.json();
-                errorBody = errorData.message || errorData.error || JSON.stringify(errorData);
-            } catch (e) {
-                errorBody = response.statusText;
-            }
-            console.error("Lỗi API:", response.status, errorBody);
-            throw new Error(`Không thể tạo category: ${errorBody} (Status: ${response.status})`);
+    if (!response.ok) {
+        let errorBody = "Lỗi không xác định từ máy chủ.";
+        try {
+            const errorData = await response.json();
+            errorBody = errorData.message || errorData.error || JSON.stringify(errorData);
+        } catch {
+            errorBody = response.statusText;
         }
-
-        return await response.json();
-    } catch (error) {
-        console.error("Lỗi khi gọi API tạo category:", error);
-        throw error instanceof Error ? error : new Error("Đã xảy ra lỗi mạng hoặc hệ thống.");
+        console.error("Lỗi API:", response.status, errorBody);
+        throw new Error(`Không thể tạo category: ${errorBody} (Status: ${response.status})`);
     }
+
+    return await response.json();
 };
 
-export default function CategoryForm({ onSuccess, onCancel }: CategoryFormProps) {
+export default function CategoryForm({ onSuccess }: CategoryFormProps) {
     const { data: session, status } = useSession();
     const [formError, setFormError] = useState<string | null>(null);
     const [categoryName, setCategoryName] = useState("");
@@ -77,7 +76,7 @@ export default function CategoryForm({ onSuccess, onCancel }: CategoryFormProps)
             return;
         }
 
-        if (status !== 'authenticated') {
+        if (status !== 'authenticated' || !session) {
             setFormError("Bạn cần đăng nhập để thực hiện hành động này.");
             return;
         }
@@ -85,12 +84,13 @@ export default function CategoryForm({ onSuccess, onCancel }: CategoryFormProps)
         setIsSubmitting(true);
 
         try {
-            const token = session?.accessToken;
+            const extendedSession = session as unknown as ExtendedSession;
+            const token = extendedSession.accessToken;
             if (!token) {
                 throw new Error("Phiên đăng nhập hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.");
             }
 
-            const response = await createCategory(
+            await createCategory(
                 {
                     name: categoryName.trim(),
                     description: description.trim()
@@ -114,7 +114,7 @@ export default function CategoryForm({ onSuccess, onCancel }: CategoryFormProps)
                 onSuccess();
             }
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : "Không thể tạo Category. Đã xảy ra lỗi không mong muốn.";
             console.error("Lỗi khi submit:", err);
             setFormError(errorMessage);

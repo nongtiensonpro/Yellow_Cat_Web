@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
@@ -41,6 +41,17 @@ interface AppUser {
     avatarUrl: string;
     createdAt: string;
     updatedAt: string;
+}
+
+interface Order {
+    orderId: number;
+    orderCode: string;
+    customerName?: string;
+    phoneNumber?: string;
+    orderStatus: string;
+    finalAmount: number;
+    subTotalAmount: number;
+    discountAmount: number;
 }
 
 interface ApiResponse {
@@ -86,14 +97,18 @@ export default function PurchaseOrder() {
     // Kiểm tra thông tin số điện thoại từ AppUser (backend)
     const hasPhoneNumber = !!userProfile?.phoneNumber;
 
+    // Extract complex expressions for dependency arrays
+    const sessionAccessToken = session?.accessToken;
+    const sessionUserId = session?.user?.id;
+
     // Function để fetch user profile từ backend
-    const fetchUserProfile = async (keycloakId: string): Promise<AppUser | null> => {
+    const fetchUserProfile = useCallback(async (keycloakId: string): Promise<AppUser | null> => {
         try {
             const response = await fetch(`http://localhost:8080/api/users/keycloak-user/${keycloakId}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.accessToken}`,
+                    'Authorization': `Bearer ${sessionAccessToken}`,
                 },
             });
 
@@ -112,12 +127,12 @@ export default function PurchaseOrder() {
             console.error('❌ Error fetching user profile:', error);
             throw error;
         }
-    };
+    }, [sessionAccessToken]);
 
     // Effect để fetch user profile khi session thay đổi
     useEffect(() => {
         const loadUserProfile = async () => {
-            if (!session?.user?.id || !session?.accessToken) {
+            if (!sessionUserId || !sessionAccessToken) {
                 setUserProfileLoading(false);
                 return;
             }
@@ -126,16 +141,17 @@ export default function PurchaseOrder() {
                 setUserProfileLoading(true);
                 setUserProfileError(null);
                 
-                const profile = await fetchUserProfile(session.user.id);
+                const profile = await fetchUserProfile(sessionUserId);
                 setUserProfile(profile);
                 
                 console.log('✅ User profile loaded:', profile);
                 console.log('📱 Phone number:', profile?.phoneNumber);
                 console.log('🔓 Can access features:', !!profile?.phoneNumber);
                 
-            } catch (error: any) {
+            } catch (error: unknown) {
                 console.error('❌ Failed to load user profile:', error);
-                setUserProfileError(error.message || 'Không thể tải thông tin người dùng');
+                const errorMessage = error instanceof Error ? error.message : 'Không thể tải thông tin người dùng';
+                setUserProfileError(errorMessage);
                 setUserProfile(null);
             } finally {
                 setUserProfileLoading(false);
@@ -143,7 +159,7 @@ export default function PurchaseOrder() {
         };
 
         loadUserProfile();
-    }, [session?.user?.id, session?.accessToken]);
+    }, [sessionUserId, sessionAccessToken, fetchUserProfile]);
 
     // Handler để chuyển hướng đến trang cập nhật thông tin
     const handleGoToUpdateProfile = () => {
@@ -152,10 +168,10 @@ export default function PurchaseOrder() {
 
     // Auto-fetch orders when dependencies change - chỉ khi có số điện thoại và đã load xong profile
     useEffect(() => {
-        if (!userProfileLoading && hasPhoneNumber && session?.accessToken) {
+        if (!userProfileLoading && hasPhoneNumber && sessionAccessToken) {
             fetchOrders(session);
         }
-    }, [session, page, activeTab, fetchOrders, hasPhoneNumber, userProfileLoading]);
+    }, [session, page, activeTab, fetchOrders, hasPhoneNumber, userProfileLoading, sessionAccessToken]);
 
     // Handlers using store functions
     const handleSelectionChange = (key: string | number) => {
@@ -166,9 +182,10 @@ export default function PurchaseOrder() {
         await createOrder(session);
     };
 
-    const handleViewDetails = (order: any) => {
+    const handleViewDetails = (order: Order) => {
         if (!userProfileLoading && !userProfileError && hasPhoneNumber) {
-            openEditOrder(order);
+            // Type assertion để tương thích với store's Order type
+            openEditOrder(order as Parameters<typeof openEditOrder>[0]);
         }
     };
 

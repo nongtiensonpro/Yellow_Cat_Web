@@ -6,6 +6,28 @@ import { CldUploadButton, CldImage } from 'next-cloudinary';
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 
+// Extend Session type để có accessToken
+interface ExtendedSession {
+    accessToken: string;
+    user?: {
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+    };
+}
+
+// Interface cho resource từ Cloudinary
+interface CloudinaryResource {
+    public_id: string;
+    [key: string]: unknown;
+}
+
+// Interface cho upload result
+interface UploadResult {
+    event: string;
+    info: CloudinaryResource;
+}
+
 export interface Brand {
     brandName: string;
     logoPublicId: string;
@@ -17,50 +39,40 @@ interface BrandFormProps {
     onCancel?: () => void;  // Callback khi hủy
 }
 
-const createBrand = async (data: Brand, token: string | undefined) => {
-    if (!token) {
-        console.error("Lỗi: Không tìm thấy token xác thực.");
-        throw new Error("Yêu cầu chưa được xác thực. Vui lòng đăng nhập lại.");
-    }
+const createBrand = async (data: Brand, token: string) => {
+    const response = await fetch("http://localhost:8080/api/brands", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+    });
 
-    try {
-        const response = await fetch("http://localhost:8080/api/brands", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify(data)
-        });
-
-        if (!response.ok) {
-            let errorBody = "Lỗi không xác định từ máy chủ.";
-            try {
-                const errorData = await response.json();
-                errorBody = errorData.message || errorData.error || JSON.stringify(errorData);
-            } catch (e) {
-                errorBody = response.statusText;
-            }
-            console.error("Lỗi API:", response.status, errorBody);
-            throw new Error(`Không thể tạo brand: ${errorBody} (Status: ${response.status})`);
+    if (!response.ok) {
+        let errorBody = "Lỗi không xác định từ máy chủ.";
+        try {
+            const errorData = await response.json();
+            errorBody = errorData.message || errorData.error || JSON.stringify(errorData);
+        } catch {
+            errorBody = response.statusText;
         }
-
-        return await response.json();
-    } catch (error) {
-        console.error("Lỗi khi gọi API tạo brand:", error);
-        throw error instanceof Error ? error : new Error("Đã xảy ra lỗi mạng hoặc hệ thống.");
+        console.error("Lỗi API:", response.status, errorBody);
+        throw new Error(`Không thể tạo brand: ${errorBody} (Status: ${response.status})`);
     }
+
+    return await response.json();
 };
 
-export default function BrandForm({ onSuccess, onCancel }: BrandFormProps) {
+export default function BrandForm({ onSuccess }: BrandFormProps) {
     const { data: session, status } = useSession();
-    const [resource, setResource] = useState<any>(null);
+    const [resource, setResource] = useState<CloudinaryResource | null>(null);
     const [formError, setFormError] = useState<string | null>(null);
     const [brandName, setBrandName] = useState("");
     const [brandInfo, setBrandInfo] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleUploadSuccess = (result: any) => {
+    const handleUploadSuccess = (result: UploadResult) => {
         if (result.event === "success" && result.info) {
             console.log("Upload thành công:", result.info);
             setResource(result.info);
@@ -106,7 +118,7 @@ export default function BrandForm({ onSuccess, onCancel }: BrandFormProps) {
             return;
         }
 
-        if (status !== 'authenticated') {
+        if (status !== 'authenticated' || !session) {
             setFormError("Bạn cần đăng nhập để thực hiện hành động này.");
             return;
         }
@@ -114,19 +126,21 @@ export default function BrandForm({ onSuccess, onCancel }: BrandFormProps) {
         setIsSubmitting(true);
 
         try {
-            const token = session?.accessToken;
+            const extendedSession = session as unknown as ExtendedSession;
+            const token = extendedSession.accessToken;
             if (!token) {
                 throw new Error("Phiên đăng nhập hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.");
             }
 
-            const response = await createBrand(
-                {
-                    brandName: brandName.trim(),
-                    brandInfo: brandInfo.trim(),
-                    logoPublicId: resource.public_id
-                },
-                token
-            );
+            // Tạo brand data
+            const brandData: Brand = {
+                brandName: brandName.trim(),
+                logoPublicId: resource!.public_id,
+                brandInfo: brandInfo.trim()
+            };
+
+            // Gọi API để tạo brand
+            await createBrand(brandData, token);
 
             addToast({
                 title: "Thành công",
@@ -145,7 +159,7 @@ export default function BrandForm({ onSuccess, onCancel }: BrandFormProps) {
                 onSuccess();
             }
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : "Không thể tạo Brand. Đã xảy ra lỗi không mong muốn.";
             console.error("Lỗi khi submit:", err);
             setFormError(errorMessage);
@@ -204,9 +218,8 @@ export default function BrandForm({ onSuccess, onCancel }: BrandFormProps) {
                         <CldUploadButton
                             className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors duration-200 text-sm font-medium"
                             uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "YellowCatWeb"}
-                            onSuccess={(result, { widget }) => {
-                                handleUploadSuccess(result);
-                                widget.close();
+                            onSuccess={(result) => {
+                                handleUploadSuccess(result as UploadResult);
                             }}
                             onError={(error) => {
                                 console.error("Lỗi Cloudinary Upload:", error);

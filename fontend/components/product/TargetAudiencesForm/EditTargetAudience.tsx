@@ -57,7 +57,7 @@ const updateTargetAudience = async (
     id: string | number,
     data: Omit<TargetAudience, "id" | "createdAt" | "updatedAt">,
     token: string | undefined
-): Promise<any> => {
+): Promise<ApiResponse<TargetAudience> | null> => {
     if (!token) throw new Error("Chưa xác thực.");
     try {
         const nowISO = new Date().toISOString();
@@ -75,7 +75,7 @@ const updateTargetAudience = async (
             try {
                 const errorData = await response.json();
                 errorBody = errorData.message || errorData.error || JSON.stringify(errorData);
-            } catch (e) { }
+            } catch { }
             throw new Error(errorBody);
         }
         const contentType = response.headers.get("content-type");
@@ -187,8 +187,8 @@ export default function EditTargetAudienceModal({
             });
             if (onSuccess) onSuccess();
             onOpenChange(false);
-        } catch (err: any) {
-            const errorMessage = err.message || "Không thể cập nhật Đối tượng mục tiêu.";
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Không thể cập nhật Đối tượng mục tiêu.";
             setFormError(errorMessage);
             addToast({
                 title: "Lỗi Cập Nhật",
@@ -218,7 +218,7 @@ export default function EditTargetAudienceModal({
             isKeyboardDismissDisabled={isSubmitting}
         >
             <ModalContent>
-                {(onClose) => (
+                {() => (
                     <>
                         <ModalHeader className="flex flex-col gap-1 px-6 py-4 border-b">
                             <h2 className="text-xl font-semibold">Chỉnh sửa Đối tượng mục tiêu (ID: {targetAudienceId})</h2>

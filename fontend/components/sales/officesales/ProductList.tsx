@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Input,  Spinner, Chip, Button} from "@heroui/react";
 import { CldImage } from 'next-cloudinary';
 import Link from "next/link";
@@ -11,10 +11,10 @@ interface BaseEntity {
     description?: string;
 }
 
-interface ColorInfo extends BaseEntity {}
-interface SizeInfo extends BaseEntity {}
-interface Material extends BaseEntity {}
-interface TargetAudience extends BaseEntity {}
+type ColorInfo = BaseEntity;
+type SizeInfo = BaseEntity;
+type Material = BaseEntity;
+type TargetAudience = BaseEntity;
 
 interface PaginatedResponse<T> {
     content: T[];
@@ -115,89 +115,25 @@ export default function ProductListSaleOffice(){
     // States for related entities
     const [colors, setColors] = useState<ColorInfo[]>([]);
     const [sizes, setSizes] = useState<SizeInfo[]>([]);
-    const [materials, setMaterials] = useState<Material[]>([]);
-    const [targetAudiences, setTargetAudiences] = useState<TargetAudience[]>([]);
     const [initialFetchComplete, setInitialFetchComplete] = useState(false);
-
-    useEffect(() => {
-        setLoading(true);
-        Promise.all([
-            fetchProductsManagement(),
-            fetchColors(),
-            fetchSizes(),
-            fetchMaterials(),
-            fetchTargetAudiences()
-        ]).then(() => {
-            setInitialFetchComplete(true);
-        }).catch(err => {
-            console.error("Error during initial data fetch:", err);
-            setError(err.message || "Lỗi tải dữ liệu");
-        }).finally(() => {
-            setLoading(false);
-        });
-    }, []);
-
-    useEffect(() => {
-        if (searchTerm.trim() === "") {
-            setFilteredProducts(products);
-        } else {
-            const filtered = products.filter(product =>
-                product.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                product.categoryName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                product.brandName.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-            setFilteredProducts(filtered);
-        }
-    }, [searchTerm, products]);
-
-    // Load variants for all products after initial data is loaded
-    useEffect(() => {
-        if (initialFetchComplete && products.length > 0) {
-            loadVariantsForAllProducts();
-        }
-    }, [initialFetchComplete, products.length]);
-
-    const fetchProductsManagement = async () => {
-        try {
-            const response = await fetch(`http://localhost:8080/api/products/management`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            const apiResponse: ApiManagementResponse = await response.json();
-            if (apiResponse.status === 200 && apiResponse.data?.content) {
-                const productsWithVariants: ProductWithVariants[] = apiResponse.data.content.map(product => ({
-                    ...product,
-                    variants: [],
-                    variantsLoaded: false
-                }));
-                setProducts(productsWithVariants);
-                setFilteredProducts(productsWithVariants);
-            } else {
-                throw new Error(apiResponse.message || 'Failed to fetch products');
-            }
-        } catch (err: any) {
-            console.error('Error fetching products:', err);
-            setError(err.message || 'Lỗi tải danh sách sản phẩm');
-        }
-    };
 
     const fetchProductDetail = async (productId: number): Promise<ProductDetail | null> => {
         try {
             const response = await fetch(`http://localhost:8080/api/products/${productId}`);
             if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                console.log(`HTTP error! Status: ${response.status}`);
             }
             const apiResponse: ApiDetailResponse = await response.json();
             if (apiResponse.status === 200 && apiResponse.data) {
                 return apiResponse.data;
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(`Error fetching product detail for ${productId}:`, err);
         }
         return null;
     };
 
-    const loadVariantsForAllProducts = async () => {
+    const loadVariantsForAllProducts = useCallback(async () => {
         const productIds = products.map(p => p.productId);
 
         for (const productId of productIds) {
@@ -229,17 +165,81 @@ export default function ProductListSaleOffice(){
                 });
             }
         }
+    }, [products, loadingVariants, colors, sizes]);
+
+    useEffect(() => {
+        setLoading(true);
+        Promise.all([
+            fetchProductsManagement(),
+            fetchColors(),
+            fetchSizes(),
+            fetchMaterials(),
+            fetchTargetAudiences()
+        ]).then(() => {
+            setInitialFetchComplete(true);
+        }).catch((err: unknown) => {
+            console.error("Error during initial data fetch:", err);
+            const errorMessage = err instanceof Error ? err.message : "Lỗi tải dữ liệu";
+            setError(errorMessage);
+        }).finally(() => {
+            setLoading(false);
+        });
+    }, []);
+
+    useEffect(() => {
+        if (searchTerm.trim() === "") {
+            setFilteredProducts(products);
+        } else {
+            const filtered = products.filter(product =>
+                product.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                product.categoryName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                product.brandName.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            setFilteredProducts(filtered);
+        }
+    }, [searchTerm, products]);
+
+    // Load variants for all products after initial data is loaded
+    useEffect(() => {
+        if (initialFetchComplete && products.length > 0) {
+            loadVariantsForAllProducts();
+        }
+    }, [initialFetchComplete, products.length, loadVariantsForAllProducts]);
+
+    const fetchProductsManagement = async () => {
+        try {
+            const response = await fetch(`http://localhost:8080/api/products/management`);
+            if (!response.ok) {
+                console.log(`HTTP error! Status: ${response.status}`);
+            }
+            const apiResponse: ApiManagementResponse = await response.json();
+            if (apiResponse.status === 200 && apiResponse.data?.content) {
+                const productsWithVariants: ProductWithVariants[] = apiResponse.data.content.map(product => ({
+                    ...product,
+                    variants: [],
+                    variantsLoaded: false
+                }));
+                setProducts(productsWithVariants);
+                setFilteredProducts(productsWithVariants);
+            } else {
+                console.log(apiResponse.message || 'Failed to fetch products');
+            }
+        } catch (err: unknown) {
+            console.error('Error fetching products:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Lỗi tải danh sách sản phẩm';
+            setError(errorMessage);
+        }
     };
 
     const fetchColors = async () => {
         try {
             const response = await fetch(`http://localhost:8080/api/colors`);
-            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status} fetching colors`);
+            if (!response.ok) console.log(`HTTP error! Status: ${response.status} fetching colors`);
             const data: ApiEntitiesResponse<ColorInfo> = await response.json();
             if (data.status === 200 && data.data?.content) {
                 setColors(data.data.content);
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error fetching colors:', err);
         }
     };
@@ -247,12 +247,12 @@ export default function ProductListSaleOffice(){
     const fetchSizes = async () => {
         try {
             const response = await fetch(`http://localhost:8080/api/sizes`);
-            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status} fetching sizes`);
+            if (!response.ok) console.log(`HTTP error! Status: ${response.status} fetching sizes`);
             const data: ApiEntitiesResponse<SizeInfo> = await response.json();
             if (data.status === 200 && data.data?.content) {
                 setSizes(data.data.content);
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error fetching sizes:', err);
         }
     };
@@ -260,12 +260,13 @@ export default function ProductListSaleOffice(){
     const fetchMaterials = async () => {
         try {
             const response = await fetch(`http://localhost:8080/api/materials`);
-            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status} fetching materials`);
+            if (!response.ok) console.log(`HTTP error! Status: ${response.status} fetching materials`);
             const data: ApiEntitiesResponse<Material> = await response.json();
             if (data.status === 200 && data.data?.content) {
-                setMaterials(data.data.content);
+                // Materials data received but not used in current implementation
+                console.log('Materials loaded:', data.data.content.length);
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error fetching materials:', err);
         }
     };
@@ -273,12 +274,13 @@ export default function ProductListSaleOffice(){
     const fetchTargetAudiences = async () => {
         try {
             const response = await fetch(`http://localhost:8080/api/target-audiences`);
-            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status} fetching target audiences`);
+            if (!response.ok) console.log(`HTTP error! Status: ${response.status} fetching target audiences`);
             const data: ApiEntitiesResponse<TargetAudience> = await response.json();
             if (data.status === 200 && data.data?.content) {
-                setTargetAudiences(data.data.content);
+                // Target audiences data received but not used in current implementation
+                console.log('Target audiences loaded:', data.data.content.length);
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error fetching target audiences:', err);
         }
     };
@@ -403,7 +405,7 @@ export default function ProductListSaleOffice(){
             {searchTerm && (
                 <div className="mb-3">
                     <p className="text-sm text-gray-600">
-                        Tìm thấy {filteredProducts.length} sản phẩm cho "{searchTerm}"
+                        Tìm thấy {filteredProducts.length} sản phẩm cho {searchTerm}
                     </p>
                 </div>
             )}

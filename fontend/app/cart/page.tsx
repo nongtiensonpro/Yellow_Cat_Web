@@ -2,13 +2,29 @@
 
 import { Card, CardHeader, CardBody, Divider, Button } from "@heroui/react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { CldImage } from 'next-cloudinary';
 import { useSession } from "next-auth/react";
 import { v4 as uuidv4 } from 'uuid';
 
 interface CartItem {
     id: number;
+    productId: number;
+    productName: string;
+    name: string;
+    price: number;
+    quantity: number;
+    imageUrl: string;
+    sku: string;
+    stockLevel: number;
+    cartItemId?: number;
+    colorName?: string;
+    sizeName?: string;
+}
+
+interface CartItemResponse {
+    id: number;
+    variantId: number;
     productId: number;
     productName: string;
     name: string;
@@ -29,20 +45,20 @@ export default function CartPage() {
     const [loading, setLoading] = useState(true);
 
     // Hàm fetchCart để reload cart khi đã đăng nhập
-    const fetchCart = async () => {
-        if (session?.user) {
+    const fetchCart = useCallback(async () => {
+        if (session?.user && 'id' in session.user) {
             const res = await fetch(`http://localhost:8080/api/cart?keycloakId=${session.user.id}`);
             const data = await res.json();
-            setCartItems((data.items || []).map((item: any) => ({
+            setCartItems((data.items || []).map((item: CartItemResponse) => ({
                 ...item,
                 id: item.id || item.variantId
             })));
         }
-    };
+    }, [session?.user]);
 
     useEffect(() => {
         const fetchInitialCart = async () => {
-            if (session?.user) {
+            if (session?.user && 'id' in session.user) {
                 await fetchCart();
             } else if (typeof window !== 'undefined') {
                 const storedCart = localStorage.getItem('cart');
@@ -53,7 +69,7 @@ export default function CartPage() {
             setLoading(false);
         };
         fetchInitialCart();
-    }, [session]);
+    }, [session, fetchCart]);
 
     // Log ra thông tin sản phẩm trong giỏ hàng (bao gồm cả màu và size)
     useEffect(() => {
@@ -88,9 +104,9 @@ export default function CartPage() {
 
     // Sửa handleQuantityChange
     const handleQuantityChange = async (itemKey: number, newQuantity: number) => {
-        if (session?.user) {
+        if (session?.user && 'id' in session.user) {
             // Đã đăng nhập: tìm theo cartItemId
-            const cartItem = cartItems.find((item: any) => item.cartItemId === itemKey);
+            const cartItem = cartItems.find((item: CartItem) => item.cartItemId === itemKey);
             if (!cartItem || !cartItem.cartItemId) return;
             await fetch('http://localhost:8080/api/cart-items/update', {
                 method: 'PUT',
@@ -118,9 +134,9 @@ export default function CartPage() {
 
     // Sửa handleRemoveItem
     const handleRemoveItem = async (itemKey: number) => {
-        if (session?.user) {
+        if (session?.user && 'id' in session.user) {
             // Đã đăng nhập: tìm theo cartItemId
-            const cartItem = cartItems.find((item: any) => item.cartItemId === itemKey);
+            const cartItem = cartItems.find((item: CartItem) => item.cartItemId === itemKey);
             if (!cartItem || !cartItem.cartItemId) return;
             await fetch(`http://localhost:8080/api/cart-items/remove/${cartItem.cartItemId}`, {
                 method: 'DELETE'
@@ -134,7 +150,7 @@ export default function CartPage() {
 
     // Function to handle proceeding to checkout
     const handleProceedToCheckout = async () => {
-        if (session?.user) {
+        if (session?.user && 'id' in session.user) {
             if (!session.user.id) {
                 alert('Không tìm thấy thông tin người dùng!');
                 return;
@@ -160,13 +176,13 @@ export default function CartPage() {
                     })
                 });
                 if (!res.ok) {
-                    const err = await res.json().catch(() => ({}));
-                    alert(err.message || 'Lỗi xác nhận giỏ hàng!');
+                    const errorData = await res.json().catch(() => ({}));
+                    alert(errorData.message || 'Lỗi xác nhận giỏ hàng!');
                     return;
                 }
                 // Nếu thành công, chuyển sang trang checkout
                 router.push('/checkout');
-            } catch (err) {
+            } catch {
                 alert('Lỗi xác nhận giỏ hàng!');
             }
         } else {
@@ -199,13 +215,13 @@ export default function CartPage() {
                     })
                 });
                 if (!res.ok) {
-                    const err = await res.json().catch(() => ({}));
-                    alert(err.message || 'Lỗi xác nhận giỏ hàng!');
+                    const errorData = await res.json().catch(() => ({}));
+                    alert(errorData.message || 'Lỗi xác nhận giỏ hàng!');
                     return;
                 }
                 // Nếu thành công, chuyển sang trang checkout
                 router.push('/checkout');
-            } catch (err) {
+            } catch {
                 alert('Lỗi xác nhận giỏ hàng!');
             }
         }
@@ -249,16 +265,7 @@ export default function CartPage() {
                             <div className="md:col-span-2 space-y-4">
                                 {cartItems.map(item => (
                                     <div key={item.cartItemId || item.id} className="flex items-center space-x-4 border-b pb-4">
-                                        {item.imageUrl && typeof item.imageUrl === 'string' && item.imageUrl.trim() !== '' ? (
-                                            item.imageUrl.startsWith('http') ? (
-                                                <img
-                                                    src={item.imageUrl}
-                                                    alt={item.name}
-                                                    width={80}
-                                                    height={80}
-                                                    className="rounded-md object-cover"
-                                                />
-                                            ) : (
+                                        {item.imageUrl && item.imageUrl.trim() !== '' ? (
                                                 <CldImage
                                                     src={item.imageUrl}
                                                     alt={item.name}
@@ -267,7 +274,6 @@ export default function CartPage() {
                                                     crop="fill"
                                                     className="rounded-md object-cover"
                                                 />
-                                            )
                                         ) : (
                                             <div className="w-20 h-20 bg-gray-200 rounded-md flex items-center justify-center text-gray-500 text-xs">
                                                 No Image
@@ -284,7 +290,7 @@ export default function CartPage() {
                                                 <Button
                                                     size="sm"
                                                     variant="ghost"
-                                                    onClick={() => handleQuantityChange(session?.user ? (item.cartItemId ?? item.id) : item.id, item.quantity - 1)}
+                                                    onClick={() => handleQuantityChange(session?.user && 'id' in session.user ? (item.cartItemId ?? item.id) : item.id, item.quantity - 1)}
                                                     disabled={item.quantity <= 1}
                                                 >
                                                     -
@@ -293,7 +299,7 @@ export default function CartPage() {
                                                 <Button
                                                     size="sm"
                                                     variant="ghost"
-                                                    onClick={() => handleQuantityChange(session?.user ? (item.cartItemId ?? item.id) : item.id, item.quantity + 1)}
+                                                    onClick={() => handleQuantityChange(session?.user && 'id' in session.user ? (item.cartItemId ?? item.id) : item.id, item.quantity + 1)}
                                                     disabled={item.quantity >= item.stockLevel}
                                                 >
                                                     +
@@ -312,7 +318,7 @@ export default function CartPage() {
                                                 className="mt-2"
                                                 onClick={() => {
                                                     if (window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?')) {
-                                                        handleRemoveItem(session?.user ? (item.cartItemId ?? item.id) : item.id);
+                                                        handleRemoveItem(session?.user && 'id' in session.user ? (item.cartItemId ?? item.id) : item.id);
                                                     }
                                                 }}
                                             >

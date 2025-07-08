@@ -1,13 +1,16 @@
-
-
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { Session } from 'next-auth';
 import Link from 'next/link';
 import { Edit, Trash2 } from 'lucide-react';
 import PromotionGuide from '../../../../components/promotion/PromotionGuide';
+
+interface CustomSession extends Session {
+    accessToken?: string;
+}
 
 interface Voucher {
     id: number;
@@ -45,8 +48,7 @@ export default function VouchersPage() {
         discountValue: '',
     });
 
-    const router = useRouter();
-    const { data: session, status } = useSession();
+    const { data: session, status } = useSession() as { data: CustomSession | null, status: string };
 
     useEffect(() => {
         if (status !== 'authenticated') return;
@@ -109,8 +111,9 @@ export default function VouchersPage() {
             } else {
                 throw new Error('Xoá không thành công.');
             }
-        } catch (err: any) {
-            alert('❌ Lỗi: ' + (err.message || 'Có lỗi xảy ra khi xoá voucher.'));
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Có lỗi xảy ra khi xoá voucher.';
+            alert('❌ Lỗi: ' + errorMessage);
         }
     };
 

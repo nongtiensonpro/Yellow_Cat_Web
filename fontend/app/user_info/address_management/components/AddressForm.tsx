@@ -44,11 +44,39 @@ interface Ward {
     name: string;
 }
 
+// Interface cho dữ liệu địa chỉ submit
+interface AddressFormData {
+    addressId?: number;
+    recipientName: string;
+    phoneNumber: string;
+    streetAddress: string;
+    cityProvince: string;
+    district: string;
+    wardCommune: string;
+    addressType: string;
+    isDefault: boolean;
+    country: string;
+}
+
+// Interface cho initial data khi edit
+interface AddressInitialData {
+    addressId?: number;
+    recipientName?: string;
+    phoneNumber?: string;
+    streetAddress?: string;
+    cityProvince?: string;
+    district?: string;
+    wardCommune?: string;
+    addressType?: string;
+    isDefault?: boolean;
+    country?: string;
+}
+
 interface AddressFormProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: any) => void;
-    initialData?: any;
+    onSubmit: (data: AddressFormData) => void;
+    initialData?: AddressInitialData;
     mode: 'create' | 'edit';
 }
 
@@ -230,7 +258,7 @@ export default function AddressForm({ isOpen, onClose, onSubmit, initialData, mo
         const sd = districts.find((d) => d.code === formData.district);
         const sw = wards.find((w) => w.code === formData.ward);
 
-        const payload = {
+        const payload: AddressFormData = {
             ...(mode === 'edit' && initialData ? { addressId: initialData.addressId } : {}),
             recipientName: formData.recipientName.trim(),
             phoneNumber: formData.phoneNumber.trim(),

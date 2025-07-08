@@ -1,8 +1,18 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { jwtDecode } from 'jwt-decode';
+
+// Extend Session type để có accessToken
+interface ExtendedSession {
+    accessToken: string;
+    user?: {
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+    };
+}
 
 interface DecodedToken {
     sub?: string;
@@ -19,7 +29,7 @@ interface DecodedToken {
         };
     };
     exp?: number;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface UserRequestDTO {
@@ -33,14 +43,17 @@ const CheckoutUser = () => {
     const { data: session, status } = useSession();
     const syncedRef = useRef<Set<string>>(new Set());
 
-    const syncUserData = async (userDTO: UserRequestDTO) => {
+    const syncUserData = useCallback(async (userDTO: UserRequestDTO) => {
+        if (!session) return;
+        
         try {
+            const extendedSession = session as unknown as ExtendedSession;
             const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
             const response = await fetch(`${backendUrl}/api/users/me`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.accessToken}`,
+                    'Authorization': `Bearer ${extendedSession.accessToken}`,
                 },
                 body: JSON.stringify(userDTO),
             });
@@ -55,7 +68,7 @@ const CheckoutUser = () => {
         } catch (error) {
             console.error("Lỗi khi gọi API đồng bộ người dùng:", error);
         }
-    };
+    }, [session]);
 
     useEffect(() => {
         const handleUserSync = async () => {
@@ -64,7 +77,8 @@ const CheckoutUser = () => {
             if (status === 'unauthenticated' || !session) return;
 
             try {
-                const accessToken = session.accessToken as string;
+                const extendedSession = session as unknown as ExtendedSession;
+                const accessToken = extendedSession.accessToken;
                 if (!accessToken) return;
 
                 const tokenData = jwtDecode<DecodedToken>(accessToken);
@@ -115,7 +129,7 @@ const CheckoutUser = () => {
         };
 
         handleUserSync();
-    }, [session, status]);
+    }, [session, status, syncUserData]);
 
     // Component này không render gì cả - chỉ xử lý logic
     return null;

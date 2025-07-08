@@ -131,7 +131,7 @@ export default function OrderDetailPage() {
                 alert('Cập nhật trạng thái thất bại');
             }
         } catch (error) {
-            alert('Lỗi khi cập nhật trạng thái');
+            alert('Lỗi khi cập nhật trạng thái' + error);
         }
     };
 
@@ -160,7 +160,7 @@ export default function OrderDetailPage() {
                 alert(`Hủy đơn hàng thất bại: ${errorData.message || 'Lỗi không xác định'}`);
             }
         } catch (error) {
-            alert('Lỗi khi hủy đơn hàng');
+            alert('Lỗi khi hủy đơn hàng' + error);
         }
     };
 

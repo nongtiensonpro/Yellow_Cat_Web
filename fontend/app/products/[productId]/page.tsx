@@ -5,13 +5,8 @@ import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import { CldImage } from 'next-cloudinary';
 
-import ReviewSection from "@/components/review/ReviewSection"; // Adjust path if needed
+import ReviewSection from "@/components/review/ReviewSection";
 import { useSession } from "next-auth/react";
-
-// ============================================================================
-//                                INTERFACES
-// ============================================================================
-
 
 interface BaseEntity {
     id: number;
@@ -19,10 +14,27 @@ interface BaseEntity {
     description?: string;
 }
 
-interface ColorInfo extends BaseEntity {}
-interface SizeInfo extends BaseEntity {}
-interface Material extends BaseEntity {}
-interface TargetAudience extends BaseEntity {}
+// Use type aliases instead of empty interfaces
+type ColorInfo = BaseEntity;
+type SizeInfo = BaseEntity;
+type Material = BaseEntity;
+type TargetAudience = BaseEntity;
+
+// Interface for Extended Session
+interface ExtendedSession {
+    user?: {
+        id: string;
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+    };
+    accessToken?: string;
+}
+
+// Interface for API Error
+interface ApiError {
+    message?: string;
+}
 
 interface PaginatedResponse<T> {
     content: T[];
@@ -81,32 +93,14 @@ interface ApiResponse {
     data: ProductDetail;
 }
 
-interface CartItem {
-    id: number;
-    productId: number;
-    productName: string;
-    name: string;
-    price: number;
-    quantity: number;
-    imageUrl: string;
-    sku: string;
-    stockLevel: number;
-    colorName?: string;
-    sizeName?: string;
-}
-
-// ============================================================================
-//                             MAIN COMPONENT
-// ============================================================================
 
 export default function ProductDetailPage() {
     const router = useRouter();
     const params = useParams();
     const productId = Array.isArray(params?.productId) ? params.productId[0] : params?.productId;
-    // Convert productId to a number immediately, as ReviewSection expects number
     const numericProductId = productId ? parseInt(productId as string, 10) : null;
 
-    const { data: session } = useSession();
+    const { data: session } = useSession() as { data: ExtendedSession | null };
 
     const [product, setProduct] = useState<ProductDetail | null>(null);
     const [loading, setLoading] = useState(true);
@@ -121,13 +115,7 @@ export default function ProductDetailPage() {
     const [targetAudiences, setTargetAudiences] = useState<TargetAudience[]>([]);
     const [initialFetchComplete, setInitialFetchComplete] = useState(false);
 
-    // State to hold review count and average rating from ReviewSection
     const [reviewCount, setReviewCount] = useState<number>(0);
-    const [averageReviewRating, setAverageReviewRating] = useState<number>(0.0);
-
-    // ============================================================================
-    //                             FETCH FUNCTIONS (using useCallback)
-    // ============================================================================
 
     const fetchProductDetail = useCallback(async (id: string) => {
         console.log("ProductDetailPage: Fetching product detail for ID:", id);
@@ -136,7 +124,7 @@ export default function ProductDetailPage() {
             const response = await fetch(`http://localhost:8080/api/products/${id}`);
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => null);
+                const errorData: ApiError | null = await response.json().catch(() => null);
                 throw new Error(errorData?.message || `HTTP error! Status: ${response.status}`);
             }
 
@@ -147,9 +135,10 @@ export default function ProductDetailPage() {
             } else {
                 throw new Error(apiResponse.message || 'Failed to fetch product data');
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'An error occurred while fetching the product';
             console.error('ProductDetailPage: Error fetching product:', err);
-            setError(err.message || 'An error occurred while fetching the product');
+            setError(errorMessage);
             throw err;
         }
     }, []);
@@ -158,14 +147,14 @@ export default function ProductDetailPage() {
         console.log("ProductDetailPage: Fetching colors...");
         try {
             const response = await fetch(`http://localhost:8080/api/colors`);
-            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status} fetching colors`);
+            if (!response.ok) console.log(`HTTP error! Status: ${response.status} fetching colors`);
             const data: ApiEntitiesResponse<ColorInfo> = await response.json();
             if (data.status === 200 && data.data?.content) {
                 setColors(data.data.content);
             } else {
-                throw new Error(data.message || 'Failed to fetch colors');
+                console.log(data.message || 'Failed to fetch colors');
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('ProductDetailPage: Error fetching colors:', err);
             throw err;
         }
@@ -182,7 +171,7 @@ export default function ProductDetailPage() {
             } else {
                 throw new Error(data.message || 'Failed to fetch sizes');
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('ProductDetailPage: Error fetching sizes:', err);
             throw err;
         }
@@ -199,7 +188,7 @@ export default function ProductDetailPage() {
             } else {
                 throw new Error(data.message || 'Failed to fetch materials');
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('ProductDetailPage: Error fetching materials:', err);
             throw err;
         }
@@ -216,7 +205,7 @@ export default function ProductDetailPage() {
             } else {
                 throw new Error(data.message || 'Failed to fetch target audiences');
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('ProductDetailPage: Error fetching target audiences:', err);
             throw err;
         }
@@ -225,8 +214,27 @@ export default function ProductDetailPage() {
     const handleReviewStatsLoaded = useCallback((stats: { totalReviews: number, averageRating: number }) => {
         console.log("ProductDetailPage: Review stats loaded:", stats);
         setReviewCount(stats.totalReviews);
-        setAverageReviewRating(stats.averageRating);
     }, []);
+
+    // Type guard for ExtendedSession
+    const isExtendedSession = (session: unknown): session is ExtendedSession => {
+        if (typeof session !== 'object' || session === null) return false;
+        const sessionObj = session as Record<string, unknown>;
+        if (!('user' in sessionObj) || typeof sessionObj.user !== 'object' || sessionObj.user === null) return false;
+        const userObj = sessionObj.user as Record<string, unknown>;
+        return 'id' in userObj && typeof userObj.id === 'string';
+    };
+
+    // Helper function - defined early to be used in useEffect
+    const getSizesForColor = useCallback((colorId: number | null, currentVariants?: ProductVariant[]): SizeInfo[] => {
+        const variantsToUse = currentVariants || product?.variants;
+        if (!variantsToUse || !colorId || sizes.length === 0) return [];
+        const sizeIds = new Set<number>();
+        variantsToUse
+            .filter(variant => variant.colorId === colorId && variant.sizeId)
+            .forEach(variant => sizeIds.add(variant.sizeId));
+        return sizes.filter(s => sizeIds.has(s.id));
+    }, [product?.variants, sizes]);
 
     useEffect(() => {
         console.log("ProductDetailPage: Main useEffect triggered. Raw productId:", productId, "Numeric productId:", numericProductId);
@@ -251,47 +259,64 @@ export default function ProductDetailPage() {
             setLoading(false);
             console.error("ProductDetailPage: Invalid numericProductId, not fetching data.");
         }
-    }, [numericProductId, fetchProductDetail, fetchColors, fetchSizes, fetchMaterials, fetchTargetAudiences]);
+    }, [productId, numericProductId, fetchProductDetail, fetchColors, fetchSizes, fetchMaterials, fetchTargetAudiences]);
 
 
     // Effect to update product variants with names and set initial selected variant
     useEffect(() => {
-        if (initialFetchComplete && product && colors.length > 0 && sizes.length > 0) {
-            console.log("ProductDetailPage: Initial fetch complete, processing variants.");
-            const updatedVariants = product.variants.map(variant => ({
-                ...variant,
-                colorName: colors.find(c => c.id === variant.colorId)?.name || 'N/A',
-                sizeName: sizes.find(s => s.id === variant.sizeId)?.name || 'N/A',
-            }));
+        // Điều kiện cơ bản để tiếp tục – nếu thiếu dữ liệu cần thiết thì bỏ qua
+        if (!initialFetchComplete || !product || colors.length === 0 || sizes.length === 0) {
+            return;
+        }
 
-            const updatedProductData = { ...product, variants: updatedVariants };
+        // Kiểm tra xem biến thể đã được gán tên màu/kích cỡ hoặc thông tin bổ sung chưa
+        const variantsNeedUpdate = product.variants.some(
+            (variant) => !variant.colorName || !variant.sizeName
+        );
+        const needsAdditionalInfo =
+            (!product.materialName && materials.length > 0) ||
+            (!product.targetAudienceName && targetAudiences.length > 0);
 
-            if (materials.length > 0 && targetAudiences.length > 0) {
-                updatedProductData.materialName = materials.find(m => m.id === product.materialId)?.name;
-                updatedProductData.targetAudienceName = targetAudiences.find(ta => ta.id === product.targetAudienceId)?.name;
-            }
+        // Nếu không cần cập nhật nữa, thoát sớm để tránh vòng lặp vô hạn
+        if (!variantsNeedUpdate && !needsAdditionalInfo) {
+            return;
+        }
 
-            setProduct(updatedProductData);
+        console.log("ProductDetailPage: Initial fetch complete, processing variants.");
 
-            // Set initial selected variant
-            if (updatedVariants.length > 0) {
-                const firstVariant = updatedVariants[0];
-                setSelectedVariant(firstVariant);
-                setSelectedColorId(firstVariant.colorId);
+        const updatedVariants = product.variants.map((variant) => ({
+            ...variant,
+            colorName: colors.find((c) => c.id === variant.colorId)?.name || "N/A",
+            sizeName: sizes.find((s) => s.id === variant.sizeId)?.name || "N/A",
+        }));
 
-                const availableSizesForFirstColor = getSizesForColor(firstVariant.colorId, updatedVariants);
-                if (availableSizesForFirstColor.length > 0) {
-                    setSelectedSizeId(availableSizesForFirstColor[0].id);
-                } else {
-                    setSelectedSizeId(null);
-                }
+        const updatedProductData = { ...product, variants: updatedVariants };
+
+        if (materials.length > 0 && targetAudiences.length > 0) {
+            updatedProductData.materialName = materials.find((m) => m.id === product.materialId)?.name;
+            updatedProductData.targetAudienceName = targetAudiences.find((ta) => ta.id === product.targetAudienceId)?.name;
+        }
+
+        setProduct(updatedProductData);
+
+        // Đặt biến thể được chọn ban đầu
+        if (updatedVariants.length > 0) {
+            const firstVariant = updatedVariants[0];
+            setSelectedVariant(firstVariant);
+            setSelectedColorId(firstVariant.colorId);
+
+            const availableSizesForFirstColor = getSizesForColor(firstVariant.colorId, updatedVariants);
+            if (availableSizesForFirstColor.length > 0) {
+                setSelectedSizeId(availableSizesForFirstColor[0].id);
             } else {
-                setSelectedVariant(null);
-                setSelectedColorId(null);
                 setSelectedSizeId(null);
             }
+        } else {
+            setSelectedVariant(null);
+            setSelectedColorId(null);
+            setSelectedSizeId(null);
         }
-    }, [initialFetchComplete, product?.productId, colors, sizes, materials, targetAudiences]);
+    }, [initialFetchComplete, product, colors, sizes, materials, targetAudiences, getSizesForColor]);
 
 
     // Effect to update selectedVariant when color/size selection changes
@@ -318,7 +343,7 @@ export default function ProductDetailPage() {
     //                             HELPER FUNCTIONS
     // ============================================================================
 
-    const getUniqueColors = (): ColorInfo[] => {
+    const getUniqueColors = useCallback((): ColorInfo[] => {
         if (!product?.variants || colors.length === 0) return [];
         const colorIdsInProduct = new Set<number>();
         product.variants.forEach(variant => {
@@ -327,18 +352,7 @@ export default function ProductDetailPage() {
             }
         });
         return colors.filter(c => colorIdsInProduct.has(c.id));
-    };
-
-    const getSizesForColor = (colorId: number | null, currentVariants?: ProductVariant[]): SizeInfo[] => {
-        const variantsToUse = currentVariants || product?.variants;
-        if (!variantsToUse || !colorId || sizes.length === 0) return [];
-        const sizeIds = new Set<number>();
-        variantsToUse
-            .filter(variant => variant.colorId === colorId && variant.sizeId)
-            .forEach(variant => sizeIds.add(variant.sizeId));
-        return sizes.filter(s => sizeIds.has(s.id));
-    };
-
+    }, [product?.variants, colors]);
 
     const handleColorSelect = (colorId: number) => {
         setSelectedColorId(colorId);
@@ -377,7 +391,7 @@ export default function ProductDetailPage() {
             return;
         }
 
-        if (session?.user) {
+        if (isExtendedSession(session)) {
             // Đã đăng nhập: chỉ gọi API backend, không thao tác localStorage
             try {
                 const res = await fetch("http://localhost:8080/api/cart-items/add", {
@@ -387,30 +401,44 @@ export default function ProductDetailPage() {
                         ...(session.accessToken ? { "Authorization": `Bearer ${session.accessToken}` } : {})
                     },
                     body: JSON.stringify({
-                        keycloakId: session.user.id,
+                        keycloakId: session.user!.id,
                         variantId: selectedVariant.variantId,
                         quantity: 1
                     })
                 });
                 if (!res.ok) {
-                    const err = await res.json().catch(() => ({}));
+                    const err: ApiError = await res.json().catch(() => ({}));
                     throw new Error(err.message || 'Lỗi khi thêm vào giỏ hàng');
                 }
                 alert('Đã thêm sản phẩm vào giỏ hàng!');
                 router.push('/cart');
-            } catch (err: any) {
-                alert(err.message || 'Không thể thêm vào giỏ hàng');
+            } catch (err: unknown) {
+                const errorMessage = err instanceof Error ? err.message : 'Không thể thêm vào giỏ hàng';
+                alert(errorMessage);
             }
         } else {
             // Chưa đăng nhập: thêm vào localStorage
-            let localCart = [];
+            interface LocalCartItem {
+                id: number;
+                productId: number;
+                name: string;
+                price: number;
+                quantity: number;
+                imageUrl: string;
+                sku: string;
+                stockLevel: number;
+                colorName: string;
+                sizeName: string;
+            }
+            
+            let localCart: LocalCartItem[] = [];
             if (typeof window !== 'undefined') {
                 const storedCart = localStorage.getItem('cart');
                 if (storedCart) {
                     localCart = JSON.parse(storedCart);
                 }
                 // Thêm hoặc cập nhật sản phẩm trong cart
-                const existing = localCart.find((item: any) => item.id === selectedVariant.variantId);
+                const existing = localCart.find((item: LocalCartItem) => item.id === selectedVariant.variantId);
                 if (existing) {
                     existing.quantity += 1;
                 } else {
@@ -478,7 +506,8 @@ export default function ProductDetailPage() {
                                 setLoading(false);
                             }).catch(err => {
                                 console.error("Error during retry data fetch:", err);
-                                setError(err.message || "Lỗi tải dữ liệu phụ trợ");
+                                const errorMessage = err instanceof Error ? err.message : "Lỗi tải dữ liệu phụ trợ";
+                                setError(errorMessage);
                                 setLoading(false);
                             });
                         }

@@ -19,13 +19,14 @@ import {
     useDisclosure,
     Input
 } from "@heroui/react";
-import NextLink from "next/link";
 import { useEffect, useState } from "react";
 import { useSession, signIn } from "next-auth/react";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { CldImage } from "next-cloudinary";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
+import BrandForm from "@/components/product/BrandForm/BrandForm";
+import EditBrandModal from "@/components/product/BrandForm/EditBrandModal";
 
 interface Brands {
     id: number;
@@ -53,8 +54,10 @@ export default function Page() {
     const [totalPages, setTotalPages] = useState(1);
     const [brandToDelete, setBrandToDelete] = useState<{ id: number; name: string } | null>(null);
     const [notification, setNotification] = useState<string | null>(null);
-    const { isOpen, onOpen, onClose } = useDisclosure();
-    const [stompClient, setStompClient] = useState<Client | null>(null);
+    const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
+    const { isOpen: isAddOpen, onOpen: onAddOpen, onClose: onAddClose, onOpenChange: onAddOpenChange } = useDisclosure();
+    const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
+    const [editBrandId, setEditBrandId] = useState<number | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [finalSearchTerm, setFinalSearchTerm] = useState("");
 
@@ -83,7 +86,8 @@ export default function Page() {
         });
 
         client.activate();
-        setStompClient(client);
+
+        return client;
     };
 
     useEffect(() => {
@@ -91,9 +95,9 @@ export default function Page() {
     }, [status]);
 
     useEffect(() => {
-        initializeStompClient();
+        const client = initializeStompClient();
         return () => {
-            if (stompClient?.active) stompClient.deactivate();
+            if (client && client.active) client.deactivate();
         };
     }, []);
 
@@ -115,7 +119,7 @@ export default function Page() {
                 const json: ApiResponse = await res.json();
                 setAllBrandsData(json.data.content);
             } catch (err) {
-                setError("Không thể tải dữ liệu. Vui lòng thử lại sau.");
+                setError("Không thể tải dữ liệu. Vui lòng thử lại sau." + err);
             } finally {
                 setLoading(false);
             }
@@ -150,7 +154,12 @@ export default function Page() {
 
     const openDeleteConfirm = (id: number, name: string) => {
         setBrandToDelete({ id, name });
-        onOpen();
+        onDeleteOpen();
+    };
+
+    const openEditModal = (id: number) => {
+        setEditBrandId(id);
+        onEditOpen();
     };
 
     const handleDeleteBrand = async () => {
@@ -161,11 +170,11 @@ export default function Page() {
                 headers: { Authorization: `Bearer ${session.accessToken}` }
             });
             if (!res.ok) throw new Error("Xoá không thành công");
-            onClose();
+            onDeleteClose();
             setBrandToDelete(null);
         } catch (err) {
-            setError("Không thể xoá brand. Vui lòng thử lại.");
-            onClose();
+            setError("Không thể xoá brand. Vui lòng thử lại." + err);
+            onDeleteClose();
         }
     };
 
@@ -177,12 +186,13 @@ export default function Page() {
         <Card className="min-h-screen py-8 px-4 md:px-36">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold">Quản lý thương hiệu</h1>
-                <NextLink
-                    href="/admin/product_management/brands/create"
-                    className="inline-block cursor-pointer transition-all bg-blue-500 text-white px-6 py-2 rounded-lg border-blue-600 border-b-[4px] hover:brightness-110 hover:-translate-y-[1px] hover:border-b-[6px] active:border-b-[2px] active:brightness-90 active:translate-y-[2px]"
+                <Button
+                    color="primary"
+                    onClick={onAddOpen}
+                    className="px-6 py-2"
                 >
                     Thêm mới
-                </NextLink>
+                </Button>
             </div>
 
             <Divider />
@@ -241,9 +251,12 @@ export default function Page() {
                                     <TableCell className="max-w-xs truncate">{brand.brandInfo}</TableCell>
                                     <TableCell>
                                         <div className="flex space-x-2">
-                                            <NextLink href={`/admin/product_management/brands/update/${brand.id}`}>
-                                                <button className="bg-yellow-500 text-white px-4 py-2 rounded hover:brightness-110">Sửa</button>
-                                            </NextLink>
+                                            <button
+                                                onClick={() => openEditModal(brand.id)}
+                                                className="bg-yellow-500 text-white px-4 py-2 rounded hover:brightness-110"
+                                            >
+                                                Sửa
+                                            </button>
                                             <button
                                                 onClick={() => openDeleteConfirm(brand.id, brand.brandName)}
                                                 className="bg-red-500 text-white px-4 py-2 rounded hover:brightness-110"
@@ -282,7 +295,7 @@ export default function Page() {
                     </button>
                 </div>
 
-                <Modal isOpen={isOpen} onClose={onClose}>
+                <Modal isOpen={isDeleteOpen} onClose={onDeleteClose}>
                     <ModalContent>
                         <ModalHeader>Xác nhận xoá</ModalHeader>
                         <ModalBody>
@@ -293,11 +306,38 @@ export default function Page() {
                             )}
                         </ModalBody>
                         <ModalFooter>
-                            <Button variant="light" onPress={onClose}>Huỷ</Button>
+                            <Button variant="light" onPress={onDeleteClose}>Huỷ</Button>
                             <Button color="danger" onPress={handleDeleteBrand}>Xoá</Button>
                         </ModalFooter>
                     </ModalContent>
                 </Modal>
+
+                <Modal isOpen={isAddOpen} onOpenChange={onAddOpenChange} size="3xl" scrollBehavior="inside" placement="center">
+                    <ModalContent>
+                        <ModalHeader>Thêm thương hiệu</ModalHeader>
+                        <ModalBody>
+                            <BrandForm onSuccess={() => {
+                                onAddClose();
+                            }} />
+                        </ModalBody>
+                    </ModalContent>
+                </Modal>
+
+                {editBrandId !== null && (
+                    <EditBrandModal
+                        isOpen={isEditOpen}
+                        onOpenChange={(open: boolean) => {
+                            if (!open) {
+                                onEditClose();
+                                setEditBrandId(null);
+                            }
+                        }}
+                        brandId={editBrandId}
+                        onSuccess={() => {
+                            onEditClose();
+                        }}
+                    />
+                )}
             </CardBody>
         </Card>
     );

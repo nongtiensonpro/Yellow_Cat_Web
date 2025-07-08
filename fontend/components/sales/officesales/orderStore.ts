@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import { Session } from 'next-auth';
 
 interface Payment {
     paymentId: number;
@@ -71,6 +72,24 @@ interface ValidationErrors {
     phoneNumber: string;
 }
 
+// Kiểu cho form chỉnh sửa đơn hàng
+type EditableOrder = {
+    customerName: string;
+    phoneNumber: string;
+    discountAmount: number;
+};
+
+// Kiểu dữ liệu cơ bản cho màu sắc và kích thước
+interface Color {
+    id: number;
+    name: string;
+}
+
+interface Size {
+    id: number;
+    name: string;
+}
+
 interface OrderState {
     // State
     orders: Order[];
@@ -100,11 +119,7 @@ interface OrderState {
     searchTerm: string;
     
     // Edit Form State
-    editableOrder: {
-        customerName: string;
-        phoneNumber: string;
-        discountAmount: number;
-    };
+    editableOrder: EditableOrder;
     validationErrors: ValidationErrors;
     isUpdatingOrder: boolean;
     
@@ -130,23 +145,23 @@ interface OrderState {
     filterProducts: () => void;
     
     // Edit Form Actions
-    setEditableOrder: (order: any) => void;
+    setEditableOrder: (order: EditableOrder) => void;
     setValidationErrors: (errors: ValidationErrors) => void;
     setIsUpdatingOrder: (updating: boolean) => void;
     
     // API Actions
-    fetchOrders: (session: any) => Promise<void>;
-    fetchOrderDetail: (orderCode: string, session: any) => Promise<void>;
-    createOrder: (session: any) => Promise<void>;
-    updateOrder: (orderData: any, session: any) => Promise<void>;
-    deleteOrder: (orderId: number, session: any) => Promise<void>;
-    cashPayment: (orderCode: string, session: any) => Promise<void>;
+    fetchOrders: (session: Session | null) => Promise<void>;
+    fetchOrderDetail: (orderCode: string, session: Session | null) => Promise<void>;
+    createOrder: (session: Session | null) => Promise<void>;
+    updateOrder: (orderData: Partial<Order>, session: Session | null) => Promise<void>;
+    deleteOrder: (orderId: number, session: Session | null) => Promise<void>;
+    cashPayment: (orderCode: string, session: Session | null) => Promise<void>;
     
     // Order Items API Actions
-    fetchOrderItems: (session: any) => Promise<void>;
-    addVariantToOrder: (variant: ProductVariant, session: any) => Promise<void>;
-    updateOrderItemQuantity: (orderItemId: number, newQuantity: number, session: any) => Promise<void>;
-    deleteOrderItem: (orderItemId: number, session: any) => Promise<void>;
+    fetchOrderItems: (session: Session | null) => Promise<void>;
+    addVariantToOrder: (variant: ProductVariant, session: Session | null) => Promise<void>;
+    updateOrderItemQuantity: (orderItemId: number, newQuantity: number, session: Session | null) => Promise<void>;
+    deleteOrderItem: (orderItemId: number, session: Session | null) => Promise<void>;
     
     // Products API Actions
     initializeProductData: () => Promise<void>;
@@ -155,13 +170,17 @@ interface OrderState {
     validateCustomerInfo: () => boolean;
     isPaid: () => boolean;
     calculateOrderTotals: () => { subTotalAmount: number; finalAmount: number; calculatedStatus: string };
-    refreshCurrentOrder: (session: any) => Promise<void>;
+    refreshCurrentOrder: (session: Session | null) => Promise<void>;
     forceUpdateCurrentOrder: () => void;
     resetError: () => void;
     openEditOrder: (order: Order) => void;
     closeEditOrder: () => void;
     syncEditableOrderWithCurrent: () => void;
 }
+
+// Helper: trích xuất message an toàn từ lỗi unknown
+const getErrorMessage = (error: unknown): string =>
+    error instanceof Error ? error.message : String(error);
 
 export const useOrderStore = create<OrderState>()(
     devtools(
@@ -274,16 +293,16 @@ export const useOrderStore = create<OrderState>()(
                         loading: false,
                         error: null
                     });
-                } catch (err: any) {
+                } catch (err: unknown) {
                     set({
-                        error: err.message,
+                        error: getErrorMessage(err),
                         orders: [],
                         loading: false
                     });
                 }
             },
             
-            fetchOrderDetail: async (orderCode, session) => {
+            fetchOrderDetail: async (orderCode: string, session: Session | null) => {
                 if (!session?.accessToken) return;
                 
                 try {
@@ -314,13 +333,13 @@ export const useOrderStore = create<OrderState>()(
                         );
                         set({ orders: updatedOrders });
                     }
-                } catch (error: any) {
+                } catch (error: unknown) {
                     console.error('Error fetching order detail:', error);
-                    set({ error: `Lỗi tải thông tin đơn hàng: ${error.message}` });
+                    set({ error: `Lỗi tải thông tin đơn hàng: ${getErrorMessage(error)}` });
                 }
             },
             
-            createOrder: async (session) => {
+            createOrder: async (session: Session | null) => {
                 if (!session?.accessToken) {
                     set({ error: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại." });
                     return;
@@ -346,14 +365,14 @@ export const useOrderStore = create<OrderState>()(
                     set({ activeTab: 'all', page: 1 });
                     await get().fetchOrders(session);
                     
-                } catch (err: any) {
-                    set({ error: err.message });
+                } catch (err: unknown) {
+                    set({ error: getErrorMessage(err) });
                 } finally {
                     set({ isCreating: false });
                 }
             },
             
-            updateOrder: async (orderData, session) => {
+            updateOrder: async (orderData: Partial<Order>, session: Session | null) => {
                 if (!session?.accessToken) return;
                 
                 set({ isUpdatingOrder: true, itemsError: null, error: null });
@@ -383,15 +402,15 @@ export const useOrderStore = create<OrderState>()(
                     // Refresh orders list
                     await get().fetchOrders(session);
                     
-                } catch (err: any) {
-                    set({ error: `Lỗi cập nhật đơn hàng: ${err.message}` });
+                } catch (err: unknown) {
+                    set({ error: `Lỗi cập nhật đơn hàng: ${getErrorMessage(err)}` });
                     throw err;
                 } finally {
                     set({ isUpdatingOrder: false });
                 }
             },
             
-            deleteOrder: async (orderId, session) => {
+            deleteOrder: async (orderId: number, session: Session | null) => {
                 if (!session?.accessToken) {
                     set({ error: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại." });
                     return;
@@ -413,12 +432,12 @@ export const useOrderStore = create<OrderState>()(
                     set({ activeTab: 'all', page: 1 });
                     await get().fetchOrders(session);
                     
-                } catch (err: any) {
-                    set({ error: err.message });
+                } catch (err: unknown) {
+                    set({ error: getErrorMessage(err) });
                 }
             },
             
-            cashPayment: async (orderCode, session) => {
+            cashPayment: async (orderCode: string, session: Session | null) => {
                 if (!session?.accessToken) return;
                 
                 // Kiểm tra có sản phẩm trong đơn hàng không
@@ -461,15 +480,15 @@ export const useOrderStore = create<OrderState>()(
                     
                     set({ error: null });
                     
-                } catch (error: any) {
+                } catch (error: unknown) {
                     console.error('Cash payment error:', error);
-                    set({ error: `Lỗi thanh toán tiền mặt: ${error.message}` });
+                    set({ error: `Lỗi thanh toán tiền mặt: ${getErrorMessage(error)}` });
                     throw error;
                 }
             },
             
             // Order Items API Actions
-            fetchOrderItems: async (session) => {
+            fetchOrderItems: async (session: Session | null) => {
                 const { currentOrder } = get();
                 if (!currentOrder || !session?.accessToken) return;
                 
@@ -488,7 +507,8 @@ export const useOrderStore = create<OrderState>()(
                     if (!res.ok) throw new Error(`Lỗi ${res.status}: Không thể tải chi tiết đơn hàng.`);
                     
                     const responseData = await res.json();
-                    const items = responseData?.data?.content || [];
+                    const itemsData = responseData?.data?.content ?? [];
+                    const items = itemsData as OrderItem[];
                     
                     // Enrich with product info
                     const { products } = get();
@@ -502,7 +522,7 @@ export const useOrderStore = create<OrderState>()(
                         });
                     });
 
-                    const enrichedItems = items.map((item: any) => {
+                    const enrichedItems = items.map((item) => {
                         const details = variantMap.get(item.productVariantId);
                         return {
                             ...item,
@@ -512,14 +532,14 @@ export const useOrderStore = create<OrderState>()(
                     });
                     
                     set({ orderItems: enrichedItems });
-                } catch (err: any) {
-                    set({ itemsError: err.message });
+                } catch (err: unknown) {
+                    set({ itemsError: getErrorMessage(err) });
                 } finally {
                     set({ itemsLoading: false });
                 }
             },
             
-            addVariantToOrder: async (variant, session) => {
+            addVariantToOrder: async (variant: ProductVariant, session: Session | null) => {
                 const { currentOrder, orderItems } = get();
                 if (!currentOrder || !session?.accessToken) return;
                 
@@ -551,13 +571,13 @@ export const useOrderStore = create<OrderState>()(
                         ]);
                         console.log('✅ Order refresh completed');
                         
-                    } catch (err: any) {
-                        set({ itemsError: `Lỗi thêm sản phẩm: ${err.message}` });
+                    } catch (err: unknown) {
+                        set({ itemsError: `Lỗi thêm sản phẩm: ${getErrorMessage(err)}` });
                     }
                 }
             },
             
-            updateOrderItemQuantity: async (orderItemId, newQuantity, session) => {
+            updateOrderItemQuantity: async (orderItemId: number, newQuantity: number, session: Session | null) => {
                 if (newQuantity <= 0) {
                     await get().deleteOrderItem(orderItemId, session);
                     return;
@@ -587,12 +607,12 @@ export const useOrderStore = create<OrderState>()(
                     ]);
                     console.log('✅ Order refresh completed');
                     
-                } catch (err: any) {
-                    set({ itemsError: `Lỗi cập nhật số lượng: ${err.message}` });
+                } catch (err: unknown) {
+                    set({ itemsError: `Lỗi cập nhật số lượng: ${getErrorMessage(err)}` });
                 }
             },
             
-            deleteOrderItem: async (orderItemId, session) => {
+            deleteOrderItem: async (orderItemId: number, session: Session | null) => {
                 if (!session?.accessToken) return;
                 set({ itemsError: null });
 
@@ -616,8 +636,8 @@ export const useOrderStore = create<OrderState>()(
                     ]);
                     console.log('✅ Order refresh completed');
                     
-                } catch (err: any) {
-                    set({ itemsError: `Lỗi xóa sản phẩm: ${err.message}` });
+                } catch (err: unknown) {
+                    set({ itemsError: `Lỗi xóa sản phẩm: ${getErrorMessage(err)}` });
                 }
             },
             
@@ -632,18 +652,18 @@ export const useOrderStore = create<OrderState>()(
                         fetch(`http://localhost:8080/api/products/management`).then(res => res.json())
                     ]);
 
-                    const fetchedColors: any[] = colorsRes?.data?.content || [];
-                    const fetchedSizes: any[] = sizesRes?.data?.content || [];
-                    const baseProducts: any[] = productsRes?.data?.content || [];
+                    const fetchedColors = (colorsRes?.data?.content ?? []) as Color[];
+                    const fetchedSizes = (sizesRes?.data?.content ?? []) as Size[];
+                    const baseProducts = (productsRes?.data?.content ?? []) as ProductWithVariants[];
 
-                    const variantPromises = baseProducts.map(p =>
-                        fetch(`http://localhost:8080/api/products/${p.productId}`).then(res => res.json())
+                    const variantPromises = baseProducts.map((p) =>
+                        fetch(`http://localhost:8080/api/products/${p.productId}`).then((res) => res.json())
                     );
-                    const detailResponses: any[] = await Promise.all(variantPromises);
+                    const detailResponses = await Promise.all(variantPromises);
 
                     const productsWithVariants = baseProducts.map(p => {
                         const detail = detailResponses.find(dr => dr.data?.productId === p.productId)?.data;
-                        const variants = detail?.variants.map((variant: any) => ({
+                        const variants = (detail?.variants as ProductVariant[] | undefined)?.map((variant) => ({
                             ...variant,
                             colorName: fetchedColors.find(c => c.id === variant.colorId)?.name || 'N/A',
                             sizeName: fetchedSizes.find(s => s.id === variant.sizeId)?.name || 'N/A',
@@ -653,8 +673,8 @@ export const useOrderStore = create<OrderState>()(
 
                     set({ products: productsWithVariants, productsError: null });
                     get().filterProducts();
-                } catch (err: any) {
-                    set({ productsError: err.message || "Lỗi tải dữ liệu sản phẩm" });
+                } catch (err: unknown) {
+                    set({ productsError: getErrorMessage(err) || "Lỗi tải dữ liệu sản phẩm" });
                 } finally {
                     set({ productsLoading: false });
                 }
@@ -791,7 +811,7 @@ export const useOrderStore = create<OrderState>()(
                 };
             },
             
-            refreshCurrentOrder: async (session) => {
+            refreshCurrentOrder: async (session: Session | null) => {
                 const { currentOrder } = get();
                 if (currentOrder && session?.accessToken) {
                     console.log('🔄 Refreshing current order:', currentOrder.orderCode);

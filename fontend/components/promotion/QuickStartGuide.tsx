@@ -129,7 +129,7 @@ export default function QuickStartGuide() {
                     </div>
                     <div className="flex items-center gap-2">
                         <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                        <span><strong>Voucher:</strong> Mã "SAVE50" → Giảm 50k đơn hàng</span>
+                        <span><strong>Voucher:</strong> Mã SAVE50 → Giảm 50k đơn hàng</span>
                     </div>
                 </div>
             )}

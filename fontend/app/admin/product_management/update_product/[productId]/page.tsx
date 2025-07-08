@@ -26,6 +26,7 @@ import {
 import {Save, ArrowLeft, RefreshCw, Settings} from "lucide-react";
 import {useRouter, useParams} from "next/navigation";
 import ProductImageUpload from "@/components/product/ProductImageUpload";
+import type { Session } from "next-auth";
 
 interface DropdownOption {
     id: number;
@@ -55,6 +56,22 @@ interface ProductVariant {
     enabled: boolean; // Cho phép kích hoạt/vô hiệu hóa biến thể
 }
 
+// Raw variant type trả về từ backend (giúp tránh dùng any)
+interface RawVariant {
+    variantId?: number;
+    sku?: string;
+    colorId: number;
+    sizeId: number;
+    price?: number;
+    salePrice?: number;
+    stockLevel?: number;
+    stockLevelOnline?: number;
+    sold?: number;
+    soldOnline?: number;
+    imageUrl?: string;
+    weight?: number;
+}
+
 interface ProductFormData {
     productName: string;
     description: string;
@@ -65,6 +82,8 @@ interface ProductFormData {
     thumbnail: string;
     variants: ProductVariant[];
 }
+
+type SessionWithToken = Session & { accessToken?: string };
 
 export default function UpdateProductPage() {
     const {data: session} = useSession();
@@ -123,7 +142,7 @@ export default function UpdateProductPage() {
     // Thêm trạng thái loading dữ liệu sản phẩm
     const [isProductLoading, setIsProductLoading] = useState(true);
 
-    const token = session?.accessToken;
+    const token = (session as SessionWithToken | null)?.accessToken;
 
     // Toast helper functions
     const showSuccessToast = (title: string, description: string) => {
@@ -206,26 +225,39 @@ export default function UpdateProductPage() {
                 ]);
 
                 // Trích xuất dữ liệu từ cấu trúc phản hồi backend
-                const extractData = (response: any) => {
-                    if (response?.data?.content && Array.isArray(response.data.content)) {
-                        return response.data.content;
-                    } else if (response?.data?.data && Array.isArray(response.data.data)) {
-                        return response.data.data;
-                    } else if (response?.data && Array.isArray(response.data)) {
-                        return response.data;
-                    } else if (Array.isArray(response)) {
-                        return response;
-                    } else {
-                        return [];
+                const extractData = <T,>(response: unknown): T[] => {
+                    if (Array.isArray(response)) {
+                        return response as T[];
                     }
+
+                    if (typeof response === "object" && response !== null) {
+                        const obj = response as Record<string, unknown>;
+                        const dataField = obj.data;
+
+                        if (Array.isArray(dataField)) {
+                            return dataField as T[];
+                        }
+
+                        if (typeof dataField === "object" && dataField !== null) {
+                            const inner = dataField as Record<string, unknown>;
+                            if (Array.isArray(inner.content)) {
+                                return inner.content as T[];
+                            }
+                            if (Array.isArray(inner.data)) {
+                                return inner.data as T[];
+                            }
+                        }
+                    }
+
+                    return [] as T[];
                 };
 
-                const extractedBrands = extractData(brandsData);
-                const extractedCategories = extractData(categoriesData);
-                const extractedMaterials = extractData(materialsData);
-                const extractedAudiences = extractData(audiencesData);
-                const extractedColors = extractData(colorsData);
-                const extractedSizes = extractData(sizesData);
+                const extractedBrands = extractData<BrandOption>(brandsData);
+                const extractedCategories = extractData<DropdownOption>(categoriesData);
+                const extractedMaterials = extractData<DropdownOption>(materialsData);
+                const extractedAudiences = extractData<DropdownOption>(audiencesData);
+                const extractedColors = extractData<DropdownOption>(colorsData);
+                const extractedSizes = extractData<DropdownOption>(sizesData);
 
                 setBrands(extractedBrands);
                 setCategories(extractedCategories);
@@ -284,7 +316,7 @@ export default function UpdateProductPage() {
                     materialId: product.materialId || 0,
                     targetAudienceId: product.targetAudienceId || 0,
                     thumbnail: product.thumbnail || "",
-                    variants: (product.variants || []).map((v: any) => ({
+                    variants: (product.variants || []).map((v: RawVariant) => ({
                         id: v.variantId ? v.variantId.toString() : `${v.colorId}-${v.sizeId}`,
                         sku: v.sku,
                         colorId: v.colorId,
@@ -308,7 +340,7 @@ export default function UpdateProductPage() {
             }
         };
         if (productId) fetchProductDetail();
-        // eslint-disable-next-line
+        // Dependency chỉ cần productId
     }, [productId]);
 
     // Validation functions
@@ -374,7 +406,7 @@ export default function UpdateProductPage() {
         }
 
         // Validate từng variant
-        enabledVariants.forEach((variant, index) => {
+        enabledVariants.forEach((variant) => {
             const priceError = validatePrice(variant.price, "Giá gốc");
             if (priceError) newErrors[`variant_${variant.id}_price`] = priceError;
 
@@ -440,7 +472,7 @@ export default function UpdateProductPage() {
 
     // Helper function để validate và clean input value
     const handleNumberInput = (value: string, min: number = 0, max: number = Infinity): number => {
-        let numValue = parseFloat(value);
+        const numValue = parseFloat(value);
 
         // Nếu NaN hoặc nhỏ hơn min, return min
         if (isNaN(numValue) || numValue < min) {
@@ -457,7 +489,7 @@ export default function UpdateProductPage() {
 
     // Helper function cho integer input
     const handleIntegerInput = (value: string, min: number = 0, max: number = Infinity): number => {
-        let numValue = parseInt(value);
+        const numValue = parseInt(value);
 
         // Nếu NaN hoặc nhỏ hơn min, return min
         if (isNaN(numValue) || numValue < min) {
@@ -496,7 +528,7 @@ export default function UpdateProductPage() {
         }
     };
 
-    const handleInputChange = (field: keyof ProductFormData, value: any) => {
+    const handleInputChange = <K extends keyof ProductFormData>(field: K, value: ProductFormData[K]) => {
         setFormData(prev => ({
             ...prev,
             [field]: value
@@ -507,7 +539,7 @@ export default function UpdateProductPage() {
 
         // Validate realtime cho một số trường
         if (field === 'productName') {
-            const error = validateProductName(value);
+            const error = validateProductName(value as string);
             if (error) {
                 setErrors(prev => ({...prev, [field]: error}));
             }
@@ -580,14 +612,14 @@ export default function UpdateProductPage() {
     };
 
     // Cập nhật biến thể cụ thể
-    const updateVariant = (variantId: string, field: keyof ProductVariant, value: any) => {
+    const updateVariant = <K extends keyof ProductVariant>(variantId: string, field: K, value: ProductVariant[K]) => {
         const currentVariant = formData.variants.find(v => v.id === variantId);
         if (!currentVariant) return;
 
         // Validate giá real-time
         if (field === 'price' || field === 'salePrice') {
-            const newPrice = field === 'price' ? value : currentVariant.price;
-            const newSalePrice = field === 'salePrice' ? value : currentVariant.salePrice;
+            const newPrice = field === 'price' ? (value as number) : currentVariant.price;
+            const newSalePrice = field === 'salePrice' ? (value as number) : currentVariant.salePrice;
 
             // Validate và hiển thị toast nếu có lỗi
             if (!validatePriceWithToast(newPrice, newSalePrice, variantId)) {
@@ -729,7 +761,8 @@ export default function UpdateProductPage() {
                     errorData.message || "Không thể cập nhật sản phẩm. Vui lòng thử lại sau."
                 );
             }
-        } catch (error) {
+        } catch (err) {
+            console.error("Lỗi khi cập nhật sản phẩm:", err);
             showErrorToast(
                 "Lỗi kết nối",
                 "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng và thử lại."
@@ -1255,7 +1288,7 @@ export default function UpdateProductPage() {
                             <div className="text-center py-12 text-gray-500">
                                 <div className="text-4xl mb-4">🎯</div>
                                 <h3 className="text-lg font-medium mb-2">Chưa có biến thể nào</h3>
-                                <p className="text-sm">Chọn màu sắc và kích thước, sau đó nhấn "Tạo Ma Trận" để bắt
+                                <p className="text-sm">Chọn màu sắc và kích thước, sau đó nhấn &quot;Tạo Ma Trận&quot; để bắt
                                     đầu</p>
                             </div>
                         )}

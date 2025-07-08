@@ -240,7 +240,7 @@ export default function Page() {
                     <ModalBody>
                         {modalMode === 'delete' ? (
                             <p className="text-gray-700 dark:text-gray-300">
-                                Bạn có chắc chắn muốn xoá đối tượng <span className="font-semibold text-red-600">"{selected?.name}"</span> không?
+                                Bạn có chắc chắn muốn xoá đối tượng <span className="font-semibold text-red-600">{selected?.name}</span> không?
                             </p>
                         ) : (
                             <form className="space-y-4">

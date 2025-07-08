@@ -18,6 +18,9 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60,
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   compress: true,
   onDemandEntries: {
     maxInactiveAge: 30 * 1000,

@@ -1,9 +1,30 @@
-import React, { useEffect, useState } from "react";
-import {Badge, Switch} from "@heroui/react";
+import React, { useEffect, useState, useCallback } from "react";
+import {Badge} from "@heroui/react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 
-export const NotificationIcon = ({size, height, width, ...props}: {size?: number, height?: number, width?: number, [x: string]: any}) => {
+// --- Types ---
+interface IconProps {
+    size?: number;
+    height?: number;
+    width?: number;
+    [key: string]: unknown;
+}
+
+interface CartItem {
+    quantity: number;
+    [key: string]: unknown;
+}
+
+interface ExtendedUser {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    id?: string;
+    sub?: string;
+}
+
+export const NotificationIcon = ({size, height, width, ...props}: IconProps) => {
     return (
         <svg
             fill="none"
@@ -23,7 +44,7 @@ export const NotificationIcon = ({size, height, width, ...props}: {size?: number
     );
 };
 
-export const CartIcon = ({size, height, width, ...props}: {size?: number, height?: number, width?: number, [x: string]: any}) => {
+export const CartIcon = ({size, height, width, ...props}: IconProps) => {
     return (
         <svg
             fill="none"
@@ -55,17 +76,21 @@ export const CartIcon = ({size, height, width, ...props}: {size?: number, height
 
 export default function App() {
     const { data: session } = useSession();
-    const [isInvisible, setIsInvisible] = useState(false);
     const [cartCount, setCartCount] = useState(0);
     const router = useRouter();
 
     // Hàm tính tổng số lượng sản phẩm trong giỏ hàng
-    const getCartCount = async () => {
+    const getCartCount = useCallback(async () => {
         if (session?.user) {
             try {
-                const res = await fetch(`http://localhost:8080/api/cart?keycloakId=${session.user.id}`);
+                // Sử dụng sub hoặc email làm identifier
+                const user = session.user as ExtendedUser;
+                const userId = user.id || user.sub || user.email;
+                if (!userId) return 0;
+                
+                const res = await fetch(`http://localhost:8080/api/cart?keycloakId=${userId}`);
                 const data = await res.json();
-                return (data.items || []).reduce((total: number, item: any) => total + (item.quantity || 0), 0);
+                return (data.items || []).reduce((total: number, item: CartItem) => total + (item.quantity || 0), 0);
             } catch {
                 return 0;
             }
@@ -75,13 +100,13 @@ export default function App() {
             try {
                 const cartItems = JSON.parse(storedCart);
                 if (!Array.isArray(cartItems)) return 0;
-                return cartItems.reduce((total: number, item: any) => total + (item.quantity || 0), 0);
+                return cartItems.reduce((total: number, item: CartItem) => total + (item.quantity || 0), 0);
             } catch {
                 return 0;
             }
         }
         return 0;
-    };
+    }, [session]);
 
     // Cập nhật realtime khi localStorage thay đổi hoặc khi thêm/xóa/cập nhật sản phẩm
     useEffect(() => {
@@ -106,12 +131,12 @@ export default function App() {
             window.removeEventListener('storage', handleStorage);
             if (interval) clearInterval(interval);
         };
-    }, [session]);
+    }, [getCartCount]);
 
     return (
         <div className="flex items-center gap-4">
             <button className="flex items-center gap-3" >
-                <Badge color="danger" content={cartCount} isInvisible={isInvisible || cartCount === 0} shape="circle">
+                <Badge color="danger" content={cartCount} isInvisible={cartCount === 0} shape="circle">
                     <CartIcon size={30}  onClick={() => router.push('/cart')}/>
                 </Badge>
             </button>

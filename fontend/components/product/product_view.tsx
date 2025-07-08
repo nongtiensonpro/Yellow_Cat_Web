@@ -149,7 +149,7 @@ export default function Page() {
             }
             
             // Lấy accessToken từ session
-            const token = session.accessToken;
+            const token = session?.accessToken;
             if (!token) {
                 console.log("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
             }
@@ -189,7 +189,7 @@ export default function Page() {
                 return;
             }
             // Lấy accessToken từ session
-            const token = session.accessToken;
+            const token = session?.accessToken;
             if (!token) {
                 console.log("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
             }
@@ -388,7 +388,7 @@ export default function Page() {
                         <ModalBody>
                             {productToDelete && (
                                 <p>
-                                    Bạn có chắc chắn muốn xóa sản phẩm "<b>{productToDelete.productName}</b>"?
+                                    Bạn có chắc chắn muốn xóa sản phẩm <b>{productToDelete.productName}</b>?
                                     <br />
                                     Hành động này không thể hoàn tác.
                                 </p>
@@ -422,7 +422,7 @@ export default function Page() {
                         <ModalBody>
                             {productToToggle && (
                                 <p>
-                                    Bạn có chắc chắn muốn {productToToggle.isActive ? "ngừng bán" : "kích hoạt bán"} sản phẩm "<b>{productToToggle.productName}</b>"?
+                                    Bạn có chắc chắn muốn {productToToggle.isActive ? "ngừng bán" : "kích hoạt bán"} sản phẩm <b>{productToToggle.productName}</b>?
                                 </p>
                             )}
                             {toggleError && (

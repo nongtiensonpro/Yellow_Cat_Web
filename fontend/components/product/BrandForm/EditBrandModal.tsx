@@ -15,6 +15,34 @@ import { CldUploadButton, CldImage } from 'next-cloudinary';
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 
+// Extend Session type để có accessToken
+interface ExtendedSession {
+    accessToken: string;
+    user?: {
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+    };
+}
+
+// Interface cho CloudinaryResource
+interface CloudinaryResource {
+    public_id: string;
+    [key: string]: unknown;
+}
+
+// Interface cho upload result
+interface UploadResult {
+    event: string;
+    info: CloudinaryResource;
+}
+
+// Interface cho ProductId
+interface ProductId {
+    id: number | string;
+    [key: string]: unknown;
+}
+
 export interface Brand {
     id: number | string;
     brandName: string;
@@ -22,7 +50,7 @@ export interface Brand {
     brandInfo: string;
     createdAt?: string | null;
     updatedAt?: string | null;
-    productIds?: any[];
+    productIds?: ProductId[];
 }
 
 interface ApiResponse<T> {
@@ -32,6 +60,12 @@ interface ApiResponse<T> {
     data: T;
 }
 
+interface UpdateBrandResponse {
+    success: boolean;
+    message?: string;
+    data?: Brand;
+}
+
 interface EditBrandModalProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
@@ -39,61 +73,45 @@ interface EditBrandModalProps {
     onSuccess?: () => void;
 }
 
-const fetchBrandById = async (id: string | number, token: string | undefined): Promise<ApiResponse<Brand>> => {
-    if (!token) {
-        throw new Error("Chưa xác thực.");
-    }
-    try {
-        const response = await fetch(`http://localhost:8080/api/brands/${id}`, {
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
-        });
-        if (!response.ok) {
-            if (response.status === 404) throw new Error("Không tìm thấy Brand.");
-            const errorData = await response.json().catch(() => ({ message: `Lỗi không xác định (Status: ${response.status})` }));
-            throw new Error(errorData.message || `Failed to fetch brand (Status: ${response.status})`);
+const fetchBrandById = async (id: string | number, token: string): Promise<ApiResponse<Brand>> => {
+    const response = await fetch(`http://localhost:8080/api/brands/${id}`, {
+        headers: {
+            "Authorization": `Bearer ${token}`
         }
-        return await response.json();
-    } catch (error) {
-        console.error("Error fetching brand by ID:", error);
-        throw error;
+    });
+    if (!response.ok) {
+        if (response.status === 404) throw new Error("Không tìm thấy Brand.");
+        const errorData = await response.json().catch(() => ({ message: `Lỗi không xác định (Status: ${response.status})` }));
+        throw new Error(errorData.message || `Failed to fetch brand (Status: ${response.status})`);
     }
+    return await response.json();
 };
 
-const updateBrand = async (id: string | number, data: Omit<Brand, 'id' | 'createdAt' | 'updatedAt' | 'productIds'>, token: string | undefined): Promise<any> => {
-    if (!token) {
-        throw new Error("Chưa xác thực.");
-    }
-    try {
-        console.log("Sending update data:", JSON.stringify(data));
-        const response = await fetch(`http://localhost:8080/api/brands/${id}`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify(data)
-        });
+const updateBrand = async (id: string | number, data: Omit<Brand, 'id' | 'createdAt' | 'updatedAt' | 'productIds'>, token: string): Promise<UpdateBrandResponse> => {
+    console.log("Sending update data:", JSON.stringify(data));
+    const response = await fetch(`http://localhost:8080/api/brands/${id}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+    });
 
-        if (!response.ok) {
-            let errorBody = `Lỗi cập nhật (Status: ${response.status})`;
-            try {
-                const errorData = await response.json();
-                errorBody = errorData.message || errorData.error || JSON.stringify(errorData);
-            } catch (e) { /* Ignore parsing error */ }
-            console.error("API Update Error:", response.status, errorBody);
-            throw new Error(errorBody);
-        }
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-            return await response.json();
-        } else {
-            return null;
-        }
-    } catch (error) {
-        console.error("Error updating brand:", error);
-        throw error instanceof Error ? error : new Error("Đã xảy ra lỗi khi cập nhật.");
+    if (!response.ok) {
+        let errorBody = `Lỗi cập nhật (Status: ${response.status})`;
+        try {
+            const errorData = await response.json();
+            errorBody = errorData.message || errorData.error || JSON.stringify(errorData);
+        } catch { /* Ignore parsing error */ }
+        console.error("API Update Error:", response.status, errorBody);
+        throw new Error(errorBody);
+    }
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.indexOf("application/json") !== -1) {
+        return await response.json();
+    } else {
+        return { success: true };
     }
 };
 
@@ -104,15 +122,14 @@ export default function EditBrandModal({ isOpen, onOpenChange, brandId, onSucces
         brandInfo: '',
         logoPublicId: ''
     });
-    const [initialLogoId, setInitialLogoId] = useState<string | null>(null);
-    const [resource, setResource] = useState<any>(null); // Logo mới
+    const [resource, setResource] = useState<CloudinaryResource | null>(null); // Logo mới
     const [loading, setLoading] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [dataLoaded, setDataLoaded] = useState(false); // Track if data has been loaded
 
     // Lấy token từ session của NextAuth
-    const authToken = session?.accessToken;
+    const authToken = session ? (session as unknown as ExtendedSession).accessToken : undefined;
 
     // Reset form khi modal đóng
     useEffect(() => {
@@ -122,7 +139,6 @@ export default function EditBrandModal({ isOpen, onOpenChange, brandId, onSucces
                 brandInfo: '',
                 logoPublicId: ''
             });
-            setInitialLogoId(null);
             setResource(null);
             setFormError(null);
             setIsSubmitting(false);
@@ -150,12 +166,11 @@ export default function EditBrandModal({ isOpen, onOpenChange, brandId, onSucces
                         brandInfo: fetchedBrand.brandInfo || '',
                         logoPublicId: fetchedBrand.logoPublicId || ''
                     });
-                    setInitialLogoId(fetchedBrand.logoPublicId || null);
                     setDataLoaded(true); // Mark as loaded
                 })
                 .catch(err => {
                     console.error("Error in fetch useEffect:", err);
-                    const errorMsg = err.message || "Không thể tải dữ liệu Brand.";
+                    const errorMsg = err instanceof Error ? err.message : "Không thể tải dữ liệu Brand.";
                     setFormError(errorMsg);
                     addToast({ title: "Lỗi", description: errorMsg, color: "danger" });
                 })
@@ -171,7 +186,7 @@ export default function EditBrandModal({ isOpen, onOpenChange, brandId, onSucces
         setFormError(null);
     };
 
-    const handleUploadSuccess = (result: any) => {
+    const handleUploadSuccess = (result: UploadResult) => {
         if (result.event === "success" && result.info) {
             console.log("Upload mới thành công:", result.info);
             setResource(result.info);
@@ -244,8 +259,8 @@ export default function EditBrandModal({ isOpen, onOpenChange, brandId, onSucces
             // Đóng modal
             onOpenChange(false);
 
-        } catch (err: any) {
-            const errorMessage = err.message || "Không thể cập nhật Brand.";
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : "Không thể cập nhật Brand.";
             console.error("Lỗi khi submit update:", err);
             setFormError(errorMessage);
             addToast({
@@ -279,7 +294,7 @@ export default function EditBrandModal({ isOpen, onOpenChange, brandId, onSucces
             isKeyboardDismissDisabled={isSubmitting}
         >
             <ModalContent>
-                {(onClose) => (
+                {() => (
                     <>
                         <ModalHeader className="flex flex-col gap-1 px-6 py-4 border-b">
                             <h2 className="text-xl font-semibold">Chỉnh sửa thương hiệu (ID: {brandId})</h2>
@@ -327,9 +342,8 @@ export default function EditBrandModal({ isOpen, onOpenChange, brandId, onSucces
                                         <CldUploadButton
                                             className={`px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition duration-200 mb-4 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "YellowCatWeb"}
-                                            onSuccess={(result, { widget }) => {
-                                                handleUploadSuccess(result);
-                                                widget.close();
+                                            onSuccess={(result) => {
+                                                handleUploadSuccess(result as UploadResult);
                                             }}
                                             onError={(error) => {
                                                 console.error("Lỗi Cloudinary Upload:", error);
