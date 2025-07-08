@@ -103,11 +103,6 @@ public class OrderOnlineService {
                     .orElseThrow(() -> new RuntimeException("Địa chỉ không tồn tại"));
         }
 
-//        PaymentStatus paymentStatus = request.getPaymentStatus();
-//        if (paymentStatus == null) {
-//            paymentStatus = PaymentStatus.UNPAID; // fallback nếu không truyền
-//        }
-
         System.out.println("shipping methot được chuyền vào: "+ request.getShippingMethodId());
         ShippingMethod shippingOption = shippingMethodIdRepository.findById(request.getShippingMethodId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phương thức giao hàng với ID: " + request.getShippingMethodId()));
@@ -128,9 +123,7 @@ public class OrderOnlineService {
                 .orderItems(orderItems)
                 .orderDate(LocalDateTime.now())
                 .orderStatus("Pending")
-                .paymentStatus(PaymentStatus.PENDING)
                 .isSyncedToGhtk(false)
-//                .paymentStatus(paymentStatus)
                 .shippingMethod(shippingOption)
                 .build();
 
@@ -195,7 +188,7 @@ public class OrderOnlineService {
             throw new RuntimeException("Chỉ được huỷ đơn hàng ở trạng thái 'Pending'");
         }
 
-        // Hoàn kho - chỉ cập nhật quantity_in_stock thông thường
+        // Hoàn kho
         for (OrderItem item : order.getOrderItems()) {
             ProductVariant variant = item.getVariant();
             variant.setQuantityInStock(variant.getQuantityInStock() + item.getQuantity());
@@ -295,7 +288,7 @@ public class OrderOnlineService {
                 .build()).toList();
 
         Addresses address = addressRepository.findByAddressId(order.getShippingAddress().getAddressId());
-        Payment payment = paymentRepository.findByOrder(order);
+        Payment payment= paymentRepository.findByOrder(order);
 
         return OrderOnlineDetailDTO.builder()
                 .orderId(order.getOrderId())
@@ -303,17 +296,17 @@ public class OrderOnlineService {
                 .orderStatus(order.getOrderStatus())
                 .customerName(order.getCustomerName())
                 .phoneNumber(order.getPhoneNumber())
-                .wardCommune(address != null ? address.getWardCommune() : "")
-                .streetAddress(address != null ? address.getStreetAddress() : "")
-                .district(address != null ? address.getDistrict() : "")
-                .cityProvince(address != null ? address.getCityProvince() : "")
-                .country(address != null ? address.getCountry() : "")
+                .wardCommune(address.getWardCommune())
+                .streetAddress(address.getStreetAddress())
+                .district(address.getDistrict())
+                .cityProvince(address.getCityProvince())
+                .country(address.getCountry())
                 .orderDate(order.getOrderDate())
                 .subTotal(order.getSubTotalAmount())
                 .shippingFee(order.getShippingFee())
                 .finalAmount(order.getFinalAmount())
-                .paymentStatus(payment != null ? payment.getPaymentStatus() : "Pending")
-                .paymentMethod(payment != null ? payment.getPaymentMethod() : "")
+                .paymentStatus(payment.getPaymentStatus())
+                .paymentMethod(payment.getPaymentMethod())
                 .items(itemDTOs)
                 .build();
     }

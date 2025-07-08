@@ -199,4 +199,6 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
                     "WHERE (o.phone_number LIKE CONCAT('%', :searchValue, '%') OR u.email LIKE CONCAT('%', :searchValue, '%')) " +
                     "ORDER BY o.order_date DESC")
     List<OrderDetailProjection> findOrdersByPhoneNumberOrEmail(@Param("searchValue") String searchValue);
+
+    Order getOrderByOrderCode(String orderCode);
 }

@@ -9,8 +9,11 @@ import org.yellowcat.backend.online_selling.image_of_order_timeline.ImageReposit
 import org.yellowcat.backend.online_selling.image_of_order_timeline.OrderTimelineImage;
 import org.yellowcat.backend.online_selling.oder_online.OderOnlineRepository;
 import org.yellowcat.backend.product.order.Order;
+import org.yellowcat.backend.product.payment.Payment;
 import org.yellowcat.backend.product.payment.PaymentRepository;
+import org.yellowcat.backend.zalopay.ZaloPayService;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -23,9 +26,14 @@ public class OrderTimelineService {
     private final OderOnlineRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final ImageRepository imageRepository;
+//    private final EmailService emailService;
+    private final ZaloPayService zaloPayService;
 
     private static final int RETURN_ALLOWED_DAYS = 3;
 
+    /**
+     * Cập nhật trạng thái đơn hàng và lưu lại timeline kèm ảnh nếu có
+     */
     @Transactional
     public Map<String, Object> updateOrderStatus(Integer orderId, String newStatus, String note, List<String> imageUrls) {
         Order order = orderRepository.findById(orderId)
@@ -35,14 +43,17 @@ public class OrderTimelineService {
         String paymentStatus = (payment != null) ? payment.getPaymentStatus() : "Pending";
         String currentStatus = order.getOrderStatus();
 
+        // Kiểm tra nếu trùng trạng thái hiện tại
         if (currentStatus.equalsIgnoreCase(newStatus)) {
             throw new RuntimeException("Đơn hàng đã ở trạng thái này rồi.");
         }
 
+        // Không cho phép chuyển trạng thái nếu đã ở trạng thái kết thúc
         if (isTerminalStatus(currentStatus)) {
             throw new RuntimeException("Không thể thay đổi trạng thái của đơn hàng đã kết thúc.");
         }
 
+        // Kiểm tra trạng thái chuyển tiếp có hợp lệ không
         Map<String, Set<String>> allowedTransitions = getAllowedTransitions();
         Set<String> allowedNextStates = allowedTransitions.getOrDefault(currentStatus, Collections.emptySet());
 
@@ -51,6 +62,7 @@ public class OrderTimelineService {
             throw new RuntimeException("Không thể chuyển từ '" + currentStatus + "' sang '" + newStatus + "'. Chỉ có thể chuyển sang: " + allowed + ".");
         }
 
+        // Nếu yêu cầu hoàn hàng sau giao hàng, kiểm tra điều kiện hoàn hàng
         if ("Delivered".equalsIgnoreCase(currentStatus) && "ReturnRequested".equalsIgnoreCase(newStatus)) {
             Optional<OrderTimeline> delivered = orderTimelineRepository.findFirstByOrderIdAndToStatusOrderByChangedAtAsc(orderId, "Delivered");
             if (delivered.isEmpty() || delivered.get().getChangedAt().plusDays(RETURN_ALLOWED_DAYS).isBefore(LocalDateTime.now())) {
@@ -61,37 +73,59 @@ public class OrderTimelineService {
             }
         }
 
+        // Nếu hủy khi đang chờ xử lý thì hoàn kho và hoàn tiền nếu cần
         if ("Pending".equalsIgnoreCase(currentStatus) && "Cancelled".equalsIgnoreCase(newStatus)) {
+            restockOrderItems(order);
+            Payment payment1 = paymentRepository.findByOrder(order);
+            if (payment1 != null && "SUCCESS".equalsIgnoreCase(payment1.getPaymentStatus())) {
+                String zp = payment1.getZpTransId();
+                BigDecimal amount = payment1.getAmount();
+
+                try {
+                    long amountToRefund = amount.longValueExact();
+                    String decp = "Hoàn tiền hủy đơn ở trạng thái PENDING";
+                    zaloPayService.refundTransaction(zp, amountToRefund, decp);
+                } catch (Exception e) {
+                    log.error("Lỗi hoàn tiền khi hủy đơn hàng PENDING", e);
+                    throw new RuntimeException("Không thể hoàn tiền đơn hàng khi hủy", e);
+                }
+            }
+        }
+
+
+        // Trả lại kho và hoàn tiền khi hàng hoàn về
+        if ("ReturnedToSeller".equalsIgnoreCase(newStatus)) {
             restockOrderItems(order);
         }
 
+        // Nếu trạng thái mới là hủy đơn, kiểm tra hoàn tiền
+        if ("Cancelled".equalsIgnoreCase(newStatus)) {
+            Payment payment1 = paymentRepository.findByOrder(order);
+            if (payment1 != null && "SUCCESS".equalsIgnoreCase(payment1.getPaymentStatus())) {
+                String zp = payment1.getZpTransId();
+                BigDecimal amount = payment1.getAmount();
+
+                try {
+                    long amountToRefund = amount.longValueExact();
+                    String decp = "Hoàn tiền hủy đơn ở trạng thái PENDING";
+                    zaloPayService.refundTransaction(zp, amountToRefund, decp);
+                } catch (Exception e) {
+                    log.error("Lỗi hoàn tiền khi hủy đơn hàng PENDING", e);
+                    throw new RuntimeException("Không thể hoàn tiền đơn hàng khi hủy", e);
+                }
+            }
+        }
+
+        // Chỉ được chuyển sang Completed sau khi khách đã xác nhận nhận hàng
         if ("Completed".equalsIgnoreCase(newStatus) && !"CustomerReceived".equalsIgnoreCase(currentStatus)) {
             throw new RuntimeException("Chỉ có thể hoàn tất đơn hàng sau khi khách hàng xác nhận đã nhận hàng.");
         } else if ("Completed".equalsIgnoreCase(newStatus)) {
+            // Cộng dồn số lượng đã bán
             order.getOrderItems().forEach(item -> {
                 var variant = item.getVariant();
-                Integer currentSold = variant.getSoldOnline() != null ? variant.getSoldOnline() : 0;
-                variant.setSoldOnline(currentSold + item.getQuantity());
+                Integer currentSold = variant.getSold() != null ? variant.getSold() : 0;
+                variant.setSold(currentSold + item.getQuantity());
             });
-        }
-
-        if ("ReturnedToWarehouse".equalsIgnoreCase(newStatus)) {
-            restockOrderItems(order);
-        }
-
-        if ("LostOrDamaged".equalsIgnoreCase(newStatus)) {
-            if (!order.isPaid()) {
-                order.setOrderStatus("CustomerDecisionPending");
-                orderRepository.save(order);
-                saveTimeline(orderId, currentStatus, "CustomerDecisionPending", note, imageUrls);
-
-                Map<String, Object> res = new HashMap<>();
-                res.put("orderId", orderId);
-                res.put("fromStatus", currentStatus);
-                res.put("toStatus", "CustomerDecisionPending");
-                res.put("message", "Chuyển trạng thái sang CustomerDecisionPending vì đơn chưa thanh toán.");
-                return res;
-            }
         }
 
         order.setOrderStatus(newStatus);
@@ -108,6 +142,9 @@ public class OrderTimelineService {
         return response;
     }
 
+    /**
+     * Khách hàng xác nhận đã nhận hàng
+     */
     @Transactional
     public Map<String, Object> confirmCustomerReceived(Integer orderId, String note) {
         Order order = orderRepository.findById(orderId)
@@ -131,6 +168,9 @@ public class OrderTimelineService {
         return res;
     }
 
+    /**
+     * Tự động chuyển trạng thái sang CustomerReceived sau 3 ngày nếu khách không phản hồi
+     */
     @Scheduled(cron = "0 0 12 * * *", zone = "Asia/Ho_Chi_Minh")
     @Transactional
     public void autoMarkCustomerReceived() {
@@ -148,6 +188,9 @@ public class OrderTimelineService {
         }
     }
 
+    /**
+     * Lưu timeline trạng thái đơn hàng, kèm hình ảnh nếu có
+     */
     public void saveTimeline(Integer orderId, String fromStatus, String toStatus, String note, List<String> imageUrls) {
         OrderTimeline timeline = new OrderTimeline(orderId, fromStatus, toStatus, note, LocalDateTime.now());
         orderTimelineRepository.save(timeline);
@@ -163,60 +206,66 @@ public class OrderTimelineService {
         }
     }
 
+    /**
+     * Lấy lịch sử timeline của đơn hàng
+     */
     public List<OrderTimeline> getTimelineByOrderId(Integer orderId) {
         return orderTimelineRepository.findByOrderIdOrderByChangedAtAsc(orderId);
     }
 
+    /**
+     * Trạng thái kết thúc không cho chuyển tiếp nữa
+     */
     private boolean isTerminalStatus(String status) {
-        return List.of("Cancelled", "Completed", "Refunded", "ReturnedToSeller", "FinalRejected").contains(status);
+        return List.of("Cancelled", "Completed", "Refunded", "ReturnedToSeller").contains(status);
     }
 
+    /**
+     * Định nghĩa các trạng thái hợp lệ có thể chuyển tiếp
+     */
     private Map<String, Set<String>> getAllowedTransitions() {
         Map<String, Set<String>> transitions = new HashMap<>();
         transitions.put("Pending", Set.of("Confirmed", "Cancelled"));
-        transitions.put("Confirmed", Set.of("Processing", "Cancelled"));
-        transitions.put("Processing", Set.of("Shipping", "Cancelled"));
-        transitions.put("Shipping", Set.of("Delivered", "DeliveryFailed1", "IncidentReported"));
-        transitions.put("IncidentReported", Set.of("Investigation"));
-        transitions.put("Investigation", Set.of("LostOrDamaged", "Delivered"));
-        transitions.put("LostOrDamaged", Set.of("Refunded", "CustomerDecisionPending"));
-        transitions.put("CustomerDecisionPending", Set.of("Cancelled", "Pending"));
-        transitions.put("Delivered", Set.of("ReturnRequested", "CustomerReceived", "NotReceivedReported"));
-        transitions.put("NotReceivedReported", Set.of("Investigation"));
+        transitions.put("Confirmed", Set.of("Packing", "Cancelled"));
+        transitions.put("Packing", Set.of("Shipping", "Cancelled"));
+        transitions.put("Shipping", Set.of("Delivered", "DeliveryFailed"));
+        transitions.put("DeliveryFailed", Set.of("ReturnedToSeller"));
+        transitions.put("Delivered", Set.of("CustomerReceived", "ReturnRequested"));
         transitions.put("CustomerReceived", Set.of("Completed"));
         transitions.put("ReturnRequested", Set.of("ReturnApproved", "ReturnRejected"));
-        transitions.put("ReturnRejected", Set.of("Dispute"));
-        transitions.put("Dispute", Set.of("ReturnApproved", "FinalRejected"));
-        transitions.put("FinalRejected", Set.of("CustomerReceived"));
-        transitions.put("ReturnApproved", Set.of("ReturningInProgress"));
-        transitions.put("ReturningInProgress", Set.of("ReturnedToWarehouse"));
+        transitions.put("ReturnApproved", Set.of("ReturnedToWarehouse"));
         transitions.put("ReturnedToWarehouse", Set.of("Refunded"));
-        transitions.put("DeliveryFailed1", Set.of("DeliveryFailed2"));
-        transitions.put("DeliveryFailed2", Set.of("DeliveryFailed3"));
-        transitions.put("DeliveryFailed3", Set.of("ReturnedToSeller"));
+        transitions.put("ReturnRejected", Set.of("CustomerReceived"));
+        transitions.put("ReturnedToSeller", Set.of("Refunded"));
         return transitions;
     }
 
+    /**
+     * Lấy danh sách trạng thái có thể chuyển tiếp từ trạng thái hiện tại
+     */
     public Set<String> getAllowedTransitionsByStatus(String currentStatus) {
         return getAllowedTransitions().getOrDefault(currentStatus, Set.of());
     }
 
+    /**
+     * Trả lại kho khi đơn hàng bị hủy hoặc trả hàng thành công
+     */
     private void restockOrderItems(Order order) {
         order.getOrderItems().forEach(item -> {
             var variant = item.getVariant();
-            variant.setQuantityInStockOnline(variant.getQuantityInStockOnline() + item.getQuantity());
+            variant.setQuantityInStock(variant.getQuantityInStock() + item.getQuantity());
         });
     }
 
+    /**
+     * Trả về toàn bộ trạng thái hệ thống đang hỗ trợ (bao gồm cả trạng thái đích)
+     */
     public Set<String> getAllOrderStatuses() {
         Set<String> allStatuses = new HashSet<>();
 
         Map<String, Set<String>> transitions = getAllowedTransitions();
 
-        // Thêm tất cả trạng thái nguồn (fromStatus)
         allStatuses.addAll(transitions.keySet());
-
-        // Thêm tất cả trạng thái đích (toStatus)
         for (Set<String> targets : transitions.values()) {
             allStatuses.addAll(targets);
         }
