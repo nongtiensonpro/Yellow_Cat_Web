@@ -4,6 +4,7 @@ import { SessionProvider } from "next-auth/react";
 import { HeroUIProvider, ToastProvider } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import React from "react";
 
 declare module "@react-types/shared" {
   interface RouterConfig {

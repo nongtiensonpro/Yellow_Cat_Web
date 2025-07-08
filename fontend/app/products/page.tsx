@@ -14,6 +14,7 @@ import {
 import {Selection} from "@react-types/shared";
 
 
+
 interface Brand {
     id: number;
     brandName: string;
@@ -82,8 +83,8 @@ const getStockStatus = (stock: number | null): {
     return {color: 'success' as const, text: 'Còn hàng'};
 };
 
-const calculateDiscountPercentage = (originalPrice: number | null, salePrice: number | null): number | null => {
-    if (salePrice === null || originalPrice === null || originalPrice === 0 || salePrice >= originalPrice) {
+const calculateDiscountPercentage = (originalPrice: number | null, salePrice: number | null | undefined): number | null => {
+    if (salePrice === null || salePrice === undefined || originalPrice === null || originalPrice === 0 || salePrice >= originalPrice) {
         return null;
     }
     const discount = ((originalPrice - salePrice) / originalPrice) * 100;
@@ -108,18 +109,7 @@ const SORT_OPTIONS = [
     {key: 'name-desc', label: 'Tên: Z-A'},
 ];
 
-const ColorSwatch: React.FC<{ color: Color }> = ({color}) => (
-    <div className="relative flex items-center justify-center" title={color.name}>
-        <div
-            className={cn(
-                "w-7 h-7 rounded-full border-2 peer-data-[selected=true]:border-primary transition-transform-colors",
-                color.tailwindClass || 'bg-transparent border-dashed'
-            )}
-        />
-        <CheckIcon
-            className="w-4 h-4 text-white absolute pointer-events-none opacity-0 peer-data-[selected=true]:opacity-100"/>
-    </div>
-);
+
 
 const ProductCard: React.FC<{ product: Product }> = ({product}) => {
     const stockStatus = getStockStatus(product.totalStock);
@@ -168,7 +158,7 @@ const ProductCard: React.FC<{ product: Product }> = ({product}) => {
 
                 <div className="mt-2">
                     <div className="flex items-baseline gap-2">
-                        {product.minSalePrice != null && product.minSalePrice < product.minPrice ? (
+                        {product.minSalePrice != null  && product.minPrice!=null && product.minSalePrice < product.minPrice ? (
                             <>
                 <span className="text-base text-default-400 line-through">
                     {formatPrice(product.minPrice)}
