@@ -25,7 +25,7 @@ interface Brand {
 interface Color {
     id: number;
     name: string;
-    tailwindClass: string; 
+    tailwindClass: string;
     description: string;
     createdAt: string;
     updatedAt: string;
@@ -39,6 +39,7 @@ interface Product {
     brandName: string;
     logoPublicId: string;
     minPrice: number | null;
+    minSalePrice?: number | null;
     totalStock: number | null;
     thumbnail: string | null;
     sizes: number[];
@@ -81,6 +82,15 @@ const getStockStatus = (stock: number | null): {
     return {color: 'success' as const, text: 'Còn hàng'};
 };
 
+const calculateDiscountPercentage = (originalPrice: number | null, salePrice: number | null): number | null => {
+    if (salePrice === null || originalPrice === null || originalPrice === 0 || salePrice >= originalPrice) {
+        return null;
+    }
+    const discount = ((originalPrice - salePrice) / originalPrice) * 100;
+    return Math.round(discount);
+};
+
+
 const PRICE_RANGES = [
     {key: 'under-600k', label: 'Dưới 600.000đ', min: 0, max: 599999},
     {key: '600k-1m', label: '600.000đ - 1.000.000đ', min: 600000, max: 1000000},
@@ -98,8 +108,23 @@ const SORT_OPTIONS = [
     {key: 'name-desc', label: 'Tên: Z-A'},
 ];
 
+const ColorSwatch: React.FC<{ color: Color }> = ({color}) => (
+    <div className="relative flex items-center justify-center" title={color.name}>
+        <div
+            className={cn(
+                "w-7 h-7 rounded-full border-2 peer-data-[selected=true]:border-primary transition-transform-colors",
+                color.tailwindClass || 'bg-transparent border-dashed'
+            )}
+        />
+        <CheckIcon
+            className="w-4 h-4 text-white absolute pointer-events-none opacity-0 peer-data-[selected=true]:opacity-100"/>
+    </div>
+);
+
 const ProductCard: React.FC<{ product: Product }> = ({product}) => {
     const stockStatus = getStockStatus(product.totalStock);
+    const discountPercentage = calculateDiscountPercentage(product.minPrice, product.minSalePrice);
+
     return (
         <Card
             className="group/card w-full transition-all duration-300 border-2 border-transparent hover:border-primary hover:shadow-2xl hover:shadow-primary/20 cursor-pointer">
@@ -111,6 +136,15 @@ const ProductCard: React.FC<{ product: Product }> = ({product}) => {
                                       className="w-full h-full object-contain transition-transform duration-500 ease-in-out group-hover/card:scale-105"/>) : (
                             <div className="w-full h-full flex items-center justify-center text-default-400">
                                 <BuildingStorefrontIcon className="w-16 h-16"/></div>)}
+
+                        {/* Badge Giảm giá (góc trên bên trái) */}
+                        {discountPercentage !== null && (
+                            <Badge color="danger" className="absolute top-3 left-3 shadow-md">
+                                -{discountPercentage}%
+                            </Badge>
+                        )}
+
+                        {/* Badge Tồn kho (góc trên bên phải) */}
                         <Badge color={stockStatus.color}
                                className="absolute top-3 right-3 shadow-md">{stockStatus.text}</Badge>
                     </div>
@@ -131,9 +165,32 @@ const ProductCard: React.FC<{ product: Product }> = ({product}) => {
                 <Link href={`/products/${product.productId}`}><h4
                     className="font-bold text-lg line-clamp-2 h-14 hover:text-primary transition-colors"> {product.productName} </h4>
                 </Link>
-                <div className="mt-2"><span
-                    className="text-xl font-bold text-success-600 dark:text-success-400"> {formatPrice(product.minPrice)} </span>
+
+                <div className="mt-2">
+                    <div className="flex items-baseline gap-2">
+                        {product.minSalePrice != null && product.minSalePrice < product.minPrice ? (
+                            <>
+                <span className="text-base text-default-400 line-through">
+                    {formatPrice(product.minPrice)}
+                </span>
+                                <span className="text-xl font-bold text-danger-500">
+                    {formatPrice(product.minSalePrice)}
+                </span>
+                            </>
+                        ) : (
+                            <span className="text-xl font-bold text-success-600 dark:text-success-400">
+                {formatPrice(product.minPrice)}
+            </span>
+                        )}
+                    </div>
+
+                    {discountPercentage !== null && (
+                        <p className="text-sm text-danger-500 font-medium mt-1">
+                            Giảm {discountPercentage}%
+                        </p>
+                    )}
                 </div>
+
             </CardBody>
             <CardFooter className="p-4 pt-0 flex justify-between items-center">
                 <div className="flex items-center gap-1 text-sm text-default-600"><StarIcon
@@ -218,21 +275,29 @@ const ProductListPage = () => {
                 const matchesSearch = product.productName.toLowerCase().includes(searchTerm.toLowerCase());
                 const matchesBrand = selectedBrands.length === 0 || selectedBrands.includes(product.brandName);
                 const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(product.categoryName);
+
+                // ===== LOGIC LỌC THEO GIÁ ĐÃ SỬA LẠI =====
                 const matchesPrice = priceRange.length === 0 || priceRange.some(rangeKey => {
                     const range = PRICE_RANGES.find(r => r.key === rangeKey);
+                    // Chỉ lọc theo giá gốc (minPrice)
                     if (!range || product.minPrice === null) return false;
                     return product.minPrice >= range.min && product.minPrice <= range.max;
                 });
+                // ===========================================
+
                 const matchesSize = selectedSizes.length === 0 || selectedSizes.some(size => product.sizes?.includes(parseInt(size)));
                 const matchesColor = selectedColors.length === 0 || product.colors?.some(colorName => selectedColors.includes(colorName));
                 const matchesStock = !inStockOnly || (product.totalStock !== null && product.totalStock > 0);
                 return matchesSearch && matchesBrand && matchesCategory && matchesPrice && matchesSize && matchesColor && matchesStock;
             })
             .sort((a, b) => {
+                // ===== LOGIC SẮP XẾP ĐÃ SỬA LẠI =====
                 switch (sortOption) {
                     case 'price-asc':
+                        // Chỉ sắp xếp theo giá gốc (minPrice)
                         return (a.minPrice ?? Infinity) - (b.minPrice ?? Infinity);
                     case 'price-desc':
+                        // Chỉ sắp xếp theo giá gốc (minPrice)
                         return (b.minPrice ?? -Infinity) - (a.minPrice ?? -Infinity);
                     case 'name-asc':
                         return a.productName.localeCompare(b.productName);
@@ -241,6 +306,7 @@ const ProductListPage = () => {
                     default:
                         return 0;
                 }
+                // =======================================
             });
     }, [products, searchTerm, selectedBrands, selectedCategories, priceRange, selectedSizes, selectedColors, inStockOnly, sortOption]);
 
@@ -368,7 +434,7 @@ const ProductListPage = () => {
                                     onSelectionChange={(keys: Selection) => setSelectedBrands(Array.from(keys) as string[])}
                                     classNames={{
                                         trigger: "h-9 text-sm",
-                                        listbox: "text-sm", // nhỏ chữ trong dropdown
+                                        listbox: "text-sm",
                                     }}
                                     renderValue={(items) => (
                                         <div className="flex flex-wrap gap-1">

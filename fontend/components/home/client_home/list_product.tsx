@@ -29,7 +29,7 @@ interface Product {
     brandName: string;
     logoPublicId: string;
     minPrice: number | null;
-    minSalePrice?: number | null; // ✅ THÊM GIÁ SAU KHI GIẢM
+    minSalePrice?: number | null;
     totalStock: number | null;
     thumbnail: string | null;
     createdAt?: string;
@@ -103,6 +103,12 @@ const ProductList = () => {
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(price));
     };
 
+    const calculateDiscountPercent = (price: number, salePrice: number) => {
+        if (!price || !salePrice || price <= salePrice) return null;
+        const percent = ((price - salePrice) / price) * 100;
+        return Math.round(percent);
+    };
+
     const handlePageChange = (page: number) => {
         setCurrentPage(page - 1);
     };
@@ -120,6 +126,9 @@ const ProductList = () => {
 
     const renderProductCard = (product: Product) => {
         const isWishlisted = wishlist.some(p => p.productId === product.productId);
+        const discountPercent = product.minSalePrice && product.minPrice
+            ? calculateDiscountPercent(product.minPrice, product.minSalePrice)
+            : null;
 
         return (
             <Card
@@ -143,6 +152,13 @@ const ProductList = () => {
                                 )}
                             </button>
                         </div>
+
+                        {discountPercent && (
+                            <div className="absolute top-2 left-2 z-30 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
+                                -{discountPercent}%
+                            </div>
+                        )}
+
                         {product.thumbnail ? (
                             <CldImage
                                 width={400}
@@ -158,6 +174,7 @@ const ProductList = () => {
                         )}
                     </div>
                 </CardHeader>
+
                 <CardBody className="px-4 py-3">
                     <Link href={`/products/${product.productId}`}>
                         <h4 className="font-bold text-lg line-clamp-2 hover:text-primary transition-colors group-hover:text-primary cursor-pointer">
@@ -165,7 +182,6 @@ const ProductList = () => {
                         </h4>
                     </Link>
 
-                    {/* ✅ GIÁ SALE + GIÁ GỐC */}
                     <div className="flex items-center gap-2 my-2">
                         <CurrencyDollarIcon className="w-4 h-4 text-success" />
                         {product.minSalePrice ? (
@@ -185,6 +201,7 @@ const ProductList = () => {
                     </div>
 
                     <Divider className="my-2" />
+
                     <div className="flex justify-between items-center text-sm">
                         <div className="flex items-center gap-1 text-default-600">
                             <TagIcon className="w-4 h-4" />
