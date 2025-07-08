@@ -12,6 +12,16 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PromotionProductRepository extends JpaRepository<PromotionProduct, Integer> {
+//    @Query("SELECT COUNT(p) > 0 FROM Promotion p WHERE LOWER(p.promotionName) = LOWER(:name)")
+//    boolean existsByPromotionNameIgnoreCase(@Param("name") String name);
+
+    @Query("SELECT COUNT(p) > 0 FROM Promotion p WHERE LOWER(p.promotionName) = LOWER(:name)")
+    boolean existsByPromotionNameIgnoreCase(@Param("name") String name);
+
+    // Mới: kiểm tra tên promotion trùng, ngoại trừ promotion đang cập nhật
+    @Query("SELECT COUNT(p) > 0 FROM Promotion p WHERE LOWER(p.promotionName) = LOWER(:name) AND p.id <> :id")
+    boolean existsByPromotionNameIgnoreCaseAndIdNot(@Param("name") String name, @Param("id") Integer id);
+
 
     @Query("""
         SELECT new org.yellowcat.backend.product.promotionproduct.dto.PromotionProductResponse(

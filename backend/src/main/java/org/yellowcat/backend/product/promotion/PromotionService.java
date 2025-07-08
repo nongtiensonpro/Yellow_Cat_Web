@@ -78,6 +78,10 @@ public class PromotionService {
     }
 
     public PromotionResponse create(PromotionRequest request, UUID userId) {
+        if (promotionRepository.existsByPromotionNameIgnoreCase(request.getPromotionName())) {
+            throw new RuntimeException("Tên khuyến mãi đã tồn tại");
+        }
+
         AppUser appUser = appUserRepository.findByKeycloakId(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Promotion promotion = promotionMapper.toPromotion(request);
@@ -90,6 +94,12 @@ public class PromotionService {
     public PromotionResponse update(Integer id, PromotionRequest request) {
         Promotion promotion = promotionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Promotion not found"));
+
+// Kiểm tra tên mới có trùng với chương trình khác không (ngoại trừ chính nó)
+        boolean nameExists = promotionRepository.existsByPromotionNameIgnoreCase(request.getPromotionName());
+        if (nameExists && !promotion.getPromotionName().equalsIgnoreCase(request.getPromotionName())) {
+            throw new RuntimeException("Tên khuyến mãi đã tồn tại");
+        }
         promotionMapper.updatePromotionFromRequest(promotion, request);
         promotionRepository.save(promotion);
         return promotionMapper.toPromotionResponse(promotion);

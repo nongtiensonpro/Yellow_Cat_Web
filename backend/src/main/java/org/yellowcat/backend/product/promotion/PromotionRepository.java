@@ -13,6 +13,11 @@ import java.util.List;
 
 @Repository
 public interface PromotionRepository extends JpaRepository<Promotion, Integer>, JpaSpecificationExecutor<Promotion> {
+    boolean existsByPromotionCode(String promotionCode);
+    boolean existsByPromotionNameIgnoreCase(String promotionName);
+    boolean existsByPromotionNameIgnoreCaseAndIdNot(String promotionName, Integer id);
+
+
     List<Promotion> findByEndDateBeforeAndIsActiveTrue(LocalDateTime now);
     @Query("""
     SELECT p FROM Promotion p

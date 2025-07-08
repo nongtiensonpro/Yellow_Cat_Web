@@ -58,19 +58,19 @@ public class PromotionProductController {
         }
     }
 
-    @PostMapping
-    public ResponseEntity<?> createPromotion(
-            @RequestBody CreatePromotionDTO dto,
-            @AuthenticationPrincipal Jwt jwt
-    ) {
-        try {
-            UUID userId = UUID.fromString(jwt.getSubject());
-            promotionProductService.createPromotionWithProducts(dto, userId);
-            return ResponseEntityBuilder.success("Tạo đợt giảm giá thành công!");
-        } catch (Exception e) {
-            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST,"Lỗi khi tạo đợt giảm giá: " + e.getMessage(),"Lỗi khi tạo đợt giảm giá: " + e.getMessage());
-        }
-    }
+//    @PostMapping
+//    public ResponseEntity<?> createPromotion(
+//            @RequestBody CreatePromotionDTO dto,
+//            @AuthenticationPrincipal Jwt jwt
+//    ) {
+//        try {
+//            UUID userId = UUID.fromString(jwt.getSubject());
+//            promotionProductService.createPromotionWithProducts(dto, userId);
+//            return ResponseEntityBuilder.success("Tạo đợt giảm giá thành công!");
+//        } catch (Exception e) {
+//            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST,"Lỗi khi tạo đợt giảm giá: " + e.getMessage(),"Lỗi khi tạo đợt giảm giá: " + e.getMessage());
+//        }
+//    }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updatePromotion(
@@ -86,6 +86,41 @@ public class PromotionProductController {
             return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "Lỗi khi cập nhật đợt giảm giá: " + e.getMessage(), e.getMessage());
         }
     }
+
+
+    @PostMapping
+    public ResponseEntity<?> createPromotion(
+            @RequestBody CreatePromotionDTO dto,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        try {
+            UUID userId = UUID.fromString(jwt.getSubject());
+            promotionProductService.createPromotionWithProducts(dto, userId);
+            return ResponseEntityBuilder.success("Tạo đợt giảm giá thành công!");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "Tên đợt giảm giá đã tồn tại!", e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST,"Lỗi khi tạo đợt giảm giá: " + e.getMessage(),"Lỗi khi tạo đợt giảm giá: " + e.getMessage());
+        }
+    }
+
+//    @PutMapping("/{id}")
+//    public ResponseEntity<?> updatePromotion(
+//            @PathVariable Integer id,
+//            @RequestBody CreatePromotionDTO dto,
+//            @AuthenticationPrincipal Jwt jwt
+//    ) {
+//        try {
+//            UUID userId = UUID.fromString(jwt.getSubject());
+//            promotionProductService.updatePromotionWithProducts(id, dto, userId);
+//            return ResponseEntityBuilder.success("Cập nhật đợt giảm giá thành công!");
+//        } catch (IllegalArgumentException e) {
+//            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "Tên đợt giảm giá đã tồn tại!", e.getMessage());
+//        } catch (Exception e) {
+//            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "Lỗi khi cập nhật đợt giảm giá: " + e.getMessage(), e.getMessage());
+//        }
+//    }
+
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(
