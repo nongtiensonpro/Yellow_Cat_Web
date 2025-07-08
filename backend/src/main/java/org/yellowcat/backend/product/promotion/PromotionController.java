@@ -29,9 +29,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PromotionController {
+    protected PromotionRepository promotionRepository;
 
     PromotionService promotionService;
     private final PromotionProductService promotionProductService;
+
 
 
 
@@ -86,4 +88,12 @@ public class PromotionController {
     public ResponseEntity<Boolean> deletePromotion(@PathVariable Integer id) {
         return ResponseEntity.ok(promotionService.delete(id));
     }
+
+    @GetMapping("/check-name")
+    public ResponseEntity<?> checkName(@RequestParam String name) {
+        boolean exists = promotionRepository.existsByPromotionNameIgnoreCase(name);
+        return ResponseEntity.ok(Map.of("exists", exists)); // 👈 JSON hợp lệ cho FE parse
+    }
+
+
 }
