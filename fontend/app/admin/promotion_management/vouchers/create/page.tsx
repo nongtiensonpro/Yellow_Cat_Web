@@ -195,18 +195,18 @@ export default function CreateVoucherPage() {
                     {errors.endDate && <p className="text-red-600 text-sm">{errors.endDate}</p>}
                 </div>
 
-                <div className="flex items-center space-x-3">
-                    <input
-                        type="checkbox"
-                        name="isActive"
-                        checked={!!form.isActive}
-                        onChange={handleChange}
-                        className="w-5 h-5"
-                    />
-                    <label className="text-sm text-gray-700">
-                        {form.isActive ? 'Đang hoạt động' : 'Không hoạt động'}
-                    </label>
-                </div>
+                {/*<div className="flex items-center space-x-3">*/}
+                {/*    <input*/}
+                {/*        type="checkbox"*/}
+                {/*        name="isActive"*/}
+                {/*        checked={!!form.isActive}*/}
+                {/*        onChange={handleChange}*/}
+                {/*        className="w-5 h-5"*/}
+                {/*    />*/}
+                {/*    <label className="text-sm text-gray-700">*/}
+                {/*        {form.isActive ? 'Đang hoạt động' : 'Không hoạt động'}*/}
+                {/*    </label>*/}
+                {/*</div>*/}
 
                 <div className="flex justify-end">
                     <button
