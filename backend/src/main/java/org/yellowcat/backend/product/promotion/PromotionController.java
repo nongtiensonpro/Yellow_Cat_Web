@@ -35,8 +35,6 @@ public class PromotionController {
     private final PromotionProductService promotionProductService;
 
 
-
-
     @GetMapping
     public ResponseEntity<?> getPromotions(
             @RequestParam(required = false) String keyword,

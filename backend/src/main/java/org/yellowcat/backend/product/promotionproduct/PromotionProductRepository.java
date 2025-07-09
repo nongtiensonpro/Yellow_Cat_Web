@@ -23,28 +23,79 @@ public interface PromotionProductRepository extends JpaRepository<PromotionProdu
     boolean existsByPromotionNameIgnoreCaseAndIdNot(@Param("name") String name, @Param("id") Integer id);
 
 
+//    @Query("""
+//        SELECT new org.yellowcat.backend.product.promotionproduct.dto.PromotionProductResponse(
+//            pp.promotionProductId,
+//            p.promotionCode,
+//            p.promotionName,
+//            p.discountType,
+//            p.discountValue,
+//            p.startDate,
+//            p.endDate,
+//            v.variantId,
+//            v.sku,
+//            v.price,
+//            v.salePrice,
+//            v.imageUrl,
+//            pr.productName
+//        )
+//        FROM PromotionProduct pp
+//        JOIN pp.promotion p
+//        JOIN pp.productVariant v
+//        JOIN v.product pr
+//    """)
+//    List<PromotionProductResponse> findAllWithJoin();
+
+
+//    @Query("""
+//        SELECT new org.yellowcat.backend.product.promotionproduct.dto.PromotionProductResponse(
+//            pp.promotionProductId,
+//            p.promotionCode,
+//            p.promotionName,
+//            p.discountType,
+//            p.discountValue,
+//            p.startDate,
+//            p.endDate,
+//            v.variantId,
+//            v.sku,
+//            v.price,
+//            v.salePrice,
+//            v.imageUrl,
+//            pr.productName
+//        )
+//        FROM PromotionProduct pp
+//        JOIN pp.promotion p
+//        JOIN pp.productVariant v
+//        JOIN v.product pr
+//        ORDER BY p.startDate DESC, p.id DESC
+//    """)
+//    List<PromotionProductResponse> findAllWithJoin();
+
+    // Thay thế method findAllWithJoin() thành:
     @Query("""
-        SELECT new org.yellowcat.backend.product.promotionproduct.dto.PromotionProductResponse(
-            pp.promotionProductId,
-            p.promotionCode,
-            p.promotionName,
-            p.discountType,
-            p.discountValue,
-            p.startDate,
-            p.endDate,
-            v.variantId,
-            v.sku,
-            v.price,
-            v.salePrice,
-            v.imageUrl,
-            pr.productName
-        )
-        FROM PromotionProduct pp
-        JOIN pp.promotion p
-        JOIN pp.productVariant v
-        JOIN v.product pr
-    """)
+    SELECT new org.yellowcat.backend.product.promotionproduct.dto.PromotionProductResponse(
+        pp.promotionProductId,
+        p.promotionCode,
+        p.promotionName,
+        p.discountType,
+        p.discountValue,
+        p.startDate,
+        p.endDate,
+        v.variantId,
+        v.sku,
+        v.price,
+        v.salePrice,
+        v.imageUrl,
+        pr.productName
+    )
+    FROM PromotionProduct pp
+    JOIN pp.promotion p
+    JOIN pp.productVariant v
+    JOIN v.product pr
+    ORDER BY p.id DESC
+""")
     List<PromotionProductResponse> findAllWithJoin();
+
 
     @Query("""
         SELECT new org.yellowcat.backend.product.promotionproduct.dto.PromotionProductResponse(
@@ -71,6 +122,77 @@ public interface PromotionProductRepository extends JpaRepository<PromotionProdu
     Optional<PromotionProductResponse> findByIdWithJoin(Integer id);
 
 
+//    @Query("""
+//    SELECT new org.yellowcat.backend.product.promotionproduct.dto.PromotionProductResponse(
+//        pp.promotionProductId,
+//        p.promotionCode,
+//        p.promotionName,
+//        p.discountType,
+//        p.discountValue,
+//        p.startDate,
+//        p.endDate,
+//        v.variantId,
+//        v.sku,
+//        v.price,
+//        v.salePrice,
+//        v.imageUrl,
+//        pr.productName
+//    )
+//    FROM PromotionProduct pp
+//    JOIN pp.promotion p
+//    JOIN pp.productVariant v
+//    JOIN v.product pr
+//    WHERE (:keyword IS NULL OR LOWER(p.promotionName) LIKE LOWER(CONCAT('%', :keyword, '%')))
+//      AND (:status IS NULL OR
+//           (:status = 'active' AND CURRENT_TIMESTAMP BETWEEN p.startDate AND p.endDate)
+//           OR (:status = 'inactive' AND CURRENT_TIMESTAMP NOT BETWEEN p.startDate AND p.endDate))
+//      AND (:discountType IS NULL OR p.discountType = :discountType)
+//      AND (:discountValue IS NULL OR p.discountValue = :discountValue)
+//""")
+//    List<PromotionProductResponse> findAllWithFilters(
+//            @Param("keyword") String keyword,
+//            @Param("status") String status,
+//            @Param("discountType") String discountType,
+//            @Param("discountValue") Double discountValue
+//    );
+
+//    @Query("""
+//        SELECT new org.yellowcat.backend.product.promotionproduct.dto.PromotionProductResponse(
+//            pp.promotionProductId,
+//            p.promotionCode,
+//            p.promotionName,
+//            p.discountType,
+//            p.discountValue,
+//            p.startDate,
+//            p.endDate,
+//            v.variantId,
+//            v.sku,
+//            v.price,
+//            v.salePrice,
+//            v.imageUrl,
+//            pr.productName
+//        )
+//        FROM PromotionProduct pp
+//        JOIN pp.promotion p
+//        JOIN pp.productVariant v
+//        JOIN v.product pr
+//        WHERE (:keyword IS NULL OR LOWER(p.promotionName) LIKE LOWER(CONCAT('%', :keyword, '%')))
+//          AND (:status IS NULL OR
+//               (:status = 'active' AND CURRENT_TIMESTAMP BETWEEN p.startDate AND p.endDate)
+//               OR (:status = 'inactive' AND CURRENT_TIMESTAMP NOT BETWEEN p.startDate AND p.endDate))
+//          AND (:discountType IS NULL OR p.discountType = :discountType)
+//          AND (:discountValue IS NULL OR p.discountValue = :discountValue)
+//        ORDER BY p.startDate DESC, p.id DESC
+//    """)
+//    List<PromotionProductResponse> findAllWithFilters(
+//            @Param("keyword") String keyword,
+//            @Param("status") String status,
+//            @Param("discountType") String discountType,
+//            @Param("discountValue") Double discountValue
+//    );
+
+
+    // Thay thế method findAllWithFilters(...) thành:
     @Query("""
     SELECT new org.yellowcat.backend.product.promotionproduct.dto.PromotionProductResponse(
         pp.promotionProductId,
@@ -93,10 +215,12 @@ public interface PromotionProductRepository extends JpaRepository<PromotionProdu
     JOIN v.product pr
     WHERE (:keyword IS NULL OR LOWER(p.promotionName) LIKE LOWER(CONCAT('%', :keyword, '%')))
       AND (:status IS NULL OR 
-           (:status = 'active' AND CURRENT_TIMESTAMP BETWEEN p.startDate AND p.endDate)
-           OR (:status = 'inactive' AND CURRENT_TIMESTAMP NOT BETWEEN p.startDate AND p.endDate))
+           (:status = 'active'   AND CURRENT_TIMESTAMP BETWEEN p.startDate AND p.endDate)
+        OR (:status = 'inactive' AND CURRENT_TIMESTAMP NOT BETWEEN p.startDate AND p.endDate)
+      )
       AND (:discountType IS NULL OR p.discountType = :discountType)
       AND (:discountValue IS NULL OR p.discountValue = :discountValue)
+    ORDER BY p.id DESC
 """)
     List<PromotionProductResponse> findAllWithFilters(
             @Param("keyword") String keyword,
