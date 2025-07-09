@@ -11,4 +11,10 @@ public interface PaymentRepository extends JpaRepository <Payment, Integer> {
     List<Payment> findByOrder_OrderId(Integer orderId);
 
     Payment findByOrder(Order order);
+
+    Payment findByTransactionId(String transactionId);
+
+    Payment findByZpTransId(String zpTransId);
+
+    Payment findByOrder_OrderCode(String orderOrderCode);
 }

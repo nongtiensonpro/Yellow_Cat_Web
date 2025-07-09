@@ -37,6 +37,9 @@ public class Payment {
     @Column(name = "payment_status", nullable = false)
     private String paymentStatus;
 
+    @Column(name = "refund_amount", nullable = false)
+    private Long refundAmount;
+
     @Column(name = "payment_date", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime paymentDate;
 
@@ -44,4 +47,10 @@ public class Payment {
     protected void onCreate() {
         paymentDate = LocalDateTime.now();
     }
+
+    @Column(name = "zp_trans_id")
+    private String zpTransId;
+
+    @Column(name = "m_refund_id")
+    private String mRefundId;
 }

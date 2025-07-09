@@ -38,8 +38,7 @@ public class CartItemOnlineService {
         ProductVariant variant = variantRepository.findById(dto.getVariantId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm"));
 
-        Optional<CartItem> existingItem = (cart.getCartItems() != null ? (java.util.List<CartItem>) cart.getCartItems() : java.util.Collections.<CartItem>emptyList())
-                .stream()
+        Optional<CartItem> existingItem = cart.getCartItems().stream()
                 .filter(i -> i.getVariant().getVariantId().equals(dto.getVariantId()))
                 .findFirst();
 
@@ -48,8 +47,8 @@ public class CartItemOnlineService {
             newQuantity += existingItem.get().getQuantity();
         }
 
-        if (variant.getQuantityInStockOnline() < newQuantity) {
-            throw new RuntimeException("Số lượng yêu cầu vượt quá số lượng tồn kho. Còn lại: " + variant.getQuantityInStockOnline());
+        if (variant.getQuantityInStock() < newQuantity) {
+            throw new RuntimeException("Số lượng yêu cầu vượt quá số lượng tồn kho. Còn lại: " + variant.getQuantityInStock());
         }
 
         if (existingItem.isPresent()) {
@@ -70,8 +69,8 @@ public class CartItemOnlineService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy item"));
 
         ProductVariant variant = item.getVariant();
-        if (variant.getQuantityInStockOnline() < dto.getQuantity()) {
-            throw new RuntimeException("Số lượng yêu cầu vượt quá số lượng tồn kho. Còn lại: " + variant.getQuantityInStockOnline());
+        if (variant.getQuantityInStock() < dto.getQuantity()) {
+            throw new RuntimeException("Số lượng yêu cầu vượt quá số lượng tồn kho. Còn lại: " + variant.getQuantityInStock());
         }
 
         item.setQuantity(dto.getQuantity());
