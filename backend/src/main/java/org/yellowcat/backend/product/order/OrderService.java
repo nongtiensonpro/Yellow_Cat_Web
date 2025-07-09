@@ -109,11 +109,16 @@ public class OrderService {
         order.setDiscountAmount(discountAmount);
         order.setFinalAmount(finalAmount);
 
-        // Cập nhật/thêm mới payments nếu có
+        // Biến để theo dõi có payment mới được thêm vào không
+        boolean hasNewPayments = false;
+
+        // Cập nhật/thêm mới payments CHỈ KHI request thực sự có payments
+        // Nếu request.getPayments() là null hoặc rỗng thì không cập nhật payments
         if (request.getPayments() != null && !request.getPayments().isEmpty()) {
             for (OrderUpdateRequest.PaymentUpdateRequest paymentReq : request.getPayments()) {
                 if (paymentReq.getPaymentId() == null) {
-                    // Payment mới
+                    // Payment mới - đánh dấu có payment mới
+                    hasNewPayments = true;
                     Payment payment = new Payment();
                     payment.setOrder(order);
                     payment.setAmount(paymentReq.getAmount());
@@ -143,7 +148,8 @@ public class OrderService {
                     }
                     paymentRepository.save(payment);
                 } else {
-                    // Payment đã tồn tại, update
+                    // Payment đã tồn tại, update - cũng coi như có thay đổi payment
+                    hasNewPayments = true;
                     Payment existing = paymentRepository.findById(paymentReq.getPaymentId())
                             .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + paymentReq.getPaymentId()));
                     existing.setAmount(paymentReq.getAmount());
@@ -171,34 +177,47 @@ public class OrderService {
             }
         }
 
-        // QUAN TRỌNG: Load lại danh sách payments từ database sau khi đã save
-        List<Payment> updatedPayments = paymentRepository.findByOrder_OrderId(order.getOrderId());
+        // CHỈ cập nhật trạng thái đơn hàng KHI có payment mới hoặc thay đổi payment
+        if (hasNewPayments) {
+            // QUAN TRỌNG: Load lại danh sách payments từ database sau khi đã save
+            List<Payment> updatedPayments = paymentRepository.findByOrder_OrderId(order.getOrderId());
 
-        // Tính tổng số tiền đã thanh toán (COMPLETED) từ danh sách mới nhất
-        BigDecimal totalPaid = updatedPayments.stream()
-                .filter(p -> "COMPLETED".equalsIgnoreCase(p.getPaymentStatus()))
-                .map(Payment::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+            // Tính tổng số tiền đã thanh toán (COMPLETED) từ danh sách mới nhất
+            BigDecimal totalPaid = updatedPayments.stream()
+                    .filter(p -> "COMPLETED".equalsIgnoreCase(p.getPaymentStatus()))
+                    .map(Payment::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Tự động set orderStatus theo tổng đã thanh toán
-        if (totalPaid.compareTo(finalAmount) >= 0) {
-            order.setOrderStatus("Paid");
-        } else if (totalPaid.compareTo(BigDecimal.ZERO) > 0) {
-            order.setOrderStatus("Partial"); // Đã thanh toán một phần
+            // Tự động set orderStatus theo tổng đã thanh toán
+            if (totalPaid.compareTo(finalAmount) >= 0) {
+                order.setOrderStatus("Paid");
+            } else if (totalPaid.compareTo(BigDecimal.ZERO) > 0) {
+                order.setOrderStatus("Partial"); // Đã thanh toán một phần
+            } else {
+                order.setOrderStatus("Pending"); // Chưa thanh toán gì
+            }
+
+            // FIX: Không dùng setPayments() để tránh orphan deletion error
+            // Thay vào đó, clear và add lại để giữ nguyên collection reference
+            if (order.getPayments() == null) {
+                order.setPayments(new ArrayList<>());
+            }
+            order.getPayments().clear();
+            order.getPayments().addAll(updatedPayments);
+
+            // Debug log để kiểm tra
+            logPaymentInfo(order, updatedPayments, totalPaid, finalAmount);
         } else {
-            order.setOrderStatus("Pending"); // Chưa thanh toán gì
+            // Nếu không có payment mới, chỉ load lại payments hiện tại để đảm bảo consistency
+            List<Payment> currentPayments = paymentRepository.findByOrder_OrderId(order.getOrderId());
+            if (order.getPayments() == null) {
+                order.setPayments(new ArrayList<>());
+            }
+            order.getPayments().clear();
+            order.getPayments().addAll(currentPayments);
+            
+            System.out.println("📝 Chỉ cập nhật thông tin khách hàng, không thay đổi trạng thái thanh toán cho đơn hàng: " + order.getOrderCode());
         }
-
-        // FIX: Không dùng setPayments() để tránh orphan deletion error
-        // Thay vào đó, clear và add lại để giữ nguyên collection reference
-        if (order.getPayments() == null) {
-            order.setPayments(new ArrayList<>());
-        }
-        order.getPayments().clear();
-        order.getPayments().addAll(updatedPayments);
-
-        // Debug log để kiểm tra
-        logPaymentInfo(order, updatedPayments, totalPaid, finalAmount);
 
         // Lưu lại order đã cập nhật
         orderRepository.save(order);

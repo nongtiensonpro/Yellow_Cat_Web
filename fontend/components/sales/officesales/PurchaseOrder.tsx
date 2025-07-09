@@ -259,7 +259,7 @@ export default function PurchaseOrder() {
                                 >
                                     Xem & Sửa
                                 </Button>
-                                <Button 
+                                {order.orderStatus!='Paid' &&<Button
                                     size="sm" 
                                     color="danger" 
                                     variant="flat" 
@@ -272,7 +272,7 @@ export default function PurchaseOrder() {
                                     }
                                 >
                                     Xóa
-                                </Button>
+                                </Button>}
                             </TableCell>
                         </TableRow>
                     ))}
