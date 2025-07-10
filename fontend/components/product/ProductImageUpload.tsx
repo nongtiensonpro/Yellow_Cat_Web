@@ -61,26 +61,22 @@ export default function ProductImageUpload({
     return (
         <div className={`space-y-2 ${className}`}>
             <div className="flex gap-2">
-                <Button
-                    color="primary"
-                    variant="bordered"
-                    size="sm"
-                    startContent={<Upload size={16} />}
-                    isLoading={isUploading}
-                    className="min-w-fit"
+                <CldUploadButton
+                    uploadPreset="YellowCatWeb"
+                    onSuccess={(result, { widget }) => {
+                        handleUpload(result);
+                        widget.close();
+                    }}
+                    onUpload={() => setIsUploading(true)}
+                    className={
+                        `flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-md border border-primary text-primary ` +
+                        `hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ` +
+                        `${isUploading ? 'opacity-50 pointer-events-none' : ''}`
+                    }
                 >
-                    <CldUploadButton
-                        uploadPreset="YellowCatWeb"
-                        onSuccess={(result, { widget }) => {
-                            handleUpload(result);
-                            widget.close();
-                        }}
-                        onUpload={() => setIsUploading(true)}
-                        className="w-full h-full"
-                    >
-                        {label}
-                    </CldUploadButton>
-                </Button>
+                    <Upload size={16} />
+                    {isUploading ? 'Đang tải...' : label}
+                </CldUploadButton>
                 
                 {resource && (
                     <Button

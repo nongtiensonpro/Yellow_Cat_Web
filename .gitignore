@@ -1,0 +1,64 @@
+# Ignore macOS system files
+.DS_Store
+
+# Ignore IDE and editor folders
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Node modules
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependency directories
+bower_components/
+jspm_packages/
+
+# Build output
+dist/
+build/
+out/
+tmp/
+temp/
+.cache/
+coverage/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Others (add/remove as needed)
+*.bak
+*.tmp
+
+# Ignore any key or secret files
+key.txt
+*.key
+*.pem
+
+# Ignore database export files
+realm-export.json
+
+# Ignore deployment-specific files
+deployment/
+
+# Ignore by pattern (customize as needed)
+*.local

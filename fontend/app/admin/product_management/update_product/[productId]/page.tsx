@@ -48,9 +48,7 @@ interface ProductVariant {
     price: number;
     salePrice: number;
     stockLevel: number;
-    stockLevelOnline: number;
     sold: number;
-    soldOnline: number;
     imageUrl: string;
     weight: number;
     enabled: boolean; // Cho phép kích hoạt/vô hiệu hóa biến thể
@@ -65,9 +63,7 @@ interface RawVariant {
     price?: number;
     salePrice?: number;
     stockLevel?: number;
-    stockLevelOnline?: number;
     sold?: number;
-    soldOnline?: number;
     imageUrl?: string;
     weight?: number;
 }
@@ -132,8 +128,7 @@ export default function UpdateProductPage() {
         price: 0,
         salePrice: 0,
         weight: 0,
-        stockLevel: 0,
-        stockLevelOnline: 0
+        stockLevel: 0
     });
 
     // Validation state
@@ -324,9 +319,7 @@ export default function UpdateProductPage() {
                         price: v.price || 0,
                         salePrice: v.salePrice || 0,
                         stockLevel: v.stockLevel || 0,
-                        stockLevelOnline: v.stockLevelOnline || 0,
                         sold: v.sold || 0,
-                        soldOnline: v.soldOnline || 0,
                         imageUrl: v.imageUrl || "",
                         weight: v.weight || 0,
                         enabled: true
@@ -416,11 +409,8 @@ export default function UpdateProductPage() {
             const weightError = validateWeight(variant.weight);
             if (weightError) newErrors[`variant_${variant.id}_weight`] = weightError;
 
-            const stockError = validateStock(variant.stockLevel, "Tồn kho quầy");
+            const stockError = validateStock(variant.stockLevel, "Tồn kho");
             if (stockError) newErrors[`variant_${variant.id}_stockLevel`] = stockError;
-
-            const stockOnlineError = validateStock(variant.stockLevelOnline, "Tồn kho online");
-            if (stockOnlineError) newErrors[`variant_${variant.id}_stockLevelOnline`] = stockOnlineError;
 
             // Kiểm tra ảnh biến thể
             if (!variant.imageUrl.trim()) {
@@ -575,10 +565,8 @@ export default function UpdateProductPage() {
                         sizeId: parseInt(sizeId),
                         price: bulkSettings.price,
                         salePrice: bulkSettings.salePrice,
-                        stockLevel: bulkSettings.stockLevel, // Tồn kho tại quầy
-                        stockLevelOnline: bulkSettings.stockLevelOnline, // Tồn kho online
-                        sold: 0, // Sản phẩm mới luôn bắt đầu với 0 đã bán
-                        soldOnline: 0, // Sản phẩm mới luôn bắt đầu với 0 đã bán online
+                        stockLevel: bulkSettings.stockLevel, // Tồn kho
+                        sold: 0,
                         imageUrl: "",
                         weight: bulkSettings.weight,
                         enabled: true
@@ -684,9 +672,7 @@ export default function UpdateProductPage() {
                     price: bulkSettings.price || v.price,
                     salePrice: bulkSettings.salePrice || v.salePrice,
                     weight: bulkSettings.weight || v.weight,
-                    stockLevel: bulkSettings.stockLevel !== undefined ? bulkSettings.stockLevel : v.stockLevel,
-                    stockLevelOnline: bulkSettings.stockLevelOnline !== undefined ? bulkSettings.stockLevelOnline : v.stockLevelOnline
-                    // sold và soldOnline giữ nguyên (luôn là 0 cho sản phẩm mới)
+                    stockLevel: bulkSettings.stockLevel !== undefined ? bulkSettings.stockLevel : v.stockLevel
                 } : v
             )
         }));
@@ -733,9 +719,7 @@ export default function UpdateProductPage() {
                     price: v.price,
                     salePrice: v.salePrice,
                     stockLevel: v.stockLevel,
-                    stockLevelOnline: v.stockLevelOnline,
                     sold: v.sold,
-                    soldOnline: v.soldOnline,
                     imageUrl: v.imageUrl,
                     weight: v.weight
                 }))
@@ -1097,9 +1081,9 @@ export default function UpdateProductPage() {
                                     onPaste={handlePaste}
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div className="grid grid-cols-1 gap-4 mb-4">
                                 <Input
-                                    label="Tồn kho tại quầy"
+                                    label="Tồn kho"
                                     type="number"
                                     size="sm"
                                     min={0}
@@ -1107,21 +1091,7 @@ export default function UpdateProductPage() {
                                     value={bulkSettings.stockLevel.toString()}
                                     onChange={(e) => {
                                         const value = handleIntegerInput(e.target.value, 0, 999999);
-                                        setBulkSettings(prev => ({...prev, stockLevel: value}));
-                                    }}
-                                    onKeyDown={handleKeyDown}
-                                    onPaste={handlePaste}
-                                />
-                                <Input
-                                    label="Tồn kho online"
-                                    type="number"
-                                    size="sm"
-                                    min={0}
-                                    max={999999}
-                                    value={bulkSettings.stockLevelOnline.toString()}
-                                    onChange={(e) => {
-                                        const value = handleIntegerInput(e.target.value, 0, 999999);
-                                        setBulkSettings(prev => ({...prev, stockLevelOnline: value}));
+                                        setBulkSettings(prev => ({ ...prev, stockLevel: value }));
                                     }}
                                     onKeyDown={handleKeyDown}
                                     onPaste={handlePaste}
@@ -1153,8 +1123,7 @@ export default function UpdateProductPage() {
                                             <TableColumn>GIÁ GỐC</TableColumn>
                                             <TableColumn>GIÁ KM</TableColumn>
                                             <TableColumn>TRỌNG LƯỢNG</TableColumn>
-                                            <TableColumn>TỒN KHO QUẦY</TableColumn>
-                                            <TableColumn>TỒN KHO ONLINE</TableColumn>
+                                            <TableColumn>TỒN KHO</TableColumn>
                                             <TableColumn>ẢNH BIẾN THỂ</TableColumn>
                                         </TableHeader>
                                         <TableBody>
@@ -1243,23 +1212,6 @@ export default function UpdateProductPage() {
                                                         />
                                                         {errors[`variant_${variant.id}_stockLevel`] && (
                                                             <p className="text-red-500 text-xs mt-1">{errors[`variant_${variant.id}_stockLevel`]}</p>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Input
-                                                            type="number"
-                                                            size="sm"
-                                                            min={0}
-                                                            max={999999}
-                                                            value={variant.stockLevelOnline.toString()}
-                                                            onChange={(e) => updateVariant(variant.id, 'stockLevelOnline', handleIntegerInput(e.target.value, 0, 999999))}
-                                                            className="w-20"
-                                                            isInvalid={!!errors[`variant_${variant.id}_stockLevelOnline`]}
-                                                            onKeyDown={handleKeyDown}
-                                                            onPaste={handlePaste}
-                                                        />
-                                                        {errors[`variant_${variant.id}_stockLevelOnline`] && (
-                                                            <p className="text-red-500 text-xs mt-1">{errors[`variant_${variant.id}_stockLevelOnline`]}</p>
                                                         )}
                                                     </TableCell>
                                                     <TableCell>

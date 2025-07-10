@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.yellowcat.backend.product.ProductVariantHistoryRepository;
 import org.yellowcat.backend.product.productvariant.dto.ProductVariantDetailDTO;
 import org.yellowcat.backend.product.productvariant.dto.ProductVariantFilterDTO;
 import org.yellowcat.backend.product.productvariant.dto.ProductVariantListResponse;
@@ -20,7 +19,7 @@ import java.util.List;
 public class ProductVariantService {
     private final ProductVariantRepository productVariantRepository;
     private final ProductVariantMapper productVariantMapper;
-    private final ProductVariantHistoryRepository historyRepository;
+
 
     @Transactional(readOnly = true)
     public Page<ProductVariantFilterDTO> searchPaged(

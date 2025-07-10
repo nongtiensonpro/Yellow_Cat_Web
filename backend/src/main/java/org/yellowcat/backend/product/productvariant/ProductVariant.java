@@ -8,7 +8,6 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.yellowcat.backend.product.Product;
 import org.yellowcat.backend.product.color.Color;
-import org.yellowcat.backend.product.material.Material;
 import org.yellowcat.backend.product.size.Size;
 import org.yellowcat.backend.user.AppUser;
 
@@ -53,14 +52,10 @@ public class ProductVariant {
     @Column(name = "quantity_in_stock", nullable = false, columnDefinition = "INT DEFAULT 0")
     private Integer quantityInStock = 0;
 
-    @Column(name = "quantity_in_stock_online", nullable = false, columnDefinition = "INT DEFAULT 0")
-    private Integer quantityInStockOnline = 0;
 
     @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
     private Integer sold = 0;
 
-    @Column(name = "sold_online", nullable = false, columnDefinition = "INT DEFAULT 0")
-    private Integer soldOnline = 0;
 
     @Column(name = "image_url", nullable = false)
     private String imageUrl;

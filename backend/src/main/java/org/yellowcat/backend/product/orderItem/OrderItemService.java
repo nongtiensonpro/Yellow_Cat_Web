@@ -63,6 +63,9 @@ public class OrderItemService {
             // Trừ kho
             productVariant.setQuantityInStock(productVariant.getQuantityInStock() - delta);
 
+            // LƯU PRODUCT VARIANT TRƯỚC khi cập nhật order_item để tránh ghi đè trường sold
+            productVariantRepository.save(productVariant);
+
             // Cập nhật order item
             existingOrderItem.setQuantity(newQuantity);
             existingOrderItem.setTotalPrice(productVariant.getPrice().multiply(BigDecimal.valueOf(newQuantity)));
@@ -75,6 +78,9 @@ public class OrderItemService {
             // Trừ kho
             productVariant.setQuantityInStock(productVariant.getQuantityInStock() - request.getQuantity());
 
+            // LƯU PRODUCT VARIANT TRƯỚC khi tạo order_item để tránh ghi đè trường sold
+            productVariantRepository.save(productVariant);
+
             OrderItem orderItem = orderItemMapper.toOrderItem(request);
             orderItem.setOrder(order);
             orderItem.setVariant(productVariant);
@@ -84,7 +90,7 @@ public class OrderItemService {
             orderItemRepository.save(orderItem);
         }
 
-        productVariantRepository.save(productVariant);
+        // ĐÃ lưu productVariant ở trên, tránh lưu lại sau khi trigger đã cập nhật trường sold
         updateOrderAmount(order);
 
         // Trả về order item vừa update/thêm

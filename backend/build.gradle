@@ -55,9 +55,9 @@ dependencies {
     implementation 'ch.qos.logback:logback-classic'
     implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
 
-    // Các dependency hiện tại của bạn
-    implementation 'org.flywaydb:flyway-core:11.3.3'
-    runtimeOnly 'org.flywaydb:flyway-database-postgresql:11.3.3'
+    // Flyway
+    implementation("org.flywaydb:flyway-core:11.10.1")
+    runtimeOnly("org.flywaydb:flyway-database-postgresql:11.10.1")
     implementation 'org.postgresql:postgresql:42.7.5'
     implementation 'com.zaxxer:HikariCP'
 
