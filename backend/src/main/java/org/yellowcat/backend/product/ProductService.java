@@ -106,11 +106,9 @@ public class ProductService {
                 variantDTO.setPrice((BigDecimal) row[18]);
                 variantDTO.setSalePrice((BigDecimal) row[19]);
                 variantDTO.setStockLevel((Integer) row[20]);
-                variantDTO.setStockLevelOnline((Integer) row[21]);
-                variantDTO.setSold((Integer) row[22]);
-                variantDTO.setSoldOnline((Integer) row[23]);
-                variantDTO.setImageUrl((String) row[24]);
-                variantDTO.setWeight((Double) row[25]);
+                variantDTO.setSold((Integer) row[21]);
+                variantDTO.setImageUrl((String) row[22]);
+                variantDTO.setWeight((Double) row[23]);
                 variants.add(variantDTO);
             }
         }
@@ -163,9 +161,7 @@ public class ProductService {
             variant.setPrice(variantDto.getPrice());
             variant.setSalePrice(variantDto.getSalePrice());
             variant.setQuantityInStock(variantDto.getStockLevel());
-            variant.setQuantityInStockOnline(variantDto.getStockLevelOnline() != null ? variantDto.getStockLevelOnline() : variantDto.getStockLevel());
             variant.setSold(variantDto.getSold() != null ? variantDto.getSold() : 0);
-            variant.setSoldOnline(variantDto.getSoldOnline() != null ? variantDto.getSoldOnline() : 0);
             variant.setImageUrl(variantDto.getImageUrl());
             variant.setWeight(variantDto.getWeight());
             variant.setCreatedBy(appUser);
@@ -270,9 +266,7 @@ public class ProductService {
             v.setPrice(vDto.getPrice());
             v.setSalePrice(vDto.getSalePrice());
             v.setQuantityInStock(vDto.getStockLevel());
-            v.setQuantityInStockOnline(vDto.getStockLevelOnline() != null ? vDto.getStockLevelOnline() : vDto.getStockLevel());
             v.setSold(vDto.getSold() != null ? vDto.getSold() : 0);
-            v.setSoldOnline(vDto.getSoldOnline() != null ? vDto.getSoldOnline() : 0);
             v.setImageUrl(vDto.getImageUrl());
             v.setWeight(vDto.getWeight());
             toSave.add(v);

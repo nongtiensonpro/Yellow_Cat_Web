@@ -19,9 +19,7 @@ public class ProductVariantDTO {
     private BigDecimal price;
     private BigDecimal salePrice;
     private Integer stockLevel;
-    private Integer stockLevelOnline;
     private Integer sold;
-    private Integer soldOnline;
     private String imageUrl;
     private Double weight;
 }
