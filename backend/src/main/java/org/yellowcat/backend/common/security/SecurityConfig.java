@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -141,6 +140,11 @@ public class SecurityConfig {
                         // Promotion private API
                                 requestMatchers(
                                 "/api/promotions/**")
+                        .hasAnyAuthority("Admin_Web")
+
+                        // Vouchers private API (tương tự promotions)
+                        .requestMatchers(
+                                "/api/vouchers/**")
                         .hasAnyAuthority("Admin_Web").
 
                         // Brands public API

@@ -12,6 +12,7 @@ import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
 import org.yellowcat.backend.product.promotion.dto.CreatePromotionDTO;
 import org.yellowcat.backend.product.promotionproduct.dto.PromotionEditResponse;
 import org.yellowcat.backend.product.promotionproduct.dto.PromotionProductResponse;
+import org.yellowcat.backend.product.promotionproduct.dto.PromotionSummaryResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -37,6 +38,11 @@ public class PromotionProductController {
         } else {
             return ResponseEntity.ok(promotionProductService.getAllWithJoin());
         }
+    }
+
+    @GetMapping("/summaries")
+    public ResponseEntity<List<PromotionSummaryResponse>> getPromotionSummaries() {
+        return ResponseEntity.ok(promotionProductService.getPromotionSummaries());
     }
 
     @GetMapping("/{id}")

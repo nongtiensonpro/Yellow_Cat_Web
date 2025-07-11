@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.yellowcat.backend.product.promotionproduct.dto.ProductVariantSelectionResponse;
 import org.yellowcat.backend.product.promotionproduct.dto.PromotionProductResponse;
+import org.yellowcat.backend.product.promotionproduct.dto.PromotionSummaryResponse;
 
 import java.util.List;
 import java.util.Optional;
@@ -48,6 +49,7 @@ public interface PromotionProductRepository extends JpaRepository<PromotionProdu
                     p.discountValue,
                     p.startDate,
                     p.endDate,
+                    p.isActive,
                     v.variantId,
                     v.sku,
                     v.price,
@@ -73,6 +75,7 @@ public interface PromotionProductRepository extends JpaRepository<PromotionProdu
                     p.discountValue,
                     p.startDate,
                     p.endDate,
+                    p.isActive,
                     v.variantId,
                     v.sku,
                     v.price,
@@ -205,6 +208,7 @@ public interface PromotionProductRepository extends JpaRepository<PromotionProdu
                 p.discountValue,
                 p.startDate,
                 p.endDate,
+                p.isActive,
                 v.variantId,
                 v.sku,
                 v.price,
@@ -263,6 +267,23 @@ public interface PromotionProductRepository extends JpaRepository<PromotionProdu
                 WHERE LOWER(p.productName) LIKE LOWER(CONCAT('%', :keyword, '%'))
             """)
     List<ProductVariantSelectionResponse> searchVariantsByKeyword(@Param("keyword") String keyword);
+
+    @Query("""
+            SELECT new org.yellowcat.backend.product.promotionproduct.dto.PromotionSummaryResponse(
+                MIN(pp.promotionProductId),
+                p.promotionName,
+                p.discountType,
+                p.discountValue,
+                p.startDate,
+                p.endDate,
+                p.isActive
+            )
+            FROM PromotionProduct pp
+            JOIN pp.promotion p
+            GROUP BY p.promotionName, p.discountType, p.discountValue, p.startDate, p.endDate, p.isActive
+            ORDER BY MIN(pp.promotionProductId) DESC
+            """)
+    List<PromotionSummaryResponse> findDistinctPromotions();
 
     @Modifying
     @Query("DELETE FROM PromotionProduct pp WHERE pp.promotion.id = :promotionId")

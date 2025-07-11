@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { Edit } from 'lucide-react';
+import { Edit, Trash2 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { Session } from 'next-auth';
 import PromotionGuide from '../../../components/promotion/PromotionGuide';
@@ -18,6 +18,7 @@ interface Promotion {
     discountType: string;
     startDate: string;
     endDate: string;
+    isActive: boolean | undefined;
 }
 
 interface APIResponse {
@@ -33,6 +34,7 @@ interface RawPromotion {
     discountType?: string;
     startDate?: string;
     endDate?: string;
+    isActive?: boolean;
 }
 
 function formatDiscount(value: number, type: string): string {
@@ -55,6 +57,23 @@ export default function PromotionManagementPage() {
     const itemsPerPage = 5;
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
+    const handleDelete = async (id: number) => {
+        if (!confirm('Bạn có chắc muốn xoá đợt giảm giá này?')) return;
+        if (sessionStatus !== 'authenticated' || !session?.accessToken) return;
+        try {
+            await fetch(`${API_URL}/api/promotion-products/${id}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${session.accessToken}` },
+            });
+            // Cập nhật local state
+            setPromotions(prev => prev.filter(p => p.id !== id));
+            alert('🗑️ Đã xoá thành công');
+        } catch (err) {
+            console.error(err);
+            alert('Không thể xoá. Vui lòng thử lại.');
+        }
+    };
+
     const loadData = useCallback(async () => {
         if (sessionStatus !== 'authenticated') return;
         const token = session?.accessToken;
@@ -63,14 +82,14 @@ export default function PromotionManagementPage() {
         setLoading(true);
         try {
             // Tải toàn bộ dữ liệu, việc lọc sẽ được thực hiện ở client
-            const res = await fetch(`${API_URL}/api/promotion-products`, {
+            const res = await fetch(`${API_URL}/api/promotion-products/summaries`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const data: APIResponse = await res.json();
             let arr: RawPromotion[] = [];
-            if (Array.isArray(data.data)) arr = data.data;
+            if (Array.isArray(data)) arr = data as RawPromotion[];
+            else if (Array.isArray(data.data)) arr = data.data;
             else if (Array.isArray(data.content)) arr = data.content;
-            else if (Array.isArray(data as unknown)) arr = data as RawPromotion[];
 
             setPromotions(
                 arr.map(item => ({
@@ -80,6 +99,7 @@ export default function PromotionManagementPage() {
                     discountType: item.discountType || '',
                     startDate: item.startDate || '',
                     endDate: item.endDate || '',
+                    isActive: typeof item.isActive === 'boolean' ? item.isActive : undefined,
                 }))
             );
         } catch (e) {
@@ -122,12 +142,20 @@ export default function PromotionManagementPage() {
 
             // Lọc theo trạng thái
             const statusMatch = (() => {
-                if (!filters.status) return true; // Không lọc nếu không chọn trạng thái
+                if (!filters.status) return true; // Không lọc nếu không chọn
                 const now = new Date();
-                const isActive = now >= new Date(promo.startDate) && now <= new Date(promo.endDate);
-                if (filters.status === 'active') return isActive;
-                if (filters.status === 'inactive') return !isActive;
-                return true;
+                const withinDate = now >= new Date(promo.startDate) && now <= new Date(promo.endDate);
+                const beforeStart = now < new Date(promo.startDate);
+
+                const statusKey = !promo.isActive && promo.isActive !== undefined
+                    ? 'inactive'
+                    : withinDate
+                        ? 'active'
+                        : beforeStart
+                            ? 'upcoming'
+                            : 'ended';
+
+                return filters.status === statusKey;
             })();
 
             return keywordMatch && statusMatch;
@@ -177,7 +205,9 @@ export default function PromotionManagementPage() {
                     >
                         <option value="">Tất cả trạng thái</option>
                         <option value="active">Đang diễn ra</option>
-                        <option value="inactive">Đã kết thúc</option>
+                        <option value="upcoming">Sắp diễn ra</option>
+                        <option value="ended">Đã kết thúc</option>
+                        <option value="inactive">Không hoạt động</option>
                     </select>
                 </div>
                 <div className="mt-4">
@@ -222,7 +252,22 @@ export default function PromotionManagementPage() {
                     ) : (
                         currentPromotions.map((promo, idx) => {
                             const now = new Date();
-                            const isActive = now >= new Date(promo.startDate) && now <= new Date(promo.endDate);
+                            const withinDate = now >= new Date(promo.startDate) && now <= new Date(promo.endDate);
+                            const beforeStart = now < new Date(promo.startDate);
+
+                            const statusLabel = !promo.isActive && promo.isActive !== undefined
+                                ? 'Không hoạt động'
+                                : withinDate
+                                    ? 'Đang diễn ra'
+                                    : beforeStart
+                                        ? 'Sắp diễn ra'
+                                        : 'Đã kết thúc';
+                            const badgeClass = (() => {
+                                if (statusLabel === 'Không hoạt động') return 'bg-gray-500';
+                                if (statusLabel === 'Đang diễn ra') return 'bg-green-500';
+                                if (statusLabel === 'Sắp diễn ra') return 'bg-yellow-500';
+                                return 'bg-gray-400';
+                            })();
 
                             return (
                                 <tr key={promo.id} className="border-b hover:bg-gray-50">
@@ -237,14 +282,12 @@ export default function PromotionManagementPage() {
                                     <td className="px-4 py-2 border text-center">{formatDateTime(promo.endDate)}</td>
                                     <td className="px-4 py-2 border text-center">
                                             <span
-                                                className={`text-xs px-2 py-1 rounded text-white ${
-                                                    isActive ? 'bg-green-500' : 'bg-gray-400'
-                                                }`}
+                                                className={`text-xs px-2 py-1 rounded text-white ${badgeClass}`}
                                             >
-                                                {isActive ? 'Đang diễn ra' : 'Đã kết thúc'}
+                                                {statusLabel}
                                             </span>
                                     </td>
-                                    <td className="px-4 py-2 border text-center">
+                                    <td className="px-4 py-2 border text-center flex items-center justify-center gap-2">
                                         <Link
                                             href={`/admin/promotion_products/${promo.id}`}
                                             className="text-orange-500 hover:text-orange-600 p-1"
@@ -252,6 +295,13 @@ export default function PromotionManagementPage() {
                                         >
                                             <Edit size={16} />
                                         </Link>
+                                        <button
+                                            onClick={() => handleDelete(promo.id)}
+                                            className="text-red-500 hover:text-red-600 p-1"
+                                            aria-label="Xóa"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
                                     </td>
                                 </tr>
                             );
