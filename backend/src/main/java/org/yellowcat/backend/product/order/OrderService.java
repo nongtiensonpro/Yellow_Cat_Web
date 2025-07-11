@@ -22,6 +22,10 @@ import org.yellowcat.backend.product.orderItem.OrderItem;
 import org.yellowcat.backend.product.orderItem.OrderItemRepository;
 import org.yellowcat.backend.product.payment.Payment;
 import org.yellowcat.backend.product.payment.PaymentRepository;
+import org.yellowcat.backend.product.promotionorder.PromotionProgram;
+import org.yellowcat.backend.product.promotionorder.PromotionProgramRepository;
+import org.yellowcat.backend.product.promotionorder.UsedPromotion;
+import org.yellowcat.backend.product.promotionorder.UsedPromotionRepository;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserService;
 import org.yellowcat.backend.online_selling.PaymentStatus;
@@ -39,13 +43,13 @@ public class OrderService {
     PaymentRepository paymentRepository;
     OrderMapper orderMapper;
     AppUserService appUserService;
+    PromotionProgramRepository promotionProgramRepository;
+    UsedPromotionRepository usedPromotionRepository;
 
     public Page<OrderResponse> getOrdersByKeyword(int page, int size, String keyword) {
         Pageable pageable = PageRequest.of(page, size);
         return orderRepository.findAllByKeyword(keyword, pageable);
     }
-
-
 
 
     public Order findOrderById(Integer orderId) {
@@ -78,27 +82,81 @@ public class OrderService {
 
     @Transactional
     public OrderUpdateResponse updateOrder(OrderUpdateRequest request) {
-        // Lấy danh sách OrderItem theo orderId
+        // 1. Lấy danh sách OrderItem theo orderId
         List<OrderItem> orderItems = orderItemRepository.findByOrder_OrderId(request.getOrderId());
 
-        // Lấy order theo orderId
+        // 2. Lấy order
         Order order = orderRepository.findById(request.getOrderId())
                 .orElseThrow(() -> new IllegalArgumentException("Order not found with id: " + request.getOrderId()));
 
-        // Tính toán subTotalAmount
+        // 3. Tính subTotalAmount
         BigDecimal subTotalAmount = orderItems.stream()
                 .map(OrderItem::getTotalPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Shipping fee
         BigDecimal shippingFee = order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO;
-        // Discount amount
-        BigDecimal discountAmount = request.getDiscountAmount() != null ? request.getDiscountAmount() : BigDecimal.ZERO;
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        LocalDateTime now = LocalDateTime.now();
 
-        // Tính lại finalAmount
+        // 4. Áp dụng khuyến mãi tốt nhất nếu có
+        List<PromotionProgram> activePromotions = promotionProgramRepository.findByIsActiveTrue();
+        PromotionProgram bestPromotion = null;
+        BigDecimal maxDiscount = BigDecimal.ZERO;
+
+        for (PromotionProgram promo : activePromotions) {
+            if (now.isBefore(promo.getStartDate()) || now.isAfter(promo.getEndDate())) continue;
+            if (subTotalAmount.compareTo(promo.getMinimumOrderValue()) < 0) continue;
+            if (promo.getUsageLimitTotal() != null) {
+                int usedCount = usedPromotionRepository.countByPromotionProgram(promo);
+                if (usedCount >= promo.getUsageLimitTotal()) continue;
+            }
+
+            BigDecimal discount;
+            if ("%".equals(promo.getDiscountType())) {
+                discount = subTotalAmount.multiply(promo.getDiscountValue().divide(BigDecimal.valueOf(100)));
+            } else {
+                discount = promo.getDiscountValue();
+            }
+
+            if (discount.compareTo(maxDiscount) > 0) {
+                maxDiscount = discount;
+                bestPromotion = promo;
+            }
+        }
+
+        if (bestPromotion != null) {
+            discountAmount = maxDiscount;
+
+            // Kiểm tra xem đơn hàng đã có UsedPromotion nào chưa
+            boolean alreadyUsed = usedPromotionRepository.existsByOrder(order);
+
+            if (!alreadyUsed) {
+                // Nếu chưa từng áp dụng -> tạo mới
+                UsedPromotion usedPromotion = UsedPromotion.builder()
+                        .order(order)
+                        .promotionProgram(bestPromotion)
+                        .quantityUsed(1)
+                        .build();
+                usedPromotionRepository.save(usedPromotion);
+
+                // Giảm usageLimitTotal chỉ 1 lần
+                if (bestPromotion.getUsageLimitTotal() != null) {
+                    bestPromotion.setUsageLimitTotal(bestPromotion.getUsageLimitTotal() - 1);
+                    promotionProgramRepository.save(bestPromotion);
+                }
+
+                System.out.println("🎁 Áp dụng khuyến mãi: " + bestPromotion.getPromotionCode() + " → Giảm " + discountAmount);
+            } else {
+                System.out.println("⚠️ Đơn hàng đã áp dụng khuyến mãi trước đó, không cập nhật lại.");
+            }
+        } else {
+            System.out.println("⚠️ Không có khuyến mãi nào được áp dụng.");
+        }
+
+        // 5. Tính finalAmount
         BigDecimal finalAmount = subTotalAmount.add(shippingFee).subtract(discountAmount);
 
-        // Cập nhật các thông tin nếu khác null
+        // 6. Cập nhật các thông tin cơ bản
         if (request.getPhoneNumber() != null) {
             order.setPhoneNumber(request.getPhoneNumber());
         }
@@ -109,15 +167,12 @@ public class OrderService {
         order.setDiscountAmount(discountAmount);
         order.setFinalAmount(finalAmount);
 
-        // Biến để theo dõi có payment mới được thêm vào không
+        // 7. Cập nhật hoặc thêm mới payments nếu có
         boolean hasNewPayments = false;
 
-        // Cập nhật/thêm mới payments CHỈ KHI request thực sự có payments
-        // Nếu request.getPayments() là null hoặc rỗng thì không cập nhật payments
         if (request.getPayments() != null && !request.getPayments().isEmpty()) {
             for (OrderUpdateRequest.PaymentUpdateRequest paymentReq : request.getPayments()) {
                 if (paymentReq.getPaymentId() == null) {
-                    // Payment mới - đánh dấu có payment mới
                     hasNewPayments = true;
                     Payment payment = new Payment();
                     payment.setOrder(order);
@@ -125,30 +180,17 @@ public class OrderService {
                     payment.setPaymentMethod(paymentReq.getPaymentMethod());
                     payment.setTransactionId(paymentReq.getTransactionId());
 
-                    // Tự động cập nhật status - Cải thiện logic cho VNPAY:
                     if (paymentReq.getPaymentStatus() != null && !paymentReq.getPaymentStatus().isEmpty()) {
-                        // Nếu frontend đã set status rõ ràng (như từ VNPAY callback)
                         payment.setPaymentStatus(paymentReq.getPaymentStatus());
-                    } else if ("CASH".equalsIgnoreCase(paymentReq.getPaymentMethod())) {
-                        // Tiền mặt luôn là COMPLETED
-                        payment.setPaymentStatus("COMPLETED");
-                    } else if ("VNPAY".equalsIgnoreCase(paymentReq.getPaymentMethod()) &&
-                            paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
-                        // VNPAY với transactionId có nghĩa là đã thanh toán thành công
-                        payment.setPaymentStatus("COMPLETED");
-                    } else if ("BANK_TRANSFER".equalsIgnoreCase(paymentReq.getPaymentMethod()) &&
-                            paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
-                        // Chuyển khoản với transactionId
-                        payment.setPaymentStatus("COMPLETED");
-                    } else if (paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
-                        // Có transactionId thì coi như COMPLETED
+                    } else if ("CASH".equalsIgnoreCase(paymentReq.getPaymentMethod())
+                            || (paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty())) {
                         payment.setPaymentStatus("COMPLETED");
                     } else {
                         payment.setPaymentStatus("PENDING");
                     }
+
                     paymentRepository.save(payment);
                 } else {
-                    // Payment đã tồn tại, update - cũng coi như có thay đổi payment
                     hasNewPayments = true;
                     Payment existing = paymentRepository.findById(paymentReq.getPaymentId())
                             .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + paymentReq.getPaymentId()));
@@ -156,73 +198,59 @@ public class OrderService {
                     existing.setPaymentMethod(paymentReq.getPaymentMethod());
                     existing.setTransactionId(paymentReq.getTransactionId());
 
-                    // Update lại status - Cải thiện logic:
                     if (paymentReq.getPaymentStatus() != null && !paymentReq.getPaymentStatus().isEmpty()) {
                         existing.setPaymentStatus(paymentReq.getPaymentStatus());
-                    } else if ("CASH".equalsIgnoreCase(paymentReq.getPaymentMethod())) {
-                        existing.setPaymentStatus("COMPLETED");
-                    } else if ("VNPAY".equalsIgnoreCase(paymentReq.getPaymentMethod()) &&
-                            paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
-                        existing.setPaymentStatus("COMPLETED");
-                    } else if ("BANK_TRANSFER".equalsIgnoreCase(paymentReq.getPaymentMethod()) &&
-                            paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
-                        existing.setPaymentStatus("COMPLETED");
-                    } else if (paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty()) {
+                    } else if ("CASH".equalsIgnoreCase(paymentReq.getPaymentMethod())
+                            || (paymentReq.getTransactionId() != null && !paymentReq.getTransactionId().isEmpty())) {
                         existing.setPaymentStatus("COMPLETED");
                     } else {
                         existing.setPaymentStatus("PENDING");
                     }
+
                     paymentRepository.save(existing);
                 }
             }
         }
 
-        // CHỈ cập nhật trạng thái đơn hàng KHI có payment mới hoặc thay đổi payment
+        // 8. Cập nhật trạng thái đơn hàng nếu có payment mới
         if (hasNewPayments) {
-            // QUAN TRỌNG: Load lại danh sách payments từ database sau khi đã save
             List<Payment> updatedPayments = paymentRepository.findByOrder_OrderId(order.getOrderId());
 
-            // Tính tổng số tiền đã thanh toán (COMPLETED) từ danh sách mới nhất
             BigDecimal totalPaid = updatedPayments.stream()
                     .filter(p -> "COMPLETED".equalsIgnoreCase(p.getPaymentStatus()))
                     .map(Payment::getAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            // Tự động set orderStatus theo tổng đã thanh toán
             if (totalPaid.compareTo(finalAmount) >= 0) {
                 order.setOrderStatus("Paid");
             } else if (totalPaid.compareTo(BigDecimal.ZERO) > 0) {
-                order.setOrderStatus("Partial"); // Đã thanh toán một phần
+                order.setOrderStatus("Partial");
             } else {
-                order.setOrderStatus("Pending"); // Chưa thanh toán gì
+                order.setOrderStatus("Pending");
             }
 
-            // FIX: Không dùng setPayments() để tránh orphan deletion error
-            // Thay vào đó, clear và add lại để giữ nguyên collection reference
             if (order.getPayments() == null) {
                 order.setPayments(new ArrayList<>());
             }
             order.getPayments().clear();
             order.getPayments().addAll(updatedPayments);
 
-            // Debug log để kiểm tra
             logPaymentInfo(order, updatedPayments, totalPaid, finalAmount);
         } else {
-            // Nếu không có payment mới, chỉ load lại payments hiện tại để đảm bảo consistency
             List<Payment> currentPayments = paymentRepository.findByOrder_OrderId(order.getOrderId());
             if (order.getPayments() == null) {
                 order.setPayments(new ArrayList<>());
             }
             order.getPayments().clear();
             order.getPayments().addAll(currentPayments);
-            
-            System.out.println("📝 Chỉ cập nhật thông tin khách hàng, không thay đổi trạng thái thanh toán cho đơn hàng: " + order.getOrderCode());
+
+            System.out.println("📝 Cập nhật thông tin đơn hàng không thay đổi thanh toán: " + order.getOrderCode());
         }
 
-        // Lưu lại order đã cập nhật
+        // 9. Lưu order
         orderRepository.save(order);
 
-        // Sử dụng MapStruct để chuyển sang DTO trả về
+        // 10. Trả kết quả
         return orderMapper.toOrderUpdateResponse(order);
     }
 
@@ -260,7 +288,7 @@ public class OrderService {
         orderRepository.delete(order);
     }
 
-    OrderResponse findOrderByOrderCode (String orderCode) {
+    OrderResponse findOrderByOrderCode(String orderCode) {
         return orderRepository.findOrderByOrderCodeOld(orderCode);
     }
 
@@ -502,7 +530,6 @@ public class OrderService {
         // Trả về response
         return orderMapper.toOrderUpdateResponse(order);
     }
-
 
 
     @Transactional

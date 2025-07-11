@@ -62,7 +62,7 @@ public class ProductVariant {
 
     private Double weight; // In kg, as GHTK might need it
 
-    @Column(name = "created_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    @Column(name = "created_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP", updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
@@ -77,6 +77,15 @@ public class ProductVariant {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (quantityInStock == null) {
+            quantityInStock = 0;
+        }
+        if (sold == null) {
+            sold = 0;
+        }
+        if (salePrice == null) {
+            salePrice = BigDecimal.ZERO;
+        }
     }
 
     @PreUpdate
