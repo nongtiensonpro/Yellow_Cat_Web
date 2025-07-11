@@ -56,6 +56,12 @@ public class Promotion {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt = LocalDateTime.now();
 
+    @PrePersist
+    public void prePersist() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+
     @PreUpdate
     public void preUpdate() {
         updatedAt = LocalDateTime.now();
