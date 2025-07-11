@@ -19,5 +19,6 @@ public class PromotionEditResponse {
     private BigDecimal discountValue;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
+    private Boolean isActive;
     private List<Integer> variantIds;
 } 

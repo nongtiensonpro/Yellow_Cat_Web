@@ -20,6 +20,7 @@ public class PromotionProductResponse {
     private BigDecimal discountValue;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
+    private Boolean isActive;
     private Integer variantId;
     private String sku;
     private BigDecimal price;

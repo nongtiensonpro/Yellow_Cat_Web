@@ -10,6 +10,7 @@ import HelpTooltip from '../../../../components/promotion/HelpTooltip';
 
 type ProductVariant = {
     variantId: number;
+    sku: string;
     productName: string;
 };
 
@@ -36,6 +37,7 @@ export default function CreatePromotionPage() {
         discountType: 'percentage',
         startDate: '',
         endDate: '',
+        isActive: true,
     });
 
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -95,26 +97,24 @@ export default function CreatePromotionPage() {
             HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
         >
     ) => {
-        const { name, value } = e.target;
-        setForm(prev => ({ ...prev, [name]: value }));
+        const { name, value, type } = e.target;
+        let v: string | number | boolean = value;
+        if (name === 'isActive') {
+            v = value === 'active';
+        }
+        if (type === 'number') {
+            v = Number(value);
+        }
+        setForm(prev => ({ ...prev, [name]: v }));
         setErrors(prev => ({ ...prev, [name]: '' }));
     };
 
     const handleSelectVariant = (variantId: number) => {
-        const product = variants.find(v => v.variantId === variantId);
-        if (!product) return;
-        const groupIds = variants
-            .filter(v => v.productName === product.productName)
-            .map(v => v.variantId);
-
-        setSelectedVariants(prev => {
-            const isGroupSelected = groupIds.some(id => prev.includes(id));
-            if (isGroupSelected) {
-                return prev.filter(id => !groupIds.includes(id));
-            } else {
-                return [...prev, ...groupIds.filter(id => !prev.includes(id))];
-            }
-        });
+        setSelectedVariants(prev =>
+            prev.includes(variantId)
+                ? prev.filter(id => id !== variantId)
+                : [...prev, variantId]
+        );
     };
 
     const validateForm = () => {
@@ -194,13 +194,11 @@ export default function CreatePromotionPage() {
     };
 
     const filtered = variants.filter(v =>
-        v.productName.toLowerCase().includes(searchTerm.toLowerCase())
+        v.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        v.sku.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    const uniqueVariants = filtered.filter(
-        (v, idx, arr) => arr.findIndex(x => x.productName === v.productName) === idx
-    );
-    const pageCount = Math.ceil(uniqueVariants.length / itemsPerPage);
-    const currentVariants = uniqueVariants.slice(
+    const pageCount = Math.ceil(filtered.length / itemsPerPage);
+    const currentVariants = filtered.slice(
         (currentPage - 1) * itemsPerPage,
         currentPage * itemsPerPage
     );
@@ -212,11 +210,7 @@ export default function CreatePromotionPage() {
     );
 
     // --- Logic for Product Selection Table Checkbox ---
-    const variantIdsOnCurrentPage = currentVariants.flatMap(product =>
-        variants
-            .filter(v => v.productName === product.productName)
-            .map(v => v.variantId)
-    );
+    const variantIdsOnCurrentPage = currentVariants.map(v => v.variantId);
     const areAllOnPageSelected = variantIdsOnCurrentPage.length > 0 && variantIdsOnCurrentPage.every(id => selectedVariants.includes(id));
     const areSomeOnPageSelected = variantIdsOnCurrentPage.some(id => selectedVariants.includes(id)) && !areAllOnPageSelected;
 
@@ -307,6 +301,7 @@ export default function CreatePromotionPage() {
                             >
                                 <option value="percentage">Giảm theo %</option>
                                 <option value="fixed_amount">Giảm số tiền</option>
+                                <option value="free_shipping">Miễn phí vận chuyển</option>
                             </select>
                         </div>
 
@@ -324,7 +319,8 @@ export default function CreatePromotionPage() {
                             <input
                                 name="discountValue"
                                 type="number"
-                                value={form.discountValue || ''}
+                                value={form.discountType === 'free_shipping' ? '' : form.discountValue || ''}
+                                disabled={form.discountType === 'free_shipping'}
                                 onChange={handleChange}
                                 className="w-full border px-3 py-2 rounded"
                             />
@@ -364,6 +360,23 @@ export default function CreatePromotionPage() {
                             )}
                         </div>
 
+                        {/* Trạng thái */}
+                        <div>
+                            <label className="block mb-1 font-medium">
+                                Trạng thái <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                                name="isActive"
+                                value={form.isActive ? 'active' : 'inactive'}
+                                onChange={handleChange}
+                                className="w-full border px-3 py-2 rounded"
+                            >
+                                <option value="active">Đang hoạt động</option>
+                                <option value="inactive">Không hoạt động</option>
+                            </select>
+                        </div>
+
+                        {/* Button submit */}
                         <button
                             type="submit"
                             disabled={loading}
@@ -403,33 +416,28 @@ export default function CreatePromotionPage() {
                                         />
                                     </th>
                                     <th className="px-3 py-2">STT</th>
+                                    <th className="px-3 py-2">SKU</th>
                                     <th className="px-3 py-2 text-left">Tên sản phẩm</th>
                                 </tr>
                                 </thead>
                                 <tbody>
-                                {currentVariants.map((v, idx) => {
-                                    const productGroupIds = variants
-                                        .filter(item => item.productName === v.productName)
-                                        .map(item => item.variantId);
-                                    const isProductGroupSelected = productGroupIds.length > 0 && productGroupIds.every(id => selectedVariants.includes(id));
-
-                                    return (
-                                        <tr key={v.variantId} className="border-t">
-                                            <td className="px-3 py-2 text-center">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isProductGroupSelected}
-                                                    onChange={() => handleSelectVariant(v.variantId)}
-                                                    className="form-checkbox"
-                                                />
-                                            </td>
-                                            <td className="px-3 py-2 text-center">
-                                                {(currentPage - 1) * itemsPerPage + idx + 1}
-                                            </td>
-                                            <td className="px-3 py-2">{v.productName}</td>
-                                        </tr>
-                                    );
-                                })}
+                                {currentVariants.map((v, idx) => (
+                                    <tr key={v.variantId} className="border-t">
+                                        <td className="px-3 py-2 text-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedVariants.includes(v.variantId)}
+                                                onChange={() => handleSelectVariant(v.variantId)}
+                                                className="form-checkbox"
+                                            />
+                                        </td>
+                                        <td className="px-3 py-2 text-center">
+                                            {(currentPage - 1) * itemsPerPage + idx + 1}
+                                        </td>
+                                        <td className="px-3 py-2">{v.sku}</td>
+                                        <td className="px-3 py-2">{v.productName}</td>
+                                    </tr>
+                                ))}
                                 </tbody>
                             </table>
                         </div>
