@@ -13,4 +13,9 @@ public class ItemResponseDTO {
     private String productName;
     private int quantity;
     private BigDecimal price;
+    private String colorName;
+    private String sizeName;
+    private String imageUrl;
+    private String sku;
+    private int stockLevel;
 }
