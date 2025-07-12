@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
@@ -11,9 +11,15 @@ export default function CreateVoucherPage() {
 
     const [form, setForm] = useState({
         promotionName: '',
+        voucherCode: '',
         description: '',
         discountType: 'percentage',
         discountValue: 0,
+        minimumOrderValue: 0,
+        maximumDiscountValue: 0,
+        usageLimitPerUser: 1,
+        usageLimitTotal: 0,
+        isStackable: false,
         startDate: '',
         endDate: '',
         isActive: true,
@@ -26,17 +32,29 @@ export default function CreateVoucherPage() {
     ) => {
         const { name, value, type } = e.target;
         const checked = 'checked' in e.target ? e.target.checked : false;
+
+        let newValue: string | number | boolean = value;
+        if (type === 'checkbox') newValue = checked;
+        if (type === 'number') newValue = parseFloat(value);
+
         setForm((prev) => ({
             ...prev,
-            [name]: type === 'checkbox' ? checked : value,
+            [name]: newValue,
         }));
         setErrors((prev) => ({ ...prev, [name]: '' }));
     };
 
-    const checkPromotionNameExists = async (name: string) => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
+    const checkPromotionNameExists = useCallback(async (name: string) => {
         try {
             const res = await fetch(
-                `http://localhost:8080/api/promotions/check-name?name=${encodeURIComponent(name)}`
+                `${API_URL}/api/vouchers/check-name?name=${encodeURIComponent(name)}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${session?.accessToken}`,
+                    },
+                }
             );
             if (!res.ok) throw new Error('Failed to check name');
             const data = await res.json();
@@ -45,24 +63,55 @@ export default function CreateVoucherPage() {
             console.error('Check name error:', error);
             return false;
         }
-    };
+    }, [API_URL, session?.accessToken]);
+
+    // Debounce check name & code
+    const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+    const [nameExists, setNameExists] = useState<boolean>(false);
+
+    useEffect(() => {
+        if (!form.promotionName) return;
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+        debounceTimer.current = setTimeout(async () => {
+            const exists = await checkPromotionNameExists(form.promotionName);
+            setNameExists(exists);
+        }, 500);
+    }, [form.promotionName, checkPromotionNameExists]);
+
+    const voucherCodePattern = /^[A-Z0-9_-]{3,50}$/;
 
     const validateForm = async () => {
         const newErrors: { [key: string]: string } = {};
 
         if (!form.promotionName) {
             newErrors.promotionName = 'Tên khuyến mãi là bắt buộc.';
-        } else {
-            const exists = await checkPromotionNameExists(form.promotionName);
-            if (exists) {
-                newErrors.promotionName = 'Tên khuyến mãi đã tồn tại.';
-            }
+        } else if (nameExists) {
+            newErrors.promotionName = 'Tên khuyến mãi đã tồn tại.';
         }
 
         if (!form.startDate) newErrors.startDate = 'Ngày bắt đầu là bắt buộc.';
         if (!form.endDate) newErrors.endDate = 'Ngày kết thúc là bắt buộc.';
 
         const value = parseFloat(form.discountValue.toString());
+
+        if (!form.voucherCode) {
+            newErrors.voucherCode = 'Mã voucher là bắt buộc.';
+        } else if (!voucherCodePattern.test(form.voucherCode)) {
+            newErrors.voucherCode = 'Mã voucher chỉ gồm A-Z, 0-9, dấu gạch và dài 3-50 ký tự.';
+        }
+
+        if (form.minimumOrderValue <= 0) newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu > 0';
+
+        if (form.maximumDiscountValue && form.maximumDiscountValue < 0)
+            newErrors.maximumDiscountValue = 'Giá trị giảm tối đa không hợp lệ';
+
+        if (form.usageLimitPerUser && form.usageLimitPerUser < 1)
+            newErrors.usageLimitPerUser = 'Số lần / người ít nhất 1';
+
+        if (form.usageLimitTotal && form.usageLimitTotal < 0)
+            newErrors.usageLimitTotal = 'Giới hạn tổng không hợp lệ';
+
         if ((form.discountType === 'percentage' || form.discountType === 'fixed_amount') && value <= 0) {
             newErrors.discountValue = 'Giá trị giảm phải lớn hơn 0.';
         }
@@ -90,7 +139,7 @@ export default function CreateVoucherPage() {
         const token = session?.accessToken;
 
         try {
-            const res = await fetch('http://localhost:8080/api/promotions', {
+            const res = await fetch(`${API_URL}/api/vouchers`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -100,6 +149,12 @@ export default function CreateVoucherPage() {
                     ...form,
                     isActive: !!form.isActive,
                     discountValue: form.discountType === 'free_shipping' ? 0 : parseFloat(form.discountValue.toString()),
+                    voucherCode: form.voucherCode.trim(),
+                    minimumOrderValue: form.minimumOrderValue,
+                    maximumDiscountValue: form.maximumDiscountValue || null,
+                    usageLimitPerUser: form.usageLimitPerUser,
+                    usageLimitTotal: form.usageLimitTotal || null,
+                    isStackable: form.isStackable,
                 }),
             });
 
@@ -136,6 +191,18 @@ export default function CreateVoucherPage() {
                         className="w-full border px-3 py-2 rounded"
                     />
                     {errors.promotionName && <p className="text-red-600 text-sm">{errors.promotionName}</p>}
+                </div>
+
+                {/* Mô tả */}
+                <div>
+                    <Label text="Mô tả" />
+                    <textarea
+                        name="description"
+                        value={form.description}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded"
+                        placeholder="Nhập mô tả cho voucher (tùy chọn)"
+                    />
                 </div>
 
                 <div>
@@ -207,6 +274,82 @@ export default function CreateVoucherPage() {
                 {/*        {form.isActive ? 'Đang hoạt động' : 'Không hoạt động'}*/}
                 {/*    </label>*/}
                 {/*</div>*/}
+
+                {/* Voucher Code */}
+                <div>
+                    <Label text="Mã voucher" required />
+                    <input
+                        name="voucherCode"
+                        value={form.voucherCode}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded"
+                    />
+                    {errors.voucherCode && <p className="text-red-600 text-sm">{errors.voucherCode}</p>}
+                </div>
+
+                {/* Minimum Order Value */}
+                <div>
+                    <Label text="Giá trị đơn tối thiểu (₫)" required />
+                    <input
+                        name="minimumOrderValue"
+                        type="number"
+                        value={form.minimumOrderValue || ''}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded"
+                    />
+                    {errors.minimumOrderValue && <p className="text-red-600 text-sm">{errors.minimumOrderValue}</p>}
+                </div>
+
+                {/* Maximum Discount Value */}
+                <div>
+                    <Label text="Giảm tối đa (₫ - không bắt buộc)" />
+                    <input
+                        name="maximumDiscountValue"
+                        type="number"
+                        value={form.maximumDiscountValue || ''}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded"
+                    />
+                    {errors.maximumDiscountValue && <p className="text-red-600 text-sm">{errors.maximumDiscountValue}</p>}
+                </div>
+
+                {/* Usage Limit Per User */}
+                <div>
+                    <Label text="Số lần / người" />
+                    <input
+                        name="usageLimitPerUser"
+                        type="number"
+                        value={form.usageLimitPerUser || ''}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded"
+                    />
+                    {errors.usageLimitPerUser && <p className="text-red-600 text-sm">{errors.usageLimitPerUser}</p>}
+                </div>
+
+                {/* Usage Limit Total */}
+                <div>
+                    <Label text="Giới hạn tổng (bỏ trống = không giới hạn)" />
+                    <input
+                        name="usageLimitTotal"
+                        type="number"
+                        value={form.usageLimitTotal || ''}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded"
+                    />
+                    {errors.usageLimitTotal && <p className="text-red-600 text-sm">{errors.usageLimitTotal}</p>}
+                </div>
+
+                {/* Is Stackable */}
+                <div className="flex items-center space-x-3">
+                    <input
+                        type="checkbox"
+                        name="isStackable"
+                        checked={!!form.isStackable}
+                        onChange={handleChange}
+                        className="w-5 h-5"
+                    />
+                    <label className="text-sm text-gray-700">Cho phép cộng dồn với chương trình khác</label>
+                </div>
 
                 <div className="flex justify-end">
                     <button

@@ -14,6 +14,7 @@ import org.yellowcat.backend.product.promotion.dto.CreatePromotionDTO;
 import org.yellowcat.backend.product.promotionproduct.dto.ProductVariantSelectionResponse;
 import org.yellowcat.backend.product.promotionproduct.dto.PromotionEditResponse;
 import org.yellowcat.backend.product.promotionproduct.dto.PromotionProductResponse;
+import org.yellowcat.backend.product.promotionproduct.dto.PromotionSummaryResponse;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserRepository;
 
@@ -82,8 +83,14 @@ public class PromotionProductService {
                 promotion.getDiscountValue(),
                 promotion.getStartDate(),
                 promotion.getEndDate(),
+                promotion.getIsActive(),
                 variantIds
         );
+    }
+
+    // ✅ TÓM TẮT CHỈ 1 BẢN GHI/ PROMOTION
+    public List<PromotionSummaryResponse> getPromotionSummaries() {
+        return promotionProductRepository.findDistinctPromotions();
     }
 
 
@@ -107,6 +114,8 @@ public class PromotionProductService {
         promotion.setDiscountType(dto.getDiscountType() != null ? dto.getDiscountType() : "percentage");
         promotion.setStartDate(dto.getStartDate());
         promotion.setEndDate(dto.getEndDate());
+        // Thiết lập trạng thái hoạt động nếu DTO có gửi
+        promotion.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : true);
         promotion.setAppUser(user);
 
         promotionRepository.save(promotion);
@@ -156,6 +165,7 @@ public class PromotionProductService {
         promotion.setDiscountType(dto.getDiscountType() != null ? dto.getDiscountType() : "percentage");
         promotion.setStartDate(dto.getStartDate());
         promotion.setEndDate(dto.getEndDate());
+        promotion.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : promotion.getIsActive());
         promotionRepository.save(promotion);
 
         // Xóa mapping cũ và tạo mới

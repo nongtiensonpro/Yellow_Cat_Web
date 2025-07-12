@@ -8,11 +8,15 @@ import { Edit, Trash2 } from 'lucide-react';
 import PromotionGuide from '@/components/promotion/PromotionGuide';
 
 interface Voucher {
-    id: number;
-    promotionCode: string;
-    promotionName: string;
+    voucherId: number;
+    voucherCode: string;
+    voucherName: string;
     discountType: string;
     discountValue: number;
+    minimumOrderValue: number;
+    maximumDiscountValue: number;
+    usageLimitPerUser: number;
+    usageLimitTotal: number;
     startDate: string;
     endDate: string;
     isActive: boolean;
@@ -21,6 +25,7 @@ interface Voucher {
 export default function VouchersPage() {
     const searchParams = useSearchParams();
     const initialPage = Number(searchParams?.get('page')) || 1;
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
     // Bộ lọc
     const [filters, setFilters] = useState({
@@ -58,20 +63,27 @@ export default function VouchersPage() {
             qp.append('sort', 'createdAt,desc');
 
             try {
-                const res = await fetch(`http://localhost:8080/api/promotions?${qp}`, {
+                const res = await fetch(`${API_URL}/api/vouchers?${qp}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 const json = await res.json();
-                const page = json.data ?? json;
-                setVouchers(page.content);
-                setTotalPages(page.totalPages);
+                const page = json.data;  // Page object trong ApiResponse.data
+                console.log('API Response:', json);
+                console.log('Page data:', page);
+                console.log('Page structure keys:', Object.keys(page));
+                console.log('Total pages:', page.totalPages || page.page?.totalPages);
+                console.log('Content length:', page.content?.length);
+                console.log('Page metadata:', page.page);
+                setVouchers(page.content || []);
+                setTotalPages(page.totalPages || page.page?.totalPages || 1);
+                console.log('Set totalPages to:', page.totalPages || page.page?.totalPages || 1);
             } catch (e) {
                 console.error(e);
             } finally {
                 setLoading(false);
             }
         })();
-    }, [status, session, currentPage, filters]);
+    }, [status, session, currentPage, filters, API_URL]);
 
     const formatDiscount = (value: number, type: string) => {
         const t = type.toLowerCase();
@@ -100,12 +112,12 @@ export default function VouchersPage() {
         if (!confirm('Bạn có chắc chắn muốn xoá voucher này?')) return;
         const token = (session as { accessToken: string }).accessToken;
         try {
-            const res = await fetch(`http://localhost:8080/api/promotions/${id}`, {
+            const res = await fetch(`${API_URL}/api/vouchers/${id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
             });
             if (!res.ok) throw new Error('Xoá không thành công');
-            setVouchers(vouchers.filter(v => v.id !== id));
+            setVouchers(vouchers.filter(v => v.voucherId !== id));
             alert('Xóa thành công!');
         } catch (e) {
             alert('Lỗi: ' + e);
@@ -217,14 +229,14 @@ export default function VouchersPage() {
                         </tr>
                     ) : (
                         vouchers.map((v, idx) => (
-                            <tr key={v.id} className="border-b hover:bg-gray-50">
+                            <tr key={v.voucherId} className="border-b hover:bg-gray-50">
                                 <td className="px-4 py-2 border text-center">
                                     {(currentPage - 1) * itemsPerPage + idx + 1}
                                 </td>
                                 <td className="px-4 py-2 border font-mono text-blue-600">
-                                    {v.promotionCode}
+                                    {v.voucherCode}
                                 </td>
-                                <td className="px-4 py-2 border">{v.promotionName}</td>
+                                <td className="px-4 py-2 border">{v.voucherName}</td>
                                 <td className="px-4 py-2 border text-center">
                                     {formatDiscount(v.discountValue, v.discountType)}
                                 </td>
@@ -246,14 +258,14 @@ export default function VouchersPage() {
                                 <td className="px-4 py-2 border">
                                     <div className="flex items-center justify-center space-x-2">
                                         <Link
-                                            href={`/admin/promotion_management/vouchers/${v.id}`}
+                                            href={`/admin/promotion_management/vouchers/${v.voucherId}`}
                                             className="p-1 rounded hover:bg-orange-100 transition"
                                             title="Chỉnh sửa"
                                         >
                                             <Edit size={16} className="text-orange-500 hover:text-orange-600" />
                                         </Link>
                                         <button
-                                            onClick={() => handleDelete(v.id)}
+                                            onClick={() => handleDelete(v.voucherId)}
                                             className="p-1 rounded hover:bg-red-100 transition"
                                             title="Xóa"
                                         >
@@ -270,7 +282,9 @@ export default function VouchersPage() {
             </div>
 
             {/* Pagination */}
-            {!loading && totalPages > 1 && (
+            {(() => {
+                console.log('Render - totalPages:', totalPages, 'loading:', loading);
+                return !loading && totalPages > 1 ? (
                 <div className="flex justify-center items-center mt-4 gap-2">
                     <button
                         onClick={() => handlePageChange(currentPage - 1)}
@@ -298,7 +312,8 @@ export default function VouchersPage() {
                         Sau
                     </button>
                 </div>
-            )}
+                ) : null;
+            })()}
         </div>
     );
 }

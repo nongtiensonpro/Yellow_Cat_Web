@@ -33,6 +33,16 @@ public class ResponseEntityBuilder {
     }
 
     /**
+     * Tạo ResponseEntity thành công với thông báo mà không kèm dữ liệu
+     *
+     * @param message Thông báo
+     * @return ResponseEntity với ApiResponse
+     */
+    public static ResponseEntity<ApiResponse<Object>> success(String message) {
+        return new ResponseEntity<>(ApiResponse.success(message, null), HttpStatus.OK);
+    }
+
+    /**
      * Tạo ResponseEntity với trạng thái tạo thành công (201 Created)
      *
      * @param data Dữ liệu trả về

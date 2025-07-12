@@ -8,6 +8,8 @@ import { Session } from 'next-auth';
 const formatDateForInput = (dateString: string) =>
     dateString ? new Date(dateString).toISOString().slice(0, 16) : '';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
 interface CustomSession extends Session {
     accessToken?: string;
 }
@@ -19,18 +21,23 @@ export default function EditVoucherPage() {
     const id = Array.isArray(idRaw) ? idRaw[0] : idRaw;
     const numericId = id ? Number(id) : NaN;
 
-    const { data: session } = useSession() as { data: CustomSession | null };
+    const { data: session, status } = useSession() as { data: CustomSession | null; status: 'authenticated' | 'unauthenticated' | 'loading' };
 
     const [loading, setLoading] = useState(false);
     const [originalName, setOriginalName] = useState('');
     const [errors, setErrors] = useState<Record<string,string>>({});
     const [form, setForm] = useState({
         id: 0,
-        promotionCode: '',
+        voucherCode: '',
         promotionName: '',
         discountType: 'percentage',
         discountValue: 0,
         description: '',
+        minimumOrderValue: 0,
+        maximumDiscountValue: 0,
+        usageLimitPerUser: 1,
+        usageLimitTotal: 0,
+        isStackable: false,
         startDate: '',
         endDate: '',
         isActive: true,
@@ -40,31 +47,59 @@ export default function EditVoucherPage() {
     const isExpired = !!form.endDate && new Date(form.endDate) < new Date();
 
     useEffect(() => {
-        if (isNaN(numericId)) return;
+        if (isNaN(numericId) || status !== 'authenticated' || !session?.accessToken) return;
         (async () => {
             try {
-                const res = await fetch(`http://localhost:8080/api/promotions/${numericId}`);
-                const json = await res.json();
+                console.log('Fetching voucher with ID:', numericId);
+                const res = await fetch(`${API_URL}/api/vouchers/${numericId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${session?.accessToken}`,
+                    },
+                });
+                console.log('Response status:', res.status);
+                console.log('Response headers:', res.headers);
+                
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    console.log('Error response text:', errorText);
+                    throw new Error(`HTTP ${res.status}: ${errorText}`);
+                }
+                
+                const responseText = await res.text();
+                console.log('Response text:', responseText);
+                
+                if (!responseText) {
+                    throw new Error('Empty response from server');
+                }
+                
+                const json = JSON.parse(responseText);
                 const data = json.data ?? json;
+                console.log('Parsed data:', data);
                 setForm({
-                    id: data.id,
-                    promotionCode: data.promotionCode,
-                    promotionName: data.promotionName,
+                    id: data.voucherId,
+                    voucherCode: data.voucherCode,
+                    promotionName: data.voucherName,
                     discountType: data.discountType,
                     discountValue: data.discountValue,
                     description: data.description ?? '',
+                    minimumOrderValue: data.minimumOrderValue,
+                    maximumDiscountValue: data.maximumDiscountValue ?? 0,
+                    usageLimitPerUser: data.usageLimitPerUser,
+                    usageLimitTotal: data.usageLimitTotal ?? 0,
+                    isStackable: data.isStackable,
                     startDate: formatDateForInput(data.startDate),
                     endDate: formatDateForInput(data.endDate),
                     isActive: data.isActive,
                 });
-                setOriginalName(data.promotionName);
+                setOriginalName(data.voucherName || data.promotionName);
                             } catch (e: Error | unknown) {
+                console.error('Full error:', e);
                 const errorMessage = e instanceof Error ? e.message : 'Unknown error';
                 alert('Không tải được voucher: ' + errorMessage);
                 router.push('/admin/promotion_management/vouchers');
             }
         })();
-    }, [numericId, router]);
+    }, [numericId, router, status, session?.accessToken]);
 
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement|HTMLTextAreaElement|HTMLSelectElement>
@@ -80,7 +115,12 @@ export default function EditVoucherPage() {
     const checkDuplicateName = async (name: string): Promise<boolean> => {
         if (name === originalName) return false;
         const res = await fetch(
-            `http://localhost:8080/api/promotions/check-name?name=${encodeURIComponent(name)}`
+            `${API_URL}/api/vouchers/check-name?name=${encodeURIComponent(name)}`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${session?.accessToken}`,
+                },
+            }
         );
         const { exists } = await res.json();
         return exists;
@@ -111,6 +151,23 @@ export default function EditVoucherPage() {
             err.discountValue = 'Không vượt quá 100%';
         if (form.discountType === 'fixed_amount' && form.discountValue > 1_000_000)
             err.discountValue = 'Không vượt quá 1.000.000₫';
+
+        const voucherCodePattern = /^[A-Z0-9_-]{3,50}$/;
+
+        if (!form.voucherCode) err.voucherCode = 'Mã voucher bắt buộc.';
+        else if (!voucherCodePattern.test(form.voucherCode))
+            err.voucherCode = 'Mã chỉ gồm A-Z, 0-9, _, - (3-50 ký tự)';
+
+        if (form.minimumOrderValue <= 0) err.minimumOrderValue = 'Giá trị tối thiểu > 0';
+
+        if (form.maximumDiscountValue && form.maximumDiscountValue < 0)
+            err.maximumDiscountValue = 'Giảm tối đa không hợp lệ';
+
+        if (form.usageLimitPerUser && form.usageLimitPerUser < 1)
+            err.usageLimitPerUser = 'Số lần / người tối thiểu 1';
+
+        if (form.usageLimitTotal && form.usageLimitTotal < 0)
+            err.usageLimitTotal = 'Giới hạn tổng không hợp lệ';
         setErrors(err);
         return Object.keys(err).length === 0;
     };
@@ -120,13 +177,17 @@ export default function EditVoucherPage() {
         if (!(await validateForm())) return;
         setLoading(true);
         try {
-            const res = await fetch(`http://localhost:8080/api/promotions/${form.id}`, {
+            const res = await fetch(`${API_URL}/api/vouchers/${form.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${session?.accessToken}`,
                 },
-                body: JSON.stringify(form),
+                body: JSON.stringify({
+                    ...form,
+                    voucherCode: form.voucherCode,
+                    promotionName: form.promotionName,
+                }),
             });
             if (!res.ok) throw new Error(await res.text());
             alert('Cập nhật thành công!');
@@ -157,8 +218,8 @@ export default function EditVoucherPage() {
                 <div>
                     <Label text="Mã voucher" required />
                     <input
-                        name="promotionCode"
-                        value={form.promotionCode}
+                        name="voucherCode"
+                        value={form.voucherCode}
                         readOnly
                         className="w-full border bg-gray-100 px-3 py-2 rounded cursor-not-allowed"
                     />
@@ -223,6 +284,78 @@ export default function EditVoucherPage() {
                     {errors.discountValue && (
                         <p className="text-red-600 text-sm">{errors.discountValue}</p>
                     )}
+                </div>
+
+                {/* Minimum order value */}
+                <div>
+                    <Label text="Giá trị đơn tối thiểu (₫)" required />
+                    <input
+                        name="minimumOrderValue"
+                        type="number"
+                        value={form.minimumOrderValue}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded"
+                    />
+                    {errors.minimumOrderValue && (
+                        <p className="text-red-600 text-sm">{errors.minimumOrderValue}</p>
+                    )}
+                </div>
+
+                {/* Maximum discount value */}
+                <div>
+                    <Label text="Giảm tối đa (đ – có thể bỏ trống)" />
+                    <input
+                        name="maximumDiscountValue"
+                        type="number"
+                        value={form.maximumDiscountValue}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded"
+                    />
+                    {errors.maximumDiscountValue && (
+                        <p className="text-red-600 text-sm">{errors.maximumDiscountValue}</p>
+                    )}
+                </div>
+
+                {/* Usage limit per user */}
+                <div>
+                    <Label text="Số lần / người" />
+                    <input
+                        name="usageLimitPerUser"
+                        type="number"
+                        value={form.usageLimitPerUser}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded"
+                    />
+                    {errors.usageLimitPerUser && (
+                        <p className="text-red-600 text-sm">{errors.usageLimitPerUser}</p>
+                    )}
+                </div>
+
+                {/* Usage limit total */}
+                <div>
+                    <Label text="Giới hạn tổng" />
+                    <input
+                        name="usageLimitTotal"
+                        type="number"
+                        value={form.usageLimitTotal}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded"
+                    />
+                    {errors.usageLimitTotal && (
+                        <p className="text-red-600 text-sm">{errors.usageLimitTotal}</p>
+                    )}
+                </div>
+
+                {/* Is stackable */}
+                <div className="flex items-center space-x-3">
+                    <input
+                        type="checkbox"
+                        name="isStackable"
+                        checked={!!form.isStackable}
+                        onChange={handleChange}
+                        className="w-5 h-5"
+                    />
+                    <label className="text-sm">Cho phép cộng dồn</label>
                 </div>
 
                 {/* Ngày bắt đầu */}
