@@ -122,7 +122,9 @@ public class OrderOnlineService {
                 .customerNotes(request.getNote())
                 .orderItems(orderItems)
                 .orderDate(LocalDateTime.now())
-                .orderStatus("Pending")
+                .orderStatus(request.getOrderStatus() != null && !request.getOrderStatus().isBlank()
+                        ? request.getOrderStatus()
+                        : "Pending")
                 .isSyncedToGhtk(false)
                 .shippingMethod(shippingOption)
                 .build();
@@ -136,8 +138,8 @@ public class OrderOnlineService {
         // Tạo timeline
         OrderTimeline timeline = new OrderTimeline();
         timeline.setNote(request.getNote());
-        timeline.setFromStatus("Pending");
-        timeline.setToStatus("Pending");
+        timeline.setFromStatus(request.getOrderStatus());
+        timeline.setToStatus(request.getOrderStatus());
         timeline.setChangedAt(LocalDateTime.now());
         timeline.setOrderId(savedOrder.getOrderId()); // Dùng savedOrder mới có ID
         orderTimelineRepository.save(timeline);
@@ -311,5 +313,14 @@ public class OrderOnlineService {
                 .build();
     }
 
+    @Transactional
+    public List<OrderSummaryDTO> getOrdersByUser(UUID keycloakId) {
+        AppUser user = appUserRepository.findByKeycloakId(keycloakId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với keycloakId: " + keycloakId));
+
+        List<Order> orders = orderRepository.findByUserOrderByOrderDateDesc(user);
+
+        return orders.stream().map(this::convertToSummary).toList();
+    }
 
 }

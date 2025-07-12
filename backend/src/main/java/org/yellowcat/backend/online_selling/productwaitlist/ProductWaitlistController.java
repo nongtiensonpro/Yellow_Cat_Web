@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/waitlist")
@@ -16,6 +17,18 @@ public class ProductWaitlistController {
     public ResponseEntity<?> submit(@RequestBody WaitlistRequestDTO dto) {
         String code = waitlistService.submitRequest(dto);
         return ResponseEntity.ok("Đã ghi nhận yêu cầu. Mã theo dõi: " + code);
+    }
+
+
+    @GetMapping("/get/{keycloakID}")
+    public ResponseEntity<?> get(@PathVariable UUID keycloakID) {
+        List<ProductWaitlistRequest> list = waitlistService.getRequests(keycloakID);
+
+        List<ProductWaitlistResponseDTO> dtoList = list.stream()
+                .map(ProductWaitlistResponseDTO::new)
+                .toList();
+
+        return ResponseEntity.ok(dtoList);
     }
 
     @PutMapping("/{id}/notify")

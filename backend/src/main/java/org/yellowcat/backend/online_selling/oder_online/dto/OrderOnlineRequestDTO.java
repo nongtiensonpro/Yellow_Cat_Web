@@ -25,4 +25,6 @@ public class OrderOnlineRequestDTO {
     private String note;
     private boolean isSyncedToGhtk;
     private Integer shippingMethodId;
+    private String orderStatus;
+
 }

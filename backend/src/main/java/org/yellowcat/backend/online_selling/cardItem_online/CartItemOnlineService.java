@@ -1,6 +1,5 @@
 package org.yellowcat.backend.online_selling.cardItem_online;
 
-
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +21,9 @@ public class CartItemOnlineService {
     private final ProductVariantRepository variantRepository;
     private final CartItemOnlineRepository cartItemRepository;
     private final AppUserRepository userRepository;
+
+    private static final int MIN_STOCK_FOR_ONLINE = 10;
+    private static final int LARGE_QUANTITY_THRESHOLD = 20;
 
     @Transactional
     public void addToCart(CartItemRequestDTO dto) {
@@ -47,9 +49,8 @@ public class CartItemOnlineService {
             newQuantity += existingItem.get().getQuantity();
         }
 
-        if (variant.getQuantityInStock() < newQuantity) {
-            throw new RuntimeException("Số lượng yêu cầu vượt quá số lượng tồn kho. Còn lại: " + variant.getQuantityInStock());
-        }
+        // Kiểm tra tồn kho và các ràng buộc
+        validateQuantityRules(variant, newQuantity);
 
         if (existingItem.isPresent()) {
             CartItem item = existingItem.get();
@@ -64,20 +65,42 @@ public class CartItemOnlineService {
         }
     }
 
+    @Transactional
     public void updateQuantity(CartItemRequestDTO dto) {
         CartItem item = cartItemRepository.findById(dto.getCartItemId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy item"));
 
         ProductVariant variant = item.getVariant();
-        if (variant.getQuantityInStock() < dto.getQuantity()) {
-            throw new RuntimeException("Số lượng yêu cầu vượt quá số lượng tồn kho. Còn lại: " + variant.getQuantityInStock());
-        }
+
+        // Kiểm tra tồn kho và các ràng buộc
+        validateQuantityRules(variant, dto.getQuantity());
 
         item.setQuantity(dto.getQuantity());
         cartItemRepository.save(item);
     }
 
+    @Transactional
     public void removeItem(Integer cartItemId) {
         cartItemRepository.deleteById(cartItemId);
+    }
+
+    /**
+     * Kiểm tra tồn kho và áp dụng các quy tắc kinh doanh:
+     * - Ưu tiên bán offline nếu tồn kho thấp
+     * - Chặn mua lẻ số lượng quá lớn
+     * - Không vượt quá tồn kho
+     */
+    private void validateQuantityRules(ProductVariant variant, int requestedQuantity) {
+        if (variant.getQuantityInStock() < MIN_STOCK_FOR_ONLINE) {
+            throw new RuntimeException("Sản phẩm tạm hết hàng để ưu tiên bán tại cửa hàng. Vui lòng chọn sản phẩm khác.");
+        }
+
+        if (requestedQuantity >= LARGE_QUANTITY_THRESHOLD) {
+            throw new RuntimeException("Số lượng đặt hàng lớn. Vui lòng liên hệ tư vấn viên để được hỗ trợ.");
+        }
+
+        if (variant.getQuantityInStock() < requestedQuantity) {
+            throw new RuntimeException("Số lượng yêu cầu vượt quá tồn kho. Còn lại: " + variant.getQuantityInStock());
+        }
     }
 }

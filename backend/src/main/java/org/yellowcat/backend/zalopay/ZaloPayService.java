@@ -13,6 +13,7 @@ import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.yellowcat.backend.online_selling.PaymentStatus;
 import org.yellowcat.backend.product.order.Order;
@@ -49,6 +50,9 @@ public class ZaloPayService {
 
     @Autowired
     private OrderRepository orderRepository;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
     private final Mac hmacSHA256;
 
@@ -114,7 +118,7 @@ public class ZaloPayService {
         zaloRequest.put("description", "Thanh toán đơn hàng " + orderCode);
         zaloRequest.put("bank_code", "");
         zaloRequest.put("embed_data", embedData.toString());
-        zaloRequest.put("callback_url", "https://few-candles-heal.loca.lt/api/payment/callback");
+        zaloRequest.put("callback_url", "https://tangy-places-crash.loca.lt/api/payment/callback");
 
         // Tính MAC
         String data = APP_ID + "|" + appTransId + "|" + userId + "|" + amount + "|" + timestamp + "|" +
@@ -219,6 +223,18 @@ public class ZaloPayService {
                 payment.setZpTransId(zpTransId);
                 paymentRepository.save(payment);
 
+                // ✅ Gửi thông báo realtime qua WebSocket
+                messagingTemplate.convertAndSend(
+                        "/topic/payment-status/" + payment.getOrder().getOrderCode(),
+                        Map.of(
+                                "status", "PAID",
+                                "orderCode", payment.getOrder().getOrderCode(),
+                                "amount", payment.getAmount(),
+                                "message", "Thanh toán thành công đơn hàng #" + payment.getOrder().getOrderCode()
+                        )
+                );
+
+                System.out.println("Thông báo chạy qua hàm thanh toán thành công ");
                 Order order = payment.getOrder();
                 if (order != null && !"PAID".equals(order.getPaymentStatus())) {
                     order.setPaymentStatus(PaymentStatus.PAID);

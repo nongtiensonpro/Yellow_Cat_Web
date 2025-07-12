@@ -13,6 +13,7 @@ import org.yellowcat.backend.product.order.Order;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -84,6 +85,12 @@ public class OrderOnlineController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
         }
+    }
+
+    @GetMapping("/user-orders")
+    public ResponseEntity<List<OrderSummaryDTO>> getOrdersByUser(@RequestParam UUID keycloakId) {
+        List<OrderSummaryDTO> orders = orderOnlineService.getOrdersByUser(keycloakId);
+        return ResponseEntity.ok(orders);
     }
 
 }
