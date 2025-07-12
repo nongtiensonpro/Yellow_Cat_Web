@@ -8,6 +8,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
 import org.yellowcat.backend.product.promotionorder.dto.PromotionOrderRequest;
@@ -17,6 +19,7 @@ import org.yellowcat.backend.user.AppUserRepository;
 import org.yellowcat.backend.user.AppUserService;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/promotion-orders")
@@ -62,15 +65,13 @@ public class PromotionOrderController {
     @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
     @PostMapping
     ResponseEntity<?> createPromotionOrder(
-            @RequestBody PromotionOrderRequest request
-//            @AuthenticationPrincipal Jwt jwt
+            @RequestBody PromotionOrderRequest request,
+            @AuthenticationPrincipal Jwt jwt
     ) {
-//        UUID userId = UUID.fromString(jwt.getSubject());
+        UUID userId = UUID.fromString(jwt.getSubject());
 
-//        Optional<AppUser> appUser = appUserService.findByKeycloakId(userId);
+        Optional<AppUser> appUser = appUserService.findByKeycloakId(userId);
         AppUser user;
-
-        Optional<AppUser> appUser = appUserRepository.findById(1);
 
         if (appUser.isEmpty()) {
             return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "User not found", "User not found");
@@ -87,17 +88,14 @@ public class PromotionOrderController {
     @PutMapping("/{promotionOrderId}")
     ResponseEntity<?> updatePromotionOrder(
             @PathVariable(name = "promotionOrderId") Integer promotionOrderId,
-            @RequestBody PromotionOrderRequest request
-//            @AuthenticationPrincipal Jwt jwt
+            @RequestBody PromotionOrderRequest request,
+            @AuthenticationPrincipal Jwt jwt
     ) {
-//        UUID userId = UUID.fromString(jwt.getSubject());
-//
-//        Optional<AppUser> appUser = appUserService.findByKeycloakId(userId);
-//        AppUser user;
+        UUID userId = UUID.fromString(jwt.getSubject());
 
+        Optional<AppUser> appUser = appUserService.findByKeycloakId(userId);
         AppUser user;
 
-        Optional<AppUser> appUser = appUserRepository.findById(2);
         if (appUser.isEmpty()) {
             return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "User not found", "User not found");
         } else {
