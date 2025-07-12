@@ -259,4 +259,9 @@ public class ProductWaitlistService {
             System.err.println("Gửi email thất bại cho yêu cầu #" + request.getId() + ": " + e.getMessage());
         }
     }
+
+    @Transactional
+    public List<ProductWaitlistRequest> getRequests(UUID keyword) {
+        return repository.findAllByAppUserKeycloakId(keyword);
+    }
 }

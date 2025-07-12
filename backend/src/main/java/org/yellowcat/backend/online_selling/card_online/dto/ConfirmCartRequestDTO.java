@@ -11,4 +11,5 @@ import java.util.UUID;
 public class ConfirmCartRequestDTO {
     private UUID keycloakId;
     private List<ProductConfirmDTO> products;
+    private boolean allowWaitingOrder;
 }

@@ -133,4 +133,18 @@ public class OrderTimelineController {
         Set<String> statuses = orderTimelineService.getAllOrderStatuses();
         return ResponseEntity.ok(statuses);
     }
+
+    /**
+     * Gọi API test xử lý đơn hàng chờ nếu sản phẩm đủ tồn kho
+     */
+    @PostMapping("/check-waiting-orders")
+    public ResponseEntity<?> checkWaitingOrders(@RequestBody Map<String, List<Integer>> body) {
+        List<Integer> variantIds = body.get("variantIds");
+        if (variantIds == null || variantIds.isEmpty()) {
+            return ResponseEntity.badRequest().body("Thiếu variantIds trong request body");
+        }
+
+        orderTimelineService.checkWaitingOrdersAndUpdateStockForVariants(variantIds);
+        return ResponseEntity.ok("Đã kiểm tra và xử lý các đơn hàng chờ nếu đủ tồn kho.");
+    }
 }
