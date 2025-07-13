@@ -491,7 +491,7 @@ export default function AdminDashboard() {
             {/* Promotion Insights Section */}
             {!promotionLoading && promotionStats.totalPromotions > 0 && (
                 <div className="mb-8">
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">📈 Thống kê Khuyến mãi chi tiết</h2>
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">📈Khuyến mãi chi tiết</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                         <Card className="shadow-md bg-gradient-to-br from-blue-50 to-cyan-50 border-l-4 border-blue-500">
                             <CardHeader className="pb-2">
@@ -722,10 +722,6 @@ export default function AdminDashboard() {
                     </div>
                 </div>
             )}
-
-            <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
-                <StatisticsByDay/>
-            </div>
         </div>
     );
 }

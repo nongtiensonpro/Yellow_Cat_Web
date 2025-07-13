@@ -23,7 +23,7 @@ interface MenuItem {
     children?: MenuItem[];
 }
 const menuItems: MenuItem[] = [
-    { href: "/admin", icon: <LayoutDashboard size={18} />, label: "Thống kê" },
+    { href: "/admin/statistics", icon: <LayoutDashboard size={18} />, label: "Thống kê" },
     { href: "/staff/officesales", icon: <Store size={18} />, label: "Bán hàng tại quầy" },
     { href: "/admin/order/officesales", icon: <FileText size={18} />, label: "Hóa đơn" },
     {
@@ -56,7 +56,7 @@ export default function Sidebar() {
     return (
         <aside className="w-64 min-h-screen bg-white dark:bg-gray-900 shadow-md border-r border-gray-200 dark:border-gray-800 flex flex-col">
             {/* Logo SneakPeak */}
-            <Link href={'/'} className="flex items-center gap-3 px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+            <Link href={'/admin'} className="flex items-center gap-3 px-6 py-5 border-b border-gray-100 dark:border-gray-700">
                 <Image src="/images/logo.png" alt="SneakPeak Logo" width={32} height={32} />
                 <span className="text-xl font-bold text-orange-600">SneakPeak</span>
             </Link>
