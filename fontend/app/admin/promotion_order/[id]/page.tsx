@@ -45,7 +45,7 @@ export default function EditPromotionOrderPage() {
     const { data: session, status: sessionStatus } = useSession() as { data: CustomSession | null; status: string };
     const router = useRouter();
     const params = useParams();
-    const promotionId = params.id as string;
+    const promotionId = params?.id as string;
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
     
     const [promotion, setPromotion] = useState<PromotionOrder | null>(null);
@@ -105,8 +105,12 @@ export default function EditPromotionOrderPage() {
             }
         };
 
-        if (promotionId) {
+        if (promotionId && promotionId !== 'undefined') {
             loadPromotionData();
+        } else {
+            setDataLoading(false);
+            alert('ID chương trình khuyến mãi không hợp lệ');
+            router.push('/admin/promotion_order');
         }
     }, [promotionId, session, sessionStatus, API_URL, router]);
 
@@ -243,6 +247,19 @@ export default function EditPromotionOrderPage() {
                 <div className="flex items-center gap-2">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
                     <span className="text-gray-600">Đang tải dữ liệu...</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (!promotionId || promotionId === 'undefined') {
+        return (
+            <div className="p-6 bg-gray-50 min-h-screen">
+                <div className="text-center">
+                    <p className="text-gray-500">ID chương trình khuyến mãi không hợp lệ</p>
+                    <Link href="/admin/promotion_order" className="text-blue-500 hover:underline">
+                        Quay lại danh sách
+                    </Link>
                 </div>
             </div>
         );
