@@ -41,7 +41,7 @@ interface APIResponse {
 function formatDiscount(value: string, type: string): string {
     const numValue = parseFloat(value);
     if (isNaN(numValue)) return '0';
-    
+
     const t = type.toLowerCase();
     if (t === 'percentage' || t === '%') return `${numValue}%`;
     if (t === 'fixed' || t === 'fixed_amount' || t === 'vnđ') return `${numValue.toLocaleString()} ₫`;
@@ -93,8 +93,8 @@ export default function PromotionOrderManagementPage() {
                 headers: { Authorization: `Bearer ${session.accessToken}` },
             });
             // Cập nhật local state
-            setPromotions(prev => prev.map(p => 
-                p.promotionProgramId === id 
+            setPromotions(prev => prev.map(p =>
+                p.promotionProgramId === id
                     ? { ...p, isActive: !p.isActive }
                     : p
             ));
@@ -116,13 +116,13 @@ export default function PromotionOrderManagementPage() {
             const res = await fetch(`${API_URL}/api/promotion-orders?page=${page}&size=${itemsPerPage}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            
+
             if (!res.ok) {
                 throw new Error(`HTTP error! status: ${res.status}`);
             }
-            
+
             const data: APIResponse = await res.json();
-            
+
             if (data.data?.content) {
                 setPromotions(data.data.content);
                 setTotalPages(data.data.totalPages);
@@ -253,7 +253,7 @@ export default function PromotionOrderManagementPage() {
                         <th className="px-4 py-3 border">Mã KM</th>
                         <th className="px-4 py-3 border">Tên Chương trình</th>
                         <th className="px-4 py-3 border">Giá trị giảm</th>
-                        <th className="px-4 py-3 border">Tối thiểu</th>
+                        <th className="px-4 py-3 border">Đơn tối thiểu</th>
                         <th className="px-4 py-3 border">Bắt đầu</th>
                         <th className="px-4 py-3 border">Kết thúc</th>
                         <th className="px-4 py-3 border">Trạng thái</th>

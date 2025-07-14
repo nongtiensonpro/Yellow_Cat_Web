@@ -47,7 +47,7 @@ export default function EditPromotionOrderPage() {
     const params = useParams();
     const promotionId = params?.id as string;
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-    
+
     const [promotion, setPromotion] = useState<PromotionOrder | null>(null);
     const [formData, setFormData] = useState<PromotionOrderRequest>({
         promotionName: '',
@@ -70,7 +70,7 @@ export default function EditPromotionOrderPage() {
     useEffect(() => {
         const loadPromotionData = async () => {
             if (sessionStatus !== 'authenticated' || !session?.accessToken) return;
-            
+
             try {
                 const response = await fetch(`${API_URL}/api/promotion-orders/${promotionId}`, {
                     headers: { Authorization: `Bearer ${session.accessToken}` }
@@ -82,7 +82,7 @@ export default function EditPromotionOrderPage() {
 
                 const data = await response.json();
                 const promotionData = data.data || data;
-                
+
                 setPromotion(promotionData);
                 setFormData({
                     promotionName: promotionData.promotionName || '',
@@ -171,6 +171,14 @@ export default function EditPromotionOrderPage() {
                 newErrors.minimumOrderValue = 'Giá trị đơn hàng tối thiểu phải là số không âm';
             }
         }
+        // **QUY TẮC VALIDATION MỚI**
+        if ((formData.discountType === 'VNĐ' || formData.discountType === 'fixed_amount') && !newErrors.discountValue && !newErrors.minimumOrderValue) {
+            const discount = parseFloat(formData.discountValue);
+            const minOrder = parseFloat(formData.minimumOrderValue);
+            if (!isNaN(discount) && !isNaN(minOrder) && discount >= minOrder) {
+                newErrors.discountValue = 'Giá trị giảm phải nhỏ hơn đơn hàng tối thiểu.';
+            }
+        }
 
         if (formData.usageLimitPerUser < 1) {
             newErrors.usageLimitPerUser = 'Giới hạn sử dụng mỗi người phải >= 1';
@@ -186,7 +194,7 @@ export default function EditPromotionOrderPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!validateForm()) return;
         if (sessionStatus !== 'authenticated' || !session?.accessToken) {
             alert('Vui lòng đăng nhập để cập nhật chương trình khuyến mãi');
@@ -224,7 +232,7 @@ export default function EditPromotionOrderPage() {
             ...prev,
             [field]: value
         }));
-        
+
         // Clear error when user starts typing
         if (errors[field]) {
             setErrors(prev => ({
@@ -536,7 +544,7 @@ export default function EditPromotionOrderPage() {
                                 disabled={loading}
                                 className="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {loading ? 'Đang cập nhật...' : 'Cập nhật chương trình khuyến mãi'}
+                                {loading ? 'Đang cập nhật...' : 'Cập nhật'}
                             </button>
                         </div>
                     </form>
@@ -544,4 +552,4 @@ export default function EditPromotionOrderPage() {
             </div>
         </div>
     );
-} 
+}
