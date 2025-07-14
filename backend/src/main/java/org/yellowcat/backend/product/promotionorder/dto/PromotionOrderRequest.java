@@ -13,4 +13,7 @@ public class PromotionOrderRequest {
     private String minimumOrderValue; // Changed to String for easier JSON serialization
     private Integer usageLimitPerUser;
     private Integer usageLimitTotal;
+
+    // Thêm vào để nhận giá trị giảm tối đa khi loại là "percentage"
+    private String maxDiscountValue;
 }
