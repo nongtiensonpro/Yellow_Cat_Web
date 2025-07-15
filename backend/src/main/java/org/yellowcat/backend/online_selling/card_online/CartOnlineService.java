@@ -172,6 +172,7 @@
                         .productName(product.getProductName())
                         .quantity(item.getQuantity())
                         .price(variant.getPrice())
+                        .salePrice(variant.getSalePrice()) // Thêm dòng này
                         .colorName(variant.getColor().getName())
                         .sizeName(variant.getSize().getName())
                         .imageUrl(variant.getImageUrl())

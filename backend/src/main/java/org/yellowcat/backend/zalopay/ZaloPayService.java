@@ -118,7 +118,7 @@ public class ZaloPayService {
         zaloRequest.put("description", "Thanh toán đơn hàng " + orderCode);
         zaloRequest.put("bank_code", "");
         zaloRequest.put("embed_data", embedData.toString());
-        zaloRequest.put("callback_url", "https://tangy-places-crash.loca.lt/api/payment/callback");
+        zaloRequest.put("callback_url", "https://7eb7f76b102e.ngrok-free.app/api/payment/callback");
 
         // Tính MAC
         String data = APP_ID + "|" + appTransId + "|" + userId + "|" + amount + "|" + timestamp + "|" +

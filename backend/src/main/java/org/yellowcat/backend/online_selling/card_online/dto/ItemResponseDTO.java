@@ -13,6 +13,7 @@ public class ItemResponseDTO {
     private String productName;
     private int quantity;
     private BigDecimal price;
+    private BigDecimal salePrice; // Thêm trường này để trả về giá khuyến mãi
     private String colorName;
     private String sizeName;
     private String imageUrl;
