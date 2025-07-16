@@ -345,7 +345,6 @@ import Link from 'next/link';
 import { Edit, Trash2, Search, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { Session } from 'next-auth';
-import PromotionGuide from '../../../components/promotion/PromotionGuide';
 
 // --- Không thay đổi các interface ---
 interface CustomSession extends Session {
@@ -462,7 +461,8 @@ export default function PromotionManagementPage() {
                 const now = new Date();
                 const withinDate = now >= new Date(promo.startDate) && now <= new Date(promo.endDate);
                 const beforeStart = now < new Date(promo.startDate);
-                const statusKey = !promo.isActive && promo.isActive !== undefined ? 'inactive' : withinDate ? 'active' : beforeStart ? 'upcoming' : 'ended';
+                // SỬA LỖI #1: Thay 'ended' bằng 'inactive' để logic bộ lọc hoạt động đúng
+                const statusKey = !promo.isActive && promo.isActive !== undefined ? 'inactive' : withinDate ? 'active' : beforeStart ? 'upcoming' : 'inactive';
                 return filters.status === statusKey;
             })();
             return keywordMatch && statusMatch;
@@ -482,11 +482,10 @@ export default function PromotionManagementPage() {
         inactive: { label: 'Đã kết thúc', className: 'bg-gray-100 text-gray-800' },
         active: { label: 'Đang diễn ra', className: 'bg-green-100 text-green-800' },
         upcoming: { label: 'Sắp diễn ra', className: 'bg-yellow-100 text-yellow-800' },
-        // ended: { label: 'Đã kết thúc', className: 'bg-red-100 text-red-800' },
+        // Key 'ended' đã bị bình luận (comment out) nên gây ra lỗi
     };
 
     return (
-        // --- BẮT ĐẦU PHẦN THAY ĐỔI GIAO DIỆN ---
         <div className="p-4 md:p-8 space-y-8 bg-gray-50 min-h-screen">
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -494,7 +493,6 @@ export default function PromotionManagementPage() {
                     Quản lý đợt giảm giá
                 </h4>
                 <div className="flex items-center gap-3">
-                    {/*<PromotionGuide type="PRODUCT" />*/}
                     <Link
                         href="/admin/promotion_products/create"
                         className="inline-flex items-center justify-center bg-orange-500 text-white px-5 py-2.5 rounded-lg hover:bg-orange-600 transition-colors shadow-sm font-semibold"
@@ -507,18 +505,16 @@ export default function PromotionManagementPage() {
             {/* Filter Section */}
             <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {/* Input tìm kiếm với icon */}
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Tìm theo tên khuyến mãi..."
+                            placeholder="Tìm theo tên..."
                             className="w-full border-gray-300 rounded-lg bg-gray-50 pl-10 pr-4 py-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500 focus:border-transparent transition"
                             value={filters.keyword}
                             onChange={e => setFilters({ ...filters, keyword: e.target.value })}
                         />
                     </div>
-                    {/* Select box */}
                     <select
                         className="w-full border-gray-300 rounded-lg bg-gray-50 px-4 py-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500 focus:border-transparent transition"
                         value={filters.status}
@@ -527,10 +523,8 @@ export default function PromotionManagementPage() {
                         <option value="">Tất cả trạng thái</option>
                         <option value="active">Đang diễn ra</option>
                         <option value="upcoming">Sắp diễn ra</option>
-                        {/*<option value="ended">Đã kết thúc</option>*/}
                         <option value="inactive">Đã kết thúc</option>
                     </select>
-                    {/* Nút làm mới */}
                     <button
                         onClick={handleResetFilters}
                         className="flex items-center justify-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2.5 rounded-lg transition-colors font-medium"
@@ -548,8 +542,8 @@ export default function PromotionManagementPage() {
                         <thead className="bg-gray-50 text-gray-600">
                         <tr>
                             <th className="px-6 py-4 font-semibold">STT</th>
-                            <th className="px-6 py-4 font-semibold">Tên Khuyến Mãi</th>
-                            <th className="px-6 py-4 font-semibold text-center">Giá trị</th>
+                            <th className="px-6 py-4 font-semibold">Tên đợt giảm</th>
+                            <th className="px-6 py-4 font-semibold text-center">Giá trị giảm</th>
                             <th className="px-6 py-4 font-semibold text-center">Bắt đầu</th>
                             <th className="px-6 py-4 font-semibold text-center">Kết thúc</th>
                             <th className="px-6 py-4 font-semibold text-center">Trạng thái</th>
@@ -577,7 +571,8 @@ export default function PromotionManagementPage() {
                                 const now = new Date();
                                 const withinDate = now >= new Date(promo.startDate) && now <= new Date(promo.endDate);
                                 const beforeStart = now < new Date(promo.startDate);
-                                const statusKey = !promo.isActive && promo.isActive !== undefined ? 'inactive' : withinDate ? 'active' : beforeStart ? 'upcoming' : 'ended';
+                                // SỬA LỖI #2: Thay 'ended' bằng 'inactive' để không bị crash khi truy cập statusConfig
+                                const statusKey = !promo.isActive && promo.isActive !== undefined ? 'inactive' : withinDate ? 'active' : beforeStart ? 'upcoming' : 'inactive';
                                 const { label, className } = statusConfig[statusKey];
 
                                 return (

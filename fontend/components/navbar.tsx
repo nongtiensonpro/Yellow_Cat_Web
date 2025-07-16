@@ -90,7 +90,7 @@ export const Navbar = () => {
 
     const fetchUserProfile = useCallback(async (keycloakId: string) => {
         if (!session) return;
-        
+
         try {
             const extendedSession = session as unknown as ExtendedSession;
             const response = await fetch(`http://localhost:8080/api/users/keycloak-user/${keycloakId}`, {
@@ -107,7 +107,7 @@ export const Navbar = () => {
             }
 
             const apiResponse: ApiResponse = await response.json();
-            
+
             if (apiResponse.status >= 200 && apiResponse.status < 300 && apiResponse.data) {
                 setUserProfile(apiResponse.data);
             }
@@ -277,14 +277,14 @@ export const Navbar = () => {
         <HeroUINavbar maxWidth="full" position="static" isMenuOpen={isMenuOpen} onMenuOpenChange={setIsMenuOpen} className="py-4 flex-col">
             {/* Component ẩn để đồng bộ dữ liệu người dùng */}
             <CheckoutUser />
-            
+
             <div className="w-24 h-auto relative transform translate-x-20">
-                <Image 
-                    src="/images/img_1.png" 
-                    alt="Logo" 
+                <Image
+                    src="/images/img_1.png"
+                    alt="Logo"
                     width={96}
                     height={96}
-                    className="object-contain w-full h-full" 
+                    className="object-contain w-full h-full"
                     priority
                 />
             </div>

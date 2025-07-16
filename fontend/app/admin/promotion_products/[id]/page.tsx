@@ -551,7 +551,6 @@
 // }
 
 
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -653,9 +652,6 @@ export default function EditPromotionProductPage() {
 
             if (numValue <= 0 && value !== '') {
                 basicErrorMsg = 'Giá trị phải lớn hơn 0.';
-            // }
-            // else if (form.discountType === 'fixed_amount' && numValue > 1_000_000) {
-            //     basicErrorMsg = 'Không quá 1.000.000₫.';
             } else if (form.discountType === 'percentage' && numValue > 100) {
                 basicErrorMsg = 'Phần trăm không quá 100%.';
             }
@@ -683,27 +679,22 @@ export default function EditPromotionProductPage() {
         }));
     };
 
-    // SỬA ĐỔI: Hàm chọn theo từng biến thể (dùng cho bảng chi tiết)
     const handleToggleVariant = (vid: number) => {
         setSelectedVariants((prev) =>
             prev.includes(vid) ? prev.filter((x) => x !== vid) : [...prev, vid]
         );
     };
 
-    // HÀM MỚI: Chọn/Bỏ chọn tất cả biến thể của một sản phẩm
     const handleSelectProductGroup = (productName: string) => {
         const groupVariantIds = variants
             .filter(v => v.productName === productName)
             .map(v => v.variantId);
 
-        // Kiểm tra xem có bất kỳ biến thể nào của nhóm đã được chọn chưa
         const isAnySelected = groupVariantIds.some(id => selectedVariants.includes(id));
 
         if (isAnySelected) {
-            // Nếu có, loại bỏ tất cả biến thể của nhóm này khỏi danh sách đã chọn
             setSelectedVariants(prev => prev.filter(id => !groupVariantIds.includes(id)));
         } else {
-            // Nếu không, thêm tất cả biến thể của nhóm này vào
             setSelectedVariants(prev => [...new Set([...prev, ...groupVariantIds])]);
         }
     };
@@ -796,6 +787,13 @@ export default function EditPromotionProductPage() {
             e.endDate = 'Đến ngày phải sau Từ ngày.';
         }
 
+        // *** BẮT ĐẦU THAY ĐỔI: Thêm logic xác thực trạng thái ***
+        // Không cho phép kích hoạt một chương trình khuyến mãi đã hết hạn
+        if (form.isActive && form.endDate && new Date(form.endDate) < new Date()) {
+            e.isActive = 'Không thể kích hoạt đợt giảm giá đã hết hạn.';
+        }
+        // *** KẾT THÚC THAY ĐỔI ***
+
         const v = form.discountValue;
         if ((form.discountType === 'percentage' || form.discountType === 'fixed_amount') && v <= 0) {
             e.discountValue = 'Giá trị phải lớn hơn 0.';
@@ -803,9 +801,6 @@ export default function EditPromotionProductPage() {
         if (form.discountType === 'percentage' && v > 100) {
             e.discountValue = 'Phần trăm không quá 100%.';
         }
-        // if (form.discountType === 'fixed_amount' && v > 1_000_000) {
-        //     e.discountValue = 'Không quá 1.000.000₫.';
-        // }
 
         const priceError = validateDiscountAgainstPrice(form.discountType, form.discountValue, details);
         if (priceError) {
@@ -855,7 +850,6 @@ export default function EditPromotionProductPage() {
         }
     };
 
-    // LỌC RA DANH SÁCH SẢN PHẨM ĐỘC NHẤT ĐỂ HIỂN THỊ
     const uniqueProducts = variants
         .filter(v => v.productName.toLowerCase().includes(searchTerm.toLowerCase()))
         .filter((v, i, a) => a.findIndex(p => p.productName === v.productName) === i);
@@ -889,7 +883,6 @@ export default function EditPromotionProductPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid lg:grid-cols-2 gap-6">
                     <div className="space-y-4">
-                        {/* ... Các trường form ... */}
                         <div>
                             <label className="block mb-1 font-medium">Tên đợt giảm giá <span className="text-red-500">*</span></label>
                             <input name="promotionName" value={form.promotionName} onChange={handleChange} className="w-full border px-3 py-2 rounded" />
@@ -917,20 +910,22 @@ export default function EditPromotionProductPage() {
                             <input name="endDate" type="datetime-local" value={form.endDate} onChange={handleChange} className="w-full border px-3 py-2 rounded" />
                             {errors.endDate && <p className="text-red-600 text-sm">{errors.endDate}</p>}
                         </div>
-                        <div>
-                            <label className="block mb-1 font-medium">Trạng thái <span className="text-red-500">*</span></label>
-                            <select name="isActive" value={form.isActive ? 'active' : 'inactive'} onChange={handleChange} className="w-full border px-3 py-2 rounded">
-                                <option value="active">Đang hoạt động</option>
-                                <option value="inactive">Không hoạt động</option>
-                            </select>
-                        </div>
+                        {/*<div>*/}
+                        {/*    <label className="block mb-1 font-medium">Trạng thái <span className="text-red-500">*</span></label>*/}
+                        {/*    <select name="isActive" value={form.isActive ? 'active' : 'inactive'} onChange={handleChange} className="w-full border px-3 py-2 rounded">*/}
+                        {/*        <option value="active">Đang hoạt động</option>*/}
+                        {/*        <option value="inactive">Không hoạt động</option>*/}
+                        {/*    </select>*/}
+                        {/*    /!* *** BẮT ĐẦU THAY ĐỔI: Thêm hiển thị lỗi cho trạng thái *** *!/*/}
+                        {/*    {errors.isActive && <p className="text-red-600 text-sm">{errors.isActive}</p>}*/}
+                        {/*    /!* *** KẾT THÚC THAY ĐỔI *** *!/*/}
+                        {/*</div>*/}
                         <div className="flex gap-4">
                             <button type="button" onClick={() => router.back()} className="bg-gray-500 text-white px-6 py-2 rounded">Hủy</button>
                             <button type="submit" disabled={submitting} className="bg-blue-600 text-white px-6 py-2 rounded disabled:opacity-50">{submitting ? 'Đang cập nhật...' : 'Cập nhật'}</button>
                         </div>
                     </div>
 
-                    {/* SỬA ĐỔI BẢNG CHỌN SẢN PHẨM */}
                     <div>
                         <h3 className="font-medium mb-2">Chọn sản phẩm áp dụng</h3>
                         <input
