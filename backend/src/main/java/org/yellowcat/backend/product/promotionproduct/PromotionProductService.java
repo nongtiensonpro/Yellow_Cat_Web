@@ -103,6 +103,9 @@ public class PromotionProductService {
         if (promotionProductRepository.existsByPromotionNameIgnoreCase(normalizedName)) {
             throw new IllegalArgumentException("Tên đợt giảm giá đã tồn tại");
         }
+        if (normalizedName.matches("^\\d+$")) {
+            throw new IllegalArgumentException("Tên đợt giảm giá không thể chỉ chứa số.");
+        }
         AppUser user = appUserRepository.findByKeycloakId(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -148,7 +151,9 @@ public class PromotionProductService {
         if (promotionProductRepository.existsByPromotionNameIgnoreCaseAndIdNot(normalizedName, promotion.getId())) {
             throw new IllegalArgumentException("Tên đợt giảm giá đã tồn tại");
         }
-
+        if (normalizedName.matches("^\\d+$")) {
+            throw new IllegalArgumentException("Tên đợt giảm giá không thể chỉ chứa số.");
+        }
 
         // Reset salePrice cũ
         List<Integer> oldIds = promotionProductRepository.findVariantIdsByPromotionId(promotion.getId());
