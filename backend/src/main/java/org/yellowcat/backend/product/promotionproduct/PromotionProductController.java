@@ -1,5 +1,6 @@
 package org.yellowcat.backend.product.promotionproduct;
 
+import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -68,7 +69,7 @@ public class PromotionProductController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updatePromotion(
             @PathVariable Integer id,
-            @RequestBody CreatePromotionDTO dto,
+            @Valid @RequestBody CreatePromotionDTO dto,
             @AuthenticationPrincipal Jwt jwt
     ) {
         try {
@@ -83,7 +84,7 @@ public class PromotionProductController {
 
     @PostMapping
     public ResponseEntity<?> createPromotion(
-            @RequestBody CreatePromotionDTO dto,
+            @Valid @RequestBody CreatePromotionDTO dto,
             @AuthenticationPrincipal Jwt jwt
     ) {
         try {
