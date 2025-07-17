@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import {useState, useEffect, useRef, useCallback} from 'react';
+import {useRouter} from 'next/navigation';
+import {useSession} from 'next-auth/react';
 
 export default function CreateVoucherPage() {
     const router = useRouter();
-    const { data: session } = useSession();
+    const {data: session} = useSession();
     const [loading, setLoading] = useState(false);
 
     const [form, setForm] = useState({
@@ -30,7 +30,7 @@ export default function CreateVoucherPage() {
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
     ) => {
-        const { name, value, type } = e.target;
+        const {name, value, type} = e.target;
         const checked = 'checked' in e.target ? e.target.checked : false;
 
         let newValue: string | number | boolean = value;
@@ -41,7 +41,7 @@ export default function CreateVoucherPage() {
             ...prev,
             [name]: newValue,
         }));
-        setErrors((prev) => ({ ...prev, [name]: '' }));
+        setErrors((prev) => ({...prev, [name]: ''}));
     };
 
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -172,7 +172,7 @@ export default function CreateVoucherPage() {
         }
     };
 
-    const Label = ({ text, required }: { text: string; required?: boolean }) => (
+    const Label = ({text, required}: { text: string; required?: boolean }) => (
         <label className="block text-sm font-medium text-gray-700 mb-1">
             {text} {required && <span className="text-red-500">*</span>}
         </label>
@@ -183,7 +183,7 @@ export default function CreateVoucherPage() {
             <h2 className="text-2xl font-bold text-black-700 mb-6">Thêm khuyến mãi</h2>
             <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                    <Label text="Tên khuyến mãi" required />
+                    <Label text="Tên khuyến mãi" required/>
                     <input
                         name="promotionName"
                         value={form.promotionName}
@@ -192,21 +192,30 @@ export default function CreateVoucherPage() {
                     />
                     {errors.promotionName && <p className="text-red-600 text-sm">{errors.promotionName}</p>}
                 </div>
-
-                {/* Mô tả */}
                 <div>
-                    <Label text="Mô tả" />
-                    <textarea
-                        name="description"
-                        value={form.description}
+                    <Label text="Mã voucher" required/>
+                    <input
+                        name="voucherCode"
+                        value={form.voucherCode}
                         onChange={handleChange}
                         className="w-full border px-3 py-2 rounded"
-                        placeholder="Nhập mô tả cho voucher (tùy chọn)"
                     />
+                    {errors.voucherCode && <p className="text-red-600 text-sm">{errors.voucherCode}</p>}
                 </div>
+                {/*/!* Mô tả *!/*/}
+                {/*<div>*/}
+                {/*    <Label text="Mô tả" />*/}
+                {/*    <textarea*/}
+                {/*        name="description"*/}
+                {/*        value={form.description}*/}
+                {/*        onChange={handleChange}*/}
+                {/*        className="w-full border px-3 py-2 rounded"*/}
+                {/*        placeholder="Nhập mô tả cho voucher (tùy chọn)"*/}
+                {/*    />*/}
+                {/*</div>*/}
 
                 <div>
-                    <Label text="Loại giảm" required />
+                    <Label text="Loại giảm" required/>
                     <select
                         name="discountType"
                         value={form.discountType}
@@ -220,7 +229,7 @@ export default function CreateVoucherPage() {
                 </div>
 
                 <div>
-                    <Label text="Giá trị giảm" required />
+                    <Label text="Giá trị giảm" required/>
                     <input
                         name="discountValue"
                         type="number"
@@ -238,58 +247,9 @@ export default function CreateVoucherPage() {
                     {errors.discountValue && <p className="text-red-600 text-sm">{errors.discountValue}</p>}
                 </div>
 
-                <div>
-                    <Label text="Ngày bắt đầu" required />
-                    <input
-                        name="startDate"
-                        type="datetime-local"
-                        value={form.startDate}
-                        onChange={handleChange}
-                        className="w-full border px-3 py-2 rounded"
-                    />
-                    {errors.startDate && <p className="text-red-600 text-sm">{errors.startDate}</p>}
-                </div>
-
-                <div>
-                    <Label text="Ngày kết thúc" required />
-                    <input
-                        name="endDate"
-                        type="datetime-local"
-                        value={form.endDate}
-                        onChange={handleChange}
-                        className="w-full border px-3 py-2 rounded"
-                    />
-                    {errors.endDate && <p className="text-red-600 text-sm">{errors.endDate}</p>}
-                </div>
-
-                {/*<div className="flex items-center space-x-3">*/}
-                {/*    <input*/}
-                {/*        type="checkbox"*/}
-                {/*        name="isActive"*/}
-                {/*        checked={!!form.isActive}*/}
-                {/*        onChange={handleChange}*/}
-                {/*        className="w-5 h-5"*/}
-                {/*    />*/}
-                {/*    <label className="text-sm text-gray-700">*/}
-                {/*        {form.isActive ? 'Đang hoạt động' : 'Không hoạt động'}*/}
-                {/*    </label>*/}
-                {/*</div>*/}
-
-                {/* Voucher Code */}
-                <div>
-                    <Label text="Mã voucher" required />
-                    <input
-                        name="voucherCode"
-                        value={form.voucherCode}
-                        onChange={handleChange}
-                        className="w-full border px-3 py-2 rounded"
-                    />
-                    {errors.voucherCode && <p className="text-red-600 text-sm">{errors.voucherCode}</p>}
-                </div>
-
                 {/* Minimum Order Value */}
                 <div>
-                    <Label text="Giá trị đơn tối thiểu (₫)" required />
+                    <Label text="Giá trị đơn tối thiểu (₫)" required/>
                     <input
                         name="minimumOrderValue"
                         type="number"
@@ -302,7 +262,7 @@ export default function CreateVoucherPage() {
 
                 {/* Maximum Discount Value */}
                 <div>
-                    <Label text="Giảm tối đa (₫ - không bắt buộc)" />
+                    <Label text="Giảm tối đa (₫ - không bắt buộc)"/>
                     <input
                         name="maximumDiscountValue"
                         type="number"
@@ -310,12 +270,13 @@ export default function CreateVoucherPage() {
                         onChange={handleChange}
                         className="w-full border px-3 py-2 rounded"
                     />
-                    {errors.maximumDiscountValue && <p className="text-red-600 text-sm">{errors.maximumDiscountValue}</p>}
+                    {errors.maximumDiscountValue &&
+                        <p className="text-red-600 text-sm">{errors.maximumDiscountValue}</p>}
                 </div>
 
                 {/* Usage Limit Per User */}
                 <div>
-                    <Label text="Số lần / người" />
+                    <Label text="Số lần / người"/>
                     <input
                         name="usageLimitPerUser"
                         type="number"
@@ -325,10 +286,34 @@ export default function CreateVoucherPage() {
                     />
                     {errors.usageLimitPerUser && <p className="text-red-600 text-sm">{errors.usageLimitPerUser}</p>}
                 </div>
+                <div>
+                    <Label text="Ngày bắt đầu" required/>
+                    <input
+                        name="startDate"
+                        type="datetime-local"
+                        value={form.startDate}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded"
+                    />
+                    {errors.startDate && <p className="text-red-600 text-sm">{errors.startDate}</p>}
+                </div>
+
+                <div>
+                    <Label text="Ngày kết thúc" required/>
+                    <input
+                        name="endDate"
+                        type="datetime-local"
+                        value={form.endDate}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded"
+                    />
+                    {errors.endDate && <p className="text-red-600 text-sm">{errors.endDate}</p>}
+                </div>
+
 
                 {/* Usage Limit Total */}
                 <div>
-                    <Label text="Giới hạn tổng (bỏ trống = không giới hạn)" />
+                    <Label text="Số lượng"/>
                     <input
                         name="usageLimitTotal"
                         type="number"
@@ -351,7 +336,18 @@ export default function CreateVoucherPage() {
                     <label className="text-sm text-gray-700">Cho phép cộng dồn với chương trình khác</label>
                 </div>
 
-                <div className="flex justify-end">
+                <div className="flex items-center justify-end gap-4 pt-5 mt-5 border-t">
+                    {/* Nút Hủy (thay cho link "Quay lại") */}
+                    <button
+                        type="button"
+                        // Giả sử bạn có router từ useRouter() để xử lý việc quay lại trang trước
+                        onClick={() => router.back()}
+                        className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg"
+                    >
+                        Hủy
+                    </button>
+
+                    {/* Nút Lưu chính */}
                     <button
                         type="submit"
                         disabled={loading}
