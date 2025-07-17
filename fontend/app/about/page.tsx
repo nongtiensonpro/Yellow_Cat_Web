@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
+import Link from "next/link";
 
 // Icon component để dễ dàng tái sử dụng (lấy từ Heroicons)
 const IconCheck = () => (
@@ -136,12 +137,12 @@ export default function AboutPage() {
               <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
                 Bộ sưu tập mới nhất đang chờ bạn. Hãy tìm cho mình đôi giày hoàn hảo và tự tin sải bước.
               </p>
-              <a
+              <Link
                   href="/products" // Thay đổi link đến trang sản phẩm của bạn
                   className="inline-block bg-red-600 text-white font-bold py-3 px-8 rounded-lg text-lg uppercase tracking-wide hover:bg-red-700 transition-colors duration-300"
               >
                 Mua Sắm Ngay
-              </a>
+              </Link>
             </div>
           </div>
         </section>
