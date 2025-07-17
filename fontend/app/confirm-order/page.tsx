@@ -520,14 +520,14 @@ export default function ConfirmOrderPage() {
     useEffect(() => {
         // Khi reload hoặc đóng tab
         const onBeforeUnload = () => {
-            handleRevertStock();
+        handleRevertStock(); 
         };
-        window.addEventListener('beforeunload', onBeforeUnload);
+        window.addEventListener('beforeunload', onBeforeUnload); 
 
         // Khi tab bị ẩn (có thể là chuyển trang, đóng tab, v.v.)
         const onVisibilityChange = () => {
             if (document.visibilityState === 'hidden') {
-                handleRevertStock();
+            handleRevertStock();
             }
         };
         document.addEventListener('visibilitychange', onVisibilityChange);
@@ -537,7 +537,7 @@ export default function ConfirmOrderPage() {
             handleRevertStock();
             prevPathRef.current = pathname;
         }
-
+        
         return () => {
             window.removeEventListener('beforeunload', onBeforeUnload);
             document.removeEventListener('visibilitychange', onVisibilityChange);
@@ -545,9 +545,9 @@ export default function ConfirmOrderPage() {
     }, [pathname, handleRevertStock]);
 
     const handleGoBack = () => { 
-        handleRevertStock(); 
+            handleRevertStock();
         router.push('/shopping_cart'); 
-    };
+        };
 
     // Wrapper cho router.push để đảm bảo revert stock trước khi chuyển trang
     const navigateWithRevert = (path: string) => {

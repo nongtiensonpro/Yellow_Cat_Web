@@ -72,6 +72,13 @@ public class OrderTimelineService {
             refundIfNeeded(order, "Hoàn tiền hủy đơn hàng");
         }
 
+        // CHẶN Refunded nếu chưa thanh toán
+        if ("Refunded".equalsIgnoreCase(newStatus)) {
+            if (!"SUCCESS".equalsIgnoreCase(paymentStatus)) {
+                throw new RuntimeException("Chỉ đơn hàng đã thanh toán mới được chuyển sang trạng thái Refunded.");
+            }
+        }
+
         if ("Completed".equalsIgnoreCase(newStatus) && !"CustomerReceived".equalsIgnoreCase(currentStatus)) {
             throw new RuntimeException("Chỉ có thể hoàn tất đơn hàng sau khi khách hàng xác nhận đã nhận hàng.");
         } else if ("Completed".equalsIgnoreCase(newStatus)) {
@@ -186,15 +193,13 @@ public class OrderTimelineService {
         Map<String, Set<String>> transitions = new HashMap<>();
         transitions.put("Pending", Set.of("Confirmed", "Cancelled"));
         transitions.put("WaitingForStock", Set.of("Cancelled"));
-        transitions.put("Confirmed", Set.of("Packing", "Cancelled"));
-        transitions.put("Packing", Set.of("Shipping", "Cancelled"));
+        transitions.put("Confirmed", Set.of("Shipping", "Cancelled"));
         transitions.put("Shipping", Set.of("Delivered", "DeliveryFailed"));
         transitions.put("DeliveryFailed", Set.of("ReturnedToSeller"));
         transitions.put("Delivered", Set.of("CustomerReceived", "ReturnRequested"));
         transitions.put("CustomerReceived", Set.of("Completed"));
         transitions.put("ReturnRequested", Set.of("ReturnApproved", "ReturnRejected"));
-        transitions.put("ReturnApproved", Set.of("ReturnedToWarehouse"));
-        transitions.put("ReturnedToWarehouse", Set.of("Refunded"));
+        transitions.put("ReturnApproved", Set.of("Refunded"));
         transitions.put("ReturnRejected", Set.of("CustomerReceived"));
         transitions.put("ReturnedToSeller", Set.of("Refunded"));
         return transitions;

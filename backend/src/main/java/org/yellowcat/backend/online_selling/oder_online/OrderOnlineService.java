@@ -310,6 +310,7 @@ public class OrderOnlineService {
                 .paymentStatus(payment.getPaymentStatus())
                 .paymentMethod(payment.getPaymentMethod())
                 .items(itemDTOs)
+                .customerNotes(order.getCustomerNotes())
                 .build();
     }
 
