@@ -45,7 +45,9 @@ public class ProductService {
     private final ProductVariantHistoryRepository productVariantHistoryRepository;
     private final AppUserRepository appUserRepository;
 
-
+    public List<ProductListItemDTO> getTop5BestSellingProducts() {
+        return productRepository.findTop5BestSellingProducts();
+    }
     public Page<ProductListItemDTO> getProductsPaginated(Pageable pageable) {
         int pageSize = pageable.getPageSize();
         int offset = (int) pageable.getOffset();

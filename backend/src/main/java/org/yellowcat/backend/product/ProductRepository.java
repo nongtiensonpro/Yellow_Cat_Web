@@ -13,6 +13,29 @@ import java.util.List;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Integer> {
+
+    @Query(nativeQuery = true, value = """
+            SELECT
+                p.product_id,
+                p.product_name,
+                p.purchases,
+                c.category_name,
+                b.brand_name,
+                b.logo_public_id,
+                (SELECT MIN(pv.price) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS min_price,
+                (SELECT MIN(pv.sale_price) FROM Product_Variants pv WHERE pv.product_id = p.product_id AND pv.sale_price > 0.00 AND pv.sale_price IS NOT NULL) AS min_sale_price,
+                (SELECT SUM(pv.quantity_in_stock) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS total_stock,
+                p.thumbnail
+            FROM Products p
+            LEFT JOIN Categories c ON p.category_id = c.category_id
+            LEFT JOIN Brands b ON p.brand_id = b.brand_id
+            WHERE p.is_active = true AND p.purchases > 0  -- <<< THÊM ĐIỀU KIỆN NÀY VÀO
+            ORDER BY p.purchases DESC
+            LIMIT 5
+            """)
+    List<ProductListItemDTO> findTop5BestSellingProducts();
+
+
     @Query(value = """
             SELECT
                 p.product_id as productId,
