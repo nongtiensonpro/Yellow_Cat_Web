@@ -503,6 +503,8 @@
 // export default ProductListPage;
 
 
+
+
 "use client";
 
 import React, {useEffect, useState, useMemo} from 'react';
@@ -628,7 +630,6 @@ const ProductCard: React.FC<{ product: Product }> = ({product}) => {
                                 <BuildingStorefrontIcon className="w-16 h-16"/>
                             </div>
                         )}
-                        {/* Huy hiệu % giảm giá đã được chuyển xuống phần giá */}
                     </div>
                 </CardHeader>
                 <CardBody className="p-3 space-y-1.5">
@@ -643,7 +644,6 @@ const ProductCard: React.FC<{ product: Product }> = ({product}) => {
                         {product.productName}
                     </h4>
 
-                    {/* THAY ĐỔI: Hiển thị % giảm giá màu đỏ bên cạnh giá gốc */}
                     <div className="flex items-baseline gap-2 pt-0.5">
                         {product.minSalePrice != null && product.minPrice != null && product.minSalePrice < product.minPrice ? (
                             <>
@@ -694,6 +694,7 @@ const ProductListPage = () => {
             setLoading(true);
             setError(null);
             try {
+                // ... (phần fetch data không thay đổi)
                 const [productsRes, brandsRes, colorsRes] = await Promise.all([
                     fetch('http://localhost:8080/api/products'),
                     fetch('http://localhost:8080/api/brands?page=0&size=1000'),
@@ -729,7 +730,6 @@ const ProductListPage = () => {
                 } else {
                     throw new Error(productsApiResponse.message || 'Lỗi không xác định khi tải sản phẩm');
                 }
-
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi không mong muốn');
             } finally {
@@ -742,6 +742,10 @@ const ProductListPage = () => {
     const displayedProducts = useMemo(() => {
         return products
             .filter(product => {
+                // ==================== THAY ĐỔI Ở ĐÂY ====================
+                // 1. Thêm điều kiện kiểm tra sản phẩm còn hàng
+                const isInStock = product.totalStock !== 0;
+
                 const matchesSearch = product.productName.toLowerCase().includes(searchTerm.toLowerCase());
                 const matchesBrand = selectedBrands.length === 0 || selectedBrands.includes(product.brandName);
                 const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(product.categoryName);
@@ -752,7 +756,10 @@ const ProductListPage = () => {
                 });
                 const matchesSize = selectedSizes.length === 0 || selectedSizes.some(size => product.sizes?.includes(parseInt(size)));
                 const matchesColor = selectedColors.length === 0 || product.colors?.some(colorName => selectedColors.includes(colorName));
-                return matchesSearch && matchesBrand && matchesCategory && matchesPrice && matchesSize && matchesColor;
+
+                // 2. Thêm `isInStock` vào điều kiện return cuối cùng
+                return isInStock && matchesSearch && matchesBrand && matchesCategory && matchesPrice && matchesSize && matchesColor;
+                // =========================================================
             })
             .sort((a, b) => {
                 switch (sortOption) {
@@ -775,11 +782,13 @@ const ProductListPage = () => {
     if (loading) { /* ... Skeleton UI ... */ }
     if (error) { /* ... Error UI ... */ }
 
+    // Phần JSX return không có gì thay đổi
     return (
         <div className="bg-default-50">
             <div className="container mx-auto max-w-screen-2xl px-4 py-8">
                 <div className="flex flex-col md:flex-row md:items-start gap-8">
                     <aside className="w-full md:w-1/4 lg:w-72 md:sticky md:top-8">
+                        {/* ... Các bộ lọc ... */}
                         <div className="space-y-4">
                             <Input aria-label="Tìm kiếm" placeholder="Tìm kiếm tên giày..." value={searchTerm} onValueChange={setSearchTerm}
                                    startContent={<MagnifyingGlassIcon className="w-5 h-5 text-default-400"/>}
@@ -878,3 +887,4 @@ const ProductListPage = () => {
 };
 
 export default ProductListPage;
+
