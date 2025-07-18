@@ -863,7 +863,10 @@ const ProductList = () => {
                 <div
                     ref={allProductsScrollRef}
                     className="flex gap-6 overflow-x-auto pb-4 -mb-4 scroll-smooth"
-                    style={{ scrollbarWidth: 'none', '-ms-overflow-style': 'none' }} // Ẩn thanh cuộn
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    role="region"
+                    aria-label="Product list"
+                    tabIndex={0}
                 >
                     {loading
                         ? Array.from({ length: 8 }).map((_, index) => (
