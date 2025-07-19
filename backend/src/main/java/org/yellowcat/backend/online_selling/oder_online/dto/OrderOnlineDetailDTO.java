@@ -28,6 +28,7 @@ public class OrderOnlineDetailDTO {
     private BigDecimal finalAmount;
     private String paymentStatus;
     private String paymentMethod;
+    private String customerNotes;
 
     private List<OrderItemOnlineDTO> items;
 }

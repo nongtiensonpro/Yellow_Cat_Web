@@ -80,6 +80,8 @@ dependencies {
     //gmail
     implementation 'org.springframework.boot:spring-boot-starter-mail'
 
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
 }
 tasks.withType(Test).configureEach {
     useJUnitPlatform()

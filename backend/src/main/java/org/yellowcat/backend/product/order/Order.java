@@ -109,4 +109,6 @@ public class Order { // Tên class là Order (số ít)
     public boolean isPaid() {
         return PaymentStatus.PAID.equals(this.paymentStatus);
     }
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 }
