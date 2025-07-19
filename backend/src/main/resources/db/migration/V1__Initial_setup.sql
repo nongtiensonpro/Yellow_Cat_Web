@@ -172,6 +172,7 @@ CREATE TABLE orders
     customer_notes      TEXT,
     is_synced_to_ghtk   BOOLEAN                 DEFAULT FALSE, -- Ghi nhận đơn đã gửi lên GHTK chưa
     updated_at          TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
+    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (app_user_id) REFERENCES app_users (app_user_id) ON DELETE SET NULL,
     FOREIGN KEY (shipping_address_id) REFERENCES addresses (address_id),
     FOREIGN KEY (shipping_method_id) REFERENCES shipping_methods (shipping_method_id)
@@ -824,4 +825,22 @@ CREATE TABLE product_waitlist_items
     waitlist_request_id INT REFERENCES product_waitlist_request (id) ON DELETE CASCADE,
     product_variant_id  INT REFERENCES product_variants (variant_id),
     desired_quantity    INT
+);
+
+CREATE TABLE chat_session (
+                              id SERIAL PRIMARY KEY,
+                              customer_id INT REFERENCES app_users (app_user_id),
+                              staff_id INT REFERENCES app_users (app_user_id),
+                              status VARCHAR(50),
+                              created_at TIMESTAMP,
+                              assigned_at TIMESTAMP
+);
+
+CREATE TABLE chat_message (
+                              id SERIAL PRIMARY KEY,
+                              session_id BIGINT REFERENCES chat_session(id) ON DELETE CASCADE,
+                              sender_id INT REFERENCES app_users (app_user_id),
+                              content TEXT,
+                              sender_type VARCHAR(50),
+                              timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
