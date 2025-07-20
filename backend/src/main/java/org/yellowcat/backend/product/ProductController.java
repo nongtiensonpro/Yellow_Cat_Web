@@ -16,6 +16,7 @@ import org.yellowcat.backend.product.dto.*;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserService;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -29,6 +30,18 @@ public class ProductController {
     public ProductController(ProductService productService, AppUserService appUserService) {
         this.productService = productService;
         this.appUserService = appUserService;
+    }
+
+    @GetMapping("/top-selling")
+    @Operation(summary = "Get top 5 best-selling products", description = "Returns a list of the top 5 products ordered by purchase count.")
+    public ResponseEntity<?> getTopSellingProducts() {
+        try {
+            List<ProductListItemDTO> topProducts = productService.getTop5BestSellingProducts();
+            return ResponseEntityBuilder.success(topProducts);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Error retrieving top-selling products", e.getMessage());
+        }
     }
 
     @GetMapping

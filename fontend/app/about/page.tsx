@@ -1,120 +1,152 @@
 "use client";
 
 import React from 'react';
-import Image from 'next/image'; // Để tối ưu hóa hình ảnh
+import Image from 'next/image';
+import Link from "next/link";
+
+// Icon component để dễ dàng tái sử dụng (lấy từ Heroicons)
+const IconCheck = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-red-600">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+);
+
+const IconCollection = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-red-600">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L12 15.25l5.571-3M6.429 9.75L12 6.75l5.571 3" />
+    </svg>
+);
+
+const IconSupport = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-red-600">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m12 0v-1.5a6 6 0 00-6-6v0a6 6 0 00-6 6v1.5m12 0v-1.5a6 6 0 00-6-6v0a6 6 0 00-6 6v1.5" />
+    </svg>
+);
+
 
 export default function AboutPage() {
   return (
-      // Loại bỏ 'container' và 'mx-auto'
-      <div className="w-full bg-gray-50"> {/* Sử dụng w-full để tràn chiều rộng */}
-        {/* Thêm một div bọc ngoài với padding để kiểm soát khoảng cách từ các cạnh */}
-        <div className="px-4 py-12 md:px-8 md:py-16 lg:px-16"> {/* Điều chỉnh padding ở đây */}
-          {/* Phần tiêu đề */}
-          <h1 className="text-4xl md:text-5xl font-extrabold text-center mb-12 text-gray-900 drop-shadow-sm">
-            VỀ CHÚNG TÔI - SNEAKERPEAK
-          </h1>
+      <div className="bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-          {/* Phần giới thiệu chung và hình ảnh chính */}
-          {/* Để phần này tràn ra, chúng ta cần đảm bảo flex container không bị giới hạn quá mức */}
-          <div className="flex flex-col md:flex-row items-center justify-center gap-10 mb-16 max-w-7xl mx-auto"> {/* Thêm max-w và mx-auto để nội dung chính giữa nhưng không bị quá rộng trên màn hình lớn */}
-            <div className="md:w-1/2 flex justify-center">
-              <div className="relative w-full max-w-lg h-80 md:h-96 rounded-xl overflow-hidden shadow-2xl transform hover:scale-105 transition-transform duration-500 ease-in-out">
-                <Image
-                    src="/images/img.png"
-                    alt="SneakerPeak Team"
-                    layout="fill"
-                    objectFit="cover"
-                    className="transition-opacity duration-500"
-                />
-              </div>
-            </div>
-            <div className="md:w-1/2 text-center md:text-left">
-              <h2 className="text-3xl md:text-4xl font-bold mb-5 text-gray-800 leading-tight">
-                Hành Trình Khẳng Định Phong Cách <br className="hidden md:block" /> Cùng <span className="text-red-600">SneakerPeak</span>
-              </h2>
-              <p className="text-lg leading-relaxed text-gray-700 mb-4 max-w-prose mx-auto md:mx-0">
-                Tại <span className="font-bold text-red-600">SneakerPeak</span>, chúng tôi không chỉ bán giày; chúng tôi kiến tạo phong cách, thổi bùng đam mê và đồng hành cùng bạn trên mọi nẻo đường. Từ những bước chân đầu tiên vào năm 2025, SneakerPeak đã lớn mạnh trở thành điểm đến tin cậy cho những tín đồ sneaker tại Việt Nam, mang đến bộ sưu tập giày chính hãng đa dạng và độc đáo nhất.
-              </p>
-              <p className="text-lg leading-relaxed text-gray-700 max-w-prose mx-auto md:mx-0">
-                Chúng tôi tự hào là cầu nối giữa bạn và những đôi giày mơ ước, từ những phiên bản kinh điển vượt thời gian đến những mẫu phát hành giới hạn hot nhất thị trường.
-              </p>
-            </div>
-          </div>
-
-          {/* Sứ mệnh & Tầm nhìn */}
-          <div className="bg-gradient-to-r from-gray-100 to-white p-10 rounded-2xl shadow-xl mb-16 border border-gray-200 max-w-7xl mx-auto"> {/* Thêm max-w và mx-auto */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              <div className="p-6 bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300 transform hover:-translate-y-1">
-                <h3 className="text-2xl font-bold mb-4 text-gray-800 border-b-2 border-red-500 pb-2 inline-block">
-                  Sứ Mệnh Của Chúng Tôi
-                </h3>
-                <p className="text-gray-700 leading-relaxed text-base">
-                  Sứ mệnh của SneakerPeak là mang đến cho khách hàng trải nghiệm mua sắm giày authentic tuyệt vời nhất, nơi mỗi đôi giày không chỉ là sản phẩm mà còn là câu chuyện, là tuyên ngôn cá tính. Chúng tôi cam kết 100% sản phẩm chính hãng, dịch vụ tận tâm và chính sách hậu mãi minh bạch.
+          {/* === SECTION 1: HERO === */}
+          <section className="py-16 md:py-24">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+              <div className="order-2 md:order-1 text-center md:text-left">
+                <h1 className="text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight">
+                  Nơi Đam Mê Gặp Gỡ <span className="text-red-600">Phong Cách</span>.
+                </h1>
+                <p className="mt-6 text-lg text-gray-600 max-w-lg mx-auto md:mx-0">
+                  Chào mừng bạn đến với <span className="font-semibold text-red-600">SneakerPeak</span>. Chúng tôi không chỉ bán giày, mà còn lan tỏa niềm đam mê và đồng hành cùng bạn trên hành trình khẳng định cá tính qua từng đôi sneaker.
+                </p>
+                <p className="mt-4 text-lg text-gray-600 max-w-lg mx-auto md:mx-0">
+                  Khởi đầu từ năm 2025, SneakerPeak tự hào là điểm đến uy tín cho cộng đồng yêu giày Việt Nam.
                 </p>
               </div>
-              <div className="p-6 bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300 transform hover:-translate-y-1">
-                <h3 className="text-2xl font-bold mb-4 text-gray-800 border-b-2 border-blue-500 pb-2 inline-block">
-                  Tầm Nhìn Của Chúng Tôi
-                </h3>
-                <p className="text-gray-700 leading-relaxed text-base">
-                  Chúng tôi hướng tới việc trở thành hệ thống bán lẻ sneaker  hàng đầu Việt Nam, là biểu tượng của sự tin cậy, chất lượng và là nguồn cảm hứng bất tận cho cộng đồng yêu giày.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Tại sao chọn SneakerPeak? */}
-          <div className="mb-16 max-w-7xl mx-auto"> {/* Thêm max-w và mx-auto */}
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-10 text-gray-800">
-              Tại Sao Bạn Nên Chọn SneakerPeak?
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="text-center p-8 bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex flex-col items-center">
-                <div className="bg-red-100 rounded-full p-4 mb-4">
-                  <svg className="h-12 w-12 text-red-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+              <div className="order-1 md:order-2">
+                <div className="relative w-full h-80 md:h-96 rounded-2xl overflow-hidden shadow-lg transform transition-transform duration-500">
+                  <Image
+                      src="/images/img.png" // Đảm bảo đường dẫn hình ảnh chính xác
+                      alt="Đội ngũ SneakerPeak"
+                      layout="fill"
+                      objectFit="cover"
+                  />
                 </div>
-                <h3 className="text-xl font-bold mb-3 text-gray-900">100% Chính Hãng</h3>
-                <p className="text-gray-700 leading-relaxed text-sm">
-                  Mỗi sản phẩm tại SneakerPeak đều được kiểm tra kỹ lưỡng bởi đội ngũ chuyên gia, đảm bảo nguồn gốc rõ ràng và chất lượng tuyệt đối.
-                </p>
-              </div>
-              <div className="text-center p-8 bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex flex-col items-center">
-                <div className="bg-blue-100 rounded-full p-4 mb-4">
-                  <svg className="h-12 w-12 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-.22 13.91l-3.56-3.56.91-.91 2.65 2.65L16.48 9l.91.91-4.22 4.22c-.1.1-.24.15-.38.15s-.28-.05-.38-.15z"/></svg>
-                </div>
-                <h3 className="text-xl font-bold mb-3 text-gray-900">Bộ Sưu Tập Đa Dạng</h3>
-                <p className="text-gray-700 leading-relaxed text-sm">
-                  Luôn cập nhật những mẫu mã mới nhất, độc đáo nhất từ các thương hiệu hàng đầu thế giới như Nike, Adidas, Jordan, New Balance,...
-                </p>
-              </div>
-              <div className="text-center p-8 bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex flex-col items-center">
-                <div className="bg-green-100 rounded-full p-4 mb-4">
-                  <svg className="h-12 w-12 text-green-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm-.01-5.5C10.79 9.5 10 8.71 10 7.72 10 6.73 10.79 6 11.78 6s1.78.73 1.78 1.72c0 .99-.79 1.78-1.78 1.78z"/></svg>
-                </div>
-                <h3 className="text-xl font-bold mb-3 text-gray-900">Dịch Vụ Chuyên Nghiệp</h3>
-                <p className="text-gray-700 leading-relaxed text-sm">
-                  Đội ngũ tư vấn tận tình, hỗ trợ nhanh chóng và chính sách đổi trả, bảo hành rõ ràng, mang lại sự yên tâm tuyệt đối cho khách hàng.
-                </p>
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Lời kêu gọi hành động */}
-          {/*<div className="text-center bg-red-600 text-white p-10 rounded-2xl shadow-xl flex flex-col items-center justify-center max-w-7xl mx-auto"> /!* Thêm max-w và mx-auto *!/*/}
-          {/*  <h2 className="text-3xl md:text-4xl font-bold mb-4">*/}
-          {/*    Sẵn Sàng Khám Phá Phong Cách Riêng Của Bạn?*/}
-          {/*  </h2>*/}
-          {/*  <p className="text-lg md:text-xl mb-8 max-w-3xl">*/}
-          {/*    Hãy đến với SneakerPeak để tìm cho mình đôi giày hoàn hảo, nâng tầm diện mạo và tự tin sải bước trên con đường khẳng định cá tính riêng!*/}
-          {/*  </p>*/}
-          {/*  <a*/}
-          {/*      href="/products"*/}
-          {/*      className="inline-block bg-white text-red-700 font-extrabold py-4 px-10 rounded-full text-xl uppercase tracking-wide hover:bg-gray-100 hover:text-red-800 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg"*/}
-          {/*  >*/}
-          {/*    MUA SẮM NGAY*/}
-          {/*  </a>*/}
-          {/*</div>*/}
         </div>
+
+        {/* === SECTION 2: WHY CHOOSE US? === */}
+        <section className="py-16 md:py-24 bg-slate-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">
+                Vì Sao Chọn SneakerPeak?
+              </h2>
+              <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
+                Chúng tôi mang đến sự an tâm tuyệt đối và trải nghiệm mua sắm đẳng cấp mà bạn xứng đáng có được.
+              </p>
+            </div>
+
+            <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+              {/* Feature 1 */}
+              <div className="p-8">
+                <div className="flex justify-center items-center mb-4">
+                  <IconCheck />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900">100% Chính Hãng</h3>
+                <p className="mt-2 text-gray-600">
+                  Mọi sản phẩm đều được xác thực bởi chuyên gia, cam kết nguồn gốc và chất lượng tuyệt đối.
+                </p>
+              </div>
+              {/* Feature 2 */}
+              <div className="p-8">
+                <div className="flex justify-center items-center mb-4">
+                  <IconCollection />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900">Bộ Sưu Tập Độc Đáo</h3>
+                <p className="mt-2 text-gray-600">
+                  Luôn cập nhật các phiên bản giới hạn và những mẫu giày hot nhất từ các thương hiệu hàng đầu.
+                </p>
+              </div>
+              {/* Feature 3 */}
+              <div className="p-8">
+                <div className="flex justify-center items-center mb-4">
+                  <IconSupport />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900">Dịch Vụ Tận Tâm</h3>
+                <p className="mt-2 text-gray-600">
+                  Đội ngũ tư vấn chuyên nghiệp, sẵn sàng hỗ trợ bạn tìm kiếm đôi giày hoàn hảo nhất.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* === SECTION 3: MISSION & VISION === */}
+        <section className="py-16 md:py-24">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-2 gap-12">
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900 border-l-4 border-red-600 pl-4">
+                Sứ Mệnh
+              </h3>
+              <p className="mt-4 text-gray-600 leading-relaxed">
+                Mang đến một không gian mua sắm giày authentic đáng tin cậy, nơi mỗi sản phẩm là một câu chuyện và là tuyên ngôn cho phong cách riêng của bạn. Chúng tôi cam kết về tính chính hãng, dịch vụ tận tâm và chính sách hậu mãi rõ ràng.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900 border-l-4 border-red-600 pl-4">
+                Tầm Nhìn
+              </h3>
+              <p className="mt-4 text-gray-600 leading-relaxed">
+                Trở thành hệ thống bán lẻ sneaker hàng đầu Việt Nam, một biểu tượng của sự uy tín, chất lượng và là nguồn cảm hứng vô tận cho cộng đồng đam mê giày thể thao trên cả nước.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* === SECTION 4: CALL TO ACTION === */}
+        <section className="bg-white pb-16 md:pb-24">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="bg-gray-900 text-white text-center rounded-2xl p-12">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                Sẵn Sàng Khám Phá?
+              </h2>
+              <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
+                Bộ sưu tập mới nhất đang chờ bạn. Hãy tìm cho mình đôi giày hoàn hảo và tự tin sải bước.
+              </p>
+              <Link
+                  href="/products" // Thay đổi link đến trang sản phẩm của bạn
+                  className="inline-block bg-red-600 text-white font-bold py-3 px-8 rounded-lg text-lg uppercase tracking-wide hover:bg-red-700 transition-colors duration-300"
+              >
+                Mua Sắm Ngay
+              </Link>
+            </div>
+          </div>
+        </section>
+
       </div>
   );
 }

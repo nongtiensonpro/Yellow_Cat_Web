@@ -127,6 +127,7 @@ public class OrderOnlineService {
                         : "Pending")
                 .isSyncedToGhtk(false)
                 .shippingMethod(shippingOption)
+                .createdAt(LocalDateTime.now())
                 .build();
 
         // Gán order vào từng orderItem trước khi lưu
@@ -141,7 +142,7 @@ public class OrderOnlineService {
         timeline.setFromStatus(request.getOrderStatus());
         timeline.setToStatus(request.getOrderStatus());
         timeline.setChangedAt(LocalDateTime.now());
-        timeline.setOrderId(savedOrder.getOrderId()); // Dùng savedOrder mới có ID
+        timeline.setOrderId(savedOrder.getOrderId());
         orderTimelineRepository.save(timeline);
 
         //Lưu phương thức thanh toán

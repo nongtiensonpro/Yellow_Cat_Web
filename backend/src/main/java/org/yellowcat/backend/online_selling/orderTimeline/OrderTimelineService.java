@@ -17,6 +17,7 @@ import org.yellowcat.backend.zalopay.ZaloPayService;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 
 @Service
@@ -66,6 +67,10 @@ public class OrderTimelineService {
 
         if ("ReturnedToSeller".equalsIgnoreCase(newStatus)) {
             restockOrderItems(order);
+        }
+
+        if ("CustomerReceived".equalsIgnoreCase(newStatus)) {
+            updateCodPaymentStatus(order);
         }
 
         if ("Cancelled".equalsIgnoreCase(newStatus)) {
@@ -119,12 +124,19 @@ public class OrderTimelineService {
                     variant.setQuantityInStock(variant.getQuantityInStock() - item.getQuantity());
                 });
                 String previousStatus = order.getOrderStatus();
-                order.setOrderStatus("Confirmed");
+                order.setOrderStatus("Pending");
                 orderRepository.save(order);
-                saveTimeline(order.getOrderId(), previousStatus, "Confirmed", "Đủ hàng và tự động chuyển sang xác nhận.", null);
+                saveTimeline(
+                        order.getOrderId(),
+                        previousStatus,
+                        "Pending",
+                        "Đủ hàng và tự động chuyển sang trạng thái chờ xác nhận.",
+                        null
+                );
             }
         }
     }
+
 
     @Transactional
     public Map<String, Object> confirmCustomerReceived(Integer orderId, String note) {
@@ -137,6 +149,9 @@ public class OrderTimelineService {
 
         order.setOrderStatus("CustomerReceived");
         orderRepository.save(order);
+
+        // Cập nhật thanh toán COD nếu có
+        updateCodPaymentStatus(order);
 
         String finalNote = (note == null || note.trim().isEmpty()) ? "Khách hàng xác nhận đã nhận hàng." : note;
         saveTimeline(orderId, "Delivered", "CustomerReceived", finalNote, null);
@@ -161,7 +176,49 @@ public class OrderTimelineService {
             if (order != null && "Delivered".equalsIgnoreCase(order.getOrderStatus())) {
                 order.setOrderStatus("CustomerReceived");
                 orderRepository.save(order);
+
+                // Cập nhật thanh toán COD nếu có
+                updateCodPaymentStatus(order);
+
                 saveTimeline(orderId, "Delivered", "CustomerReceived", "Tự động xác nhận sau 3 ngày kể từ khi nhận hàng", null);
+            }
+        }
+    }
+
+    @Scheduled(cron = "0 0 * * * *", zone = "Asia/Ho_Chi_Minh") // Chạy mỗi giờ tại phút 0
+    @Transactional
+    public void autoCancelUnpaidOrders() {
+        // Thời gian chờ: 24 giờ
+        ZoneId vietnamZone = ZoneId.of("Asia/Ho_Chi_Minh");
+        LocalDateTime cutoffTime = LocalDateTime.now(vietnamZone).minusHours(24);
+
+        log.info("Bắt đầu kiểm tra đơn chưa thanh toán sau 24 giờ...");
+        log.info("Mốc thời gian hủy: {}", cutoffTime);
+
+        // Lấy tất cả đơn online chưa thanh toán sau 24 giờ
+        List<Order> unpaidOrders = orderRepository.findUnpaidOrders(
+                Arrays.asList("ZaloPay", "MoMo", "VNPay"), // Tất cả phương thức online
+                "Pending",
+                "pending",
+                cutoffTime
+        );
+
+        log.info("Tìm thấy {} đơn cần hủy", unpaidOrders.size());
+
+        for (Order order : unpaidOrders) {
+            try {
+                log.info("Hủy đơn: {} - Tạo lúc: {}", order.getOrderCode(), order.getCreatedAt());
+
+                updateOrderStatus(
+                        order.getOrderId(),
+                        "Cancelled",
+                        "Tự động hủy do không thanh toán sau 24 giờ",
+                        null
+                );
+
+                log.info("Đã hủy thành công đơn: {}", order.getOrderCode());
+            } catch (Exception e) {
+                log.error("Lỗi khi hủy đơn {}: {}", order.getOrderId(), e.getMessage(), e);
             }
         }
     }
@@ -235,5 +292,17 @@ public class OrderTimelineService {
         allStatuses.addAll(transitions.keySet());
         transitions.values().forEach(allStatuses::addAll);
         return allStatuses;
+    }
+
+    private void updateCodPaymentStatus(Order order) {
+        Payment payment = paymentRepository.findByOrder(order);
+        if (payment != null
+                && "COD".equalsIgnoreCase(payment.getPaymentMethod())
+                && !"SUCCESS".equalsIgnoreCase(payment.getPaymentStatus())) {
+
+            payment.setPaymentStatus("SUCCESS");
+            paymentRepository.save(payment);
+            log.info("Cập nhật thành công thanh toán COD cho đơn hàng: {}", order.getOrderId());
+        }
     }
 }

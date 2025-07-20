@@ -57,6 +57,8 @@ public class SecurityConfig {
                                 "/api/address/**",
                                 "/api/users/**",
                                 "/api/ghtk/**",
+                                "/api/chat/**",
+                                "/api/bot/**",
                                 "/api/orders/**",
                                 "/api/waitlist/**",
                                 "/api/cart/**",
@@ -134,12 +136,15 @@ public class SecurityConfig {
                         // Promotion public API
                                 requestMatchers(HttpMethod.GET,
                                 "/api/promotions/**",
-                                "/api/promotions/{id}"
+                                "/api/promotions/{id}",
+                                "/api/promotion-orders/**"
                         ).permitAll().
 
                         // Promotion private API
                                 requestMatchers(
-                                "/api/promotions/**")
+                                "/api/promotions/**",
+                                "/api/promotion-orders/**"
+                        )
                         .hasAnyAuthority("Admin_Web")
 
                         // Vouchers private API (tương tự promotions)
