@@ -597,10 +597,10 @@ export default function OrdersManagementPage() {
                     const isPaid = detail.paymentStatus?.toUpperCase() === 'SUCCESS';
                     if (!(isCOD && isRefunded && !isPaid)) {
                         updateStatusDirectly(order.orderId, transitions[0]);
-                        setAutoUpdatedOrders(prev => [...prev, order.orderId]);
-                        console.log('Tự động cập nhật trạng thái cho orderId', order.orderId, '->', transitions[0]);
-                    }
+                    setAutoUpdatedOrders(prev => [...prev, order.orderId]);
+                    console.log('Tự động cập nhật trạng thái cho orderId', order.orderId, '->', transitions[0]);
                 }
+            }
             }
         });
         // eslint-disable-next-line
@@ -976,26 +976,26 @@ export default function OrdersManagementPage() {
                                                                 detailOrderCache[order.orderId]?.paymentMethod?.toUpperCase() === 'COD';
                                                             if (isCODReturnedToSeller) return null;
                                                             return (
-                                                                <button
-                                                                    key={t}
-                                                                    className={
-                                                                        t === 'Cancelled' ?
-                                                                            'px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm disabled:opacity-50'
-                                                                        : t === 'Confirmed' ?
-                                                                            'px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm disabled:opacity-50'
-                                                                        : t === 'Delivered' ?
-                                                                            'px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm disabled:opacity-50'
-                                                                        : t === 'ReturnApproved' ?
-                                                                            'px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm disabled:opacity-50'
-                                                                        : t === 'ReturnRejected' ?
-                                                                            'px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-sm disabled:opacity-50'
-                                                                        : 'px-3 py-1 bg-gray-400 text-white rounded text-sm disabled:opacity-50'
-                                                                    }
-                                                                    onClick={() => handleStatusUpdate(order.orderId, t)}
-                                                                    disabled={actionLoading === order.orderId}
-                                                                >
-                                                                    {actionLoading === order.orderId ? 'Đang xử lý...' : (TRANSITION_LABELS[t] || t)}
-                                                                </button>
+                                                            <button
+                                                                key={t}
+                                                                className={
+                                                                    t === 'Cancelled' ?
+                                                                        'px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm disabled:opacity-50'
+                                                                    : t === 'Confirmed' ?
+                                                                        'px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm disabled:opacity-50'
+                                                                    : t === 'Delivered' ?
+                                                                        'px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm disabled:opacity-50'
+                                                                    : t === 'ReturnApproved' ?
+                                                                        'px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm disabled:opacity-50'
+                                                                    : t === 'ReturnRejected' ?
+                                                                        'px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-sm disabled:opacity-50'
+                                                                    : 'px-3 py-1 bg-gray-400 text-white rounded text-sm disabled:opacity-50'
+                                                                }
+                                                                onClick={() => handleStatusUpdate(order.orderId, t)}
+                                                                disabled={actionLoading === order.orderId}
+                                                            >
+                                                                {actionLoading === order.orderId ? 'Đang xử lý...' : (TRANSITION_LABELS[t] || t)}
+                                                            </button>
                                                             );
                                                         })
                                                     }

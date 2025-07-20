@@ -25,7 +25,7 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
     { href: "/admin", icon: <LayoutDashboard size={18} />, label: "Thống kê" },
     { href: "/staff/officesales", icon: <Store size={18} />, label: "Bán hàng tại quầy" },
-    { href: "/admin/order/officesales", icon: <FileText size={18} />, label: "Hóa đơn" },
+    { href: "/admin/invoices", icon: <FileText size={18} />, label: "Hóa đơn" },
     {
         href: "/admin/product_management",
         icon: <Package size={18} />,
