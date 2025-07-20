@@ -214,12 +214,18 @@ export default function ConfirmOrderPage() {
 
     // useEffect tính phí giao hàng khi selectedAddress hoặc cartItems thay đổi
     useEffect(() => {
-        if (!selectedAddress || cartItems.length === 0) {
+        if (session?.user) return;
+
+        // Nếu chưa chọn tỉnh hoặc huyện thì luôn set phí giao hàng về 0
+        if (!selectedProvinceCode || !selectedDistrictCode) {
             setShippingFee(0);
             return;
         }
-        const provinceName = selectedAddress.province || selectedAddress.cityProvince;
-        const districtName = selectedAddress.district;
+
+        // Đã chọn tỉnh và huyện, và có sản phẩm trong giỏ
+        if (cartItems.length > 0) {
+            const provinceName = provinces.find(p => p.code === selectedProvinceCode)?.name || '';
+            const districtName = districts.find(d => d.code === selectedDistrictCode)?.name || '';
         if (provinceName && districtName) {
             fetchShippingFee(
                 provinceName,
@@ -232,55 +238,31 @@ export default function ConfirmOrderPage() {
         } else {
             setShippingFee(0);
         }
-    }, [selectedAddress, cartItems, fetchShippingFee]);
-
-    // Khi nhấn nút chọn địa chỉ đã lưu
-    const handleOpenAddressModal = async () => {
-        if (userAddresses.length === 0) {
-            await fetchUserAddresses();
+        } else {
+            setShippingFee(0);
         }
-        setShowAddressModal(true);
-    };
-    const handleAddAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setNewAddress({ ...newAddress, [e.target.name]: e.target.value });
-    };
-    // Fetch provinces khi mở form thêm địa chỉ
-    const handleOpenAddAddressForm = async () => {
-        setShowAddAddressForm(true);
-        setAddAddressError('');
-        setLoadingProvinces(true);
-        try {
-            const res = await fetch('http://localhost:8080/api/address/provinces');
-            const data = await res.json();
-            setProvincesVN(data);
-        } catch {}
-        setLoadingProvinces(false);
+    }, [selectedProvinceCode, selectedDistrictCode, cartItems, provinces, districts, fetchShippingFee, session?.user]);
+
+    // Thay đổi hàm chọn tỉnh để reset huyện, xã và phí giao hàng
+    const handleProvinceChange = (code: number | null) => {
+        setSelectedProvinceCode(code);
+        setSelectedDistrictCode(null);
+        setSelectedWardCode(null);
+        setShippingFee(0);
     };
     // Fetch districts khi chọn tỉnh
-    const handleProvinceChange = async (provinceCode: string) => {
-        setNewAddress({ ...newAddress, province: provinceCode, district: '', wardCommune: '' });
-        setDistrictsVN([]); setWardsVN([]);
-        // setLoadingDistricts(true); // Removed
+    const handleDistrictChange = async (districtCode: string) => {
+        setNewAddress({ ...newAddress, district: districtCode, wardCommune: '' });
+        setWardsVN([]);
+        // setLoadingWards(true); // Removed
         try {
-            const res = await fetch(`http://localhost:8080/api/address/districts/${provinceCode}`);
+            const res = await fetch(`http://localhost:8080/api/address/districts/${districtCode}`);
             const data = await res.json();
             setDistrictsVN(data);
         } catch {}
         // setLoadingDistricts(false); // Removed
     };
     // Fetch wards khi chọn huyện
-    const handleDistrictChange = async (districtCode: string) => {
-        setNewAddress({ ...newAddress, district: districtCode, wardCommune: '' });
-        setWardsVN([]);
-        // setLoadingWards(true); // Removed
-        try {
-            const res = await fetch(`http://localhost:8080/api/address/wards/${districtCode}`);
-            const data = await res.json();
-            setWardsVN(data);
-        } catch {}
-        // setLoadingWards(false); // Removed
-    };
-    // Khi chọn xã
     const handleWardChange = (wardCode: string) => {
         setNewAddress({ ...newAddress, wardCommune: wardCode });
     };
@@ -357,27 +339,70 @@ export default function ConfirmOrderPage() {
 
     const handlePlaceOrder = async () => {
         setOrderError('');
+        const isGuest = !session?.user;
+        let appUser, shippingAddress;
+        if (isGuest) {
+            // Validate các trường nhập tay
+            if (!fullName || !phone || !addressDetail || !selectedProvinceCode || !selectedDistrictCode || !selectedWardCode) {
+                setOrderError('Vui lòng nhập đầy đủ thông tin giao hàng.');
+                setPlacingOrder(false);
+                return;
+            }
+            // Lấy tên tỉnh/huyện/xã từ danh sách
+            const province = provinces.find(p => p.code === selectedProvinceCode)?.name || '';
+            const district = districts.find(d => d.code === selectedDistrictCode)?.name || '';
+            const ward = wards.find(w => w.code === selectedWardCode)?.name || '';
+            // Tạo appUser và shippingAddress cho khách
+            let guestId = '';
+            if (typeof window !== 'undefined') {
+                guestId = localStorage.getItem('guestId') || '';
+                if (!guestId) {
+                    guestId = crypto.randomUUID();
+                    localStorage.setItem('guestId', guestId);
+                }
+            }
+            appUser = {
+                keycloakId: guestId,
+                username: fullName,
+                phoneNumber: phone,
+            };
+            shippingAddress = {
+                recipientName: fullName,
+                phoneNumber: phone,
+                streetAddress: addressDetail,
+                wardCommune: ward,
+                district: district,
+                cityProvince: province,
+                country: 'Việt Nam',
+                isDefault: false,
+                addressType: 'home',
+            };
+        } else {
+            // Đã đăng nhập, dùng selectedAddress
         if (!selectedAddress) {
             setOrderError('Vui lòng chọn địa chỉ giao hàng.');
+                setPlacingOrder(false);
             return;
+            }
+            const user = session?.user as { id?: string; name?: string; email?: string };
+            appUser = {
+                keycloakId: user?.id || user?.email || '',
+                username: user?.name || '',
+                phoneNumber: selectedAddress?.phoneNumber || '',
+            };
+            shippingAddress = selectedAddress;
         }
         if (cartItems.length === 0) {
             setOrderError('Giỏ hàng trống.');
+            setPlacingOrder(false);
             return;
         }
         setPlacingOrder(true);
         try {
-            // Lấy thông tin user
-            const user = session?.user as { id?: string; name?: string; email?: string };
-            const keycloakId = user?.id || user?.email || '';
             // Chuẩn bị body
             const body = {
-                appUser: {
-                    keycloakId,
-                    username: user?.name || '',
-                    phoneNumber: selectedAddress.phoneNumber || '',
-                },
-                shippingAddress: selectedAddress,
+                appUser,
+                shippingAddress,
                 shippingMethodId: 1, // hardcode shipping method id, có thể lấy từ state nếu có
                 shippingFee: shippingFee,
                 note: note,
@@ -390,12 +415,17 @@ export default function ConfirmOrderPage() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.accessToken || ''}`
+                    ...(session?.accessToken ? { 'Authorization': `Bearer ${session?.accessToken}` } : {})
                 },
                 body: JSON.stringify(body)
             });
             if (res.ok) {
                 const data = await res.json();
+                // Reset local cart khi đặt hàng thành công
+                if (typeof window !== 'undefined') {
+                    localStorage.removeItem('cart');
+                    window.dispatchEvent(new Event('cart-updated'));
+                }
                 if (paymentMethod === 'COD') {
                     router.push('/confirm-order/success');
                 } else if (paymentMethod === 'ZALOPAY') {
@@ -555,6 +585,29 @@ export default function ConfirmOrderPage() {
         router.push(path);
     };
 
+    // Khi nhấn nút chọn địa chỉ đã lưu
+    const handleOpenAddressModal = async () => {
+        if (userAddresses.length === 0) {
+            await fetchUserAddresses();
+        }
+        setShowAddressModal(true);
+    };
+    const handleAddAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setNewAddress({ ...newAddress, [e.target.name]: e.target.value });
+    };
+    // Fetch provinces khi mở form thêm địa chỉ
+    const handleOpenAddAddressForm = async () => {
+        setShowAddAddressForm(true);
+        setAddAddressError('');
+        setLoadingProvinces(true);
+        try {
+            const res = await fetch('http://localhost:8080/api/address/provinces');
+            const data = await res.json();
+            setProvincesVN(data);
+        } catch {}
+        setLoadingProvinces(false);
+    };
+
     if (loadingCart || loadingProvinces) {
         return <div className="flex justify-center items-center min-h-screen"><p>Đang tải...</p></div>;
     }
@@ -629,7 +682,7 @@ export default function ConfirmOrderPage() {
                                             <select 
                                                 id="province" 
                                                 value={selectedProvinceCode || ''} 
-                                                onChange={e => setSelectedProvinceCode(parseInt(e.target.value) || null)}
+                                                onChange={e => handleProvinceChange(parseInt(e.target.value) || null)}
                                                 className="p-3 border border-gray-300 rounded-md w-full"
                                             >
                                                 <option value="">Chọn tỉnh/thành phố</option>
@@ -871,7 +924,7 @@ export default function ConfirmOrderPage() {
                                     <select
                                         className="p-2 border border-gray-300 rounded w-full"
                                         value={newAddress.province}
-                                        onChange={e => handleProvinceChange(e.target.value)}
+                                        onChange={e => handleProvinceChange(parseInt(e.target.value) || null)}
                                     >
                                         <option value="">Chọn tỉnh/thành phố</option>
                                         {provincesVN.map((p) => {
