@@ -26,6 +26,7 @@ import {
     Package,
 } from "lucide-react";
 import {CldImage} from "next-cloudinary";
+import OrderTabs from '@/components/order/OrderTabs';
 
 // Extend Session type để có accessToken
 interface ExtendedSession {
@@ -285,6 +286,7 @@ export default function OrderPage() {
 
     return (
         <div className="container mx-auto p-6 space-y-6">
+            <OrderTabs />
             {/* Header */}
             <Card>
                 <CardHeader className="flex gap-3">
