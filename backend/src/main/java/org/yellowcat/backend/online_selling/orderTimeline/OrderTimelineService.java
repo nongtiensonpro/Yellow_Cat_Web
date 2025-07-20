@@ -77,6 +77,13 @@ public class OrderTimelineService {
             refundIfNeeded(order, "Hoàn tiền hủy đơn hàng");
         }
 
+        // CHẶN Refunded nếu chưa thanh toán
+        if ("Refunded".equalsIgnoreCase(newStatus)) {
+            if (!"SUCCESS".equalsIgnoreCase(paymentStatus)) {
+                throw new RuntimeException("Chỉ đơn hàng đã thanh toán mới được chuyển sang trạng thái Refunded.");
+            }
+        }
+
         if ("Completed".equalsIgnoreCase(newStatus) && !"CustomerReceived".equalsIgnoreCase(currentStatus)) {
             throw new RuntimeException("Chỉ có thể hoàn tất đơn hàng sau khi khách hàng xác nhận đã nhận hàng.");
         } else if ("Completed".equalsIgnoreCase(newStatus)) {

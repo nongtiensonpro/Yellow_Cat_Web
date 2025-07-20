@@ -11,11 +11,6 @@ interface IconProps {
     [key: string]: unknown;
 }
 
-interface CartItem {
-    quantity: number;
-    [key: string]: unknown;
-}
-
 interface ExtendedUser {
     name?: string | null;
     email?: string | null;
@@ -89,9 +84,20 @@ export default function App() {
                 if (!userId) return 0;
                 
                 const res = await fetch(`http://localhost:8080/api/cart?keycloakId=${userId}`);
+                if (!res.ok) {
+                    if (res.status === 400 || res.status === 404) {
+                        // Không có giỏ hàng hoặc user chưa từng thêm sản phẩm
+                        return 0;
+                    }
+                    console.error('Failed to fetch cart from DB:', res.status);
+                    return 0;
+                }
                 const data = await res.json();
-                return (data.items || []).reduce((total: number, item: CartItem) => total + (item.quantity || 0), 0);
-            } catch {
+                // Đảm bảo data.items là mảng
+                if (!data.items || !Array.isArray(data.items)) return 0;
+                return data.items.length;
+            } catch (error) {
+                console.error('Error fetching cart from DB:', error);
                 return 0;
             }
         } else if (typeof window !== 'undefined') {
@@ -100,7 +106,8 @@ export default function App() {
             try {
                 const cartItems = JSON.parse(storedCart);
                 if (!Array.isArray(cartItems)) return 0;
-                return cartItems.reduce((total: number, item: CartItem) => total + (item.quantity || 0), 0);
+                // Trả về số lượng loại sản phẩm (length của array) thay vì tổng quantity
+                return cartItems.length;
             } catch {
                 return 0;
             }
@@ -116,28 +123,33 @@ export default function App() {
         };
         updateCartCount();
 
-        // Lắng nghe sự kiện storage (tab khác)
+        // Lắng nghe sự kiện storage (tab khác) - chỉ khi chưa đăng nhập
         const handleStorage = (e: StorageEvent) => {
-            if (e.key === 'cart') {
+            if (e.key === 'cart' && !session?.user) {
                 updateCartCount();
             }
         };
         window.addEventListener('storage', handleStorage);
 
-        // Lắng nghe thay đổi localStorage trên cùng tab (polling)
-        interval = setInterval(updateCartCount, 700);
+        // Lắng nghe thay đổi localStorage trên cùng tab (polling) - chỉ khi chưa đăng nhập
+        if (!session?.user) {
+            interval = setInterval(updateCartCount, 700);
+        } else {
+            // Khi đã đăng nhập, cập nhật từ DB mỗi 2 giây
+            interval = setInterval(updateCartCount, 2000);
+        }
 
         return () => {
             window.removeEventListener('storage', handleStorage);
             if (interval) clearInterval(interval);
         };
-    }, [getCartCount]);
+    }, [getCartCount, session?.user]);
 
     return (
         <div className="flex items-center gap-4">
-            <button className="flex items-center gap-3" >
+            <button className="flex items-center gap-3" onClick={() => router.push('/shopping_cart')}>
                 <Badge color="danger" content={cartCount} isInvisible={cartCount === 0} shape="circle">
-                    <CartIcon size={30}  onClick={() => router.push('/cart')}/>
+                    <CartIcon size={30} />
                 </Badge>
             </button>
         </div>

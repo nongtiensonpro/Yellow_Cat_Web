@@ -162,15 +162,24 @@
             Cart cart = cartRepository.findByAppUser(user)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy giỏ hàng"));
 
-            List<ItemResponseDTO> itemDTOs = cart.getCartItems().stream().map(item ->
-                    ItemResponseDTO.builder()
-                            .cartItemId(item.getCartItemId())
-                            .variantId(item.getVariant().getVariantId())
-                            .productName(item.getVariant().getProduct().getProductName())
-                            .quantity(item.getQuantity())
-                            .price(item.getVariant().getPrice())
-                            .build()
-            ).toList();
+            List<ItemResponseDTO> itemDTOs = cart.getCartItems().stream().map(item -> {
+                var variant = item.getVariant();
+                var product = variant.getProduct();
+
+                return ItemResponseDTO.builder()
+                        .cartItemId(item.getCartItemId())
+                        .variantId(variant.getVariantId())
+                        .productName(product.getProductName())
+                        .quantity(item.getQuantity())
+                        .price(variant.getPrice())
+                        .salePrice(variant.getSalePrice()) // Thêm dòng này
+                        .colorName(variant.getColor().getName())
+                        .sizeName(variant.getSize().getName())
+                        .imageUrl(variant.getImageUrl())
+                        .sku(variant.getSku())
+                        .stockLevel(variant.getQuantityInStock())
+                        .build();
+            }).toList();
 
             return CartResponseDTO.builder()
                     .cartId(cart.getCartId())

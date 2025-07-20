@@ -118,7 +118,7 @@ public class ZaloPayService {
         zaloRequest.put("description", "Thanh toán đơn hàng " + orderCode);
         zaloRequest.put("bank_code", "");
         zaloRequest.put("embed_data", embedData.toString());
-        zaloRequest.put("callback_url", "https://legal-squids-taste.loca.lt/api/payment/callback");
+        zaloRequest.put("callback_url", "https://8707fdb4ca6a.ngrok-free.app/api/payment/callback");
 
         // Tính MAC
         String data = APP_ID + "|" + appTransId + "|" + userId + "|" + amount + "|" + timestamp + "|" +
