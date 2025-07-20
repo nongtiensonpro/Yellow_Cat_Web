@@ -82,7 +82,7 @@ public class ZaloPayService {
             throw new IllegalArgumentException("Không tìm thấy đơn hàng với mã: " + orderCode);
         }
 
-    // Null-safe lấy userId
+        // Null-safe lấy userId
         String userId = (order.getUser() != null && order.getUser().getEmail() != null)
                 ? order.getUser().getEmail().toString()
                 : "guest";
@@ -118,7 +118,7 @@ public class ZaloPayService {
         zaloRequest.put("description", "Thanh toán đơn hàng " + orderCode);
         zaloRequest.put("bank_code", "");
         zaloRequest.put("embed_data", embedData.toString());
-        zaloRequest.put("callback_url", "https://tangy-places-crash.loca.lt/api/payment/callback");
+        zaloRequest.put("callback_url", "https://legal-squids-taste.loca.lt/api/payment/callback");
 
         // Tính MAC
         String data = APP_ID + "|" + appTransId + "|" + userId + "|" + amount + "|" + timestamp + "|" +
