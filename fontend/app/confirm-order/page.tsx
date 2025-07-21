@@ -455,7 +455,7 @@ export default function ConfirmOrderPage() {
                 setOrderError(data.message || 'Đặt hàng thất bại.');
             }
         } catch (err) {
-            setOrderError('Có lỗi xảy ra khi đặt hàng.');
+            setOrderError('Có lỗi xảy ra khi đặt hàng.' + err);
         } finally {
             setPlacingOrder(false);
         }
@@ -580,10 +580,10 @@ export default function ConfirmOrderPage() {
         };
 
     // Wrapper cho router.push để đảm bảo revert stock trước khi chuyển trang
-    const navigateWithRevert = (path: string) => {
-        handleRevertStock();
-        router.push(path);
-    };
+    // const navigateWithRevert = (path: string) => {
+    //     handleRevertStock();
+    //     router.push(path);
+    // };
 
     // Khi nhấn nút chọn địa chỉ đã lưu
     const handleOpenAddressModal = async () => {

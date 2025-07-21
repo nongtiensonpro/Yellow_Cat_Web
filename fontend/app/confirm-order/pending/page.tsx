@@ -12,7 +12,7 @@ export default function PendingZaloPay() {
 
   useEffect(() => {
     if (!orderCode) return;
-    let SockJS: any;
+    let SockJS: new (url: string) => WebSocket;
     let Stomp: typeof StompClient;
     let client: StompClient;
     // Dynamic import để tránh lỗi SSR
