@@ -340,6 +340,10 @@ export default function EditPromotionProductPage() {
                             {errors.promotionName && <p className="text-red-600 text-sm">{errors.promotionName}</p>}
                         </div>
                         <div>
+                            <label className="block mb-1 font-medium">Mô tả</label>
+                            <textarea name="description" value={form.description} onChange={handleChange} rows={3} className="w-full border px-3 py-2 rounded" placeholder="Nhập mô tả cho đợt giảm giá..." />
+                        </div>
+                        <div>
                             <label className="block mb-1 font-medium">Loại giảm <span className="text-red-500">*</span></label>
                             <select name="discountType" value={form.discountType} onChange={handleChange} className="w-full border px-3 py-2 rounded">
                                 <option value="percentage">Giảm %</option>
@@ -361,16 +365,14 @@ export default function EditPromotionProductPage() {
                             <input name="endDate" type="datetime-local" value={form.endDate} onChange={handleChange} className="w-full border px-3 py-2 rounded" />
                             {errors.endDate && <p className="text-red-600 text-sm">{errors.endDate}</p>}
                         </div>
-                        {/*<div>*/}
-                        {/*    <label className="block mb-1 font-medium">Trạng thái <span className="text-red-500">*</span></label>*/}
-                        {/*    <select name="isActive" value={form.isActive ? 'active' : 'inactive'} onChange={handleChange} className="w-full border px-3 py-2 rounded">*/}
-                        {/*        <option value="active">Đang hoạt động</option>*/}
-                        {/*        <option value="inactive">Không hoạt động</option>*/}
-                        {/*    </select>*/}
-                        {/*    /!* *** BẮT ĐẦU THAY ĐỔI: Thêm hiển thị lỗi cho trạng thái *** *!/*/}
-                        {/*    {errors.isActive && <p className="text-red-600 text-sm">{errors.isActive}</p>}*/}
-                        {/*    /!* *** KẾT THÚC THAY ĐỔI *** *!/*/}
-                        {/*</div>*/}
+                        <div>
+                            <label className="block mb-1 font-medium">Trạng thái <span className="text-red-500">*</span></label>
+                            <select name="isActive" value={form.isActive ? 'active' : 'inactive'} onChange={handleChange} className="w-full border px-3 py-2 rounded">
+                                <option value="active">Đang hoạt động</option>
+                                <option value="inactive">Không hoạt động</option>
+                            </select>
+                            {errors.isActive && <p className="text-red-600 text-sm">{errors.isActive}</p>}
+                        </div>
                         <div className="flex gap-4">
                             <button type="button" onClick={() => router.back()} className="bg-gray-500 text-white px-6 py-2 rounded">Hủy</button>
                             <button type="submit" disabled={submitting} className="bg-blue-600 text-white px-6 py-2 rounded disabled:opacity-50">{submitting ? 'Đang cập nhật...' : 'Cập nhật'}</button>

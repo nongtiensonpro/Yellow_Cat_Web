@@ -23,6 +23,8 @@ import org.yellowcat.backend.product.targetaudience.TargetAudience;
 import org.yellowcat.backend.product.targetaudience.TargetAudienceRepository;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserRepository;
+import org.yellowcat.backend.product.dto.VariantPromoItemDTO;
+import org.yellowcat.backend.product.dto.VariantPromosDTO;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -491,6 +493,29 @@ public class ProductService {
 
     public void activeornotactive(Integer productId) {
         productRepository.activeornotactive(productId);
+    }
+
+    // ----------------------- Khuyến mãi cho variant -----------------------
+    public VariantPromosDTO getVariantPromotions(Integer variantId) {
+        List<Object[]> rows = productRepository.findVariantPromotions(variantId);
+        VariantPromosDTO result = new VariantPromosDTO();
+        List<VariantPromoItemDTO> usable = new ArrayList<>();
+
+        for (Object[] r : rows) {
+            VariantPromoItemDTO item = new VariantPromoItemDTO();
+            item.setPromotionCode((String) r[0]);
+            item.setPromotionName((String) r[1]);
+            item.setDescription((String) r[2]);
+            item.setDiscountAmount((java.math.BigDecimal) r[3]);
+            item.setFinalPrice((java.math.BigDecimal) r[4]);
+            Boolean isBest = (Boolean) r[5];
+            if (Boolean.TRUE.equals(isBest) && result.getBestPromo() == null) {
+                result.setBestPromo(item);
+            }
+            usable.add(item);
+        }
+        result.setUsablePromos(usable);
+        return result;
     }
 
     private ProductsHistory createProductHistory(Product product, AppUser user, char op) {

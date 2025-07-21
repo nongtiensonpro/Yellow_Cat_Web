@@ -177,4 +177,54 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                     "WHERE product_id = :productId")
     int activeornotactive(@Param("productId") Integer productId);
 
+    // Thêm phương thức lấy khuyến mãi cho một variant
+    @Query(value = """
+            WITH base AS (
+                SELECT pv.variant_id,
+                       pv.price,
+                       COALESCE(pv.sale_price, pv.price) AS base_price
+                FROM product_variants pv
+                WHERE pv.variant_id = :variantId
+            ),
+            promo_calc AS (
+                SELECT b.variant_id,
+                       p.promotion_id,
+                       p.promotion_code,
+                       p.promotion_name,
+                       p.description AS promotion_description,
+                       p.discount_type,
+                       p.discount_value,
+                       CASE
+                           WHEN p.discount_type = 'percentage' THEN b.base_price * p.discount_value / 100
+                           WHEN p.discount_type IN ('fixed_amount','VNĐ') THEN p.discount_value
+                           ELSE 0
+                       END AS discount_amount
+                FROM base b
+                JOIN promotion_products pp ON pp.variant_id = b.variant_id
+                JOIN promotions p ON p.promotion_id = pp.promotion_id
+                WHERE p.is_active = TRUE
+                  AND p.discount_type IN ('percentage','fixed_amount','VNĐ')
+                  AND NOW() BETWEEN p.start_date AND p.end_date
+                  AND NOT EXISTS (
+                       SELECT 1 FROM promotion_programs pg
+                       WHERE pg.promotion_code = p.promotion_code
+                  )
+            ),
+            ranked AS (
+                SELECT *,
+                       RANK() OVER (PARTITION BY variant_id ORDER BY discount_amount DESC) AS rnk
+                FROM promo_calc
+            )
+            SELECT r.promotion_code,
+                   r.promotion_name,
+                   r.promotion_description,
+                   r.discount_amount,
+                   b.base_price - r.discount_amount AS final_price,
+                   (r.rnk = 1) AS is_best
+            FROM ranked r
+            JOIN base b ON b.variant_id = r.variant_id
+            ORDER BY r.discount_amount DESC
+            """, nativeQuery = true)
+    List<Object[]> findVariantPromotions(@Param("variantId") Integer variantId);
+
 }
