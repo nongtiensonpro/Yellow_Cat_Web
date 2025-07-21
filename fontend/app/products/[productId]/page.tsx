@@ -7,8 +7,6 @@ import {
     Divider,
     Button,
     Spinner,
-    Tabs,
-    Tab,
     Badge,
     Chip,
     Modal,
@@ -317,7 +315,7 @@ export default function ProductDetailPage() {
                             startDate: json.data.bestPromo.startDate ? String(json.data.bestPromo.startDate) : '',
                             endDate: json.data.bestPromo.endDate ? String(json.data.bestPromo.endDate) : ''
                         } : undefined,
-                        usablePromos: json.data.usablePromos.map((promo: any) => ({
+                        usablePromos: json.data.usablePromos.map((promo: PromoItem) => ({
                             ...promo,
                             startDate: promo.startDate ? String(promo.startDate) : '',
                             endDate: promo.endDate ? String(promo.endDate) : ''
@@ -920,7 +918,7 @@ export default function ProductDetailPage() {
                                         </div>
                                         <div className="space-y-3">
                                             {promos.usablePromos.map((p: PromoItem, index) => {
-                                                const { timeRemaining, isExpiringSoon, isExpired, totalDays } = p.endDate ? getTimeRemaining(p.endDate) : { timeRemaining: '', isExpiringSoon: false, isExpired: false, totalDays: 0 };
+                                                const { timeRemaining, isExpiringSoon } = p.endDate ? getTimeRemaining(p.endDate) : { timeRemaining: '', isExpiringSoon: false };
                                                 const duration = p.startDate && p.endDate ? getPromotionDuration(p.startDate, p.endDate) : null;
                                                 return (
                                                     <Card key={p.promotionCode}
