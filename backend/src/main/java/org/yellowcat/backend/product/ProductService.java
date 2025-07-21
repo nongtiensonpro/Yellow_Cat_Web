@@ -508,7 +508,29 @@ public class ProductService {
             item.setDescription((String) r[2]);
             item.setDiscountAmount((java.math.BigDecimal) r[3]);
             item.setFinalPrice((java.math.BigDecimal) r[4]);
-            Boolean isBest = (Boolean) r[5];
+            
+            // Transform discount type to match frontend expectations
+            String discountType = (String) r[5];
+            if ("percentage".equalsIgnoreCase(discountType)) {
+                item.setDiscountType("PERCENTAGE");
+            } else if ("fixed_amount".equalsIgnoreCase(discountType) || "VNĐ".equalsIgnoreCase(discountType)) {
+                item.setDiscountType("FIXED_AMOUNT");
+            } else {
+                item.setDiscountType(discountType != null ? discountType.toUpperCase() : "FIXED_AMOUNT");
+            }
+            
+            item.setDiscountValue((java.math.BigDecimal) r[6]);
+            
+            // Convert Timestamp to LocalDateTime
+            if (r[7] != null) {
+                item.setStartDate(((java.sql.Timestamp) r[7]).toLocalDateTime());
+            }
+            if (r[8] != null) {
+                item.setEndDate(((java.sql.Timestamp) r[8]).toLocalDateTime());
+            }
+            
+            item.setIsActive((Boolean) r[9]);
+            Boolean isBest = (Boolean) r[10];
             if (Boolean.TRUE.equals(isBest) && result.getBestPromo() == null) {
                 result.setBestPromo(item);
             }

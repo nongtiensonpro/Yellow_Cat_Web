@@ -194,6 +194,9 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                        p.description AS promotion_description,
                        p.discount_type,
                        p.discount_value,
+                       p.start_date,
+                       p.end_date,
+                       p.is_active,
                        CASE
                            WHEN p.discount_type = 'percentage' THEN b.base_price * p.discount_value / 100
                            WHEN p.discount_type IN ('fixed_amount','VNĐ') THEN p.discount_value
@@ -220,6 +223,11 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                    r.promotion_description,
                    r.discount_amount,
                    b.base_price - r.discount_amount AS final_price,
+                   r.discount_type,
+                   r.discount_value,
+                   r.start_date,
+                   r.end_date,
+                   r.is_active,
                    (r.rnk = 1) AS is_best
             FROM ranked r
             JOIN base b ON b.variant_id = r.variant_id

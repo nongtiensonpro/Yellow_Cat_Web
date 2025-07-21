@@ -100,6 +100,13 @@ interface PromoItem {
     description: string;
     discountAmount: number;
     finalPrice: number;
+    discountType: string; // "PERCENTAGE" hoặc "FIXED_AMOUNT"
+    discountValue: number;
+    startDate: string;
+    endDate: string;
+    isActive: boolean;
+    timeRemaining?: string; // Thời gian còn lại
+    isExpiringSoon?: boolean; // Sắp hết hạn (< 24h)
 }
 
 interface VariantPromos {
@@ -111,6 +118,112 @@ const money = (n: number) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n);
 const percent = (orig: number, sale: number) =>
     Math.round((1 - sale / orig) * 100);
+
+// Hàm tính thời gian còn lại với thông tin chi tiết
+const getTimeRemaining = (endDate: string): {
+    timeRemaining: string;
+    isExpiringSoon: boolean;
+    totalDays: number;
+    totalHours: number;
+    isExpired: boolean;
+} => {
+    const now = new Date();
+    const end = new Date(endDate);
+    const diff = end.getTime() - now.getTime();
+
+    if (diff <= 0) {
+        return {
+            timeRemaining: 'Đã hết hạn',
+            isExpiringSoon: false,
+            totalDays: 0,
+            totalHours: 0,
+            isExpired: true
+        };
+    }
+
+    const totalDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const totalHours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    const isExpiringSoon = diff < 24 * 60 * 60 * 1000; // < 24 giờ
+
+    if (days > 0) {
+        return {
+            timeRemaining: `${days} ngày ${hours} giờ`,
+            isExpiringSoon,
+            totalDays,
+            totalHours,
+            isExpired: false
+        };
+    } else if (hours > 0) {
+        return {
+            timeRemaining: `${hours} giờ ${minutes} phút`,
+            isExpiringSoon,
+            totalDays,
+            totalHours,
+            isExpired: false
+        };
+    } else {
+        return {
+            timeRemaining: `${minutes} phút`,
+            isExpiringSoon: true,
+            totalDays,
+            totalHours,
+            isExpired: false
+        };
+    }
+};
+
+// Hàm tính thời gian từ ngày bắt đầu đến ngày kết thúc
+const getPromotionDuration = (startDate: string, endDate: string): {
+    duration: string;
+    totalDays: number;
+    isActive: boolean;
+    status: 'upcoming' | 'active' | 'expired';
+} => {
+    const now = new Date();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    const totalDiff = end.getTime() - start.getTime();
+    const totalDays = Math.floor(totalDiff / (1000 * 60 * 60 * 24));
+
+    let status: 'upcoming' | 'active' | 'expired';
+    let isActive = false;
+
+    if (now < start) {
+        status = 'upcoming';
+    } else if (now >= start && now <= end) {
+        status = 'active';
+        isActive = true;
+    } else {
+        status = 'expired';
+    }
+
+    const duration = totalDays > 0 ? `${totalDays} ngày` : '< 1 ngày';
+
+    return {
+        duration,
+        totalDays,
+        isActive,
+        status
+    };
+};
+
+// Hàm format ngày tháng
+const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    }).format(date);
+};
+
 const fetchJSON = async <T,>(url: string) => {
     try {
         const res = await fetch(url);
@@ -197,7 +310,20 @@ export default function ProductDetailPage() {
                 if (!res.ok) throw new Error();
                 const json = await res.json();
                 if (json?.data) {
-                    setPromos(json.data as VariantPromos);
+                    // Transform the data to ensure dates are strings
+                    const transformedData: VariantPromos = {
+                        bestPromo: json.data.bestPromo ? {
+                            ...json.data.bestPromo,
+                            startDate: json.data.bestPromo.startDate ? String(json.data.bestPromo.startDate) : '',
+                            endDate: json.data.bestPromo.endDate ? String(json.data.bestPromo.endDate) : ''
+                        } : undefined,
+                        usablePromos: json.data.usablePromos.map((promo: any) => ({
+                            ...promo,
+                            startDate: promo.startDate ? String(promo.startDate) : '',
+                            endDate: promo.endDate ? String(promo.endDate) : ''
+                        }))
+                    };
+                    setPromos(transformedData);
                 } else {
                     setPromos({ usablePromos: [] });
                 }
@@ -403,7 +529,7 @@ export default function ProductDetailPage() {
     );
 
     return (
-        <div className="container mx-auto my-4 p-4 max-w-7xl">
+        <div className="container mx-auto my-4 p-4 max">
             <Card className="shadow-lg">
                 <CardHeader className="pb-4">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-4">
@@ -437,7 +563,7 @@ export default function ProductDetailPage() {
                 <CardBody className="p-6">
                     <div className="grid lg:grid-cols-2 gap-8">
                         {/* Enhanced Image Section */}
-                        <div className="space-y-4">
+                        <div className="space-y-6">
                             <div
                                 className="relative aspect-square bg-gradient-to-br from-default-100 to-default-200 rounded-xl overflow-hidden cursor-pointer group"
                                 onClick={onImageOpen}
@@ -496,6 +622,89 @@ export default function ProductDetailPage() {
                                     </div>
                                 ))}
                             </div>
+
+                            {/* Brand Information Card */}
+                            <Card className="bg-gradient-to-r from-default-50 to-primary-50 border border-primary-200">
+                                <CardBody className="p-4">
+                                    <div className="flex items-center gap-4 mb-3">
+                                        {view.logoPublicId && (
+                                            <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
+                                                <CldImage
+                                                    width={48}
+                                                    height={48}
+                                                    src={view.logoPublicId}
+                                                    alt={view.brandName}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                        )}
+                                        <div className="flex-1">
+                                            <h3 className="font-bold text-foreground text-lg">{view.brandName}</h3>
+                                            <Badge color="primary" variant="flat" size="sm">Thương hiệu chính thức</Badge>
+                                        </div>
+                                    </div>
+                                    {view.brandInfo && (
+                                        <p className="text-sm text-default-600 leading-relaxed line-clamp-3">
+                                            {view.brandInfo}
+                                        </p>
+                                    )}
+                                </CardBody>
+                            </Card>
+
+                            {/* Technical Specifications Card */}
+                            <Card className="bg-gradient-to-r from-secondary-50 to-warning-50 border border-secondary-200">
+                                <CardHeader className="pb-2">
+                                    <div className="flex items-center gap-2">
+                                        <svg className="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                                d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                                        </svg>
+                                        <h3 className="font-semibold text-secondary">Thông số kỹ thuật</h3>
+                                    </div>
+                                </CardHeader>
+                                <CardBody className="pt-0">
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center py-2 border-b border-default-200">
+                                            <span className="text-sm font-medium text-default-700">SKU</span>
+                                            <Badge variant="flat" color="default" size="sm">{selected.sku}</Badge>
+                                        </div>
+                                        <div className="flex justify-between items-center py-2 border-b border-default-200">
+                                            <span className="text-sm font-medium text-default-700">Màu sắc</span>
+                                            <Badge variant="flat" color="primary" size="sm">{selected.colorName}</Badge>
+                                        </div>
+                                        <div className="flex justify-between items-center py-2 border-b border-default-200">
+                                            <span className="text-sm font-medium text-default-700">Kích cỡ</span>
+                                            <Badge variant="flat" color="secondary" size="sm">{selected.sizeName}</Badge>
+                                        </div>
+                                        <div className="flex justify-between items-center py-2 border-b border-default-200">
+                                            <span className="text-sm font-medium text-default-700">Cân nặng</span>
+                                            <span className="text-sm font-semibold">{selected.weight} kg</span>
+                                        </div>
+                                        {view.materialName && (
+                                            <div className="flex justify-between items-center py-2 border-b border-default-200">
+                                                <span className="text-sm font-medium text-default-700">Chất liệu</span>
+                                                <Badge variant="flat" color="success" size="sm">{view.materialName}</Badge>
+                                            </div>
+                                        )}
+                                        {view.targetAudienceName && (
+                                            <div className="flex justify-between items-center py-2 border-b border-default-200">
+                                                <span className="text-sm font-medium text-default-700">Đối tượng</span>
+                                                <Badge variant="flat" color="warning" size="sm">{view.targetAudienceName}</Badge>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between items-center py-2">
+                                            <span className="text-sm font-medium text-default-700">Tồn kho</span>
+                                            <Chip
+                                                color={selected.stockLevel > 10 ? 'success' : selected.stockLevel > 0 ? 'warning' : 'danger'}
+                                                variant="flat"
+                                                size="sm"
+                                            >
+                                                {selected.stockLevel > 0 ? `${selected.stockLevel} sản phẩm` : 'Hết hàng'}
+                                            </Chip>
+                                        </div>
+                                    </div>
+                                </CardBody>
+                            </Card>
                         </div>
 
                         {/* Enhanced Product Details Section */}
@@ -546,10 +755,46 @@ export default function ProductDetailPage() {
                                 <Card
                                     className="bg-gradient-to-r from-primary-50 to-secondary-50 border border-primary-200">
                                     <CardBody className="p-4">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <Chip color="primary" variant="solid" size="sm">
-                                                🎉 Khuyến mãi đặc biệt
-                                            </Chip>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                                <Chip color="primary" variant="solid" size="sm">
+                                                    🎉 Khuyến mãi đặc biệt
+                                                </Chip>
+                                                {!promos.bestPromo.isActive && (
+                                                    <Chip color="danger" variant="flat" size="sm">
+                                                        Không hoạt động
+                                                    </Chip>
+                                                )}
+                                            </div>
+                                            {promos.bestPromo.endDate && (() => {
+                                                const { timeRemaining, isExpiringSoon, isExpired } = getTimeRemaining(promos.bestPromo.endDate);
+                                                const duration = promos.bestPromo.startDate ?
+                                                    getPromotionDuration(promos.bestPromo.startDate, promos.bestPromo.endDate) : null;
+
+                                                return (
+                                                    <div className="flex flex-col gap-1">
+                                                        <Chip
+                                                            color={isExpired ? "default" : isExpiringSoon ? "danger" : "warning"}
+                                                            variant="flat"
+                                                            size="sm"
+                                                            className={isExpiringSoon && !isExpired ? "animate-pulse" : ""}
+                                                        >
+                                                            ⏰ {timeRemaining}
+                                                        </Chip>
+                                                        {duration && (
+                                                            <Chip
+                                                                color={duration.status === 'active' ? "success" :
+                                                                    duration.status === 'upcoming' ? "primary" : "default"}
+                                                                variant="flat"
+                                                                size="sm"
+                                                                className="text-xs"
+                                                            >
+                                                                📅 Diện {duration.duration}
+                                                            </Chip>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                         <div className="space-y-2 text-sm">
                                             <div className="flex justify-between items-center">
@@ -580,6 +825,15 @@ export default function ProductDetailPage() {
                                                         className="text-right max-w-[60%]">{promos.bestPromo.description}</span>
                                                 </div>
                                             )}
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-medium text-default-700">Loại giảm:</span>
+                                                <Badge color="secondary" variant="flat" size="sm">
+                                                    {promos.bestPromo.discountType === 'PERCENTAGE' ?
+                                                        `${promos.bestPromo.discountValue}%` :
+                                                        money(promos.bestPromo.discountValue)
+                                                    }
+                                                </Badge>
+                                            </div>
                                             <Divider />
                                             <div className="flex justify-between items-center">
                                                 <span className="font-medium text-default-700">Giảm giá:</span>
@@ -591,6 +845,61 @@ export default function ProductDetailPage() {
                                                 <span
                                                     className="font-bold text-danger text-lg">{money(displayPrice)}</span>
                                             </div>
+                                            {promos.bestPromo.startDate && promos.bestPromo.endDate && (
+                                                <>
+                                                    <Divider />
+                                                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg border border-blue-200">
+                                                        <div className="space-y-2">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                                </svg>
+                                                                <span className="font-semibold text-blue-700 text-sm">Thời gian khuyến mãi</span>
+                                                            </div>
+                                                            <div className="grid grid-cols-1 gap-2 text-xs">
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-blue-600 font-medium">Bắt đầu:</span>
+                                                                    <span className="text-blue-800 font-semibold">{formatDate(promos.bestPromo.startDate)}</span>
+                                                                </div>
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-blue-600 font-medium">Kết thúc:</span>
+                                                                    <span className="text-blue-800 font-semibold">{formatDate(promos.bestPromo.endDate)}</span>
+                                                                </div>
+                                                                {(() => {
+                                                                    const duration = getPromotionDuration(promos.bestPromo.startDate, promos.bestPromo.endDate);
+                                                                    const { timeRemaining, isExpiringSoon, isExpired } = getTimeRemaining(promos.bestPromo.endDate);
+                                                                    return (
+                                                                        <>
+                                                                            <div className="flex justify-between items-center">
+                                                                                <span className="text-blue-600 font-medium">Thời lượng:</span>
+                                                                                <span className="text-blue-800 font-semibold">{duration.duration}</span>
+                                                                            </div>
+                                                                            <div className="flex justify-between items-center">
+                                                                                <span className="text-blue-600 font-medium">Còn lại:</span>
+                                                                                <span className={`font-semibold ${isExpired ? 'text-red-600' : isExpiringSoon ? 'text-orange-600' : 'text-green-600'}`}>
+                                                                                    {timeRemaining}
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="flex justify-between items-center">
+                                                                                <span className="text-blue-600 font-medium">Trạng thái:</span>
+                                                                                <Chip
+                                                                                    color={duration.status === 'active' ? 'success' : duration.status === 'upcoming' ? 'primary' : 'danger'}
+                                                                                    variant="flat"
+                                                                                    size="sm"
+                                                                                    className="text-xs"
+                                                                                >
+                                                                                    {duration.status === 'active' ? '🟢 Đang diễn ra' :
+                                                                                        duration.status === 'upcoming' ? '🔵 Sắp diễn ra' : '🔴 Đã kết thúc'}
+                                                                                </Chip>
+                                                                            </div>
+                                                                        </>
+                                                                    );
+                                                                })()}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     </CardBody>
                                 </Card>
@@ -610,74 +919,145 @@ export default function ProductDetailPage() {
                                             </Badge>
                                         </div>
                                         <div className="space-y-3">
-                                            {promos.usablePromos.map((p: PromoItem, index) => (
-                                                <Card key={p.promotionCode}
-                                                    className="bg-white/70 border border-default-200 hover:shadow-md transition-shadow">
-                                                    <CardBody className="p-3">
-                                                        <div className="flex items-start justify-between gap-3">
-                                                            <div className="flex-1 space-y-2">
-                                                                <div className="flex items-center gap-2">
-                                                                    <Badge
-                                                                        color={index === 0 ? "success" : "secondary"}
-                                                                        variant="flat"
-                                                                        size="sm"
-                                                                        className="font-mono"
-                                                                    >
-                                                                        {p.promotionCode}
-                                                                    </Badge>
-                                                                    {index === 0 && (
-                                                                        <Chip color="success" variant="solid" size="sm"
-                                                                            className="text-xs">
-                                                                            Tốt nhất
-                                                                        </Chip>
+                                            {promos.usablePromos.map((p: PromoItem, index) => {
+                                                const { timeRemaining, isExpiringSoon, isExpired, totalDays } = p.endDate ? getTimeRemaining(p.endDate) : { timeRemaining: '', isExpiringSoon: false, isExpired: false, totalDays: 0 };
+                                                const duration = p.startDate && p.endDate ? getPromotionDuration(p.startDate, p.endDate) : null;
+                                                return (
+                                                    <Card key={p.promotionCode}
+                                                        className="bg-white/70 border border-default-200 hover:shadow-md transition-shadow">
+                                                        <CardBody className="p-3">
+                                                            <div className="flex items-start justify-between gap-3">
+                                                                <div className="flex-1 space-y-2">
+                                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                                        <Badge
+                                                                            color={index === 0 ? "success" : "secondary"}
+                                                                            variant="flat"
+                                                                            size="sm"
+                                                                            className="font-mono"
+                                                                        >
+                                                                            {p.promotionCode}
+                                                                        </Badge>
+                                                                        {index === 0 && (
+                                                                            <Chip color="success" variant="solid" size="sm"
+                                                                                className="text-xs">
+                                                                                Tốt nhất
+                                                                            </Chip>
+                                                                        )}
+                                                                        {!p.isActive && (
+                                                                            <Chip color="danger" variant="flat" size="sm"
+                                                                                className="text-xs">
+                                                                                Không hoạt động
+                                                                            </Chip>
+                                                                        )}
+                                                                        {p.endDate && (
+                                                                            <Chip
+                                                                                color={isExpiringSoon ? "danger" : "warning"}
+                                                                                variant="flat"
+                                                                                size="sm"
+                                                                                className={`text-xs ${isExpiringSoon ? "animate-pulse" : ""}`}
+                                                                            >
+                                                                                ⏰ {timeRemaining}
+                                                                            </Chip>
+                                                                        )}
+                                                                    </div>
+                                                                    <h4 className="font-semibold text-sm text-default-800">
+                                                                        {p.promotionName}
+                                                                    </h4>
+                                                                    {p.description && (
+                                                                        <p className="text-xs text-default-600 leading-relaxed">
+                                                                            {p.description}
+                                                                        </p>
+                                                                    )}
+                                                                    <div className="flex items-center gap-4 text-xs flex-wrap">
+                                                                        <div className="flex items-center gap-1">
+                                                                            <span className="text-default-600">Loại:</span>
+                                                                            <Badge color="secondary" variant="flat" size="sm">
+                                                                                {p.discountType === 'PERCENTAGE' ?
+                                                                                    `${p.discountValue}%` :
+                                                                                    money(p.discountValue)
+                                                                                }
+                                                                            </Badge>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-1">
+                                                                            <span className="text-default-600">Giảm:</span>
+                                                                            <span className="font-bold text-success">
+                                                                                {money(p.discountAmount)}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-1">
+                                                                            <span
+                                                                                className="text-default-600">Giá cuối:</span>
+                                                                            <span className="font-bold text-danger">
+                                                                                {money(p.finalPrice)}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                    {p.startDate && p.endDate && (
+                                                                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-2 rounded-md mt-2 border border-blue-200">
+                                                                            <div className="space-y-1">
+                                                                                <div className="flex items-center gap-1 mb-1">
+                                                                                    <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                                                    </svg>
+                                                                                    <span className="font-medium text-blue-700 text-xs">Thời gian KM</span>
+                                                                                </div>
+                                                                                <div className="grid grid-cols-1 gap-1 text-xs">
+                                                                                    <div className="flex justify-between items-center">
+                                                                                        <span className="text-blue-600">Từ:</span>
+                                                                                        <span className="text-blue-800 font-medium">{formatDate(p.startDate)}</span>
+                                                                                    </div>
+                                                                                    <div className="flex justify-between items-center">
+                                                                                        <span className="text-blue-600">Đến:</span>
+                                                                                        <span className="text-blue-800 font-medium">{formatDate(p.endDate)}</span>
+                                                                                    </div>
+                                                                                    {duration && (
+                                                                                        <>
+                                                                                            <div className="flex justify-between items-center">
+                                                                                                <span className="text-blue-600">Diện:</span>
+                                                                                                <span className="text-blue-800 font-medium">{duration.duration}</span>
+                                                                                            </div>
+                                                                                            <div className="flex justify-between items-center">
+                                                                                                <span className="text-blue-600">Trạng thái:</span>
+                                                                                                <Chip
+                                                                                                    color={duration.status === 'active' ? 'success' : duration.status === 'upcoming' ? 'primary' : 'danger'}
+                                                                                                    variant="flat"
+                                                                                                    size="sm"
+                                                                                                    className="text-xs"
+                                                                                                >
+                                                                                                    {duration.status === 'active' ? '🟢 Đang diễn ra' :
+                                                                                                        duration.status === 'upcoming' ? '🔵 Sắp diễn ra' : '🔴 Đã kết thúc'}
+                                                                                                </Chip>
+                                                                                            </div>
+                                                                                        </>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
                                                                     )}
                                                                 </div>
-                                                                <h4 className="font-semibold text-sm text-default-800">
-                                                                    {p.promotionName}
-                                                                </h4>
-                                                                {p.description && (
-                                                                    <p className="text-xs text-default-600 leading-relaxed">
-                                                                        {p.description}
-                                                                    </p>
-                                                                )}
-                                                                <div className="flex items-center gap-4 text-xs">
-                                                                    <div className="flex items-center gap-1">
-                                                                        <span className="text-default-600">Giảm:</span>
-                                                                        <span className="font-bold text-success">
-                                                                            {money(p.discountAmount)}
-                                                                        </span>
+                                                                <div className="flex flex-col items-end gap-2">
+                                                                    <div className="text-right">
+                                                                        <div className="text-xs text-default-500">Tiết
+                                                                            kiệm
+                                                                        </div>
+                                                                        <div className="font-bold text-success text-sm">
+                                                                            {money(selected.price - p.finalPrice)}
+                                                                        </div>
                                                                     </div>
-                                                                    <div className="flex items-center gap-1">
-                                                                        <span
-                                                                            className="text-default-600">Giá cuối:</span>
-                                                                        <span className="font-bold text-danger">
-                                                                            {money(p.finalPrice)}
-                                                                        </span>
-                                                                    </div>
+                                                                    <Chip
+                                                                        color="warning"
+                                                                        variant="flat"
+                                                                        size="sm"
+                                                                        className="text-xs"
+                                                                    >
+                                                                        -{percent(selected.price, p.finalPrice)}%
+                                                                    </Chip>
                                                                 </div>
                                                             </div>
-                                                            <div className="flex flex-col items-end gap-2">
-                                                                <div className="text-right">
-                                                                    <div className="text-xs text-default-500">Tiết
-                                                                        kiệm
-                                                                    </div>
-                                                                    <div className="font-bold text-success text-sm">
-                                                                        {money(selected.price - p.finalPrice)}
-                                                                    </div>
-                                                                </div>
-                                                                <Chip
-                                                                    color="warning"
-                                                                    variant="flat"
-                                                                    size="sm"
-                                                                    className="text-xs"
-                                                                >
-                                                                    -{percent(selected.price, p.finalPrice)}%
-                                                                </Chip>
-                                                            </div>
-                                                        </div>
-                                                    </CardBody>
-                                                </Card>
-                                            ))}
+                                                        </CardBody>
+                                                    </Card>
+                                                );
+                                            })}
                                         </div>
                                         <div
                                             className="mt-4 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
@@ -861,228 +1241,104 @@ export default function ProductDetailPage() {
                         </div>
                     </div>
 
-                    {/* Enhanced Tabs Section */}
-                    <div className="mt-10">
-                        <Tabs
-                            variant="underlined"
-                            color="primary"
-                            classNames={{
-                                tabList: "gap-6 w-full relative rounded-none p-0 border-b border-divider",
-                                cursor: "w-full bg-primary",
-                                tab: "max-w-fit px-0 h-12",
-                                tabContent: "group-data-[selected=true]:text-primary"
-                            }}
-                        >
-                            <Tab
-                                key="description"
-                                title={
-                                    <div className="flex items-center space-x-2">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {/* Product Description Section */}
+                    <div className="mt-10 space-y-8">
+                        {/* Description Card */}
+                        <Card className="shadow-md">
+                            <CardHeader className="pb-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-gradient-to-r from-primary-100 to-secondary-100 rounded-full flex items-center justify-center">
+                                        <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                                                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                         </svg>
-                                        <span>Mô tả sản phẩm</span>
                                     </div>
-                                }
-                            >
-                                <Card className="mt-4">
-                                    <CardBody className="p-6">
-                                        <div className="prose max-w-none text-default-700">
-                                            <p className="text-base leading-relaxed mb-4">{view.description}</p>
-                                            <div className="grid sm:grid-cols-2 gap-4 mt-6">
-                                                {view.materialName && (
-                                                    <div
-                                                        className="flex items-center gap-3 p-3 bg-default-100 rounded-lg">
-                                                        <div
-                                                            className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                                                            <svg className="w-4 h-4 text-primary" fill="none"
-                                                                stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round"
-                                                                    strokeWidth={2}
-                                                                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                                                            </svg>
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-medium text-sm">Chất liệu</p>
-                                                            <p className="text-primary font-semibold">{view.materialName}</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                {view.targetAudienceName && (
-                                                    <div
-                                                        className="flex items-center gap-3 p-3 bg-default-100 rounded-lg">
-                                                        <div
-                                                            className="w-8 h-8 bg-secondary-100 rounded-full flex items-center justify-center">
-                                                            <svg className="w-4 h-4 text-secondary" fill="none"
-                                                                stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round"
-                                                                    strokeWidth={2}
-                                                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                                            </svg>
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-medium text-sm">Đối tượng</p>
-                                                            <p className="text-secondary font-semibold">{view.targetAudienceName}</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </CardBody>
-                                </Card>
-                            </Tab>
-
-                            <Tab
-                                key="brand"
-                                title={
-                                    <div className="flex items-center space-x-2">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                        </svg>
-                                        <span>Thương hiệu</span>
+                                    <div>
+                                        <h2 className="text-xl font-bold text-foreground">Mô tả sản phẩm</h2>
+                                        <p className="text-sm text-default-500">Thông tin chi tiết về sản phẩm</p>
                                     </div>
-                                }
-                            >
-                                <Card className="mt-4">
-                                    <CardBody className="p-6">
-                                        <div className="flex items-center gap-4 mb-6">
-                                            {view.logoPublicId && (
-                                                <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
-                                                    <CldImage
-                                                        width={64}
-                                                        height={64}
-                                                        src={view.logoPublicId}
-                                                        alt={view.brandName}
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                </div>
-                                            )}
-                                            <div>
-                                                <h3 className="text-xl font-bold text-foreground">{view.brandName}</h3>
-                                                <Badge color="primary" variant="flat">Thương hiệu chính thức</Badge>
-                                            </div>
-                                        </div>
-                                        <div className="prose max-w-none text-default-700">
-                                            <p className="text-base leading-relaxed">{view.brandInfo}</p>
-                                        </div>
-                                    </CardBody>
-                                </Card>
-                            </Tab>
-
-                            <Tab
-                                key="specs"
-                                title={
-                                    <div className="flex items-center space-x-2">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                                d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                                        </svg>
-                                        <span>Thông số kỹ thuật</span>
-                                    </div>
-                                }
-                            >
-                                <Card className="mt-4">
-                                    <CardBody className="p-0">
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full">
-                                                <thead>
-                                                    <tr className="border-b border-divider">
-                                                        <th className="px-6 py-4 text-left text-sm font-semibold text-default-700 bg-default-50">
-                                                            Thuộc tính
-                                                        </th>
-                                                        <th className="px-6 py-4 text-left text-sm font-semibold text-default-700 bg-default-50">
-                                                            Giá trị
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-divider">
-                                                    <tr className="hover:bg-default-50 transition-colors">
-                                                        <td className="px-6 py-4 text-sm font-medium text-default-900">SKU</td>
-                                                        <td className="px-6 py-4 text-sm text-default-700">
-                                                            <Badge variant="flat" color="default">{selected.sku}</Badge>
-                                                        </td>
-                                                    </tr>
-                                                    <tr className="hover:bg-default-50 transition-colors">
-                                                        <td className="px-6 py-4 text-sm font-medium text-default-900">Màu
-                                                            sắc
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm text-default-700">
-                                                            <Badge variant="flat"
-                                                                color="primary">{selected.colorName}</Badge>
-                                                        </td>
-                                                    </tr>
-                                                    <tr className="hover:bg-default-50 transition-colors">
-                                                        <td className="px-6 py-4 text-sm font-medium text-default-900">Kích
-                                                            cỡ
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm text-default-700">
-                                                            <Badge variant="flat"
-                                                                color="secondary">{selected.sizeName}</Badge>
-                                                        </td>
-                                                    </tr>
-                                                    <tr className="hover:bg-default-50 transition-colors">
-                                                        <td className="px-6 py-4 text-sm font-medium text-default-900">Giá
-                                                            gốc
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm font-semibold text-default-700">{money(selected.price)}</td>
-                                                    </tr>
-                                                    {selected.salePrice != null && (
-                                                        <tr className="hover:bg-default-50 transition-colors">
-                                                            <td className="px-6 py-4 text-sm font-medium text-default-900">Giá
-                                                                khuyến mãi
-                                                            </td>
-                                                            <td className="px-6 py-4 text-sm font-semibold text-danger">{money(selected.salePrice)}</td>
-                                                        </tr>
-                                                    )}
-                                                    <tr className="hover:bg-default-50 transition-colors">
-                                                        <td className="px-6 py-4 text-sm font-medium text-default-900">Cân
-                                                            nặng
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm text-default-700">{selected.weight} kg</td>
-                                                    </tr>
-                                                    <tr className="hover:bg-default-50 transition-colors">
-                                                        <td className="px-6 py-4 text-sm font-medium text-default-900">Tồn
-                                                            kho
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm text-default-700">
-                                                            <Chip
-                                                                color={selected.stockLevel > 10 ? 'success' : selected.stockLevel > 0 ? 'warning' : 'danger'}
-                                                                variant="flat"
-                                                                size="sm"
-                                                            >
-                                                                {selected.stockLevel} sản phẩm
-                                                            </Chip>
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </CardBody>
-                                </Card>
-                            </Tab>
-
-                            <Tab
-                                key="reviews"
-                                title={
-                                    <div className="flex items-center space-x-2">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                                d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                                        </svg>
-                                        <span>Đánh giá</span>
-                                        <Badge color="primary" variant="flat" size="sm">{reviewCnt}</Badge>
-                                    </div>
-                                }
-                            >
-                                <div className="mt-4">
-                                    <ReviewSection
-                                        productId={view.productId}
-                                        onReviewStatsChange={s => setReviewCnt(s.totalReviews)}
-                                    />
                                 </div>
-                            </Tab>
-                        </Tabs>
+                            </CardHeader>
+                            <Divider />
+                            <CardBody className="p-6">
+                                <div className="prose max-w-none text-default-700">
+                                    {/* Additional Product Features */}
+                                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+                                        {view.materialName && (
+                                            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-primary-50 to-primary-100 rounded-lg border border-primary-200">
+                                                <div className="w-10 h-10 bg-primary-200 rounded-full flex items-center justify-center">
+                                                    <svg className="w-5 h-5 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                                            d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-primary-800 text-sm">Chất liệu</p>
+                                                    <p className="text-primary-700 font-bold">{view.materialName}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {view.targetAudienceName && (
+                                            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-secondary-50 to-secondary-100 rounded-lg border border-secondary-200">
+                                                <div className="w-10 h-10 bg-secondary-200 rounded-full flex items-center justify-center">
+                                                    <svg className="w-5 h-5 text-secondary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-secondary-800 text-sm">Đối tượng sử dụng</p>
+                                                    <p className="text-secondary-700 font-bold">{view.targetAudienceName}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-success-50 to-success-100 rounded-lg border border-success-200">
+                                            <div className="w-10 h-10 bg-success-200 rounded-full flex items-center justify-center">
+                                                <svg className="w-5 h-5 text-success-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-success-800 text-sm">Chất lượng</p>
+                                                <p className="text-success-700 font-bold">Đảm bảo chính hãng</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p className="text-base leading-relaxed mb-6 whitespace-pre-line">{view.description}</p>
+                                </div>
+                            </CardBody>
+                        </Card>
+
+                        {/* Reviews Section */}
+                        <Card className="shadow-md">
+                            <CardHeader className="pb-3">
+                                <div className="flex items-center justify-between w-full">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-gradient-to-r from-warning-100 to-warning-200 rounded-full flex items-center justify-center">
+                                            <svg className="w-5 h-5 text-warning-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                                    d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h2 className="text-xl font-bold text-foreground">Đánh giá sản phẩm</h2>
+                                            <p className="text-sm text-default-500">Ý kiến từ khách hàng đã mua</p>
+                                        </div>
+                                    </div>
+                                    <Badge color="warning" variant="flat" size="lg" className="font-semibold">
+                                        {reviewCnt} đánh giá
+                                    </Badge>
+                                </div>
+                            </CardHeader>
+                            <Divider />
+                            <CardBody className="p-6">
+                                <ReviewSection
+                                    productId={view.productId}
+                                    onReviewStatsChange={s => setReviewCnt(s.totalReviews)}
+                                />
+                            </CardBody>
+                        </Card>
                     </div>
                 </CardBody>
             </Card>

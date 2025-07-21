@@ -1,6 +1,7 @@
 package org.yellowcat.backend.product.dto;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public class VariantPromoItemDTO {
     private String promotionCode;
@@ -8,6 +9,11 @@ public class VariantPromoItemDTO {
     private BigDecimal discountAmount;
     private BigDecimal finalPrice;
     private String description;
+    private String discountType;
+    private BigDecimal discountValue;
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
+    private Boolean isActive;
 
     public String getPromotionCode() {
         return promotionCode;
@@ -47,5 +53,45 @@ public class VariantPromoItemDTO {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getDiscountType() {
+        return discountType;
+    }
+
+    public void setDiscountType(String discountType) {
+        this.discountType = discountType;
+    }
+
+    public BigDecimal getDiscountValue() {
+        return discountValue;
+    }
+
+    public void setDiscountValue(BigDecimal discountValue) {
+        this.discountValue = discountValue;
+    }
+
+    public LocalDateTime getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDateTime startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDateTime getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDateTime endDate) {
+        this.endDate = endDate;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }
