@@ -151,7 +151,7 @@ export default function Sidebar() {
     return (
         <aside className="w-64 min-h-screen bg-white dark:bg-gray-900 shadow-md border-r border-gray-200 dark:border-gray-800 flex flex-col">
             {/* Logo SneakPeak */}
-            <a href={'/admin'} className="flex items-center gap-3 px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+            <a href={'http://localhost:3000'} className="flex items-center gap-3 px-6 py-5 border-b border-gray-100 dark:border-gray-700">
                 <span className="text-xl font-bold text-orange-600">SneakPeak</span>
             </a>
 

@@ -321,8 +321,14 @@ public class OrderOnlineService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với keycloakId: " + keycloakId));
 
         List<Order> orders = orderRepository.findByUserOrderByOrderDateDesc(user);
+        List<Order> ordersOnline = new ArrayList<>();
+        for (Order order : orders) {
+            if (order.getShippingAddress() != null && order.getShippingAddress().getAddressId() != null) {
+                ordersOnline.add(order);
+            }
+        }
 
-        return orders.stream().map(this::convertToSummary).toList();
+        return ordersOnline.stream().map(this::convertToSummary).toList();
     }
 
 }

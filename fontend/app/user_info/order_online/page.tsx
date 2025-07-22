@@ -36,7 +36,7 @@ const tabList = [
   { key: "pending", label: "Chờ xác nhận" },
   { key: "processing", label: "Chờ lấy hàng" },
   { key: "shipping", label: "Chờ giao hàng" },
-  { key: "delivered", label: "Đánh giá" },
+  { key: "delivered", label: "Đã giao" },
 ];
 
 // Dữ liệu mẫu, thêm trạng thái cho từng đơn hàng

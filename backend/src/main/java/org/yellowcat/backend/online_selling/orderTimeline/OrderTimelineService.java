@@ -46,7 +46,7 @@ public class OrderTimelineService {
             throw new RuntimeException("Đơn hàng đã ở trạng thái này rồi.");
         }
 
-        if (isTerminalStatus(currentStatus)) {
+        if (isTerminalStatus(currentStatus, payment)) {
             throw new RuntimeException("Không thể thay đổi trạng thái của đơn hàng đã kết thúc.");
         }
 
@@ -67,6 +67,21 @@ public class OrderTimelineService {
 
         if ("ReturnedToSeller".equalsIgnoreCase(newStatus)) {
             restockOrderItems(order);
+            // Nếu là ZALOPAY và đã thanh toán thành công, tự động chuyển tiếp sang Refunded
+            if (payment != null && "ZALOPAY".equalsIgnoreCase(payment.getPaymentMethod()) && "SUCCESS".equalsIgnoreCase(paymentStatus)) {
+                // Lưu timeline cho ReturnedToSeller trước
+                String finalNote = (note == null || note.trim().isEmpty()) ? "Không có ghi chú." : note;
+                saveTimeline(orderId, currentStatus, newStatus, finalNote, imageUrls);
+                order.setOrderStatus("Refunded");
+                orderRepository.save(order);
+                saveTimeline(orderId, newStatus, "Refunded", "Tự động hoàn tiền cho đơn ZaloPay đã trả về người bán", null);
+                Map<String, Object> response = new HashMap<>();
+                response.put("orderId", orderId);
+                response.put("fromStatus", currentStatus);
+                response.put("toStatus", "Refunded");
+                response.put("message", "Chuyển trạng thái đơn hàng thành công từ '" + currentStatus + "' sang 'Refunded'.");
+                return response;
+            }
         }
 
         if ("CustomerReceived".equalsIgnoreCase(newStatus)) {
@@ -145,6 +160,12 @@ public class OrderTimelineService {
 
         if (!"Delivered".equalsIgnoreCase(order.getOrderStatus())) {
             throw new RuntimeException("Chỉ có thể xác nhận nhận hàng sau khi đã giao.");
+        }
+
+        // Kiểm tra nếu là ZALOPAY mà chưa thanh toán thì không cho xác nhận
+        Payment payment = paymentRepository.findByOrder(order);
+        if (payment != null && "ZALOPAY".equalsIgnoreCase(payment.getPaymentMethod()) && !"SUCCESS".equalsIgnoreCase(payment.getPaymentStatus())) {
+            throw new RuntimeException("Đơn hàng thanh toán qua ZaloPay nhưng chưa thanh toán thành công, không thể xác nhận đã nhận hàng.");
         }
 
         order.setOrderStatus("CustomerReceived");
@@ -242,8 +263,17 @@ public class OrderTimelineService {
         return orderTimelineRepository.findByOrderIdOrderByChangedAtAsc(orderId);
     }
 
-    private boolean isTerminalStatus(String status) {
-        return List.of("Cancelled", "Completed", "Refunded", "ReturnedToSeller").contains(status);
+    private boolean isTerminalStatus(String status, Payment payment) {
+        // Nếu là ReturnedToSeller, kiểm tra payment method
+        if ("ReturnedToSeller".equalsIgnoreCase(status)) {
+            if (payment != null && "ZALOPAY".equalsIgnoreCase(payment.getPaymentMethod()) && "SUCCESS".equalsIgnoreCase(payment.getPaymentStatus())) {
+                // Cho phép chuyển tiếp sang Refunded
+                return false;
+            }
+            // COD hoặc chưa thanh toán thì là kết thúc
+            return true;
+        }
+        return List.of("Cancelled", "Completed", "Refunded").contains(status);
     }
 
     private Map<String, Set<String>> getAllowedTransitions() {
