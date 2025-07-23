@@ -81,6 +81,21 @@ public class SecurityConfig {
                                 "/v3/api-docs/**")
                         .permitAll().
 
+                        // return request public API GET
+                                requestMatchers(HttpMethod.GET,
+                                "/api/return-request/{returnRequestId}/items",
+                                "/api/return-request/items/{returnItemId}"
+                        ).permitAll().
+                        // return request public API POST
+                                requestMatchers(HttpMethod.POST,
+                                "/api/return-request",
+                                "/api/return-request/images"
+                        ).permitAll().
+                        // return request private API
+                                requestMatchers(
+                                "/api/return-request/**"
+                        ).hasAnyAuthority("Admin_Web").
+
                         //Orders private API
                                 requestMatchers(
                                 "/api/orders/**",
