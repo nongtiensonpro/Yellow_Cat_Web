@@ -13,7 +13,8 @@ import {
     Ruler,
     Store,
     ChevronRight,
-    TicketPercent // Icon mới
+    TicketPercent, // Icon mới
+    MessageCircle // Thêm icon ô chat
 } from "lucide-react";
 
 // NOTE: Next.js specific imports (Link, Image, usePathname) have been replaced
@@ -57,6 +58,7 @@ const menuItems: MenuItem[] = [
     },
     { href: "/admin/return_management", icon: <RotateCcw size={18} />, label: "Trả hàng" },
     { href: "/admin/account_management", icon: <User size={18} />, label: "Tài khoản" },
+    { href: "http://localhost:3000/admin/chat", icon: <MessageCircle size={18} />, label: "Chat" },
 ];
 
 interface MenuItemComponentProps {

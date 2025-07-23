@@ -55,9 +55,10 @@ public class OrderTimelineService {
             if (delivered.isEmpty() || delivered.get().getChangedAt().plusDays(RETURN_ALLOWED_DAYS).isBefore(LocalDateTime.now())) {
                 throw new RuntimeException("Không đủ điều kiện để hoàn hàng.");
             }
-            if ("Pending".equals(paymentStatus)) {
-                throw new RuntimeException("Đơn hàng chưa thanh toán. Vui lòng liên hệ cửa hàng để xử lý.");
-            }
+            // Bỏ kiểm tra paymentStatus để cho phép hoàn hàng cả khi chưa thanh toán
+            // if ("Pending".equals(paymentStatus)) {
+            //     throw new RuntimeException("Đơn hàng chưa thanh toán. Vui lòng liên hệ cửa hàng để xử lý.");
+            // }
         }
 
         if ("Pending".equalsIgnoreCase(currentStatus) && "Cancelled".equalsIgnoreCase(newStatus)) {
@@ -286,8 +287,8 @@ public class OrderTimelineService {
         transitions.put("Delivered", Set.of("CustomerReceived", "ReturnRequested"));
         transitions.put("CustomerReceived", Set.of("Completed"));
         transitions.put("ReturnRequested", Set.of("ReturnApproved", "ReturnRejected"));
-        transitions.put("ReturnApproved", Set.of("Refunded"));
-        transitions.put("ReturnRejected", Set.of("CustomerReceived"));
+        transitions.put("ReturnApproved", Set.of("Refunded", "ReturnedToSeller"));
+        transitions.put("ReturnRejected", Set.of("Completed"));
         transitions.put("ReturnedToSeller", Set.of("Refunded"));
         return transitions;
     }

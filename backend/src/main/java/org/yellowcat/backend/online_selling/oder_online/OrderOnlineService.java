@@ -331,4 +331,20 @@ public class OrderOnlineService {
         return ordersOnline.stream().map(this::convertToSummary).toList();
     }
 
+    @Transactional
+    public List<OrderSummaryDTO> getOrderStatus(UUID keycloakId, String orderStatus) {
+        Optional<AppUser> userOpt = appUserRepository.findByKeycloakId(keycloakId);
+        if (userOpt.isEmpty()) {
+            return Collections.emptyList();
+        }
+        AppUser user = userOpt.get();
+        List<Order> orders = orderRepository.findByUserAndOrderStatus(user, orderStatus);
+        List<Order> ordersOnline = new ArrayList<>();
+        for (Order order : orders) {
+            if (order.getShippingAddress() != null && order.getShippingAddress().getAddressId() != null) {
+                ordersOnline.add(order);
+            }
+        }
+        return ordersOnline.stream().map(this::convertToSummary).toList();
+    }
 }

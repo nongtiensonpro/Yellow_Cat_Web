@@ -386,7 +386,6 @@ export default function OrdersManagementPage() {
     // Danh sách trạng thái sẽ auto update không cần popup
     const AUTO_UPDATE_STATES = [
         'CustomerReceived',
-        'ReturnApproved',
         'ReturnRejected',
         'ReturnedToSeller',
     ];

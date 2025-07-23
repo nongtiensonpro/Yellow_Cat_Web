@@ -93,4 +93,73 @@ public class OrderOnlineController {
         return ResponseEntity.ok(orders);
     }
 
+    @GetMapping("/user-orders_pending")
+    public ResponseEntity<List<OrderSummaryDTO>> getOrdersUserAndPending(@RequestParam UUID keycloakId) {
+        String status = "Pending";
+        List<OrderSummaryDTO> orders = orderOnlineService.getOrderStatus(keycloakId,status);
+        return ResponseEntity.ok(orders);
+    }
+    @GetMapping("/user-orders_shipping")
+    public ResponseEntity<List<OrderSummaryDTO>> getOrdersByUserAndShipping(@RequestParam UUID keycloakId) {
+        String status = "Shipping";
+        List<OrderSummaryDTO> orders = orderOnlineService.getOrderStatus(keycloakId,status);
+        return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/user-orders_confirmed")
+    public ResponseEntity<List<OrderSummaryDTO>> getOrdersByUserAndConfirmed(@RequestParam UUID keycloakId) {
+        String status = "Confirmed";
+        List<OrderSummaryDTO> orders = orderOnlineService.getOrderStatus(keycloakId,status);
+        return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/user-orders_cancelled")
+    public ResponseEntity<List<OrderSummaryDTO>> getOrdersByUserAndCancelled(@RequestParam UUID keycloakId) {
+        String status = "Cancelled";
+        List<OrderSummaryDTO> orders = orderOnlineService.getOrderStatus(keycloakId,status);
+        return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/user-orders_delivered")
+    public ResponseEntity<List<OrderSummaryDTO>> getOrdersByUserAndDelivered(@RequestParam UUID keycloakId) {
+        String status = "Delivered";
+        List<OrderSummaryDTO> orders = orderOnlineService.getOrderStatus(keycloakId,status);
+        return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/user-orders_refunded")
+    public ResponseEntity<List<OrderSummaryDTO>> getOrdersByUserAndRefunded(@RequestParam UUID keycloakId) {
+        String status = "Refunded";
+        List<OrderSummaryDTO> orders = orderOnlineService.getOrderStatus(keycloakId,status);
+        return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/user-orders_completed")
+    public ResponseEntity<List<OrderSummaryDTO>> getOrdersByUserAndCompleted(@RequestParam UUID keycloakId) {
+        String status = "Completed";
+        List<OrderSummaryDTO> orders = orderOnlineService.getOrderStatus(keycloakId,status);
+        return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/user-orders_deliveryFailed")
+    public ResponseEntity<List<OrderSummaryDTO>> getOrdersByUserAndDeliveryFailed(@RequestParam UUID keycloakId) {
+        String status = "DeliveryFailed";
+        List<OrderSummaryDTO> orders = orderOnlineService.getOrderStatus(keycloakId,status);
+        return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/user-orders_returnedToSeller")
+    public ResponseEntity<List<OrderSummaryDTO>> getOrdersByUserAndReturnedToSeller(@RequestParam UUID keycloakId) {
+        String status = "ReturnedToSeller";
+        List<OrderSummaryDTO> orders = orderOnlineService.getOrderStatus(keycloakId,status);
+        return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/user-orders_returnRequested")
+    public ResponseEntity<List<OrderSummaryDTO>> getOrdersByUserAndReturnRequested(@RequestParam UUID keycloakId) {
+        String status = "ReturnRequested";
+        List<OrderSummaryDTO> orders = orderOnlineService.getOrderStatus(keycloakId,status);
+        return ResponseEntity.ok(orders);
+    }
+
 }
