@@ -11,8 +11,10 @@ import {
     TableColumn,
     TableBody,
     TableRow,
-    TableCell
+    TableCell,
+    Modal
 } from "@heroui/react";
+import { Dialog } from "@headlessui/react";
 import { 
     ShoppingCart, 
     Calendar, 
@@ -21,96 +23,239 @@ import {
     Package,
 } from "lucide-react";
 import {CldImage} from "next-cloudinary";
-import { useState } from "react";
+import React, { useState } from "react";
 import OrderTabs from '@/components/order/OrderTabs';
-
-const user = {
-    fullName: "Nguyễn Văn A",
-    username: "nguyenvana",
-    email: "nguyenvana@example.com",
-    phoneNumber: "0987654321",
-    avatarUrl: "sample_avatar_public_id"
-};
+import { useSession } from 'next-auth/react';
+import { jwtDecode } from 'jwt-decode';
+import { useEffect, useCallback } from 'react';
 
 const tabList = [
-  { key: "pending", label: "Chờ xác nhận" },
-  { key: "processing", label: "Chờ lấy hàng" },
-  { key: "shipping", label: "Chờ giao hàng" },
-  { key: "delivered", label: "Đánh giá" },
+  { key: "Pending", label: "Chờ xác nhận" },
+  { key: "Confirmed", label: "Chờ giao hàng" },
+  { key: "Shipping", label: "Đang giao hàng" },
+  { key: "Delivered", label: "Đã giao" },
+  { key: "Completed", label: "Hoàn thành" },
+  { key: "Refunded", label: "Đã hoàn tiền" },
+  { key: "Cancelled", label: "Đã hủy" },
+  { key: "DeliveryFailed", label: "Giao thất bại" },
+  { key: "ReturnedToSeller", label: "Đã trả về người bán" },
+  { key: "ReturnRequested", label: "Hoàn hàng" },
 ];
 
-// Dữ liệu mẫu, thêm trạng thái cho từng đơn hàng
-const orders = [
-  {
-    orderId: 1,
-    orderCode: "ONL123456",
-    orderDate: "2024-06-01T10:30:00Z",
-    orderStatus: "pending",
-    customerName: "Nguyễn Văn A",
-    finalAmount: 1500000,
-    discountAmount: 50000
-  },
-  {
-    orderId: 2,
-    orderCode: "ONL123457",
-    orderDate: "2024-06-02T14:15:00Z",
-    orderStatus: "processing",
-    customerName: "Nguyễn Văn A",
-    finalAmount: 800000,
-    discountAmount: 0
-  },
-  {
-    orderId: 3,
-    orderCode: "ONL123458",
-    orderDate: "2024-06-03T09:00:00Z",
-    orderStatus: "shipping",
-    customerName: "Nguyễn Văn A",
-    finalAmount: 1200000,
-    discountAmount: 0
-  },
-  {
-    orderId: 4,
-    orderCode: "ONL123459",
-    orderDate: "2024-06-04T09:00:00Z",
-    orderStatus: "delivered",
-    customerName: "Nguyễn Văn A",
-    finalAmount: 900000,
-    discountAmount: 0
-  }
+const RETURN_REASONS = [
+    'Sản phẩm bị lỗi',
+    'Sản phẩm không đúng mô tả',
+    'Thiếu phụ kiện/quà tặng',
+    'Đóng gói kém',
+    'Khác',
 ];
-
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-        style: 'currency',
-        currency: 'VND'
-    }).format(amount);
-};
-
-const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('vi-VN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-};
-
-const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-        case 'pending': return 'warning';
-        case 'paid': return 'success';
-        case 'partial': return 'secondary';
-        case 'completed': return 'success';
-        case 'cancelled': return 'danger';
-        default: return 'default';
-    }
-};
 
 export default function OrderOnlinePage() {
-    const [activeTab, setActiveTab] = useState("pending");
-    // Lọc đơn hàng theo tab
-    const filteredOrders = orders.filter(order => order.orderStatus === activeTab);
+    const { data: session, status } = useSession();
+    const [user, setUser] = useState<any>(null);
+    const [orders, setOrders] = useState<any[]>([]);
+    const [activeTab, setActiveTab] = useState("Pending");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [openDetailOrderId, setOpenDetailOrderId] = useState<number | null>(null);
+    const [orderDetailCache, setOrderDetailCache] = useState<Record<number, any>>({});
+    const [loadingDetail, setLoadingDetail] = useState(false);
+    const [detailError, setDetailError] = useState<string | null>(null);
+    const [showReturnPopup, setShowReturnPopup] = useState(false);
+    const [returnReason, setReturnReason] = useState('');
+    const [customReason, setCustomReason] = useState('');
+    const [returnImages, setReturnImages] = useState<string[]>([]);
+    const [returnLoading, setReturnLoading] = useState(false);
+    const [returnError, setReturnError] = useState<string | null>(null);
+    const [returnSuccess, setReturnSuccess] = useState<string | null>(null);
+    const [confirmLoading, setConfirmLoading] = useState(false);
+    const [confirmError, setConfirmError] = useState<string | null>(null);
+    const [confirmSuccess, setConfirmSuccess] = useState<string | null>(null);
+
+    // Lấy user info từ backend
+    const fetchUserByKeycloakId = useCallback(async (keycloakId: string, accessToken: string) => {
+        const res = await fetch(`http://localhost:8080/api/users/keycloak-user/${keycloakId}`, {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        const apiRes = await res.json();
+        if (!apiRes.data) throw new Error(apiRes.message || 'Không lấy được thông tin user');
+        return apiRes.data;
+    }, []);
+
+    // Lấy orders theo trạng thái
+    const fetchOrdersByStatus = useCallback(async (keycloakId: string, status: string, accessToken: string) => {
+        setLoading(true);
+        setError(null);
+        let url = '';
+        switch (status) {
+            case 'Pending': url = '/user-orders_pending'; break;
+            case 'Shipping': url = '/user-orders_shipping'; break;
+            case 'Confirmed': url = '/user-orders_confirmed'; break;
+            case 'Cancelled': url = '/user-orders_cancelled'; break;
+            case 'Delivered': url = '/user-orders_delivered'; break;
+            case 'Refunded': url = '/user-orders_refunded'; break;
+            case 'Completed': url = '/user-orders_completed'; break;
+            case 'DeliveryFailed': url = '/user-orders_deliveryFailed'; break;
+            case 'ReturnedToSeller': url = '/user-orders_returnedToSeller'; break;
+            case 'ReturnRequested': url = '/user-orders_returnRequested'; break;
+            default: url = '/user-orders_pending';
+        }
+        try {
+            const res = await fetch(`http://localhost:8080/api/orders${url}?keycloakId=${keycloakId}`, {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            const data = await res.json();
+            setOrders(Array.isArray(data) ? data : data.data || []);
+        } catch (err: any) {
+            setError('Không lấy được danh sách đơn hàng');
+            setOrders([]);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Lấy user và orders khi mount hoặc đổi tab
+    useEffect(() => {
+        const getUserAndOrders = async () => {
+            if (status === 'loading') return;
+            if (status === 'unauthenticated' || !session) {
+                setError('Bạn chưa đăng nhập');
+                return;
+            }
+            try {
+                const accessToken = session.accessToken || (session as any).user?.accessToken;
+                if (!accessToken) throw new Error('Không tìm thấy accessToken');
+                const tokenData = jwtDecode<any>(accessToken);
+                const keycloakId = tokenData.sub;
+                if (!keycloakId) throw new Error('Không tìm thấy keycloakId');
+                // Lấy user
+                const userData = await fetchUserByKeycloakId(keycloakId, accessToken);
+                setUser(userData);
+                // Lấy orders theo tab
+                await fetchOrdersByStatus(keycloakId, activeTab, accessToken);
+            } catch (err: any) {
+                setError(err.message || 'Lỗi không xác định');
+            }
+        };
+        getUserAndOrders();
+    }, [session, status, activeTab, fetchUserByKeycloakId, fetchOrdersByStatus]);
+
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND'
+        }).format(amount);
+    };
+
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${day}/${month}/${year} ${hours}:${minutes}`;
+    };
+
+    const getStatusColor = (status: string) => {
+        switch (status.toLowerCase()) {
+            case 'pending': return 'warning';
+            case 'paid': return 'success';
+            case 'partial': return 'secondary';
+            case 'completed': return 'success';
+            case 'cancelled': return 'danger';
+            default: return 'default';
+        }
+    };
+
+    // Thêm hàm getStatusBadgeClass cho orderStatus và paymentStatus
+    const getStatusBadgeClass = (status: string) => {
+        if (!status) return 'bg-gray-100 text-gray-800';
+        const s = status.toLowerCase();
+        if (["completed", "delivered", "paid", "success", "refunded"].includes(s)) return "bg-green-100 text-green-800";
+        if (["pending", "processing", "confirmed", "shipping"].includes(s)) return "bg-yellow-100 text-yellow-800";
+        if (["cancelled", "failed", "deliveryfailed", "returnrejected", "finalrejected"].includes(s)) return "bg-red-100 text-red-800";
+        return "bg-gray-100 text-gray-800";
+    };
+
+    // Hàm lấy chi tiết đơn hàng (có cache)
+    const fetchOrderDetail = async (orderId: number) => {
+        setLoadingDetail(true);
+        setDetailError(null);
+        if (orderDetailCache[orderId]) {
+            setLoadingDetail(false);
+            return;
+        }
+        try {
+            const res = await fetch(`http://localhost:8080/api/orders/detail-online/${orderId}`);
+            const data = await res.json();
+            setOrderDetailCache(prev => ({ ...prev, [orderId]: data }));
+        } catch (err) {
+            setDetailError('Không lấy được chi tiết đơn hàng');
+        } finally {
+            setLoadingDetail(false);
+        }
+    };
+
+    // Khi openDetailOrderId thay đổi, fetch chi tiết nếu chưa có
+    useEffect(() => {
+        if (openDetailOrderId) {
+            fetchOrderDetail(openDetailOrderId);
+        } else {
+            setDetailError(null);
+        }
+    }, [openDetailOrderId]);
+
+    // Hàm xác nhận nhận hàng
+    const handleConfirmReceived = async (orderId: number) => {
+        setConfirmLoading(true);
+        setConfirmError(null);
+        setConfirmSuccess(null);
+        try {
+            const res = await fetch('http://localhost:8080/api/order-timelines/confirm-received', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, note: 'Khách xác nhận đã nhận hàng' }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setConfirmSuccess('Xác nhận nhận hàng thành công!');
+                setTimeout(() => { setConfirmSuccess(null); window.location.reload(); }, 1200);
+            } else {
+                setConfirmError(data.message || 'Không thể xác nhận nhận hàng');
+            }
+        } catch (err) {
+            setConfirmError('Lỗi hệ thống');
+        } finally {
+            setConfirmLoading(false);
+        }
+    };
+    // Hàm gửi yêu cầu hoàn hàng
+    const handleRequestReturn = async (orderId: number) => {
+        setReturnLoading(true);
+        setReturnError(null);
+        setReturnSuccess(null);
+        let note = returnReason === 'Khác' ? customReason : returnReason;
+        try {
+            const res = await fetch('http://localhost:8080/api/order-timelines/request-return', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, note, imageUrls: returnImages }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setReturnSuccess('Gửi yêu cầu hoàn hàng thành công!');
+                setTimeout(() => { setReturnSuccess(null); setShowReturnPopup(false); window.location.reload(); }, 1200);
+            } else {
+                setReturnError(data.message || 'Không thể gửi yêu cầu hoàn hàng');
+            }
+        } catch (err) {
+            setReturnError('Lỗi hệ thống');
+        } finally {
+            setReturnLoading(false);
+        }
+    };
+
     return (
         <div className="container mx-auto p-6 space-y-6">
             <OrderTabs />
@@ -118,23 +263,33 @@ export default function OrderOnlinePage() {
             <Card>
                 <CardHeader className="flex gap-3">
                     <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
-                        <CldImage
-                            width={64}
-                            height={64}
-                            src={user.avatarUrl}
-                            alt="Avatar"
-                            className="w-full h-full object-cover"
-                        />
+                        {user?.avatarUrl ? (
+                            <CldImage
+                                width={64}
+                                height={64}
+                                src={user.avatarUrl}
+                                alt="Avatar"
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-default-200 flex items-center justify-center">
+                                <span className="text-default-500 text-lg font-medium">
+                                    {user?.fullName?.charAt(0) || user?.username?.charAt(0) || "U"}
+                                </span>
+                            </div>
+                        )}
                     </div>
                     <div className="flex flex-col">
                         <p className="text-xl font-bold">Đơn hàng online của tôi</p>
                         <p className="text-small text-default-500">
-                            {user.fullName} • {user.email}
+                            {user?.fullName || user?.username} • {user?.email}
                         </p>
-                        <p className="text-small text-default-500 flex items-center gap-1">
-                            <Phone size={12} />
-                            {user.phoneNumber}
-                        </p>
+                        {user?.phoneNumber && (
+                            <p className="text-small text-default-500 flex items-center gap-1">
+                                <Phone size={12} />
+                                {user.phoneNumber}
+                            </p>
+                        )}
                     </div>
                 </CardHeader>
             </Card>
@@ -206,7 +361,11 @@ export default function OrderOnlinePage() {
                     <h3 className="text-lg font-semibold">Danh sách đơn hàng online</h3>
                 </CardHeader>
                 <CardBody>
-                    {filteredOrders.length === 0 ? (
+                    {loading ? (
+                        <div className="text-center py-8">Đang tải...</div>
+                    ) : error ? (
+                        <div className="text-center py-8 text-red-500">{error}</div>
+                    ) : orders.length === 0 ? (
                         <div className="text-center py-8">
                             <ShoppingCart size={48} className="text-default-400 mx-auto mb-4" />
                             <p className="text-default-500">Không có đơn hàng nào ở trạng thái này</p>
@@ -221,58 +380,209 @@ export default function OrderOnlinePage() {
                                 <TableColumn>HÀNH ĐỘNG</TableColumn>
                             </TableHeader>
                             <TableBody>
-                                {filteredOrders.map((order) => (
-                                    <TableRow key={order.orderId}>
-                                        <TableCell>
-                                            <div>
-                                                <p className="font-medium">{order.orderCode}</p>
-                                                <p className="text-small text-default-500">{order.customerName}</p>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <Calendar size={16} className="text-default-400" />
-                                                {formatDate(order.orderDate)}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Chip 
-                                                color={getStatusColor(order.orderStatus)} 
-                                                variant="flat"
-                                                size="sm"
-                                            >
-                                                {order.orderStatus}
-                                            </Chip>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div>
-                                                <p className="font-medium">{formatCurrency(order.finalAmount)}</p>
-                                                {order.discountAmount > 0 && (
-                                                    <p className="text-small text-success">
-                                                        Giảm: {formatCurrency(order.discountAmount)}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    size="sm"
-                                                    color="primary"
+                                {orders.map((order) => (
+                                    <React.Fragment key={order.orderId}>
+                                        <TableRow>
+                                            <TableCell>
+                                                <div>
+                                                    <p className="font-medium">{order.orderCode}</p>
+                                                    <p className="text-small text-default-500">{order.customerName}</p>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <Calendar size={16} className="text-default-400" />
+                                                    {formatDate(order.createdAt)}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip 
+                                                    color={getStatusColor(order.orderStatus)} 
                                                     variant="flat"
-                                                    onClick={() => alert(`Xem chi tiết đơn hàng: ${order.orderCode}`)}
+                                                    size="sm"
                                                 >
-                                                    Chi tiết đầy đủ
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
+                                                    {order.orderStatus}
+                                                </Chip>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div>
+                                                    <p className="font-medium">{formatCurrency(order.finalAmount)}</p>
+                                                    {order.discountAmount > 0 && (
+                                                        <p className="text-small text-success">
+                                                            Giảm: {formatCurrency(order.discountAmount)}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        color="primary"
+                                                        variant="flat"
+                                                        onClick={() => setOpenDetailOrderId(openDetailOrderId === order.orderId ? null : order.orderId)}
+                                                    >
+                                                        {openDetailOrderId === order.orderId ? 'Đóng' : 'Chi tiết đầy đủ'}
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                        {/* Hiển thị chi tiết nếu openDetailOrderId === order.orderId */}
+                                        {openDetailOrderId === order.orderId && (
+                                            <TableRow>
+                                                <TableCell colSpan={5}>
+                                                    {loadingDetail ? (
+                                                        <div className="text-center py-8">Đang tải chi tiết đơn hàng...</div>
+                                                    ) : detailError ? (
+                                                        <div className="text-center text-red-600 py-8">{detailError}</div>
+                                                    ) : orderDetailCache[order.orderId] ? (
+                                                        <div className="bg-gray-50 rounded-lg p-6 mb-4 border border-gray-200">
+                                                            {/* Thông tin đơn hàng */}
+                                                            <div className="mb-4">
+                                                                <h3 className="text-lg font-bold text-blue-700 mb-2">Thông tin đơn hàng</h3>
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                    <div>
+                                                                        <div><span className="font-semibold">Mã đơn hàng:</span> {orderDetailCache[order.orderId].orderCode}</div>
+                                                                        <div><span className="font-semibold">Ngày đặt:</span> {formatDate(orderDetailCache[order.orderId].orderDate)}</div>
+                                                                        <div>
+                                                                            <span className="font-semibold">Trạng thái:</span> 
+                                                                            <span className={`inline-block ml-2 px-2 py-1 rounded text-xs font-semibold ${getStatusBadgeClass(orderDetailCache[order.orderId].orderStatus)}`}>
+                                                                                {orderDetailCache[order.orderId].orderStatus}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div><span className="font-semibold">Ghi chú:</span> {orderDetailCache[order.orderId].customerNotes || 'Không có'}</div>
+                                                                    </div>
+                                                                    <div>
+                                                                        <div><span className="font-semibold">Phương thức thanh toán:</span> {orderDetailCache[order.orderId].paymentMethod}</div>
+                                                                        <div>
+                                                                            <span className="font-semibold">Trạng thái thanh toán:</span>
+                                                                            <span className={`inline-block ml-2 px-2 py-1 rounded text-xs font-semibold ${getStatusBadgeClass(orderDetailCache[order.orderId].paymentStatus)}`}>
+                                                                                {orderDetailCache[order.orderId].paymentStatus}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div><span className="font-semibold">Phí ship:</span> {formatCurrency(orderDetailCache[order.orderId].shippingFee)}</div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            {/* Thông tin khách hàng */}
+                                                            <div className="mb-4">
+                                                                <h3 className="text-lg font-bold text-green-700 mb-2">Thông tin khách hàng</h3>
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                    <div>
+                                                                        <div><span className="font-semibold">Khách hàng:</span> {orderDetailCache[order.orderId].customerName}</div>
+                                                                        <div><span className="font-semibold">Số điện thoại:</span> {orderDetailCache[order.orderId].phoneNumber}</div>
+                                                                    </div>
+                                                                    <div>
+                                                                        <div><span className="font-semibold">Địa chỉ:</span> {orderDetailCache[order.orderId].streetAddress}, {orderDetailCache[order.orderId].wardCommune}, {orderDetailCache[order.orderId].district}, {orderDetailCache[order.orderId].cityProvince}, {orderDetailCache[order.orderId].country}</div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            {/* Danh sách sản phẩm */}
+                                                            <div className="mb-4">
+                                                                <h3 className="text-lg font-bold text-purple-700 mb-2">Danh sách sản phẩm</h3>
+                                                                <div className="overflow-x-auto">
+                                                                    <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                                                                        <thead className="bg-gray-100">
+                                                                            <tr>
+                                                                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-700 uppercase">Sản phẩm</th>
+                                                                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-700 uppercase">Thông tin</th>
+                                                                                <th className="px-4 py-2 text-center text-xs font-bold text-gray-700 uppercase">Số lượng</th>
+                                                                                <th className="px-4 py-2 text-right text-xs font-bold text-gray-700 uppercase">Đơn giá</th>
+                                                                                <th className="px-4 py-2 text-right text-xs font-bold text-gray-700 uppercase">Thành tiền</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {orderDetailCache[order.orderId].items?.map((item: any, idx: number) => (
+                                                                                <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                                                                                    <td className="px-4 py-2 font-medium text-gray-900">{item.productName}</td>
+                                                                                    <td className="px-4 py-2 text-gray-700">{item.variantName}</td>
+                                                                                    <td className="px-4 py-2 text-center">{item.quantity}</td>
+                                                                                    <td className="px-4 py-2 text-right">{formatCurrency(item.unitPrice)}</td>
+                                                                                    <td className="px-4 py-2 text-right font-semibold">{formatCurrency(item.totalPrice)}</td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </div>
+                                                            {/* Tổng kết */}
+                                                            <div className="bg-blue-50 rounded-lg p-4 flex flex-col md:flex-row md:justify-between md:items-center">
+                                                                <div className="font-semibold text-gray-700">Tổng thanh toán:</div>
+                                                                <div className="text-2xl font-bold text-blue-700">{formatCurrency(orderDetailCache[order.orderId].finalAmount)}</div>
+                                                            </div>
+                                                            {orderDetailCache[order.orderId].orderStatus === 'Delivered' && (
+                                                                <div className="flex gap-4 mt-4">
+                                                                    <Button color="success" onClick={() => handleConfirmReceived(order.orderId)} disabled={confirmLoading}>
+                                                                        {confirmLoading ? 'Đang xác nhận...' : 'Xác nhận nhận hàng'}
+                                                                    </Button>
+                                                                    <Button color="warning" onClick={() => setShowReturnPopup(true)}>
+                                                                        Yêu cầu hoàn hàng
+                                                                    </Button>
+                                                                </div>
+                                                            )}
+                                                            {confirmError && <div className="text-red-600 mt-2">{confirmError}</div>}
+                                                            {confirmSuccess && <div className="text-green-600 mt-2">{confirmSuccess}</div>}
+                                                        </div>
+                                                    ) : null}
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </React.Fragment>
                                 ))}
                             </TableBody>
                         </Table>
                     )}
                 </CardBody>
             </Card>
+            {/* Popup yêu cầu hoàn hàng */}
+            <Dialog open={showReturnPopup} onClose={() => setShowReturnPopup(false)} className="fixed z-50 inset-0 overflow-y-auto">
+                <div className="flex items-center justify-center min-h-screen">
+                    <Dialog.Overlay className="fixed inset-0 bg-black opacity-30" />
+                    <div className="relative bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-auto z-10">
+                        <Dialog.Title className="text-lg font-bold mb-4">Yêu cầu hoàn hàng</Dialog.Title>
+                        <div className="mb-3">
+                            <label className="block font-semibold mb-1">Lý do hoàn hàng</label>
+                            <select
+                                className="w-full border rounded px-3 py-2"
+                                value={returnReason}
+                                onChange={e => setReturnReason(e.target.value)}
+                            >
+                                <option value="">-- Chọn lý do --</option>
+                                {RETURN_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                        </div>
+                        {returnReason === 'Khác' && (
+                            <div className="mb-3">
+                                <label className="block font-semibold mb-1">Nhập lý do</label>
+                                <input
+                                    className="w-full border rounded px-3 py-2"
+                                    value={customReason}
+                                    onChange={e => setCustomReason(e.target.value)}
+                                    placeholder="Nhập lý do hoàn hàng..."
+                                />
+                            </div>
+                        )}
+                        <div className="mb-3">
+                            <label className="block font-semibold mb-1">Ảnh minh họa (URL, mỗi dòng 1 ảnh)</label>
+                            <textarea
+                                className="w-full border rounded px-3 py-2"
+                                rows={3}
+                                value={returnImages.join('\n')}
+                                onChange={e => setReturnImages(e.target.value.split('\n'))}
+                                placeholder="https://example.com/img1.jpg\nhttps://example.com/img2.jpg"
+                            />
+                        </div>
+                        {returnError && <div className="text-red-600 mb-2">{returnError}</div>}
+                        {returnSuccess && <div className="text-green-600 mb-2">{returnSuccess}</div>}
+                        <div className="flex justify-end gap-2 mt-4">
+                            <Button color="danger" variant="flat" onClick={() => setShowReturnPopup(false)} disabled={returnLoading}>Hủy</Button>
+                            <Button color="primary" onClick={() => handleRequestReturn(openDetailOrderId!)} disabled={returnLoading || !returnReason || (returnReason === 'Khác' && !customReason)}>
+                                {returnLoading ? 'Đang gửi...' : 'Gửi yêu cầu'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </Dialog>
         </div>
     );
 }
