@@ -12,7 +12,6 @@ import {
     TableBody,
     TableRow,
     TableCell,
-    Modal
 } from "@heroui/react";
 import { Dialog } from "@headlessui/react";
 import { 
@@ -28,6 +27,7 @@ import OrderTabs from '@/components/order/OrderTabs';
 import { useSession } from 'next-auth/react';
 import { jwtDecode } from 'jwt-decode';
 import { useEffect, useCallback } from 'react';
+import toast from 'react-hot-toast';
 
 const tabList = [
   { key: "Pending", label: "Chờ xác nhận" },
@@ -71,6 +71,11 @@ export default function OrderOnlinePage() {
     const [confirmLoading, setConfirmLoading] = useState(false);
     const [confirmError, setConfirmError] = useState<string | null>(null);
     const [confirmSuccess, setConfirmSuccess] = useState<string | null>(null);
+    // Hàm huỷ đơn hàng
+    const [cancelLoading, setCancelLoading] = useState(false);
+    // Đã bỏ thông báo huỷ đơn
+    // State cho xác nhận huỷ đơn
+    const [showCancelConfirm, setShowCancelConfirm] = useState<{orderId: number, orderCode: string} | null>(null);
 
     // Lấy user info từ backend
     const fetchUserByKeycloakId = useCallback(async (keycloakId: string, accessToken: string) => {
@@ -256,6 +261,29 @@ export default function OrderOnlinePage() {
         }
     };
 
+    // Hàm huỷ đơn hàng
+    const handleCancelOrder = async (orderId: number, orderCode: string) => {
+        setCancelLoading(true);
+        try {
+            const res = await fetch('http://localhost:8080/api/order-timelines/cancel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId }),
+            });
+            if (res.ok) {
+                toast.success(`Đã huỷ đơn hàng thành công! (Mã đơn: ${orderCode})`);
+                setTimeout(() => window.location.reload(), 1200);
+            } else {
+                const data = await res.json();
+                toast.error(data.message || 'Không thể huỷ đơn hàng');
+            }
+        } catch {
+            toast.error('Lỗi hệ thống');
+        } finally {
+            setCancelLoading(false);
+        }
+    };
+
     return (
         <div className="container mx-auto p-6 space-y-6">
             <OrderTabs />
@@ -424,6 +452,18 @@ export default function OrderOnlinePage() {
                                                     >
                                                         {openDetailOrderId === order.orderId ? 'Đóng' : 'Chi tiết đầy đủ'}
                                                     </Button>
+                                                    {/* Nút huỷ đơn cho trạng thái Pending */}
+                                                    {order.orderStatus === 'Pending' && (
+                                                        <Button
+                                                            size="sm"
+                                                            color="danger"
+                                                            variant="flat"
+                                                            onClick={() => setShowCancelConfirm({ orderId: order.orderId, orderCode: order.orderCode })}
+                                                            disabled={cancelLoading}
+                                                        >
+                                                            {cancelLoading ? 'Đang huỷ...' : 'Huỷ đơn'}
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -578,6 +618,22 @@ export default function OrderOnlinePage() {
                             <Button color="danger" variant="flat" onClick={() => setShowReturnPopup(false)} disabled={returnLoading}>Hủy</Button>
                             <Button color="primary" onClick={() => handleRequestReturn(openDetailOrderId!)} disabled={returnLoading || !returnReason || (returnReason === 'Khác' && !customReason)}>
                                 {returnLoading ? 'Đang gửi...' : 'Gửi yêu cầu'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </Dialog>
+            {/* Dialog xác nhận huỷ đơn */}
+            <Dialog open={!!showCancelConfirm} onClose={() => setShowCancelConfirm(null)} className="fixed z-50 inset-0 overflow-y-auto">
+                <div className="flex items-center justify-center min-h-screen">
+                    <Dialog.Overlay className="fixed inset-0 bg-black opacity-30" />
+                    <div className="relative bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-auto z-10">
+                        <Dialog.Title className="text-lg font-bold mb-4 text-red-700">Xác nhận huỷ đơn hàng</Dialog.Title>
+                        <div className="mb-4 text-gray-700">Bạn có chắc chắn muốn huỷ đơn hàng <span className="font-semibold">{showCancelConfirm?.orderCode}</span> không?</div>
+                        <div className="flex justify-end gap-2">
+                            <Button color="default" variant="flat" onClick={() => setShowCancelConfirm(null)} disabled={cancelLoading}>Không</Button>
+                            <Button color="danger" onClick={() => { if (showCancelConfirm) { handleCancelOrder(showCancelConfirm.orderId, showCancelConfirm.orderCode); setShowCancelConfirm(null); } }} disabled={cancelLoading}>
+                                {cancelLoading ? 'Đang huỷ...' : 'Xác nhận huỷ'}
                             </Button>
                         </div>
                     </div>

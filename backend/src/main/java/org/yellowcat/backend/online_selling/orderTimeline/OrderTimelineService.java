@@ -336,4 +336,14 @@ public class OrderTimelineService {
             log.info("Cập nhật thành công thanh toán COD cho đơn hàng: {}", order.getOrderId());
         }
     }
+
+    // Thêm hàm public để controller gọi
+    public Order getOrderById(Integer orderId) {
+        return orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng với ID: " + orderId));
+    }
+
+    public Payment getPaymentByOrder(Order order) {
+        return paymentRepository.findByOrder(order);
+    }
 }
