@@ -160,6 +160,7 @@ CREATE TABLE orders
     app_user_id         INT,
     shipping_address_id INT,
     order_date          TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
+    delivery_date       TIMESTAMP,
     phone_number        VARCHAR(15),
     customer_name       VARCHAR(255),
     sub_total_amount    NUMERIC(14, 2) NOT NULL,
@@ -172,7 +173,7 @@ CREATE TABLE orders
     customer_notes      TEXT,
     is_synced_to_ghtk   BOOLEAN                 DEFAULT FALSE, -- Ghi nhận đơn đã gửi lên GHTK chưa
     updated_at          TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
-    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at          TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (app_user_id) REFERENCES app_users (app_user_id) ON DELETE SET NULL,
     FOREIGN KEY (shipping_address_id) REFERENCES addresses (address_id),
     FOREIGN KEY (shipping_method_id) REFERENCES shipping_methods (shipping_method_id)
@@ -396,7 +397,7 @@ CREATE TABLE cart_items
 
 -- Cho PostgreSQL để sinh UUID
 CREATE
-EXTENSION IF NOT EXISTS "pgcrypto";
+    EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Bảng lịch sử product
 CREATE TABLE products_history
@@ -445,6 +446,49 @@ CREATE TABLE product_variants_history
     changed_by        INT,
     FOREIGN KEY (changed_by) REFERENCES app_users (app_user_id) ON DELETE CASCADE
 );
+
+CREATE TABLE return_requests
+(
+    return_request_id SERIAL PRIMARY KEY,
+    order_id          INT NOT NULL,
+    app_user_id       INT NOT NULL,
+    request_date      TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+    return_reason     TEXT,
+    status            VARCHAR(50)    DEFAULT 'Pending', -- Pending, Approved, Rejected, Completed
+    refund_amount     NUMERIC(12, 2) DEFAULT 0,
+    processed_date    TIMESTAMP,
+    note              TEXT,
+    created_at        TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+    updated_at        TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (order_id) REFERENCES orders (order_id) ON DELETE CASCADE,
+    FOREIGN KEY (app_user_id) REFERENCES app_users (app_user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE return_items
+(
+    return_item_id    SERIAL PRIMARY KEY,
+    return_request_id INT            NOT NULL,
+    order_item_id     INT            NOT NULL,
+    quantity_returned INT            NOT NULL,
+    refund_amount     NUMERIC(12, 2) NOT NULL,
+    reason            TEXT,
+
+    FOREIGN KEY (return_request_id) REFERENCES return_requests (return_request_id) ON DELETE CASCADE,
+    FOREIGN KEY (order_item_id) REFERENCES order_items (order_item_id) ON DELETE CASCADE
+);
+
+CREATE TABLE return_images
+(
+    return_image_id SERIAL PRIMARY KEY,
+    return_item_id  INT  NOT NULL,
+    image_url       TEXT NOT NULL,
+    uploaded_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    description     TEXT,
+
+    FOREIGN KEY (return_item_id) REFERENCES return_items (return_item_id) ON DELETE CASCADE
+);
+
 
 -- Thêm Index
 CREATE INDEX idx_orders_user_id ON orders (app_user_id);
@@ -706,104 +750,117 @@ VALUES
      'VNĐ', 70000, '2025-07-01 00:00:00', '2025-09-30 23:59:59', TRUE,
      800000.00, 3, 5000);
 
+-- thêm dữ liệu bảng return_requests
+INSERT INTO return_requests (order_id, app_user_id, request_date, return_reason, status, refund_amount, note)
+VALUES (1, 1, NOW(), 'Sản phẩm bị lỗi kỹ thuật', 'Pending', 0, 'Đang chờ kiểm tra');
+
+INSERT INTO return_items (return_request_id, order_item_id, quantity_returned, refund_amount, reason)
+VALUES (1, 1, 1, 1500000, 'Giày bị bung keo sau khi mang 2 ngày');
+
+INSERT INTO return_images (return_item_id, image_url, description)
+VALUES (1, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 'Ảnh mặt bên bị bung keo'),
+       (1, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 'Ảnh mặt đế bị nứt');
 
 -- 1. Trigger function: xử lý sau khi INSERT
 CREATE
-OR REPLACE FUNCTION trg_after_insert_order_item()
+    OR REPLACE FUNCTION trg_after_insert_order_item()
     RETURNS TRIGGER AS
 $$
 BEGIN
     -- 1.1 Cộng số lượng bán vào trường sold của variant
-UPDATE product_variants
-SET sold = sold + NEW.quantity
-WHERE variant_id = NEW.variant_id;
+    UPDATE product_variants
+    SET sold = sold + NEW.quantity
+    WHERE variant_id = NEW.variant_id;
 
 -- 1.2 Cộng số lượng bán vào trường purchases của product
-UPDATE products
-SET purchases = purchases + NEW.quantity FROM product_variants pv
-WHERE products.product_id = pv.product_id
-  AND pv.variant_id = NEW.variant_id;
+    UPDATE products
+    SET purchases = purchases + NEW.quantity
+    FROM product_variants pv
+    WHERE products.product_id = pv.product_id
+      AND pv.variant_id = NEW.variant_id;
 
-RETURN NEW;
+    RETURN NEW;
 END;
 $$
-LANGUAGE plpgsql;
+    LANGUAGE plpgsql;
 
 -- 2. Tạo trigger AFTER INSERT trên order_items
 CREATE TRIGGER after_insert_order_item
     AFTER INSERT
     ON order_items
     FOR EACH ROW
-    EXECUTE FUNCTION trg_after_insert_order_item();
+EXECUTE FUNCTION trg_after_insert_order_item();
 
 
 -- 3. Trigger function: xử lý sau khi UPDATE (thay đổi quantity)
 CREATE
-OR REPLACE FUNCTION trg_after_update_order_item()
+    OR REPLACE FUNCTION trg_after_update_order_item()
     RETURNS TRIGGER AS
 $$
 DECLARE
-delta INT;
+    delta INT;
 BEGIN
     -- Tính độ chênh giữa giá trị mới và cũ
     delta
-:= NEW.quantity - OLD.quantity;
+        := NEW.quantity - OLD.quantity;
 
     IF
-delta <> 0 THEN
+        delta <> 0 THEN
         -- 3.1 Cập nhật sold của variant
-UPDATE product_variants
-SET sold = sold + delta
-WHERE variant_id = NEW.variant_id;
+        UPDATE product_variants
+        SET sold = sold + delta
+        WHERE variant_id = NEW.variant_id;
 
 -- 3.2 Cập nhật purchases của product
-UPDATE products
-SET purchases = purchases + delta FROM product_variants pv
-WHERE products.product_id = pv.product_id
-  AND pv.variant_id = NEW.variant_id;
-END IF;
+        UPDATE products
+        SET purchases = purchases + delta
+        FROM product_variants pv
+        WHERE products.product_id = pv.product_id
+          AND pv.variant_id = NEW.variant_id;
+    END IF;
 
-RETURN NEW;
+    RETURN NEW;
 END;
 $$
-LANGUAGE plpgsql;
+    LANGUAGE plpgsql;
 
 -- 4. Tạo trigger AFTER UPDATE trên order_items
 CREATE TRIGGER after_update_order_item
     AFTER UPDATE OF quantity, variant_id
     ON order_items
     FOR EACH ROW
-    EXECUTE FUNCTION trg_after_update_order_item();
+EXECUTE FUNCTION trg_after_update_order_item();
 
 
 -- 5. Trigger function: xử lý sau khi DELETE
 CREATE
-OR REPLACE FUNCTION trg_after_delete_order_item()
+    OR REPLACE FUNCTION trg_after_delete_order_item()
     RETURNS TRIGGER AS
 $$
 BEGIN
     -- 5.1 Trừ số lượng đã xóa khỏi sold
-UPDATE product_variants
-SET sold = sold - OLD.quantity
-WHERE variant_id = OLD.variant_id;
+    UPDATE product_variants
+    SET sold = sold - OLD.quantity
+    WHERE variant_id = OLD.variant_id;
 
 -- 5.2 Trừ khỏi purchases của product
-UPDATE products
-SET purchases = purchases - OLD.quantity FROM product_variants pv
-WHERE products.product_id = pv.product_id
-  AND pv.variant_id = OLD.variant_id;
+    UPDATE products
+    SET purchases = purchases - OLD.quantity
+    FROM product_variants pv
+    WHERE products.product_id = pv.product_id
+      AND pv.variant_id = OLD.variant_id;
 
-RETURN OLD;
+    RETURN OLD;
 END;
 $$
-LANGUAGE plpgsql;
+    LANGUAGE plpgsql;
 
 -- 6. Tạo trigger AFTER DELETE trên order_items
 CREATE TRIGGER after_delete_order_item
     AFTER DELETE
     ON order_items
     FOR EACH ROW
-    EXECUTE FUNCTION trg_after_delete_order_item();
+EXECUTE FUNCTION trg_after_delete_order_item();
 
 CREATE TABLE product_waitlist_request
 (
@@ -827,20 +884,22 @@ CREATE TABLE product_waitlist_items
     desired_quantity    INT
 );
 
-CREATE TABLE chat_session (
-                              id SERIAL PRIMARY KEY,
-                              customer_id INT REFERENCES app_users (app_user_id),
-                              staff_id INT REFERENCES app_users (app_user_id),
-                              status VARCHAR(50),
-                              created_at TIMESTAMP,
-                              assigned_at TIMESTAMP
+CREATE TABLE chat_session
+(
+    id          SERIAL PRIMARY KEY,
+    customer_id INT REFERENCES app_users (app_user_id),
+    staff_id    INT REFERENCES app_users (app_user_id),
+    status      VARCHAR(50),
+    created_at  TIMESTAMP,
+    assigned_at TIMESTAMP
 );
 
-CREATE TABLE chat_message (
-                              id SERIAL PRIMARY KEY,
-                              session_id BIGINT REFERENCES chat_session(id) ON DELETE CASCADE,
-                              sender_id INT REFERENCES app_users (app_user_id),
-                              content TEXT,
-                              sender_type VARCHAR(50),
-                              timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE chat_message
+(
+    id          SERIAL PRIMARY KEY,
+    session_id  BIGINT REFERENCES chat_session (id) ON DELETE CASCADE,
+    sender_id   INT REFERENCES app_users (app_user_id),
+    content     TEXT,
+    sender_type VARCHAR(50),
+    timestamp   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

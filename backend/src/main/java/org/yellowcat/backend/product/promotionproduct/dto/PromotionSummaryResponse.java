@@ -5,7 +5,9 @@ import java.time.LocalDateTime;
 
 public record PromotionSummaryResponse(
         Integer promotionProductId,
+        String promotionCode,
         String promotionName,
+        String description,
         String discountType,
         BigDecimal discountValue,
         LocalDateTime startDate,

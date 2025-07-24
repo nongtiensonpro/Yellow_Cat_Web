@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import Link from 'next/link';
+// import Link from 'next/link';
 import { EyeIcon, MagnifyingGlassIcon, FunnelIcon, ArrowPathIcon, PhoneIcon, EnvelopeIcon, MapPinIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 interface OrderOnline {
@@ -129,12 +129,12 @@ interface OrderOnlineDetail {
     customerNotes?: string; // Added for customer notes
     note?: string; // Added for general notes
 }
-const PAYMENT_STATUS_MAP: Record<string, string> = {
-    Pending: 'Chờ thanh toán',
-    Paid: 'Đã thanh toán',
-    Failed: 'Thanh toán thất bại',
-    Refunded: 'Đã hoàn tiền',
-};
+// const PAYMENT_STATUS_MAP: Record<string, string> = {
+//     Pending: 'Chờ thanh toán',
+//     Paid: 'Đã thanh toán',
+//     Failed: 'Thanh toán thất bại',
+//     Refunded: 'Đã hoàn tiền',
+// };
 
 // Custom hook for debouncing
 function useDebounce<T>(value: T, delay: number): T {
@@ -371,7 +371,7 @@ export default function OrdersManagementPage() {
                 fetchTransitions(status);
             }
         });
-        // eslint-disable-next-line
+        // ////////eslint-disable-next-line
     }, [orders, transitionsCache, fetchTransitions]);
 
     // Khi openDetailOrderId thay đổi, fetch chi tiết nếu chưa có trong cache
@@ -504,43 +504,43 @@ export default function OrdersManagementPage() {
         setSelectedFiles(prev => prev.filter((_, i) => i !== index));
     };
 
-    const handleCancelOrder = async (orderId: number) => {
-        if (!session?.accessToken) return;
-
-        // Confirm before canceling
-        if (!confirm('Bạn có chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác.')) {
-            return;
-        }
-
-        setActionLoading(orderId);
-        try {
-            const body = {
-                orderId,
-                newStatus: 'Cancelled',
-                note: 'Admin hủy đơn hàng',
-                imageUrls: [],
-            };
-            const response = await fetch('http://localhost:8080/api/order-timelines/admin/update', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.accessToken}`,
-                },
-                body: JSON.stringify(body),
-            });
-
-            if (response.ok) {
-                fetchOrders(true);
-            } else {
-                const errorData = await response.json();
-                alert(`Hủy đơn hàng thất bại: ${errorData.message || 'Lỗi không xác định'}`);
-            }
-        } catch (error) {
-            alert('Lỗi khi hủy đơn hàng' +  error);
-        } finally {
-            setActionLoading(null);
-        }
-    };
+    // const handleCancelOrder = async (orderId: number) => {
+    //     if (!session?.accessToken) return;
+    //
+    //     // Confirm before canceling
+    //     if (!confirm('Bạn có chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác.')) {
+    //         return;
+    //     }
+    //
+    //     setActionLoading(orderId);
+    //     try {
+    //         const body = {
+    //             orderId,
+    //             newStatus: 'Cancelled',
+    //             note: 'Admin hủy đơn hàng',
+    //             imageUrls: [],
+    //         };
+    //         const response = await fetch('http://localhost:8080/api/order-timelines/admin/update', {
+    //             method: 'POST',
+    //             headers: {
+    //                 'Content-Type': 'application/json',
+    //                 'Authorization': `Bearer ${session.accessToken}`,
+    //             },
+    //             body: JSON.stringify(body),
+    //         });
+    //
+    //         if (response.ok) {
+    //             fetchOrders(true);
+    //         } else {
+    //             const errorData = await response.json();
+    //             alert(`Hủy đơn hàng thất bại: ${errorData.message || 'Lỗi không xác định'}`);
+    //         }
+    //     } catch (error) {
+    //         alert('Lỗi khi hủy đơn hàng' +  error);
+    //     } finally {
+    //         setActionLoading(null);
+    //     }
+    // };
 
     // Memoized calculations
     const getTotalRevenue = useMemo(() => {
@@ -571,7 +571,7 @@ export default function OrdersManagementPage() {
 
     // State lưu các orderId đã tự động update để tránh lặp
     const [autoUpdatedOrders, setAutoUpdatedOrders] = useState<number[]>([]);
-    const [autoCancelledOrders, setAutoCancelledOrders] = useState<number[]>([]);
+    // const [autoCancelledOrders, setAutoCancelledOrders] = useState<number[]>([]);
 
     useEffect(() => {
         orders.forEach(order => {
