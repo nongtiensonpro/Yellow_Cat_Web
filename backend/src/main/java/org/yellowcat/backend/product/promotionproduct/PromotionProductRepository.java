@@ -296,6 +296,51 @@ public interface PromotionProductRepository extends JpaRepository<PromotionProdu
     @Query("SELECT pp.productVariant.variantId FROM PromotionProduct pp WHERE pp.promotion.id = :promotionId")
     List<Integer> findVariantIdsByPromotionId(@Param("promotionId") Integer promotionId);
 
+    // ====== NEW: Kiểm tra xung đột khuyến mãi theo khoảng thời gian ======
+    @Query("""
+            SELECT v.sku
+            FROM PromotionProduct pp
+            JOIN pp.promotion p
+            JOIN pp.productVariant v
+            WHERE v.variantId IN :variantIds
+              AND (:startDate <= p.endDate AND :endDate >= p.startDate)
+        """)
+    List<String> findConflictingSkus(
+            @Param("variantIds") List<Integer> variantIds,
+            @Param("startDate") java.time.LocalDateTime startDate,
+            @Param("endDate") java.time.LocalDateTime endDate
+    );
+
+    @Query("""
+            SELECT v.sku
+            FROM PromotionProduct pp
+            JOIN pp.promotion p
+            JOIN pp.productVariant v
+            WHERE v.variantId IN :variantIds
+              AND (:startDate <= p.endDate AND :endDate >= p.startDate)
+              AND p.id <> :promotionId
+        """)
+    List<String> findConflictingSkusExcludingPromotion(
+            @Param("variantIds") List<Integer> variantIds,
+            @Param("startDate") java.time.LocalDateTime startDate,
+            @Param("endDate") java.time.LocalDateTime endDate,
+            @Param("promotionId") Integer promotionId
+    );
+
+    // ====== NEW: Tìm promotion active cho variant cụ thể ======
+    @Query("""
+            SELECT pp
+            FROM PromotionProduct pp
+            JOIN pp.promotion p
+            WHERE pp.productVariant.variantId = :variantId
+              AND p.isActive = true
+              AND :now BETWEEN p.startDate AND p.endDate
+        """)
+    List<PromotionProduct> findActivePromotionsByVariantId(
+            @Param("variantId") Integer variantId,
+            @Param("now") java.time.LocalDateTime now
+    );
+
 
 }
 

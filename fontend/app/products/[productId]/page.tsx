@@ -713,13 +713,12 @@ export default function ProductDetailPage() {
                                 {hasPromo ? (
                                     <div className="space-y-2">
                                         <div className="flex items-end gap-3 flex-wrap">
-                                            <span
-                                                className="text-3xl sm:text-4xl font-bold text-danger">{money(displayPrice)}</span>
-                                            <span
-                                                className="text-lg line-through text-default-400">{money(selected.salePrice ?? selected.price)}</span>
-                                            <Chip color="danger" variant="solid" size="sm" className="animate-pulse">
-                                                -{percent(selected.salePrice ?? selected.price, displayPrice)}%
-                                            </Chip>
+                                            <span className="text-3xl sm:text-4xl font-bold text-danger">
+                                                {money(selected.salePrice ?? selected.price)}
+                                            </span>
+                                            <span className="text-lg line-through text-default-400">
+                                                {money(selected.price)}
+                                            </span>
                                         </div>
                                         <Badge color="success" variant="flat" className="text-xs">
                                             Tiết kiệm {money(totalSavings)}
@@ -766,9 +765,10 @@ export default function ProductDetailPage() {
                                             </div>
                                             {promos.bestPromo.endDate && (() => {
                                                 const { timeRemaining, isExpiringSoon, isExpired } = getTimeRemaining(promos.bestPromo.endDate);
-                                                const duration = promos.bestPromo.startDate ?
-                                                    getPromotionDuration(promos.bestPromo.startDate, promos.bestPromo.endDate) : null;
-
+                                                const duration = promos.bestPromo.startDate 
+                                                    ? getPromotionDuration(promos.bestPromo.startDate, promos.bestPromo.endDate) 
+                                                    : null;
+                                                
                                                 return (
                                                     <div className="flex flex-col gap-1">
                                                         <Chip
@@ -781,13 +781,12 @@ export default function ProductDetailPage() {
                                                         </Chip>
                                                         {duration && (
                                                             <Chip
-                                                                color={duration.status === 'active' ? "success" :
-                                                                    duration.status === 'upcoming' ? "primary" : "default"}
+                                                                color={duration.status === 'active' ? "success" : 
+                                                                       duration.status === 'upcoming' ? "primary" : "default"}
                                                                 variant="flat"
                                                                 size="sm"
-                                                                className="text-xs"
                                                             >
-                                                                📅 Diện {duration.duration}
+                                                                📅 Diễn ra trong {duration.duration}
                                                             </Chip>
                                                         )}
                                                     </div>

@@ -7,9 +7,15 @@ import axios from 'axios';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import HelpTooltip from '../../../../components/promotion/HelpTooltip';
+import { addToast } from '@heroui/react';
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from '@heroui/react';
 
 type ProductVariant = {
     variantId: number;
+    sku: string;
+    price: number;
+    salePrice: number;
+    imageUrl?: string;
     productName: string;
 };
 
@@ -227,7 +233,10 @@ export default function CreatePromotionPage() {
                     },
                 }
             );
-            alert('✅ Tạo đợt giảm giá thành công!');
+            addToast({
+                title: '✅ Tạo đợt giảm giá thành công!',
+                variant: 'flat',
+            });
             router.push('/admin/promotion_products?page=1');
         } catch (err: unknown) {
             if (axios.isAxiosError(err) && err.response) {
@@ -235,11 +244,18 @@ export default function CreatePromotionPage() {
                 if ((status === 400 || status === 409) && data?.message?.includes('tồn tại')) {
                     setErrors(prev => ({ ...prev, promotionName: data.message || 'Tên đợt giảm giá đã tồn tại.' }));
                 } else {
-                    alert('❌ Lỗi: ' + (data?.message || err.message));
+                    addToast({
+                        title: '❌ Lỗi',
+                        description: data?.message || err.message,
+                        variant: 'flat',
+                    });
                 }
             } else {
                 console.error(err);
-                alert('❌ Lỗi không xác định.');
+                addToast({
+                    title: '❌ Lỗi không xác định',
+                    variant: 'flat',
+                });
             }
         } finally {
             setLoading(false);
@@ -458,58 +474,52 @@ export default function CreatePromotionPage() {
                         {errors.variants && (
                             <p className="text-red-600 text-sm mb-2">{errors.variants}</p>
                         )}
-                        <div className="border rounded overflow-x-auto">
-                            <table className="min-w-full text-sm">
-                                <thead className="bg-gray-100 text-gray-700 font-semibold">
-                                    <tr>
-                                        <th className="px-3 py-2 text-center">
-                                            <input
-                                                type="checkbox"
-                                                ref={selectAllCheckboxRef}
-                                                checked={areAllOnPageSelected}
-                                                onChange={handleSelectAll}
-                                                className="form-checkbox"
-                                            />
-                                        </th>
-                                        <th className="px-3 py-2">STT</th>
-                                        <th className="px-3 py-2 text-left">Tên sản phẩm</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {currentVariants.map((v, idx) => {
-                                        const productGroupIds = variants
-                                            .filter(item => item.productName === v.productName)
-                                            .map(item => item.variantId);
-                                        const isProductGroupSelected = productGroupIds.length > 0 && productGroupIds.every(id => selectedVariants.includes(id));
-
-                                        return (
-                                            <tr key={v.variantId} className="border-t">
-                                                <td className="px-3 py-2 text-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isProductGroupSelected}
-                                                        onChange={() => handleSelectVariant(v.variantId)}
-                                                        className="form-checkbox"
-                                                    />
-                                                </td>
-                                                <td className="px-3 py-2 text-center">
-                                                    {(currentPage - 1) * itemsPerPage + idx + 1}
-                                                </td>
-                                                <td className="px-3 py-2">{v.productName}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
+                        <Table aria-label="Chọn nhóm sản phẩm">
+                            <TableHeader>
+                                <TableColumn className="w-16 text-center">
+                                    <input
+                                        type="checkbox"
+                                        ref={selectAllCheckboxRef}
+                                        checked={areAllOnPageSelected}
+                                        onChange={handleSelectAll}
+                                        className="form-checkbox"
+                                    />
+                                </TableColumn>
+                                <TableColumn className="w-16 text-center">STT</TableColumn>
+                                <TableColumn className="text-left">Tên sản phẩm</TableColumn>
+                                <TableColumn className="text-left">Giá gốc</TableColumn>
+                            </TableHeader>
+                            <TableBody>
+                                {currentVariants.map((v, idx) => {
+                                    const productGroupIds = variants
+                                        .filter(item => item.productName === v.productName)
+                                        .map(item => item.variantId);
+                                    const isProductGroupSelected = productGroupIds.length > 0 && productGroupIds.every(id => selectedVariants.includes(id));
+                                    return (
+                                        <TableRow key={v.variantId}>
+                                            <TableCell className="text-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isProductGroupSelected}
+                                                    onChange={() => handleSelectVariant(v.variantId)}
+                                                    className="form-checkbox"
+                                                />
+                                            </TableCell>
+                                            <TableCell className="text-center">{(currentPage - 1) * itemsPerPage + idx + 1}</TableCell>
+                                            <TableCell>{v.productName}</TableCell>
+                                            <TableCell>{v.price.toLocaleString()} đ</TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
                         <div className="flex items-center justify-center gap-2 mt-3">
                             {Array.from({ length: pageCount }, (_, i) => i + 1).map(page => (
                                 <button
                                     type="button"
                                     key={page}
                                     onClick={() => setCurrentPage(page)}
-                                    className={`w-8 h-8 rounded-full text-sm border ${page === currentPage ? 'bg-blue-600 text-white' : 'hover:bg-gray-200'
-                                        }`}
+                                    className={`w-8 h-8 rounded-full text-sm border ${page === currentPage ? 'bg-blue-600 text-white' : 'hover:bg-gray-200'}`}
                                 >
                                     {page}
                                 </button>
@@ -524,59 +534,56 @@ export default function CreatePromotionPage() {
                         <h4 className="text-lg font-semibold mb-2">
                             Chi tiết sản phẩm đã chọn ({selectedVariants.length})
                         </h4>
-                        <table className="min-w-full border text-sm">
-                            <thead className="bg-gray-200">
-                                <tr>
-                                    <th className="border px-2 py-1 text-center">
-                                        <input
-                                            type="checkbox"
-                                            ref={selectAllDetailsCheckboxRef}
-                                            checked={areAllDetailsOnPageSelected}
-                                            onChange={handleSelectAllDetails}
-                                            className="form-checkbox"
-                                        />
-                                    </th>
-                                    <th className="border px-2 py-1">STT</th>
-                                    <th className="border px-2 py-1">Tên</th>
-                                    <th className="border px-2 py-1">Thương hiệu</th>
-                                    <th className="border px-2 py-1">Màu sắc</th>
-                                    <th className="border px-2 py-1">Kích cỡ</th>
-                                    <th className="border px-2 py-1">Giá gốc</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                        <Table aria-label="Chi tiết sản phẩm đã chọn">
+                            <TableHeader>
+                                <TableColumn className="w-16 text-center">
+                                    <input
+                                        type="checkbox"
+                                        ref={selectAllDetailsCheckboxRef}
+                                        checked={areAllDetailsOnPageSelected}
+                                        onChange={handleSelectAllDetails}
+                                        className="form-checkbox"
+                                    />
+                                </TableColumn>
+                                <TableColumn className="w-12 text-center">STT</TableColumn>
+                                <TableColumn>SKU</TableColumn>
+                                <TableColumn>Tên</TableColumn>
+                                <TableColumn>Thương hiệu</TableColumn>
+                                <TableColumn>Màu sắc</TableColumn>
+                                <TableColumn>Kích cỡ</TableColumn>
+                                <TableColumn>Chất liệu</TableColumn>
+                                <TableColumn>Giá gốc</TableColumn>
+                            </TableHeader>
+                            <TableBody>
                                 {currentDetailRows.map((d, i) => (
-                                    <tr key={d.variantId}>
-                                        <td className="border px-2 py-1 text-center">
+                                    <TableRow key={d.variantId}>
+                                        <TableCell className="text-center">
                                             <input
                                                 type="checkbox"
                                                 checked={selectedVariants.includes(d.variantId)}
                                                 onChange={() => handleSelectDetail(d.variantId)}
                                                 className="form-checkbox"
                                             />
-                                        </td>
-                                        <td className="border px-2 py-1 text-center">
-                                            {(detailPage - 1) * detailPerPage + i + 1}
-                                        </td>
-                                        <td className="border px-2 py-1">{d.productName}</td>
-                                        <td className="border px-2 py-1">{d.brandName}</td>
-                                        <td className="border px-2 py-1">{d.colorName}</td>
-                                        <td className="border px-2 py-1">{d.sizeName}</td>
-                                        <td className="border px-2 py-1">
-                                            {d.price.toLocaleString()}₫
-                                        </td>
-                                    </tr>
+                                        </TableCell>
+                                        <TableCell className="text-center">{(detailPage - 1) * detailPerPage + i + 1}</TableCell>
+                                        <TableCell>{variants.find(v => v.variantId === d.variantId)?.sku ?? '-'}</TableCell>
+                                        <TableCell>{d.productName}</TableCell>
+                                        <TableCell>{d.brandName}</TableCell>
+                                        <TableCell>{d.colorName}</TableCell>
+                                        <TableCell>{d.sizeName}</TableCell>
+                                        <TableCell>{d.materialName || '-'}</TableCell>
+                                        <TableCell>{d.price.toLocaleString()}₫</TableCell>
+                                    </TableRow>
                                 ))}
-                            </tbody>
-                        </table>
+                            </TableBody>
+                        </Table>
                         <div className="flex items-center justify-center gap-2 mt-3">
                             {Array.from({ length: detailPageCount }, (_, i) => i + 1).map(page => (
                                 <button
                                     type="button"
                                     key={page}
                                     onClick={() => setDetailPage(page)}
-                                    className={`w-8 h-8 rounded-full text-sm border ${page === detailPage ? 'bg-blue-600 text-white' : 'hover:bg-gray-200'
-                                        }`}
+                                    className={`w-8 h-8 rounded-full text-sm border ${page === detailPage ? 'bg-blue-600 text-white' : 'hover:bg-gray-200'}`}
                                 >
                                     {page}
                                 </button>

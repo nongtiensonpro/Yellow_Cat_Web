@@ -39,11 +39,18 @@ interface Order {
 
 interface OrderItem {
   orderItemId: number | string;
+  productVariantId?: number;
   productName?: string;
   variantInfo?: string;
   quantity: number;
   priceAtPurchase: number;
   totalPrice: number;
+  bestPromo?: {
+    promotionCode: string;
+    promotionName: string;
+    discountAmount: number;
+  };
+  originalPrice?: number;
 }
 
 interface InvoiceProps {
@@ -59,6 +66,16 @@ interface InvoiceProps {
 
 // Component hiển thị hóa đơn để in
 const InvoiceContent: React.FC<InvoiceProps> = ({ order, orderItems, totals, staffInfo }) => (
+  (() => {
+    // Tính tổng giá gốc và tổng giảm
+    const originalTotal = orderItems.reduce((sum, item) => {
+      const unitOriginal = item.originalPrice ?? item.priceAtPurchase;
+      return sum + unitOriginal * item.quantity;
+    }, 0);
+    const discountedTotal = totals.subTotalAmount ?? totals.finalAmount;
+    const totalDiscount = originalTotal - discountedTotal;
+
+    return (
   <div className="bg-white p-8 max-w-4xl mx-auto text-black" style={{ fontFamily: 'Arial, sans-serif' }}>
     {/* Header */}
     <div className="text-center mb-6">
@@ -117,7 +134,13 @@ const InvoiceContent: React.FC<InvoiceProps> = ({ order, orderItems, totals, sta
               </td>
               <td className="border border-gray-300 p-2 text-center">{item.quantity}</td>
               <td className="border border-gray-300 p-2 text-right">
-                {item.priceAtPurchase.toLocaleString('vi-VN')}
+                {item.bestPromo ? (
+                  <div className="text-right inline-block">
+                    <span className="font-semibold text-red-600">{item.priceAtPurchase.toLocaleString('vi-VN')}</span><br />
+                    <span className="line-through text-xs text-gray-500">{item.originalPrice?.toLocaleString('vi-VN')}</span><br />
+                    <span className="text-[10px] text-orange-600">KM: {item.bestPromo.promotionCode}</span>
+                  </div>
+                ) : item.priceAtPurchase.toLocaleString('vi-VN')}
               </td>
               <td className="border border-gray-300 p-2 text-right">
                 {item.totalPrice.toLocaleString('vi-VN')}
@@ -129,17 +152,21 @@ const InvoiceContent: React.FC<InvoiceProps> = ({ order, orderItems, totals, sta
     </div>
 
     {/* Totals */}
-    <div className="bg-gray-50 p-4 border border-gray-300 mb-6">
-      {order.discountAmount > 0 && (
-        <div className="flex justify-between text-sm mb-2">
+    <div className="bg-gray-50 p-4 border border-gray-300 mb-6 text-sm">
+      <div className="flex justify-between mb-1">
+        <span className="font-bold">Tạm tính (giá gốc):</span>
+        <span>{originalTotal.toLocaleString('vi-VN')} VND</span>
+      </div>
+      {totalDiscount > 0 && (
+        <div className="flex justify-between mb-1 text-red-600">
           <span className="font-bold">Giảm giá:</span>
-          <span>-{order.discountAmount.toLocaleString('vi-VN')} VND</span>
+          <span>-{totalDiscount.toLocaleString('vi-VN')} VND</span>
         </div>
       )}
-      
+
       <hr className="border-gray-400 my-2" />
       <div className="flex justify-between text-lg font-bold">
-        <span>TỔNG CỘNG:</span>
+        <span>Thành tiền:</span>
         <span>{totals.finalAmount.toLocaleString('vi-VN')} VND</span>
       </div>
     </div>
@@ -166,6 +193,8 @@ const InvoiceContent: React.FC<InvoiceProps> = ({ order, orderItems, totals, sta
       <p>Hóa đơn được in lúc: {new Date().toLocaleString('vi-VN')}</p>
     </div>
   </div>
+ );
+  })()
 );
 
 interface InvoicePrintProps {
@@ -179,12 +208,22 @@ interface InvoicePrintProps {
   className?: string;
 }
 
+interface PromoItem {
+  promotionCode: string;
+  promotionName: string;
+  discountAmount: number;
+}
+
 const InvoicePrint: React.FC<InvoicePrintProps> = ({ order, orderItems, totals, className }) => {
   const { data: session } = useSession();
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const printRef = useRef<HTMLDivElement>(null);
   const [staffInfo, setStaffInfo] = useState<StaffInfo | null>(null);
   const [staffLoading, setStaffLoading] = useState<boolean>(false);
+
+  // Promotion info
+  const [promos, setPromos] = useState<PromoItem[]>([]);
+  const [promoLoading, setPromoLoading] = useState<boolean>(false);
 
   // Fetch thông tin nhân viên đơn giản theo order code
   const fetchStaffInfo = useCallback(async () => {
@@ -228,7 +267,30 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order, orderItems, totals, 
     if (isOpen && !staffInfo) {
       fetchStaffInfo();
     }
-  }, [isOpen, staffInfo, fetchStaffInfo]);
+    // Fetch promotions
+    if (isOpen && promos.length === 0 && orderItems.length > 0) {
+      (async () => {
+        setPromoLoading(true);
+        try {
+          const uniqueVariantIds = Array.from(new Set(orderItems.map(i => i.productVariantId)));
+          const promoResults = await Promise.all(uniqueVariantIds.map(async (vid) => {
+            try {
+              const res = await fetch(`http://localhost:8080/api/products/variant/${vid}/promotions`);
+              if (!res.ok) return null;
+              const json = await res.json();
+              return json?.data?.bestPromo as PromoItem | null;
+            } catch {
+              return null;
+            }
+          }));
+          const filtered = promoResults.filter((p): p is PromoItem => p !== null);
+          setPromos(filtered);
+        } finally {
+          setPromoLoading(false);
+        }
+      })();
+    }
+  }, [isOpen, staffInfo, fetchStaffInfo, orderItems, promos.length]);
 
   const handlePrint = () => {
     if (printRef.current) {
@@ -298,6 +360,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order, orderItems, totals, 
                 ) : (
                   <div ref={printRef}>
                     <InvoiceContent order={order} orderItems={orderItems} totals={totals} staffInfo={staffInfo} />
+                
                   </div>
                 )}
               </ModalBody>

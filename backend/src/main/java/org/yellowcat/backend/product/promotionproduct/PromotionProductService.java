@@ -96,9 +96,19 @@ public class PromotionProductService {
 
     @Transactional
     public void createPromotionWithProducts(CreatePromotionDTO dto, UUID userId) {
-//        if (promotionProductRepository.existsByPromotionNameIgnoreCase(dto.getPromotionName())) {
-//            throw new IllegalArgumentException("Tên đợt giảm giá đã tồn tại");
-//        }
+        // ====== NEW VALIDATION: Không cho trùng khuyến mãi cùng thời gian ======
+        List<String> conflictingSkus = promotionProductRepository.findConflictingSkus(
+                dto.getVariantIds(),
+                dto.getStartDate(),
+                dto.getEndDate()
+        );
+        if (!conflictingSkus.isEmpty()) {
+            throw new IllegalArgumentException("Các SKU đã thuộc khuyến mãi khác trong khoảng thời gian này: " + String.join(", ", conflictingSkus));
+        }
+
+        if (promotionProductRepository.existsByPromotionNameIgnoreCase(dto.getPromotionName())) {
+            throw new IllegalArgumentException("Tên đợt giảm giá đã tồn tại");
+        }
         String normalizedName = normalizeName(dto.getPromotionName());
         if (promotionProductRepository.existsByPromotionNameIgnoreCase(normalizedName)) {
             throw new IllegalArgumentException("Tên đợt giảm giá đã tồn tại");
@@ -157,6 +167,17 @@ public class PromotionProductService {
 
         // Reset salePrice cũ
         List<Integer> oldIds = promotionProductRepository.findVariantIdsByPromotionId(promotion.getId());
+        // ====== NEW VALIDATION: Kiểm tra xung đột với khuyến mãi khác ======
+        List<String> conflictingSkus = promotionProductRepository.findConflictingSkusExcludingPromotion(
+                dto.getVariantIds(),
+                dto.getStartDate(),
+                dto.getEndDate(),
+                promotion.getId()
+        );
+        if (!conflictingSkus.isEmpty()) {
+            throw new IllegalArgumentException("Các SKU đã thuộc khuyến mãi khác trong khoảng thời gian này: " + String.join(", ", conflictingSkus));
+        }
+
         List<ProductVariant> oldVariants = productVariantRepository.findAllById(oldIds);
         for (ProductVariant oldVar : oldVariants) {
             oldVar.setSalePrice(null);

@@ -1,4 +1,5 @@
 "use client";
+
 import {
     Table,
     TableHeader,
@@ -217,7 +218,7 @@ export default function Page() {
     };
 
     return (
-        <Card className={`min-h-screen py-8 px-4 md:px-36`}>
+        <Card className={`max p-1`}>
             <CardHeader className="flex gap-3">
                 <div className="flex flex-col">
                     <p className="text-4xl font-bold">Quản lý sản phẩm</p>
@@ -237,8 +238,6 @@ export default function Page() {
                     />
                     <Button color="default" as={Link} href={`/admin/product_management/add_product`}
                             startContent={<Plus size={16}/>}>Thêm sản phẩm</Button>
-                    <Button color="default" as={Link} href={`/admin/product_management/brands`}>Quản lý nhãn hàng</Button>
-                    <Button color="default" as={Link} href={`/admin/product_management/categories`}>Quản lý danh mục</Button>
                 </div>
                 {loading ? (
                     <div className="my-6 text-lg text-center text-blue-500">Đang tải dữ liệu...</div>

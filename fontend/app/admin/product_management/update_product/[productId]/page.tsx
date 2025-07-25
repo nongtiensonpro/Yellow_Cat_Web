@@ -123,10 +123,9 @@ export default function UpdateProductPage() {
     const [selectedColors, setSelectedColors] = useState<string[]>([]);
     const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
 
-    // Cài đặt hàng loạt
+    // Cài đặt hàng loạt (ẩn trường giảm giá, giá khuyến mãi luôn = giá bán)
     const [bulkSettings, setBulkSettings] = useState({
         price: 0,
-        salePrice: 0,
         weight: 0,
         stockLevel: 0
     });
@@ -403,9 +402,6 @@ export default function UpdateProductPage() {
             const priceError = validatePrice(variant.price, "Giá gốc");
             if (priceError) newErrors[`variant_${variant.id}_price`] = priceError;
 
-            const salePriceError = validatePrice(variant.salePrice, "Giá khuyến mãi", variant.price, "giá gốc");
-            if (salePriceError) newErrors[`variant_${variant.id}_salePrice`] = salePriceError;
-
             const weightError = validateWeight(variant.weight);
             if (weightError) newErrors[`variant_${variant.id}_weight`] = weightError;
 
@@ -547,7 +543,7 @@ export default function UpdateProductPage() {
         }
 
         // Validate bulk settings trước khi tạo ma trận
-        if (!validatePriceWithToast(bulkSettings.price, bulkSettings.salePrice)) {
+        if (!validatePriceWithToast(bulkSettings.price, bulkSettings.price)) { // giảm giá mặc định bằng giá bán
             return; // Dừng nếu có lỗi validation
         }
 
@@ -564,7 +560,7 @@ export default function UpdateProductPage() {
                         colorId: parseInt(colorId),
                         sizeId: parseInt(sizeId),
                         price: bulkSettings.price,
-                        salePrice: bulkSettings.salePrice,
+                        salePrice: bulkSettings.price, // giảm giá mặc định bằng giá bán
                         stockLevel: bulkSettings.stockLevel, // Tồn kho
                         sold: 0,
                         imageUrl: "",
@@ -605,9 +601,9 @@ export default function UpdateProductPage() {
         if (!currentVariant) return;
 
         // Validate giá real-time
-        if (field === 'price' || field === 'salePrice') {
-            const newPrice = field === 'price' ? (value as number) : currentVariant.price;
-            const newSalePrice = field === 'salePrice' ? (value as number) : currentVariant.salePrice;
+        if (field === 'price') {
+            const newPrice = value as number;
+            const newSalePrice = currentVariant.salePrice; // Giữ nguyên giá khuyến mãi
 
             // Validate và hiển thị toast nếu có lỗi
             if (!validatePriceWithToast(newPrice, newSalePrice, variantId)) {
@@ -618,7 +614,14 @@ export default function UpdateProductPage() {
         setFormData(prev => ({
             ...prev,
             variants: prev.variants.map(v =>
-                v.id === variantId ? {...v, [field]: value} : v
+                v.id === variantId
+                    ? {
+                          ...v,
+                          price: field === 'price' ? (value as number) : v.price,
+                          salePrice: field === 'price' ? (value as number) : v.salePrice,
+                          [field]: value
+                      }
+                    : v
             )
 
 
@@ -668,7 +671,7 @@ export default function UpdateProductPage() {
         }
 
         // Validate bulk settings trước khi áp dụng
-        if (!validatePriceWithToast(bulkSettings.price, bulkSettings.salePrice)) {
+        if (!validatePriceWithToast(bulkSettings.price, bulkSettings.price)) { // giảm giá mặc định bằng giá bán
             return; // Dừng nếu có lỗi validation
         }
 
@@ -678,7 +681,7 @@ export default function UpdateProductPage() {
                 v.enabled ? {
                     ...v,
                     price: bulkSettings.price || v.price,
-                    salePrice: bulkSettings.salePrice || v.salePrice,
+                    salePrice: bulkSettings.price || v.price,
                     weight: bulkSettings.weight || v.weight,
                     stockLevel: bulkSettings.stockLevel !== undefined ? bulkSettings.stockLevel : v.stockLevel
                 } : v
@@ -1048,28 +1051,6 @@ export default function UpdateProductPage() {
                                     onChange={(e) => {
                                         const value = handleNumberInput(e.target.value, 0, 999999999);
                                         setBulkSettings(prev => ({...prev, price: value}));
-                                        // Validate real-time với giá khuyến mãi hiện tại
-                                        if (bulkSettings.salePrice > 0) {
-                                            validatePriceWithToast(value, bulkSettings.salePrice);
-                                        }
-                                    }}
-                                    onKeyDown={handleKeyDown}
-                                    onPaste={handlePaste}
-                                />
-                                <Input
-                                    label="Giá khuyến mãi (VNĐ)"
-                                    type="number"
-                                    size="sm"
-                                    min={0}
-                                    max={999999999}
-                                    value={bulkSettings.salePrice.toString()}
-                                    onChange={(e) => {
-                                        const value = handleNumberInput(e.target.value, 0, 999999999);
-                                        setBulkSettings(prev => ({...prev, salePrice: value}));
-                                        // Validate real-time với giá gốc hiện tại
-                                        if (bulkSettings.price > 0) {
-                                            validatePriceWithToast(bulkSettings.price, value);
-                                        }
                                     }}
                                     onKeyDown={handleKeyDown}
                                     onPaste={handlePaste}
@@ -1088,8 +1069,6 @@ export default function UpdateProductPage() {
                                     onKeyDown={handleKeyDown}
                                     onPaste={handlePaste}
                                 />
-                            </div>
-                            <div className="grid grid-cols-1 gap-4 mb-4">
                                 <Input
                                     label="Tồn kho"
                                     type="number"
@@ -1129,7 +1108,6 @@ export default function UpdateProductPage() {
                                             <TableColumn>SKU</TableColumn>
                                             <TableColumn>BIẾN THỂ</TableColumn>
                                             <TableColumn>GIÁ GỐC</TableColumn>
-                                            <TableColumn>GIÁ KM</TableColumn>
                                             <TableColumn>TRỌNG LƯỢNG</TableColumn>
                                             <TableColumn>TỒN KHO</TableColumn>
                                             <TableColumn>ẢNH BIẾN THỂ</TableColumn>
@@ -1169,23 +1147,6 @@ export default function UpdateProductPage() {
                                                         />
                                                         {errors[`variant_${variant.id}_price`] && (
                                                             <p className="text-red-500 text-xs mt-1">{errors[`variant_${variant.id}_price`]}</p>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Input
-                                                            type="number"
-                                                            size="sm"
-                                                            min={0}
-                                                            max={999999999}
-                                                            value={variant.salePrice.toString()}
-                                                            onChange={(e) => updateVariant(variant.id, 'salePrice', handleNumberInput(e.target.value, 0, 999999999))}
-                                                            className="w-24"
-                                                            isInvalid={!!errors[`variant_${variant.id}_salePrice`]}
-                                                            onKeyDown={handleKeyDown}
-                                                            onPaste={handlePaste}
-                                                        />
-                                                        {errors[`variant_${variant.id}_salePrice`] && (
-                                                            <p className="text-red-500 text-xs mt-1">{errors[`variant_${variant.id}_salePrice`]}</p>
                                                         )}
                                                     </TableCell>
                                                     <TableCell>

@@ -92,7 +92,7 @@ public class PromotionProductController {
             promotionProductService.createPromotionWithProducts(dto, userId);
             return ResponseEntityBuilder.success("Tạo đợt giảm giá thành công!");
         } catch (IllegalArgumentException e) {
-            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "Tên đợt giảm giá đã tồn tại!", e.getMessage());
+            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, e.getMessage(), e.getMessage());
         } catch (Exception e) {
             return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST,"Lỗi khi tạo đợt giảm giá: " + e.getMessage(),"Lỗi khi tạo đợt giảm giá: " + e.getMessage());
         }

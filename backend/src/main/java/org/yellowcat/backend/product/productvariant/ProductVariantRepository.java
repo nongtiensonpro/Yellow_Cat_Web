@@ -72,6 +72,7 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
         b.brandName,
         c.name,
         s.name,
+        m.name,
         v.price,
         v.salePrice
     )
@@ -80,6 +81,7 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     LEFT JOIN p.brand b
     LEFT JOIN v.color c
     LEFT JOIN v.size s
+    LEFT JOIN p.material m
     WHERE v.variantId IN :ids
 """)
     List<ProductVariantDetailDTO> findDetailsByVariantIds(@Param("ids") List<Integer> ids);

@@ -11,6 +11,7 @@ import {
     Tag,
     Palette,
     Ruler,
+    MessageCircle,
     Store,
     ChevronRight,
     TicketPercent

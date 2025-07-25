@@ -5,6 +5,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Session } from 'next-auth';
 import axios, { AxiosError } from 'axios';
+import { addToast } from '@heroui/react';
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/react";
 
 interface CustomSession extends Session {
     accessToken?: string;
@@ -172,7 +174,10 @@ export default function EditPromotionProductPage() {
                 setSelectedVariants(data.variantIds || []);
             })
             .catch(() => {
-                alert('Không thể tải dữ liệu đợt giảm giá');
+                addToast({
+                    title: 'Không thể tải dữ liệu đợt giảm giá',
+                    variant: 'flat',
+                });
                 router.push('/admin/promotion_products');
             })
             .finally(() => setLoading(false));
@@ -283,18 +288,30 @@ export default function EditPromotionProductPage() {
                     },
                 }
             );
-            alert('✅ Cập nhật thành công!');
+            addToast({
+                title: '✅ Cập nhật thành công!',
+                variant: 'flat',
+            });
             router.push('/admin/promotion_products');
         } catch (err: unknown) {
             if (err instanceof AxiosError) {
                 const msg = err.response?.data?.message || err.message;
                 if (msg.toLowerCase().includes('tồn tại')) {
                     setErrors((p) => ({ ...p, promotionName: 'Tên đã tồn tại.' }));
+                } else if (msg.toLowerCase().includes('sku') || msg.toLowerCase().includes('khuyến mãi khác')) {
+                    setErrors((p) => ({ ...p, variants: msg }));
                 } else {
-                    alert('❌ ' + msg);
+                    addToast({
+                        title: '❌ Lỗi',
+                        description: msg,
+                        variant: 'flat',
+                    });
                 }
             } else {
-                alert('❌ Lỗi không xác định');
+                addToast({
+                    title: '❌ Lỗi không xác định',
+                    variant: 'flat',
+                });
             }
         } finally {
             setSubmitting(false);
@@ -394,43 +411,45 @@ export default function EditPromotionProductPage() {
                         {errors.variants && (
                             <p className="text-red-600 text-sm mb-2">{errors.variants}</p>
                         )}
-                        <div className="border rounded overflow-x-auto">
-                            <table className="min-w-full text-sm">
-                                <thead className="bg-gray-100 font-semibold">
-                                    <tr>
-                                        <th className="px-3 py-2">Chọn</th>
-                                        <th className="px-3 py-2">STT</th>
-                                        <th className="px-3 py-2 text-left">Tên sản phẩm</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {currentProductGroups.map((product, i) => {
-                                        const groupVariantIds = variants
-                                            .filter(v => v.productName === product.productName)
-                                            .map(v => v.variantId);
-
-                                        const areAllSelected = groupVariantIds.length > 0 && groupVariantIds.every(id => selectedVariants.includes(id));
-
-                                        return (
-                                            <tr key={product.variantId} className="border-t">
-                                                <td className="px-3 py-2 text-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={areAllSelected}
-                                                        onChange={() => handleSelectProductGroup(product.productName)}
-                                                        className="form-checkbox"
-                                                    />
-                                                </td>
-                                                <td className="px-3 py-2 text-center">
-                                                    {(currentPage - 1) * itemsPerPage + i + 1}
-                                                </td>
-                                                <td className="px-3 py-2">{product.productName}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
+                        <Table aria-label="Chọn nhóm sản phẩm">
+                            <TableHeader>
+                                <TableColumn className="w-16 text-center">Chọn</TableColumn>
+                                <TableColumn className="w-16 text-center">STT</TableColumn>
+                                <TableColumn className="text-left">Tên sản phẩm</TableColumn>
+                                <TableColumn className="text-left">Giá gốc</TableColumn>
+                            </TableHeader>
+                            <TableBody>
+                                {currentProductGroups.map((product, i) => {
+                                    const groupVariantIds = variants
+                                        .filter(v => v.productName === product.productName)
+                                        .map(v => v.variantId);
+                                    const areAllSelected = groupVariantIds.length > 0 && groupVariantIds.every(id => selectedVariants.includes(id));
+                                    return (
+                                        <TableRow key={product.variantId}>
+                                            <TableCell className="text-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={areAllSelected}
+                                                    onChange={() => handleSelectProductGroup(product.productName)}
+                                                    tabIndex={0}
+                                                    aria-label={areAllSelected ? `Bỏ chọn nhóm ${product.productName}` : `Chọn nhóm ${product.productName}`}
+                                                    onKeyDown={e => {
+                                                        if (e.key === ' ' || e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            handleSelectProductGroup(product.productName);
+                                                        }
+                                                    }}
+                                                    className="form-checkbox"
+                                                />
+                                            </TableCell>
+                                            <TableCell className="text-center">{(currentPage - 1) * itemsPerPage + i + 1}</TableCell>
+                                            <TableCell>{product.productName}</TableCell>
+                                            <TableCell>{product.price.toLocaleString()} đ</TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
                         {pageCount > 1 && (
                             <div className="flex justify-center gap-2 mt-3">
                                 {Array.from({ length: pageCount }, (_, i) => i + 1).map((p) => (
@@ -456,43 +475,49 @@ export default function EditPromotionProductPage() {
                         <h4 className="text-lg font-semibold mb-2">
                             Chi tiết sản phẩm đã chọn ({details.length})
                         </h4>
-                        <div className="border rounded overflow-x-auto">
-                            <table className="min-w-full text-sm">
-                                <thead className="bg-gray-200 font-semibold">
-                                    <tr>
-                                        <th className="px-3 py-2">Bỏ chọn</th>
-                                        <th className="px-2 py-1">STT</th>
-                                        <th className="px-2 py-1">Tên</th>
-                                        <th className="px-2 py-1">Thương hiệu</th>
-                                        <th className="px-2 py-1">Màu</th>
-                                        <th className="px-2 py-1">Kích cỡ</th>
-                                        <th className="px-2 py-1">Chất liệu</th>
-                                        <th className="px-2 py-1">Giá gốc</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {details.map((d, i) => (
-                                        <tr key={d.variantId}>
-                                            <td className="px-3 py-2 text-center">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedVariants.includes(d.variantId)}
-                                                    onChange={() => handleToggleVariant(d.variantId)}
-                                                    className="form-checkbox"
-                                                />
-                                            </td>
-                                            <td className="px-2 py-1 text-center">{i + 1}</td>
-                                            <td className="px-2 py-1">{d.productName}</td>
-                                            <td className="px-2 py-1">{d.brandName}</td>
-                                            <td className="px-2 py-1">{d.colorName}</td>
-                                            <td className="px-2 py-1">{d.sizeName}</td>
-                                            <td className="px-2 py-1">{d.materialName}</td>
-                                            <td className="px-2 py-1">{d.price.toLocaleString()}₫</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                        <Table aria-label="Chi tiết sản phẩm đã chọn">
+                            <TableHeader>
+                                <TableColumn className="w-16 text-center">Bỏ chọn</TableColumn>
+                                <TableColumn className="w-12 text-center">STT</TableColumn>
+                                <TableColumn>SKU</TableColumn>
+                                <TableColumn>Tên</TableColumn>
+                                <TableColumn>Thương hiệu</TableColumn>
+                                <TableColumn>Màu</TableColumn>
+                                <TableColumn>Kích cỡ</TableColumn>
+                                <TableColumn>Chất liệu</TableColumn>
+                                <TableColumn>Giá gốc</TableColumn>
+                            </TableHeader>
+                            <TableBody>
+                                {details.map((d, i) => (
+                                    <TableRow key={d.variantId}>
+                                        <TableCell className="text-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedVariants.includes(d.variantId)}
+                                                onChange={() => handleToggleVariant(d.variantId)}
+                                                tabIndex={0}
+                                                aria-label={selectedVariants.includes(d.variantId) ? `Bỏ chọn ${d.productName}` : `Chọn ${d.productName}`}
+                                                onKeyDown={e => {
+                                                    if (e.key === ' ' || e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        handleToggleVariant(d.variantId);
+                                                    }
+                                                }}
+                                                className="form-checkbox"
+                                            />
+                                        </TableCell>
+                                        <TableCell className="text-center">{i + 1}</TableCell>
+                                        <TableCell>{variants.find(v => v.variantId === d.variantId)?.sku ?? '-'}</TableCell>
+                                        <TableCell>{d.productName}</TableCell>
+                                        <TableCell>{d.brandName}</TableCell>
+                                        <TableCell>{d.colorName}</TableCell>
+                                        <TableCell>{d.sizeName}</TableCell>
+                                        <TableCell>{d.materialName}</TableCell>
+                                        <TableCell>{d.price.toLocaleString()}₫</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
                     </div>
                 )}
             </form>

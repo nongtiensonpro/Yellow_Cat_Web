@@ -65,6 +65,14 @@ interface ApiDetailResponse {
     data: ProductDetail;
 }
 
+// Thông tin khuyến mãi đơn giản
+interface PromoItem {
+    promotionCode: string;
+    promotionName: string;
+    discountAmount: number;
+    finalPrice: number;
+}
+
 export interface ProductVariant {
     variantId: number;
     sku: string;
@@ -73,6 +81,8 @@ export interface ProductVariant {
     colorName?: string;
     sizeName?: string;
     price: number;
+    salePrice?: number;
+    bestPromo?: PromoItem;
     stockLevel: number;
     imageUrl: string;
     weight: number;
@@ -201,10 +211,27 @@ export default function ProductListSaleOffice() {
             const apiResponse: ApiDetailResponse = await response.json();
 
             if (apiResponse.status === 200 && apiResponse.data?.variants) {
-                const fetchedVariants = apiResponse.data.variants.map(variant => ({
-                    ...variant,
-                    colorName: colors.find(c => c.id === variant.colorId)?.name || 'N/A',
-                    sizeName: sizes.find(s => s.id === variant.sizeId)?.name || 'N/A',
+                // Lấy promotions cho tất cả variants song song
+                const fetchedVariants = await Promise.all(apiResponse.data.variants.map(async variant => {
+                    let bestPromo: PromoItem | undefined;
+                    try {
+                        const resPromo = await fetch(`http://localhost:8080/api/products/variant/${variant.variantId}/promotions`);
+                        if (resPromo.ok) {
+                            const json = await resPromo.json();
+                            if (json?.data?.bestPromo) {
+                                bestPromo = json.data.bestPromo as PromoItem;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Cannot fetch promo for variant', variant.variantId, e);
+                    }
+
+                    return {
+                        ...variant,
+                        colorName: colors.find(c => c.id === variant.colorId)?.name || 'N/A',
+                        sizeName: sizes.find(s => s.id === variant.sizeId)?.name || 'N/A',
+                        bestPromo,
+                    } as ProductVariant;
                 }));
 
                 setProducts(prevProducts =>
