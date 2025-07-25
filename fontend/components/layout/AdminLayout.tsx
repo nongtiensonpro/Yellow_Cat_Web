@@ -5,8 +5,11 @@ import { ReactNode, useState, useEffect } from 'react';
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
+        setMounted(true);
+        
         // Listen for sidebar state changes
         const handleStorageChange = () => {
             const saved = localStorage.getItem('sidebar-collapsed');
@@ -34,13 +37,25 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         };
     }, []);
 
-    return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-            <Slidebar />
-            <main className={`transition-[margin] duration-300 ease-in-out ${sidebarCollapsed ? 'ml-16' : 'ml-72'}`}>
-                <div className="p-6 max-w-full overflow-auto">
+    // Render với layout mặc định cho đến khi component mounted
+    if (!mounted) {
+        return (
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
+                <Slidebar />
+                <main className="flex-1 p-6 max-w-full overflow-auto">
                     {children}
-                </div>
+                </main>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
+            {/* Sidebar */}
+            <Slidebar />
+            {/* Main content */}
+            <main className="flex-1 p-6 max-w-full overflow-auto">
+                {children}
             </main>
         </div>
     );
