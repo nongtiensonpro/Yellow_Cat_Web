@@ -74,11 +74,23 @@ public class OrderTimelineController {
     }
 
     /**
-     * KHÁCH HÀNG: Hủy đơn hàng (Pending | Confirmed | Processing → Cancelled)
+     * KHÁCH HÀNG: Hủy đơn hàng (Pending | Confirmed | Processing → Cancelled hoặc Refunded nếu ZaloPay đã thanh toán)
      */
     @PostMapping("/cancel")
     public ResponseEntity<ApiResponse<Map<String, Object>>> cancelOrder(@RequestBody UpdateStatusRequest request) {
-        return updateOrderStatus(request.getOrderId(), "Cancelled", "Khách hàng hủy đơn hàng", request.getImageUrls());
+        Integer orderId = request.getOrderId();
+        // Lấy order và payment
+        var order = orderTimelineService.getOrderById(orderId);
+        var payment = orderTimelineService.getPaymentByOrder(order);
+        String paymentMethod = payment != null ? payment.getPaymentMethod() : null;
+        String paymentStatus = payment != null ? payment.getPaymentStatus() : null;
+        String newStatus;
+        if ("ZALOPAY".equalsIgnoreCase(paymentMethod) && ("SUCCESS".equalsIgnoreCase(paymentStatus) || "PAID".equalsIgnoreCase(paymentStatus))) {
+            newStatus = "Refunded";
+        } else {
+            newStatus = "Cancelled";
+        }
+        return updateOrderStatus(orderId, newStatus, "Khách hàng hủy đơn hàng", request.getImageUrls());
     }
 
     /**
