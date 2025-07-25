@@ -1,281 +1,240 @@
-'use client'
+'use client';
 
-import React, { useState } from 'react';
-import { ChatBubbleLeftIcon, PaperAirplaneIcon, UserIcon } from '@heroicons/react/24/outline';
+import { useEffect, useRef, useState } from 'react';
+import SockJS from 'sockjs-client';
+import { Client } from '@stomp/stompjs';
+import { useSession } from 'next-auth/react';
 
-interface ChatMessage {
-    id: string;
-    senderId: string;
-    senderName: string;
-    senderType: 'customer' | 'admin';
-    content: string;
-    timestamp: string;
-}
-
-interface ChatConversation {
-    id: string;
-    customerId: string;
-    customerName: string;
-    lastMessage: string;
-    lastMessageTime: string;
-    unreadCount: number;
-    status: 'active' | 'solved' | 'pending';
-    messages: ChatMessage[];
-}
+const WS_URL = 'http://localhost:8080/ws';
+const API_URL = 'http://localhost:8080/api/chat';
 
 export default function AdminChatPage() {
-    const [conversations] = useState<ChatConversation[]>([
-        {
-            id: '1',
-            customerId: 'cust1',
-            customerName: 'Nguyễn Văn A',
-            lastMessage: 'Tôi muốn hỏi về đơn hàng #12345',
-            lastMessageTime: '20240110Z',
-            unreadCount: 2,
-            status: 'active',
-            messages: [
-                {
-                    id: '1',
-                    senderId: 'cust1',
-                    senderName: 'Nguyễn Văn A',
-                    senderType: 'customer',
-                    content: 'Xin chào, tôi muốn hỏi về đơn hàng #12345',
-                    timestamp: '2024011Z'
-                },
-                {
-                    id: '2',
-                    senderId: 'admin',
-                    senderName: 'Admin',
-                    senderType: 'admin',
-                    content: 'Chào bạn! Tôi sẽ kiểm tra đơn hàng #12345 cho bạn.',
-                    timestamp: '2024011Z'
-                },
-                {
-                    id: '3',
-                    senderId: 'cust1',
-                    senderName: 'Nguyễn Văn A',
-                    senderType: 'customer',
-                    content: 'Cảm ơn bạn! Đơn hàng của tôi đang ở đâu vậy?',
-                    timestamp: '2024011Z'
-                }
-            ]
+  const { data: session } = useSession();
+  const isLoggedIn = !!session?.user?.id;
+  const userKeycloakId = session?.user?.id || '';
+
+  const [keycloakId, setKeycloakId] = useState('');
+  const [waitingSessions, setWaitingSessions] = useState<any[]>([]);
+  const [selectedSession, setSelectedSession] = useState<any>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [status, setStatus] = useState('Chưa chọn session');
+  const [error, setError] = useState('');
+  const stompRef = useRef<Client | null>(null);
+  const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
+
+  const keycloakIdToUse = isLoggedIn ? userKeycloakId : keycloakId.trim();
+
+  // Lấy session chờ
+  const loadWaitingSessions = async () => {
+    setError('');
+    const id = isLoggedIn ? userKeycloakId : keycloakId.trim();
+    if (!id) {
+      setError('Vui lòng nhập Keycloak ID cho nhân viên');
+      alert('Vui lòng nhập Keycloak ID cho nhân viên');
+      return;
+    }
+    try {
+      const res = await fetch(`${API_URL}/sessions/waiting`);
+      if (!res.ok) throw new Error('Không thể tải session chờ');
+      const data = await res.json();
+      setWaitingSessions(Array.isArray(data) ? data : data.data || []);
+    } catch (err: any) {
+      setError('Lỗi khi tải session chờ: ' + (err?.message || ''));
+      alert('Lỗi khi tải session chờ: ' + (err?.message || ''));
+    }
+  };
+
+  // Chọn session, gán nhân viên, lấy lịch sử, subscribe WS
+  const handleSelectSession = async (sessionObj: any) => {
+    setError('');
+    const id = isLoggedIn ? userKeycloakId : keycloakId.trim();
+    if (!id) {
+      setError('Vui lòng nhập Keycloak ID cho nhân viên');
+      alert('Vui lòng nhập Keycloak ID cho nhân viên');
+      return;
+    }
+    setSelectedSession(sessionObj);
+    setStatus(`Đang hỗ trợ session #${sessionObj.id || sessionObj.sessionId}`);
+    try {
+      // Gán nhân viên vào session
+      const assignRes = await fetch(`${API_URL}/sessions/${sessionObj.id || sessionObj.sessionId}/assign`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Staff-Keycloak-Id': id,
         },
-        {
-            id: '2',
-            customerId: 'cust2',
-            customerName: 'Trần Thị B',
-            lastMessage: 'Sản phẩm có còn hàng không?',
-            lastMessageTime: '20240110Z',
-            unreadCount: 0,
-            status: 'solved',
-            messages: [
-                {
-                    id: '4',
-                    senderId: 'cust2',
-                    senderName: 'Trần Thị B',
-                    senderType: 'customer',
-                    content: 'Sản phẩm có còn hàng không?',
-                    timestamp: '2024011Z'
-                },
-                {
-                    id: '5',
-                    senderId: 'admin',
-                    senderName: 'Admin',
-                    senderType: 'admin',
-                    content: 'Chào bạn! Sản phẩm vẫn còn hàng. Bạn có muốn đặt hàng không?',
-                    timestamp: '2024011Z'
-                }
-            ]
+      });
+      if (!assignRes.ok) {
+        const errData = await assignRes.json().catch(() => ({}));
+        setError('Lỗi khi gán nhân viên vào session: ' + (errData.message || assignRes.statusText));
+        alert('Lỗi khi gán nhân viên vào session: ' + (errData.message || assignRes.statusText));
+        return;
+      }
+      // Lấy lịch sử tin nhắn
+      const res = await fetch(`${API_URL}/sessions/${sessionObj.id || sessionObj.sessionId}/messages`);
+      const data = await res.json();
+      setMessages(Array.isArray(data) ? data : data.data || []);
+      // Kết nối websocket
+      if (stompRef.current) stompRef.current.deactivate();
+      setWsStatus('connecting');
+      const client = new Client({
+        webSocketFactory: () => new SockJS(WS_URL),
+        onConnect: () => {
+          setWsStatus('connected');
+          console.log('WebSocket connected!');
+          client.subscribe(`/topic/chat/sessions/${sessionObj.id || sessionObj.sessionId}/messages`, (msg) => {
+            const message = JSON.parse(msg.body);
+            if (Array.isArray(message)) {
+              setMessages(prev => [...prev, ...message]);
+            } else if (typeof message === 'object' && message !== null && message.content) {
+              setMessages(prev => [...prev, message]);
+            }
+          });
         },
-        {
-            id: '3',
-            customerId: 'cust3',
-            customerName: 'Lê Văn C',
-            lastMessage: 'Tôi muốn hủy đơn hàng',
-            lastMessageTime: '20240110Z',
-            unreadCount: 1,
-            status: 'pending',
-            messages: [
-                {
-                    id: '6',
-                    senderId: 'cust3',
-                    senderName: 'Lê Văn C',
-                    senderType: 'customer',
-                    content: 'Tôi muốn hủy đơn hàng #12346',
-                    timestamp: '2024011Z'
-                }
-            ]
-        }
-    ]);
+        onDisconnect: () => {
+          setWsStatus('disconnected');
+          console.log('WebSocket disconnected!');
+        },
+        onStompError: (frame) => {
+          setWsStatus('error');
+          console.error('WebSocket STOMP error:', frame);
+        },
+        debug: (str) => { console.log('STOMP debug:', str); },
+      });
+      client.activate();
+      stompRef.current = client;
+    } catch (err: any) {
+      setError('Lỗi khi chọn session: ' + (err?.message || ''));
+      alert('Lỗi khi chọn session: ' + (err?.message || ''));
+    }
+  };
 
-    const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null);
-    const [newMessage, setNewMessage] = useState('');
+  // Gửi tin nhắn
+  const handleSendMessage = () => {
+    setError('');
+    const id = isLoggedIn ? userKeycloakId : keycloakId.trim();
+    if (!newMessage.trim() || !selectedSession || !keycloakIdToUse) return;
+    if (!stompRef.current?.connected) {
+      setError('WebSocket chưa kết nối, vui lòng thử lại sau!');
+      alert('WebSocket chưa kết nối, vui lòng thử lại sau!');
+      return;
+    }
+    try {
+      stompRef.current.publish({
+        destination: '/app/staff/chat.send',
+        body: JSON.stringify({
+          sessionId: selectedSession.id || selectedSession.sessionId,
+          content: newMessage,
+          keycloakId: id,
+        }),
+      });
+      setNewMessage('');
+    } catch (err: any) {
+      setError('Lỗi khi gửi tin nhắn: ' + (err?.message || ''));
+      alert('Lỗi khi gửi tin nhắn: ' + (err?.message || ''));
+    }
+  };
 
-    const handleSendMessage = () => {
-        if (!newMessage.trim() || !selectedConversation) return;
-        setNewMessage('');
-    };
+  // Log trạng thái debug
+  useEffect(() => {
+    console.log('selectedSession:', selectedSession);
+    console.log('keycloakIdToUse:', isLoggedIn ? userKeycloakId : keycloakId);
+    console.log('WebSocket connected:', stompRef.current?.connected);
+  }, [selectedSession, userKeycloakId, keycloakId, stompRef.current?.connected]);
 
-    const formatTime = (timestamp: string) => {
-        const date = new Date(timestamp);
-        return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    };
-
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'active': return 'bg-green-100 text-green-800';
-            case 'solved': return 'bg-blue-100 text-blue-800';
-            case 'pending': return 'bg-yellow-100 text-yellow-800';
-            default: return 'bg-gray-100 text-gray-800';
-        }
-    };
-
+  // UI
     return (
-        <div className="h-screen bg-gray-50 flex">          {/* Sidebar - Danh sách tin nhắn */}
-            <div className="w-80 bg-white border-r border-gray-200">               {/* Header */}
-                <div className="p-4 border-b border-gray-200">
-                    <h1 className="text-lg font-semibold text-gray-900 flex items-center">
-                        <ChatBubbleLeftIcon className="w-5 h-5 mr-2" /> Hỗ trợ khách hàng
-                    </h1>
-                    <p className="text-sm text-gray-500 mt-1">
-                        {conversations.filter(c => c.unreadCount > 0).length} tin nhắn chưa đọc
-                    </p>
+    <div className="container mx-auto py-8 flex gap-8">
+      {/* Panel Nhân viên */}
+      <div className="panel flex-1 flex flex-col min-w-[350px]">
+        <div className="panel-title flex items-center justify-between mb-4 pb-3 border-b-2 border-slate-100">
+          <h2 className="text-xl font-bold text-slate-800">Nhân viên</h2>
+          <div className="badge bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold">Đã sửa lỗi</div>
                 </div>
-
-                {/* Conversations List */}
-                <div className="flex-1 overflow-y-auto">
-                    {conversations.map((conversation) => (
-                        <div
-                            key={conversation.id}
-                            onClick={() => setSelectedConversation(conversation)}
-                            className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                                selectedConversation?.id === conversation.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
-                            }`}
-                        >
-                            <div className="flex items-start justify-between">
-                                <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                    <div className="w-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                        <UserIcon className="w-5 h-5 text-blue-600" />
+        {error && <div className="bg-red-100 text-red-700 p-2 rounded mb-2 text-sm">{error}</div>}
+        <div className="mb-2 text-xs">
+          Trạng thái WebSocket: {wsStatus === 'connected' ? 'Đã kết nối' : wsStatus === 'connecting' ? 'Đang kết nối...' : wsStatus === 'error' ? 'Lỗi kết nối' : 'Chưa kết nối'}
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between">
-                                            <h3 className="text-sm font-medium text-gray-900 truncate">
-                                                {conversation.customerName}
-                                            </h3>
-                                            <span className="text-xs text-gray-500">
-                                                {formatTime(conversation.lastMessageTime)}
-                                            </span>
-                                        </div>
-                                        <p className="text-sm text-gray-600 truncate">
-                                            {conversation.lastMessage}
-                                        </p>
-                                        <div className="flex items-center justify-between mt-2">
-                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(conversation.status)}`}>
-                                                {conversation.status === 'active' ? 'Đang hoạt động' :
-                                                 conversation.status === 'solved' ? 'Đã giải quyết' : conversation.status === 'pending' ? 'Chờ xử lý' : conversation.status}
-                                            </span>
-                                            {conversation.unreadCount > 0 && (
-                                                <span className="bg-red-50 text-white text-xs rounded-full px-2 py-1">
-                                                    {conversation.unreadCount}
-                                                </span>
+        <div className="input-group mb-2">
+          <label className="block text-xs font-semibold text-gray-700 mb-1">Keycloak ID:</label>
+          {isLoggedIn ? (
+            <input
+              className="border rounded px-3 py-2 w-full text-sm bg-gray-100"
+              value={userKeycloakId}
+              disabled
+            />
+          ) : (
+            <input
+              className="border rounded px-3 py-2 w-full text-sm"
+              placeholder="Nhập Keycloak ID..."
+              value={keycloakId}
+              onChange={e => setKeycloakId(e.target.value)}
+              disabled={!!selectedSession}
+            />
                                             )}
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
+        <div className="status-bar bg-blue-50 border-l-4 border-blue-400 text-blue-800 font-semibold py-2 px-3 rounded mb-2">{status}</div>
+        <button onClick={loadWaitingSessions} className="mb-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center gap-2">
+          <span className="icon">🔄</span> Tải session chờ
+        </button>
+        <div>
+          {waitingSessions.length === 0 ? (
+            <div className="message system bg-yellow-50 text-yellow-800 p-2 rounded">Không có session nào đang chờ</div>
+          ) : (
+            waitingSessions.map(session => (
+              <div
+                key={session.id || session.sessionId}
+                className={`session-item p-3 my-2 border rounded cursor-pointer ${selectedSession && (selectedSession.id || selectedSession.sessionId) === (session.id || session.sessionId) ? 'bg-blue-100 border-blue-400' : 'hover:bg-blue-50 border-slate-200'}`}
+                onClick={() => handleSelectSession(session)}
+              >
+                <h4 className="font-semibold text-slate-800">Session #{session.id || session.sessionId}</h4>
+                <div className="session-details flex justify-between text-xs text-slate-500">
+                  <span>Khách: {session.customerId ? 'User' : 'Guest'}</span>
+                  <span>Trạng thái: {session.status}</span>
                 </div>
+                <div className="text-xs mt-1">{session.lastMessage ? `Tin cuối: ${session.lastMessage.content}` : 'Chưa có tin nhắn'}</div>
             </div>
-
-            {/* Main Chat Area */}
-            <div className="flex-1">
-                {selectedConversation ? (
-                    <>
-                        {/* Chat Header */}
-                        <div className="bg-white border-b border-gray-200 p-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3">
-                                    <div className="w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                        <UserIcon className="w-5 h-5 text-blue-600" />
+            ))
+          )}
                                     </div>
-                                    <div>
-                                        <h2 className="text-lg font-semibold text-gray-900">
-                                            {selectedConversation.customerName}
-                                        </h2>
-                                        <div className="flex items-center space-x-2">
-                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedConversation.status)}`}>
-                                                {selectedConversation.status === 'active' ? 'Đang hoạt động' :
-                                                 selectedConversation.status === 'solved' ? 'Đã giải quyết' : selectedConversation.status === 'pending' ? 'Chờ xử lý' : selectedConversation.status}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                    ID: {selectedConversation.customerId}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Messages */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                            {selectedConversation.messages.map((message) => (
-                                <div
-                                    key={message.id}
-                                    className={`flex ${message.senderType === 'admin' ? 'justify-end' : 'justify-start'}`}
-                                >
-                                    <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                                        message.senderType === 'admin'
-                                            ? 'bg-blue-500 text-white'
-                                            : 'bg-gray-200'
-                                    }`}>
-                                        <div className="text-sm">{message.content}</div>
-                                        <div className={`text-xs mt-1 ${
-                                            message.senderType === 'admin' ? 'text-blue-100' : 'text-gray-500'
-                                        }`}>
-                                                {formatTime(message.timestamp)}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Message Input */}
-                        <div className="bg-white border-t border-gray-200 p-4">
-                            <div className="flex space-x-4">
-                                <div className="flex-1">
+        <div className="input-group mt-4">
                                     <textarea
+            className="w-full p-2 border rounded mb-2"
+            rows={3}
+            placeholder="Nhập tin nhắn..."
                                         value={newMessage}
-                                        onChange={(e) => setNewMessage(e.target.value)}
-                                        placeholder="Nhập tin nhắn..."
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                                        rows={2}
-                                    />
-                                </div>
+            onChange={e => setNewMessage(e.target.value)}
+            disabled={!selectedSession || !keycloakIdToUse}
+          />
                                 <button
+            className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
                                     onClick={handleSendMessage}
-                                    disabled={!newMessage.trim()}
-                                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+            disabled={!selectedSession || !keycloakIdToUse || !stompRef.current?.connected || !newMessage.trim()}
                                 >
-                                    <PaperAirplaneIcon className="w-4 h-4" />
+            Gửi tin nhắn
                                 </button>
                             </div>
+        <div className="messages-container flex-1 overflow-y-auto mt-2 bg-slate-50 rounded p-2">
+          {messages.map((msg, idx) => (
+            <div
+              key={msg.id || msg.messageId || idx}
+              className={`message ${msg.fromStaff || msg.senderType === 'admin' ? 'staff' : (msg.senderType === 'customer' ? 'customer' : 'guest')} mb-2`}
+            >
+              <div className="message-header font-semibold mb-1">
+                {msg.fromStaff || msg.senderType === 'admin'
+                  ? 'Nhân viên'
+                  : msg.senderType === 'customer'
+                  ? 'Khách hàng'
+                  : 'Khách vãng lai'}
                         </div>
-                    </>
-                ) : (
-                    /* Empty State */
-                    <div className="flex-1 flex items-center justify-center">
-                        <div className="text-center">
-                            <ChatBubbleLeftIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                Chọn một cuộc trò chuyện
-                            </h3>
-                            <p className="text-gray-500">
-                                Chọn một khách hàng từ danh sách bên trái để bắt đầu chat
-                            </p>
-                        </div>
+              <div>{msg.content}</div>
+              <div className="timestamp text-xs mt-1 text-right">
+                {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''}
                     </div>
-                )}
+            </div>
+          ))}
+        </div>
             </div>
         </div>
     );

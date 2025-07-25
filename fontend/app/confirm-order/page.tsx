@@ -187,7 +187,6 @@ export default function ConfirmOrderPage() {
             } else {
                 setShippingFee(0);
             }
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
             setShippingFee(0);
         } finally {
@@ -214,18 +213,20 @@ export default function ConfirmOrderPage() {
 
     // useEffect tính phí giao hàng khi selectedAddress hoặc cartItems thay đổi
     useEffect(() => {
-        if (session?.user) return;
-
-        // Nếu chưa chọn tỉnh hoặc huyện thì luôn set phí giao hàng về 0
-        if (!selectedProvinceCode || !selectedDistrictCode) {
+        // Nếu chưa có địa chỉ thì không tính phí
+        if ((!selectedAddress && !selectedProvinceCode) || cartItems.length === 0) {
             setShippingFee(0);
             return;
         }
-
-        // Đã chọn tỉnh và huyện, và có sản phẩm trong giỏ
-        if (cartItems.length > 0) {
-            const provinceName = provinces.find(p => p.code === selectedProvinceCode)?.name || '';
-            const districtName = districts.find(d => d.code === selectedDistrictCode)?.name || '';
+        let provinceName = '';
+        let districtName = '';
+        if (selectedAddress) {
+            provinceName = selectedAddress.province || selectedAddress.cityProvince || '';
+            districtName = selectedAddress.district || '';
+        } else {
+            provinceName = provinces.find(p => p.code === selectedProvinceCode)?.name || '';
+            districtName = districts.find(d => d.code === selectedDistrictCode)?.name || '';
+        }
         if (provinceName && districtName) {
             fetchShippingFee(
                 provinceName,
@@ -238,10 +239,7 @@ export default function ConfirmOrderPage() {
         } else {
             setShippingFee(0);
         }
-        } else {
-            setShippingFee(0);
-        }
-    }, [selectedProvinceCode, selectedDistrictCode, cartItems, provinces, districts, fetchShippingFee, session?.user]);
+    }, [selectedAddress, selectedProvinceCode, selectedDistrictCode, cartItems, provinces, districts, fetchShippingFee]);
 
     // Thay đổi hàm chọn tỉnh để reset huyện, xã và phí giao hàng
     const handleProvinceChange = (code: number | null) => {
@@ -608,6 +606,36 @@ export default function ConfirmOrderPage() {
         setLoadingProvinces(false);
     };
 
+    // --- Thêm hàm riêng cho modal chọn tỉnh/thành phố ---
+    const handleProvinceChangeModal = async (code: number | null) => {
+        setNewAddress({ ...newAddress, province: code ? String(code) : '', district: '', wardCommune: '' });
+        setDistrictsVN([]);
+        setWardsVN([]);
+        if (code) {
+            try {
+                const res = await fetch(`http://localhost:8080/api/address/districts/${code}`);
+                const data = await res.json();
+                setDistrictsVN(data);
+            } catch {}
+        }
+    };
+
+    const handleDistrictChangeModal = async (districtCode: string) => {
+        setNewAddress({ ...newAddress, district: districtCode ? String(districtCode) : '', wardCommune: '' });
+        setWardsVN([]);
+        if (districtCode) {
+            try {
+                const res = await fetch(`http://localhost:8080/api/address/wards/${districtCode}`);
+                const data = await res.json();
+                setWardsVN(data);
+            } catch {}
+        }
+    };
+
+    const handleWardChangeModal = (wardCode: string) => {
+        setNewAddress({ ...newAddress, wardCommune: wardCode ? String(wardCode) : '' });
+    };
+
     if (loadingCart || loadingProvinces) {
         return <div className="flex justify-center items-center min-h-screen"><p>Đang tải...</p></div>;
     }
@@ -924,13 +952,13 @@ export default function ConfirmOrderPage() {
                                     <select
                                         className="p-2 border border-gray-300 rounded w-full"
                                         value={newAddress.province}
-                                        onChange={e => handleProvinceChange(parseInt(e.target.value) || null)}
+                                        onChange={e => handleProvinceChangeModal(Number(e.target.value) || null)}
                                     >
                                         <option value="">Chọn tỉnh/thành phố</option>
                                         {provincesVN.map((p) => {
-                                            const province = p as { code: string; name: string };
+                                            const province = p as { code: number; name: string };
                                             return (
-                                                <option key={province.code || ''} value={province.code || ''}>{province.name}</option>
+                                                <option key={province.code} value={province.code}>{province.name}</option>
                                             );
                                         })}
                                     </select>
@@ -940,14 +968,14 @@ export default function ConfirmOrderPage() {
                                     <select
                                         className="p-2 border border-gray-300 rounded w-full"
                                         value={newAddress.district}
-                                        onChange={e => handleDistrictChange(e.target.value)}
+                                        onChange={e => handleDistrictChangeModal(e.target.value)}
                                         disabled={!newAddress.province}
                                     >
                                         <option value="">Chọn quận/huyện</option>
                                         {districtsVN.map((d) => {
-                                            const district = d as { code: string; name: string };
+                                            const district = d as { code: string | number; name: string };
                                             return (
-                                                <option key={district.code || ''} value={district.code || ''}>{district.name}</option>
+                                                <option key={district.code} value={district.code}>{district.name}</option>
                                             );
                                         })}
                                     </select>
@@ -957,14 +985,14 @@ export default function ConfirmOrderPage() {
                                     <select
                                         className="p-2 border border-gray-300 rounded w-full"
                                         value={newAddress.wardCommune}
-                                        onChange={e => handleWardChange(e.target.value)}
+                                        onChange={e => handleWardChangeModal(e.target.value)}
                                         disabled={!newAddress.district}
                                     >
                                         <option value="">Chọn xã/thị trấn</option>
                                         {wardsVN.map((w) => {
-                                            const ward = w as { code: string; name: string };
+                                            const ward = w as { code: string | number; name: string };
                                             return (
-                                                <option key={ward.code || ''} value={ward.code || ''}>{ward.name}</option>
+                                                <option key={ward.code} value={ward.code}>{ward.name}</option>
                                             );
                                         })}
                                     </select>
