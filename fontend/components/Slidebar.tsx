@@ -13,8 +13,7 @@ import {
     Ruler,
     Store,
     ChevronRight,
-    TicketPercent, // Icon mới
-    MessageCircle // Thêm icon ô chat
+    TicketPercent
 } from "lucide-react";
 
 // NOTE: Next.js specific imports (Link, Image, usePathname) have been replaced
