@@ -16,6 +16,11 @@ import org.yellowcat.backend.product.orderItem.dto.UpdateOrderItemQuantityReques
 import org.yellowcat.backend.product.orderItem.mapper.OrderItemMapper;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
 import org.yellowcat.backend.product.productvariant.ProductVariantRepository;
+import org.yellowcat.backend.product.ProductService;
+import org.yellowcat.backend.product.promotionapplied.AppliedPromotion;
+import org.yellowcat.backend.product.promotionapplied.AppliedPromotionRepository;
+import org.yellowcat.backend.product.dto.VariantPromosDTO;
+import org.yellowcat.backend.product.dto.VariantPromoItemDTO;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -28,6 +33,8 @@ public class OrderItemService {
     OrderRepository orderRepository;
     ProductVariantRepository productVariantRepository;
     OrderItemMapper orderItemMapper;
+    ProductService productService;
+    AppliedPromotionRepository appliedPromotionRepository;
 
     public Page<OrderItemResponse> getOrderItemsByOrderId(Integer orderId, int page, int size) {
         Sort sort = Sort.by("priceAtPurchase").descending();
@@ -91,6 +98,26 @@ public class OrderItemService {
             BigDecimal unitPrice = getEffectivePrice(productVariant);
             orderItem.setPriceAtPurchase(unitPrice);
             orderItem.setTotalPrice(unitPrice.multiply(BigDecimal.valueOf(request.getQuantity())));
+
+            // Snapshot promotion nếu có
+            VariantPromosDTO promosDTO = productService.getVariantPromotions(productVariant.getVariantId());
+            if (promosDTO != null && promosDTO.getBestPromo() != null) {
+                VariantPromoItemDTO best = promosDTO.getBestPromo();
+                AppliedPromotion ap = AppliedPromotion.builder()
+                        .orderItem(orderItem)
+                        .promoType("PRODUCT")
+                        .promotionCode(best.getPromotionCode())
+                        .promotionName(best.getPromotionName())
+                        .discountType(best.getDiscountType())
+                        .discountValue(best.getDiscountValue())
+                        .discountAmount(best.getDiscountAmount())
+                        .build();
+                if (orderItem.getAppliedPromotions() == null) {
+                    orderItem.setAppliedPromotions(new java.util.ArrayList<>());
+                }
+                orderItem.getAppliedPromotions().add(ap);
+            }
+
             orderItemRepository.save(orderItem);
         }
 

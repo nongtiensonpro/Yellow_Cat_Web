@@ -529,8 +529,10 @@ export const useOrderStore = create<OrderState>()(
                         });
                     });
 
-                    // Lấy promo cho các variant duy nhất
-                    const uniqueVariantIds = Array.from(new Set(items.map(i => i.productVariantId)));
+                    // Lấy promo cho các variant CHƯA có bestPromo
+                    const uniqueVariantIds = Array.from(new Set(items
+                        .filter(i => !i.bestPromo)
+                        .map(i => i.productVariantId)));
                     const promoMap = new Map<number, { promotionCode: string; promotionName: string; discountAmount: number }>();
 
                     await Promise.all(uniqueVariantIds.map(async (vid) => {
@@ -548,13 +550,13 @@ export const useOrderStore = create<OrderState>()(
 
                     const enrichedItems = items.map((item) => {
                         const details = variantMap.get(item.productVariantId);
-                        const promo = promoMap.get(item.productVariantId);
+                        const promo = item.bestPromo ?? promoMap.get(item.productVariantId);
                         const originalPrice = promo ? item.priceAtPurchase + promo.discountAmount : undefined;
                         return {
                             ...item,
                             productName: details?.productName || 'Không tìm thấy sản phẩm',
                             variantInfo: details?.variantInfo || '',
-                            bestPromo: promo,
+                            bestPromo: promo ?? undefined,
                             originalPrice,
                         };
                     });

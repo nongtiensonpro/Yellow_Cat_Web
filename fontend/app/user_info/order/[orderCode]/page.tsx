@@ -13,12 +13,12 @@ import {
     Divider,
     Image
 } from "@heroui/react";
-import { 
+import {
     ArrowLeft,
-    Phone, 
-    Mail, 
-    MapPin, 
-    CreditCard, 
+    Phone,
+    Mail,
+    MapPin,
+    CreditCard,
     Package,
     Truck,
     ShoppingBag,
@@ -56,6 +56,12 @@ interface OrderItemDetail {
     imageUrl: string;
     weight: number;
     quantityInStock: number;
+    bestPromo?: {
+        promotionCode: string;
+        promotionName: string;
+        discountAmount: number;
+    };
+    originalPrice?: number;
 }
 
 interface OrderDetailWithItems {
@@ -114,7 +120,7 @@ export default function OrderDetailPage() {
         if (!session) {
             throw new Error('Bạn cần đăng nhập để xem chi tiết đơn hàng');
         }
-        
+
         const extendedSession = session as unknown as ExtendedSession;
         if (!extendedSession.accessToken) {
             throw new Error('Không tìm thấy access token');
@@ -139,7 +145,9 @@ export default function OrderDetailPage() {
         }
 
         const apiResponse: ApiResponse<OrderDetailWithItems> = await response.json();
-        
+
+
+
         if (apiResponse.status < 200 || apiResponse.status >= 300) {
             throw new Error(apiResponse.message || apiResponse.error || 'Có lỗi xảy ra khi lấy chi tiết đơn hàng');
         }
@@ -151,7 +159,7 @@ export default function OrderDetailPage() {
         if (!apiResponse.data) {
             throw new Error('Không có dữ liệu đơn hàng trong response');
         }
-        
+
         return apiResponse.data;
     }, [session]);
 
@@ -236,9 +244,9 @@ export default function OrderDetailPage() {
     if (error) {
         return (
             <div className="container mx-auto p-6">
-                <Button 
+                <Button
                     startContent={<ArrowLeft size={16} />}
-                    variant="ghost" 
+                    variant="ghost"
                     onClick={handleGoBack}
                     className="mb-4"
                 >
@@ -259,9 +267,9 @@ export default function OrderDetailPage() {
     if (!orderDetail) {
         return (
             <div className="container mx-auto p-6">
-                <Button 
+                <Button
                     startContent={<ArrowLeft size={16} />}
-                    variant="ghost" 
+                    variant="ghost"
                     onClick={handleGoBack}
                     className="mb-4"
                 >
@@ -280,9 +288,9 @@ export default function OrderDetailPage() {
         <div className="container mx-auto p-6 space-y-6">
             {/* Header với nút quay lại */}
             <div className="flex items-center gap-4">
-                <Button 
+                <Button
                     startContent={<ArrowLeft size={16} />}
-                    variant="ghost" 
+                    variant="ghost"
                     onClick={handleGoBack}
                 >
                     Quay lại
@@ -293,8 +301,10 @@ export default function OrderDetailPage() {
                 </div>
             </div>
 
+
+
             {/* Thông tin tổng quan */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <Card>
                     <CardBody className="text-center">
                         <div className="flex items-center justify-center mb-2">
@@ -304,7 +314,7 @@ export default function OrderDetailPage() {
                         <p className="text-xs text-default-500">Loại sản phẩm</p>
                     </CardBody>
                 </Card>
-                
+
                 <Card>
                     <CardBody className="text-center">
                         <div className="flex items-center justify-center mb-2">
@@ -318,8 +328,8 @@ export default function OrderDetailPage() {
                 <Card>
                     <CardBody className="text-center">
                         <div className="flex items-center justify-center mb-2">
-                            <Chip 
-                                color={getStatusColor(orderDetail.orderStatus)} 
+                            <Chip
+                                color={getStatusColor(orderDetail.orderStatus)}
                                 variant="flat"
                             >
                                 {orderDetail.orderStatus}
@@ -328,6 +338,37 @@ export default function OrderDetailPage() {
                         <p className="text-xs text-default-500">Trạng thái</p>
                     </CardBody>
                 </Card>
+
+                {/* Thẻ tiết kiệm */}
+                {(() => {
+                    const totalItemSavings = orderDetail.orderItems.reduce((total, item) => {
+                        if (item.bestPromo && item.bestPromo.discountAmount > 0) {
+                            return total + (item.bestPromo.discountAmount * item.quantity);
+                        }
+                        if (item.originalPrice && item.originalPrice > item.priceAtPurchase) {
+                            return total + ((item.originalPrice - item.priceAtPurchase) * item.quantity);
+                        }
+                        return total;
+                    }, 0);
+
+                    const totalOrderSavings = orderDetail.discountAmount || 0;
+                    const grandTotalSavings = totalItemSavings + totalOrderSavings;
+
+                    if (grandTotalSavings > 0) {
+                        return (
+                            <Card className="bg-success-50 border-success-200">
+                                <CardBody className="text-center">
+                                    <div className="flex items-center justify-center mb-2">
+                                        <span className="text-success-600 text-2xl">💰</span>
+                                    </div>
+                                    <p className="text-base font-medium text-success-700">{formatCurrency(grandTotalSavings)}</p>
+                                    <p className="text-xs text-success-600">Đã tiết kiệm</p>
+                                </CardBody>
+                            </Card>
+                        );
+                    }
+                    return null;
+                })()}
 
                 <Card>
                     <CardBody className="text-center">
@@ -408,24 +449,46 @@ export default function OrderDetailPage() {
                             </div>
                         </CardHeader>
                         <CardBody className="space-y-3">
-                            <div className="flex justify-between">
-                                <span>Tạm tính:</span>
-                                <span>{formatCurrency(orderDetail.subTotalAmount)}</span>
+                            <div className="flex justify-between text-default-700">
+                                <span>Tạm tính ({orderDetail.totalQuantity} sản phẩm):</span>
+                                <span className="font-medium">{formatCurrency(orderDetail.subTotalAmount)}</span>
                             </div>
-                            <div className="flex justify-between">
+
+                            <div className="flex justify-between text-default-700">
                                 <span>Phí vận chuyển:</span>
-                                <span>{formatCurrency(orderDetail.shippingFee)}</span>
+                                <span className="font-medium">
+                                    {orderDetail.shippingFee > 0 ? formatCurrency(orderDetail.shippingFee) : 'Miễn phí'}
+                                </span>
                             </div>
-                            {orderDetail.discountAmount > 0 && (
-                                <div className="flex justify-between text-success">
-                                    <span>Giảm giá:</span>
-                                    <span>-{formatCurrency(orderDetail.discountAmount)}</span>
+
+                            {orderDetail.discountAmount !== undefined && orderDetail.discountAmount !== null && orderDetail.discountAmount > 0 && (
+                                <div className="flex justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-success-600">Giảm giá đơn hàng:</span>
+                                        <Chip size="sm" color="success" variant="flat">
+                                            Tiết kiệm
+                                        </Chip>
+                                    </div>
+                                    <span className="font-semibold text-success-600">
+                                        -{formatCurrency(orderDetail.discountAmount)}
+                                    </span>
                                 </div>
                             )}
-                            <Divider />
-                            <div className="flex justify-between font-medium text-base">
-                                <span>Tổng cộng:</span>
-                                <span>{formatCurrency(orderDetail.finalAmount)}</span>
+
+                            <Divider className="my-3" />
+
+                            <div className="flex justify-between items-center">
+                                <span className="text-lg font-semibold text-default-800">Tổng thanh toán:</span>
+                                <div className="text-right">
+                                    <span className="text-xl font-bold text-primary">
+                                        {formatCurrency(orderDetail.finalAmount)}
+                                    </span>
+                                    {orderDetail.discountAmount > 0 && (
+                                        <p className="text-xs text-success-600 mt-1">
+                                            Đã tiết kiệm {formatCurrency(orderDetail.discountAmount)}
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                         </CardBody>
                     </Card>
@@ -530,18 +593,87 @@ export default function OrderDetailPage() {
 
                                                     {/* Giá và số lượng */}
                                                     <div className="flex justify-between items-end">
-                                                        <div>
-                                                            <p className="text-sm text-default-500">
-                                                                Giá mua: {formatCurrency(item.priceAtPurchase)}
-                                                            </p>
-                                                            {item.currentPrice !== item.priceAtPurchase && (
-                                                                <p className="text-sm text-default-500">
-                                                                    Giá hiện tại: {formatCurrency(item.currentPrice)}
-                                                                </p>
+                                                        <div className="space-y-2">
+                                                            {/* Hiển thị giá và khuyến mãi */}
+                                                            {item.bestPromo && item.bestPromo.discountAmount > 0 ? (
+                                                                <div className="space-y-1">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-base font-semibold text-primary">
+                                                                            {formatCurrency(item.priceAtPurchase)}
+                                                                        </span>
+                                                                        <span className="text-sm line-through text-default-400">
+                                                                            {formatCurrency(item.originalPrice ?? (item.priceAtPurchase + item.bestPromo.discountAmount))}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Chip
+                                                                            size="sm"
+                                                                            color="success"
+                                                                            variant="flat"
+                                                                            startContent="🎉"
+                                                                        >
+                                                                            {item.bestPromo.promotionName || item.bestPromo.promotionCode}
+                                                                        </Chip>
+                                                                        <span className="text-xs text-success-600 font-medium">
+                                                                            Tiết kiệm {formatCurrency(item.bestPromo.discountAmount)}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            ) : item.originalPrice && item.originalPrice > item.priceAtPurchase ? (
+                                                                <div className="space-y-1">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-base font-semibold text-primary">
+                                                                            {formatCurrency(item.priceAtPurchase)}
+                                                                        </span>
+                                                                        <span className="text-sm line-through text-default-400">
+                                                                            {formatCurrency(item.originalPrice)}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Chip
+                                                                            size="sm"
+                                                                            color="success"
+                                                                            variant="flat"
+                                                                            startContent="💰"
+                                                                        >
+                                                                            Giảm giá
+                                                                        </Chip>
+                                                                        <span className="text-xs text-success-600 font-medium">
+                                                                            Tiết kiệm {formatCurrency(item.originalPrice - item.priceAtPurchase)}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div>
+                                                                    <span className="text-base font-semibold text-default-700">
+                                                                        {formatCurrency(item.priceAtPurchase)}
+                                                                    </span>
+                                                                </div>
                                                             )}
-                                                            <p className="text-sm text-default-500">
-                                                                Số lượng: {item.quantity}
-                                                            </p>
+
+                                                            {/* Hiển thị giá hiện tại nếu khác giá mua */}
+                                                            {item.currentPrice && item.currentPrice !== item.priceAtPurchase && (
+                                                                <div className="text-xs text-default-500 bg-default-100 px-2 py-1 rounded">
+                                                                    <span>Giá hiện tại: {formatCurrency(item.currentPrice)}</span>
+                                                                    {item.currentPrice > item.priceAtPurchase && (
+                                                                        <Chip size="sm" color="warning" variant="flat" className="ml-2">
+                                                                            Đã tăng giá
+                                                                        </Chip>
+                                                                    )}
+                                                                    {item.currentPrice < item.priceAtPurchase && (
+                                                                        <Chip size="sm" color="success" variant="flat" className="ml-2">
+                                                                            Đã giảm giá
+                                                                        </Chip>
+                                                                    )}
+                                                                </div>
+                                                            )}
+
+                                                            <div className="flex items-center gap-2 text-sm text-default-600">
+                                                                <span>Số lượng:</span>
+                                                                <Chip size="sm" variant="flat" color="default">
+                                                                    {item.quantity}
+                                                                </Chip>
+                                                            </div>
                                                         </div>
                                                         <div className="text-right">
                                                             <p className="font-medium text-base">
@@ -554,6 +686,53 @@ export default function OrderDetailPage() {
                                         </CardBody>
                                     </Card>
                                 ))}
+
+                                {/* Tổng kết tiết kiệm */}
+                                {(() => {
+                                    const totalItemSavings = orderDetail.orderItems.reduce((total, item) => {
+                                        if (item.bestPromo && item.bestPromo.discountAmount > 0) {
+                                            return total + (item.bestPromo.discountAmount * item.quantity);
+                                        }
+                                        if (item.originalPrice && item.originalPrice > item.priceAtPurchase) {
+                                            return total + ((item.originalPrice - item.priceAtPurchase) * item.quantity);
+                                        }
+                                        return total;
+                                    }, 0);
+
+                                    const totalOrderSavings = orderDetail.discountAmount || 0;
+                                    const grandTotalSavings = totalItemSavings + totalOrderSavings;
+
+                                    if (grandTotalSavings > 0) {
+                                        return (
+                                            <Card className="bg-success-50 border-success-200">
+                                                <CardBody className="text-center py-4">
+                                                    <div className="flex items-center justify-center gap-2 mb-2">
+                                                        <span className="text-2xl">🎉</span>
+                                                        <h4 className="text-lg font-semibold text-success-700">
+                                                            Tổng tiết kiệm của bạn
+                                                        </h4>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        {totalItemSavings > 0 && (
+                                                            <p className="text-sm text-success-600">
+                                                                Khuyến mãi sản phẩm: {formatCurrency(totalItemSavings)}
+                                                            </p>
+                                                        )}
+                                                        {totalOrderSavings > 0 && (
+                                                            <p className="text-sm text-success-600">
+                                                                Giảm giá đơn hàng: {formatCurrency(totalOrderSavings)}
+                                                            </p>
+                                                        )}
+                                                        <p className="text-xl font-bold text-success-700">
+                                                            {formatCurrency(grandTotalSavings)}
+                                                        </p>
+                                                    </div>
+                                                </CardBody>
+                                            </Card>
+                                        );
+                                    }
+                                    return null;
+                                })()}
                             </div>
                         </CardBody>
                     </Card>

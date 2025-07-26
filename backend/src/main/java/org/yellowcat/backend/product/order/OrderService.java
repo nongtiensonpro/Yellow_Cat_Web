@@ -29,6 +29,8 @@ import org.yellowcat.backend.product.promotionorder.UsedPromotionRepository;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserService;
 import org.yellowcat.backend.online_selling.PaymentStatus;
+import org.yellowcat.backend.product.promotionapplied.AppliedPromotionRepository;
+import org.yellowcat.backend.product.promotionapplied.AppliedPromotion;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -45,6 +47,7 @@ public class OrderService {
     AppUserService appUserService;
     PromotionProgramRepository promotionProgramRepository;
     UsedPromotionRepository usedPromotionRepository;
+    AppliedPromotionRepository appliedPromotionRepository;
 
     public Page<OrderResponse> getOrdersByKeyword(int page, int size, String keyword) {
         Pageable pageable = PageRequest.of(page, size);
@@ -712,27 +715,37 @@ public class OrderService {
 
     // Helper method để convert OrderItemDetailProjection sang OrderItemDetailResponse
     private OrderItemDetailResponse convertToOrderItemDetailResponse(OrderItemDetailProjection projection) {
-        return new OrderItemDetailResponse(
-                projection.getOrderItemId(),
-                projection.getOrderId(),
-                projection.getQuantity(),
-                projection.getPriceAtPurchase(),
-                projection.getTotalPrice(),
-                projection.getVariantId(),
-                projection.getSku(),
-                projection.getProductName(),
-                projection.getColorName(),
-                projection.getSizeName(),
-                projection.getMaterialName(),
-                projection.getBrandName(),
-                projection.getCategoryName(),
-                projection.getTargetAudienceName(),
-                projection.getCurrentPrice(),
-                projection.getSalePrice(),
-                projection.getImageUrl(),
-                projection.getWeight(),
-                projection.getQuantityInStock()
-        );
+        OrderItemDetailResponse dto = new OrderItemDetailResponse();
+        dto.setOrderItemId(projection.getOrderItemId());
+        dto.setOrderId(projection.getOrderId());
+        dto.setQuantity(projection.getQuantity());
+        dto.setPriceAtPurchase(projection.getPriceAtPurchase());
+        dto.setTotalPrice(projection.getTotalPrice());
+        dto.setVariantId(projection.getVariantId());
+        dto.setSku(projection.getSku());
+        dto.setProductName(projection.getProductName());
+        dto.setColorName(projection.getColorName());
+        dto.setSizeName(projection.getSizeName());
+        dto.setMaterialName(projection.getMaterialName());
+        dto.setBrandName(projection.getBrandName());
+        dto.setCategoryName(projection.getCategoryName());
+        dto.setTargetAudienceName(projection.getTargetAudienceName());
+        dto.setCurrentPrice(projection.getCurrentPrice());
+        dto.setSalePrice(projection.getSalePrice());
+        dto.setImageUrl(projection.getImageUrl());
+        dto.setWeight(projection.getWeight());
+        dto.setQuantityInStock(projection.getQuantityInStock());
+
+        // Lấy applied promotion nếu có
+        AppliedPromotion ap = appliedPromotionRepository.findFirstByOrderItem_OrderItemId(projection.getOrderItemId());
+        if (ap != null) {
+            dto.setPromotionCode(ap.getPromotionCode());
+            dto.setPromotionName(ap.getPromotionName());
+            dto.setDiscountAmount(ap.getDiscountAmount());
+            dto.setOriginalPrice(dto.getPriceAtPurchase().add(ap.getDiscountAmount()));
+        }
+
+        return dto;
     }
 
     // Method để debug và log thông tin thanh toán

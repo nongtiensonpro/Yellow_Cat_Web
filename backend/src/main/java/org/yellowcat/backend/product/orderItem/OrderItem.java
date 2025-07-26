@@ -37,4 +37,7 @@ public class OrderItem {
 
     @Column(name = "total_price", precision = 14, scale = 2, nullable = false)
     private BigDecimal totalPrice;
+
+    @OneToMany(mappedBy = "orderItem", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private java.util.List<org.yellowcat.backend.product.promotionapplied.AppliedPromotion> appliedPromotions = new java.util.ArrayList<>();
 }
