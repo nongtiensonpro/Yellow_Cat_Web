@@ -14,6 +14,15 @@ interface OrderItem {
     totalPrice: number;
 }
 
+interface OrderTimeline {
+    id: number;
+    orderId: number;
+    fromStatus: string;
+    toStatus: string;
+    note: string;
+    changedAt: string;
+}
+
 interface OrderOnlineDetail {
     orderId: number;
     orderCode: string;
@@ -41,6 +50,15 @@ const STATUS_MAP: Record<string, string> = {
     Shipped: 'Đang vận chuyển',
     Delivered: 'Đã hoàn thành',
     Cancelled: 'Đã hủy',
+    CustomerReceived: 'Khách hàng đã nhận',
+    Completed: 'Hoàn thành',
+    Shipping: 'Đang vận chuyển',
+    ReturnRequested: 'Yêu cầu hoàn hàng',
+    ReturnApproved: 'Đã duyệt hoàn hàng',
+    ReturnRejected: 'Từ chối hoàn hàng',
+    ReturnedToSeller: 'Đã trả về người bán',
+    Refunded: 'Đã hoàn tiền',
+    DeliveryFailed: 'Giao hàng thất bại',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -66,6 +84,7 @@ export default function OrderDetailPage() {
     const orderId = params?.orderId as string;
     
     const [order, setOrder] = useState<OrderOnlineDetail | null>(null);
+    const [orderTimeline, setOrderTimeline] = useState<OrderTimeline[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -108,7 +127,35 @@ export default function OrderDetailPage() {
             }
         };
 
+        const fetchOrderTimeline = async () => {
+            if (!session?.accessToken || !orderId) return;
+
+            try {
+                const response = await fetch(`http://localhost:8080/api/order-timelines/${orderId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${session.accessToken}`,
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.data) {
+                        setOrderTimeline(data.data);
+                    } else {
+                        setOrderTimeline([]);
+                    }
+                } else {
+                    console.error('Failed to fetch order timeline');
+                    setOrderTimeline([]);
+                }
+            } catch (err) {
+                console.error('Error fetching order timeline:', err);
+                setOrderTimeline([]);
+            }
+        };
+
         fetchOrderDetail();
+        fetchOrderTimeline();
     }, [session, orderId]);
 
     const handleStatusUpdate = async (newStatus: string) => {
@@ -162,6 +209,29 @@ export default function OrderDetailPage() {
         } catch (error) {
             alert('Lỗi khi hủy đơn hàng' + error);
         }
+    };
+
+    const formatTimelineNote = (timeline: OrderTimeline) => {
+        const fromStatus = STATUS_MAP[timeline.fromStatus] || timeline.fromStatus;
+        const toStatus = STATUS_MAP[timeline.toStatus] || timeline.toStatus;
+        
+        if (timeline.fromStatus === timeline.toStatus) {
+            return timeline.note || `Cập nhật trạng thái: ${fromStatus}`;
+        }
+        
+        return timeline.note || `Chuyển từ ${fromStatus} sang ${toStatus}`;
+    };
+
+    const formatDateTime = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleString('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
     };
 
     if (loading) {
@@ -436,6 +506,44 @@ export default function OrderDetailPage() {
                                 <span className="text-gray-900">Tổng thanh toán:</span>
                                 <span className="text-blue-600">{order.finalAmount.toLocaleString('vi-VN')} ₫</span>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Order Timeline */}
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Lịch sử trạng thái đơn hàng</h3>
+                        <div className="max-h-96 overflow-y-auto">
+                            {orderTimeline.length > 0 ? (
+                                <div className="space-y-4">
+                                    {orderTimeline.map((timeline, index) => (
+                                        <div key={timeline.id} className="relative">
+                                            {/* Timeline line */}
+                                            {index < orderTimeline.length - 1 && (
+                                                <div className="absolute left-3 top-6 w-0.5 h-8 bg-gray-200"></div>
+                                            )}
+                                            
+                                            <div className="flex items-start space-x-3">
+                                                {/* Timeline dot */}
+                                                <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 ${
+                                                    index === 0 ? 'bg-blue-500 border-blue-500' : 'bg-white border-gray-300'
+                                                }`}></div>
+                                                
+                                                {/* Timeline content */}
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm text-gray-900 font-medium">
+                                                        {formatTimelineNote(timeline)}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        {formatDateTime(timeline.changedAt)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-gray-500 text-sm">Chưa có lịch sử trạng thái</p>
+                            )}
                         </div>
                     </div>
 

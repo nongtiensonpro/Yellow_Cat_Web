@@ -15,32 +15,40 @@ interface OrderOnline {
     updatedAt: string | null;
 }
 
+// STATUS_MAP cho bộ lọc - hiển thị ngắn gọn
 const STATUS_MAP: Record<string, string> = {
     Pending: 'Chờ xác nhận',
+    WaitingForStock: 'Chờ hàng',
     Confirmed: 'Đã xác nhận',
-    Processing: 'Chờ vận chuyển',
     Shipping: 'Đang vận chuyển',
     Delivered: 'Đã giao hàng',
-    Completed: 'Đã hoàn thành',
-    Cancelled: 'Đã hủy',
-    ReturnRequested: 'Yêu cầu trả hàng',
-    NotReceivedReported: 'Báo không nhận được',
-    Dispute: 'Tranh chấp',
-    CustomerReceived: 'Khách đã nhận',
-    Investigation: 'Đang điều tra',
-    DeliveryFailed1: 'Giao hàng thất bại lần 1',
-    DeliveryFailed2: 'Giao hàng thất bại lần 2',
-    DeliveryFailed3: 'Giao hàng thất bại lần 3',
-    IncidentReported: 'Báo sự cố',
-    LostOrDamaged: 'Mất hoặc hư hỏng',
-    CustomerDecisionPending: 'Chờ quyết định khách hàng',
-    ReturnApproved: 'Chấp nhận trả hàng',
-    ReturnRejected: 'Từ chối trả hàng',
-    ReturnedToWarehouse: 'Đã trả về kho',
+    DeliveryFailed: 'Giao hàng thất bại',
     ReturnedToSeller: 'Đã trả về người bán',
+    CustomerReceived: 'Khách đã nhận hàng',
+    ReturnRequested: 'Yêu cầu trả hàng',
+    ReturnApproved: 'Trả hàng được chấp nhận',
+    ReturnRejected: 'Trả hàng bị từ chối',
     Refunded: 'Đã hoàn tiền',
-    FinalRejected: 'Từ chối cuối cùng',
-    ReturningInProgress: 'Đang trả hàng',
+    Completed: 'Hoàn tất',
+    Cancelled: 'Đã hủy',
+};
+
+// STATUS_MAP cho timeline - hiển thị chi tiết hơn
+const TIMELINE_STATUS_MAP: Record<string, string> = {
+    Pending: 'Đơn hàng đang chờ xác nhận',
+    WaitingForStock: 'Sản phẩm hiện chưa có sẵn. Đơn hàng được thêm vào danh sách chờ',
+    Confirmed: 'Đơn hàng đã được xác nhận',
+    Shipping: 'Đơn hàng đang được vận chuyển',
+    Delivered: 'Đơn hàng đã được giao thành công',
+    DeliveryFailed: 'Giao hàng không thành công',
+    ReturnedToSeller: 'Đơn hàng đã được trả về người bán',
+    CustomerReceived: 'Khách hàng đã xác nhận nhận hàng',
+    ReturnRequested: 'Khách hàng yêu cầu trả hàng',
+    ReturnApproved: 'Yêu cầu trả hàng đã được chấp nhận',
+    ReturnRejected: 'Yêu cầu trả hàng đã bị từ chối',
+    Refunded: 'Đơn hàng đã được hoàn tiền',
+    Completed: 'Đơn hàng đã hoàn tất',
+    Cancelled: 'Đơn hàng đã bị hủy',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -108,6 +116,16 @@ interface OrderItem {
     unitPrice: number;
     totalPrice: number;
 }
+
+interface OrderTimeline {
+    id: number;
+    orderId: number;
+    fromStatus: string;
+    toStatus: string;
+    note: string;
+    changedAt: string;
+}
+
 interface OrderOnlineDetail {
     orderId: number;
     orderCode: string;
@@ -191,6 +209,10 @@ export default function OrdersManagementPage() {
     const [imageUrls, setImageUrls] = useState<string[]>([]);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
+    // State lưu lịch sử trạng thái đơn hàng
+    const [orderTimeline, setOrderTimeline] = useState<Record<number, OrderTimeline[]>>({});
+    const [timelineLoading, setTimelineLoading] = useState<Record<number, boolean>>({});
+
     // Hàm lấy transitions cho trạng thái (có cache)
     const fetchTransitions = useCallback(async (status: string) => {
         if (transitionsCache[status]) return transitionsCache[status];
@@ -252,12 +274,59 @@ export default function OrdersManagementPage() {
             const data = await response.json();
             const detail = data.data || data;
             setDetailOrderCache(prev => ({ ...prev, [orderId]: detail }));
+            
+            // Fetch timeline for this order
+            fetchOrderTimeline(orderId);
         } catch (err) {
             setDetailError(err instanceof Error ? err.message : 'Lỗi khi tải dữ liệu');
         } finally {
             setDetailLoading(false);
         }
     }, [session?.accessToken, detailOrderCache]);
+
+    // Hàm fetch order timeline
+    const fetchOrderTimeline = useCallback(async (orderId: number) => {
+        if (!session?.accessToken || orderTimeline[orderId]) return;
+
+        try {
+            setTimelineLoading(prev => ({ ...prev, [orderId]: true }));
+            
+            const response = await fetch(`http://localhost:8080/api/order-timelines/${orderId}`, {
+                headers: {
+                    'Authorization': `Bearer ${session.accessToken}`,
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.data) {
+                    setOrderTimeline(prev => ({
+                        ...prev,
+                        [orderId]: data.data
+                    }));
+                } else {
+                    setOrderTimeline(prev => ({
+                        ...prev,
+                        [orderId]: []
+                    }));
+                }
+            } else {
+                console.error('Failed to fetch order timeline');
+                setOrderTimeline(prev => ({
+                    ...prev,
+                    [orderId]: []
+                }));
+            }
+        } catch (err) {
+            console.error('Error fetching order timeline:', err);
+            setOrderTimeline(prev => ({
+                ...prev,
+                [orderId]: []
+            }));
+        } finally {
+            setTimelineLoading(prev => ({ ...prev, [orderId]: false }));
+        }
+    }, [session?.accessToken, orderTimeline]);
 
     // Fetch orders
     const fetchOrders = useCallback(async (isRefresh = false) => {
@@ -637,6 +706,24 @@ export default function OrdersManagementPage() {
         console.log('Ghi chú đơn hàng (customerNotes):', detailOrder.customerNotes);
     }
 
+    const formatTimelineNote = (timeline: OrderTimeline) => {
+        const toStatus = TIMELINE_STATUS_MAP[timeline.toStatus] || timeline.toStatus;
+        
+        return toStatus;
+    };
+
+    const formatDateTime = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleString('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    };
+
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
             {/* Header */}
@@ -647,8 +734,8 @@ export default function OrdersManagementPage() {
                         <p className="text-gray-600">Quản lý và theo dõi các đơn hàng bán online</p>
                         <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
                             <p className="text-sm text-blue-800">
-                                <strong>💡 Hướng dẫn sử dụng:</strong> Bạn có thể lọc đơn hàng theo nhóm trạng thái (sử dụng API /by-status-group) 
-                                hoặc theo trạng thái cụ thể (sử dụng API /online/status/{status}). 
+                                <strong>💡 Hướng dẫn sử dụng:</strong> Bạn có thể lọc đơn hàng theo nhóm trạng thái 
+                                hoặc theo trạng thái cụ thể. 
                                 Hai loại filter này không thể sử dụng đồng thời.
                             </p>
                             <p className="text-sm text-blue-800 mt-1">
@@ -1215,6 +1302,49 @@ export default function OrdersManagementPage() {
                                                                             <span className="text-gray-900">Tổng thanh toán:</span>
                                                                             <span className="text-blue-600">{detailOrder.finalAmount.toLocaleString('vi-VN')} ₫</span>
                                                                         </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Order Timeline */}
+                                                                <div className="bg-white rounded-lg shadow p-6">
+                                                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Lịch sử trạng thái đơn hàng</h3>
+                                                                    <div className="max-h-96 overflow-y-auto">
+                                                                        {timelineLoading[detailOrder.orderId] ? (
+                                                                            <div className="text-center py-4">
+                                                                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
+                                                                                <p className="text-sm text-gray-500 mt-2">Đang tải lịch sử...</p>
+                                                                            </div>
+                                                                        ) : orderTimeline[detailOrder.orderId]?.length > 0 ? (
+                                                                            <div className="space-y-4">
+                                                                                {orderTimeline[detailOrder.orderId].slice().reverse().map((timeline, index) => (
+                                                                                    <div key={timeline.id} className="relative">
+                                                                                        {/* Timeline line */}
+                                                                                        {index < orderTimeline[detailOrder.orderId].length - 1 && (
+                                                                                            <div className="absolute left-3 top-6 w-0.5 h-8 bg-gray-200"></div>
+                                                                                        )}
+                                                                                        
+                                                                                        <div className="flex items-start space-x-3">
+                                                                                                                                                                                    {/* Timeline dot */}
+                                                                                        <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 ${
+                                                                                            index === 0 ? 'bg-blue-500 border-blue-500' : 'bg-white border-gray-300'
+                                                                                        }`}></div>
+                                                                                            
+                                                                                            {/* Timeline content */}
+                                                                                            <div className="flex-1 min-w-0">
+                                                                                                <p className="text-sm text-gray-900 font-medium">
+                                                                                                    {formatTimelineNote(timeline)}
+                                                                                                </p>
+                                                                                                <p className="text-xs text-gray-500 mt-1">
+                                                                                                    {formatDateTime(timeline.changedAt)}
+                                                                                                </p>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        ) : (
+                                                                            <p className="text-gray-500 text-sm">Chưa có lịch sử trạng thái</p>
+                                                                        )}
                                                                     </div>
                                                                 </div>
                                                             </div>
