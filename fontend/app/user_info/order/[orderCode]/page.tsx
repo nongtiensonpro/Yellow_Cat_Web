@@ -56,12 +56,17 @@ interface OrderItemDetail {
     imageUrl: string;
     weight: number;
     quantityInStock: number;
+    // Thông tin promotion từ backend (flat structure)
+    promotionCode?: string;
+    promotionName?: string;
+    discountAmount?: number;
+    originalPrice?: number;
+    // Computed property để backward compatibility
     bestPromo?: {
         promotionCode: string;
         promotionName: string;
         discountAmount: number;
     };
-    originalPrice?: number;
 }
 
 interface OrderDetailWithItems {
@@ -84,6 +89,13 @@ interface OrderDetailWithItems {
     orderItems: OrderItemDetail[];
     totalItems: number;
     totalQuantity: number;
+    // Thông tin voucher/mã giảm giá đã áp dụng (nếu có)
+    appliedVoucherCode?: string;
+    appliedVoucherName?: string;
+    voucherType?: string;
+    voucherValue?: number;
+    voucherDescription?: string;
+    voucherDiscountAmount?: number;
 }
 
 interface ApiResponse<T> {
@@ -146,7 +158,14 @@ export default function OrderDetailPage() {
 
         const apiResponse: ApiResponse<OrderDetailWithItems> = await response.json();
 
-
+        // Debug: Log dữ liệu để kiểm tra (có thể xóa sau khi test xong)
+        console.log('Order Detail API Response:', apiResponse);
+        console.log('Voucher Info:', {
+            appliedVoucherCode: apiResponse.data?.appliedVoucherCode,
+            appliedVoucherName: apiResponse.data?.appliedVoucherName,
+            voucherDiscountAmount: apiResponse.data?.voucherDiscountAmount,
+            discountAmount: apiResponse.data?.discountAmount
+        });
 
         if (apiResponse.status < 200 || apiResponse.status >= 300) {
             throw new Error(apiResponse.message || apiResponse.error || 'Có lỗi xảy ra khi lấy chi tiết đơn hàng');
@@ -187,7 +206,21 @@ export default function OrderDetailPage() {
 
             try {
                 const orderData = await fetchOrderDetail(orderCode);
-                setOrderDetail(orderData);
+
+                // Transform orderItems để tạo bestPromo từ các field riêng lẻ
+                const transformedOrderData = {
+                    ...orderData,
+                    orderItems: orderData.orderItems.map(item => ({
+                        ...item,
+                        bestPromo: item.promotionCode && item.discountAmount ? {
+                            promotionCode: item.promotionCode,
+                            promotionName: item.promotionName || item.promotionCode,
+                            discountAmount: item.discountAmount
+                        } : undefined
+                    }))
+                };
+
+                setOrderDetail(transformedOrderData);
             } catch (err: unknown) {
                 const errorMessage = err instanceof Error ? err.message : "Không thể lấy thông tin đơn hàng. Vui lòng thử lại sau.";
                 console.error("Lỗi khi lấy chi tiết đơn hàng:", err);
@@ -341,6 +374,7 @@ export default function OrderDetailPage() {
 
                 {/* Thẻ tiết kiệm */}
                 {(() => {
+                    // Tính tiết kiệm từ sản phẩm
                     const totalItemSavings = orderDetail.orderItems.reduce((total, item) => {
                         if (item.bestPromo && item.bestPromo.discountAmount > 0) {
                             return total + (item.bestPromo.discountAmount * item.quantity);
@@ -351,7 +385,8 @@ export default function OrderDetailPage() {
                         return total;
                     }, 0);
 
-                    const totalOrderSavings = orderDetail.discountAmount || 0;
+                    // Tính tiết kiệm từ đơn hàng
+                    const totalOrderSavings = orderDetail.voucherDiscountAmount || orderDetail.discountAmount || 0;
                     const grandTotalSavings = totalItemSavings + totalOrderSavings;
 
                     if (grandTotalSavings > 0) {
@@ -461,19 +496,57 @@ export default function OrderDetailPage() {
                                 </span>
                             </div>
 
-                            {orderDetail.discountAmount !== undefined && orderDetail.discountAmount !== null && orderDetail.discountAmount > 0 && (
-                                <div className="flex justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-success-600">Giảm giá đơn hàng:</span>
-                                        <Chip size="sm" color="success" variant="flat">
-                                            Tiết kiệm
-                                        </Chip>
+                            {/* Hiển thị giảm giá đơn hàng */}
+                            {((orderDetail.discountAmount && orderDetail.discountAmount > 0) ||
+                                (orderDetail.voucherDiscountAmount && orderDetail.voucherDiscountAmount > 0)) && (
+                                    <div className="bg-success-50 border border-success-200 rounded px-3 py-2 my-2">
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2">
+                                                    {orderDetail.appliedVoucherCode ? (
+                                                        <Chip size="sm" color="success" variant="flat" startContent="🏷️">
+                                                            {orderDetail.appliedVoucherCode}
+                                                        </Chip>
+                                                    ) : (
+                                                        <Chip size="sm" color="success" variant="flat" startContent="💰">
+                                                            Giảm giá đơn hàng
+                                                        </Chip>
+                                                    )}
+                                                    {orderDetail.appliedVoucherName && (
+                                                        <span className="text-sm text-success-700">{orderDetail.appliedVoucherName}</span>
+                                                    )}
+                                                </div>
+
+                                                {/* Hiển thị thông tin voucher nếu có */}
+                                                {orderDetail.voucherType && orderDetail.voucherValue !== undefined && (
+                                                    <span className="text-xs text-success-600">
+                                                        Loại: {orderDetail.voucherType === '%' ? 'Phần trăm' : 'Số tiền'}
+                                                        {orderDetail.voucherType === '%' ? ` -${orderDetail.voucherValue}%` : ` -${formatCurrency(orderDetail.voucherValue)}`}
+                                                    </span>
+                                                )}
+
+                                                {/* Hiển thị mô tả voucher nếu có */}
+                                                {orderDetail.voucherDescription && (
+                                                    <span className="text-xs text-success-600" title={orderDetail.voucherDescription}>
+                                                        {orderDetail.voucherDescription.length > 50 ? orderDetail.voucherDescription.slice(0, 50) + '...' : orderDetail.voucherDescription}
+                                                    </span>
+                                                )}
+
+                                                {/* Nếu không có thông tin voucher chi tiết, hiển thị thông báo chung */}
+                                                {!orderDetail.appliedVoucherCode && !orderDetail.voucherType && (
+                                                    <span className="text-xs text-success-600">
+                                                        Đã áp dụng khuyến mãi cho đơn hàng này
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span className="font-semibold text-success-700">
+                                                -{formatCurrency(orderDetail.voucherDiscountAmount || orderDetail.discountAmount)}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <span className="font-semibold text-success-600">
-                                        -{formatCurrency(orderDetail.discountAmount)}
-                                    </span>
-                                </div>
-                            )}
+                                )}
+
+
 
                             <Divider className="my-3" />
 
@@ -483,11 +556,18 @@ export default function OrderDetailPage() {
                                     <span className="text-xl font-bold text-primary">
                                         {formatCurrency(orderDetail.finalAmount)}
                                     </span>
-                                    {orderDetail.discountAmount > 0 && (
-                                        <p className="text-xs text-success-600 mt-1">
-                                            Đã tiết kiệm {formatCurrency(orderDetail.discountAmount)}
-                                        </p>
-                                    )}
+                                    {(() => {
+                                        const totalOrderDiscount = orderDetail.voucherDiscountAmount || orderDetail.discountAmount || 0;
+
+                                        if (totalOrderDiscount > 0) {
+                                            return (
+                                                <p className="text-xs text-success-600 mt-1">
+                                                    Đã tiết kiệm {formatCurrency(totalOrderDiscount)}
+                                                </p>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
                                 </div>
                             </div>
                         </CardBody>
@@ -689,6 +769,7 @@ export default function OrderDetailPage() {
 
                                 {/* Tổng kết tiết kiệm */}
                                 {(() => {
+                                    // Tính tiết kiệm từ sản phẩm
                                     const totalItemSavings = orderDetail.orderItems.reduce((total, item) => {
                                         if (item.bestPromo && item.bestPromo.discountAmount > 0) {
                                             return total + (item.bestPromo.discountAmount * item.quantity);
@@ -699,33 +780,49 @@ export default function OrderDetailPage() {
                                         return total;
                                     }, 0);
 
-                                    const totalOrderSavings = orderDetail.discountAmount || 0;
+                                    // Tính tiết kiệm từ đơn hàng
+                                    const totalOrderSavings = orderDetail.voucherDiscountAmount || orderDetail.discountAmount || 0;
                                     const grandTotalSavings = totalItemSavings + totalOrderSavings;
 
                                     if (grandTotalSavings > 0) {
                                         return (
                                             <Card className="bg-success-50 border-success-200">
                                                 <CardBody className="text-center py-4">
-                                                    <div className="flex items-center justify-center gap-2 mb-2">
+                                                    <div className="flex items-center justify-center gap-2 mb-3">
                                                         <span className="text-2xl">🎉</span>
                                                         <h4 className="text-lg font-semibold text-success-700">
                                                             Tổng tiết kiệm của bạn
                                                         </h4>
                                                     </div>
-                                                    <div className="space-y-1">
-                                                        {totalItemSavings > 0 && (
-                                                            <p className="text-sm text-success-600">
-                                                                Khuyến mãi sản phẩm: {formatCurrency(totalItemSavings)}
-                                                            </p>
-                                                        )}
+                                                    <div className="space-y-2">
                                                         {totalOrderSavings > 0 && (
-                                                            <p className="text-sm text-success-600">
-                                                                Giảm giá đơn hàng: {formatCurrency(totalOrderSavings)}
-                                                            </p>
+                                                            <div className="flex justify-between items-center text-sm">
+                                                                <span className="text-success-600">
+                                                                    {orderDetail.appliedVoucherCode ?
+                                                                        `Mã giảm giá ${orderDetail.appliedVoucherCode}:` :
+                                                                        'Giảm giá đơn hàng:'
+                                                                    }
+                                                                </span>
+                                                                <span className="font-semibold text-success-700">
+                                                                    {formatCurrency(totalOrderSavings)}
+                                                                </span>
+                                                            </div>
                                                         )}
-                                                        <p className="text-xl font-bold text-success-700">
-                                                            {formatCurrency(grandTotalSavings)}
-                                                        </p>
+                                                        {totalItemSavings > 0 && (
+                                                            <div className="flex justify-between items-center text-sm">
+                                                                <span className="text-success-600">Khuyến mãi sản phẩm:</span>
+                                                                <span className="font-semibold text-success-700">
+                                                                    {formatCurrency(totalItemSavings)}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        <Divider className="my-2" />
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-base font-semibold text-success-700">Tổng cộng:</span>
+                                                            <span className="text-xl font-bold text-success-700">
+                                                                {formatCurrency(grandTotalSavings)}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </CardBody>
                                             </Card>
