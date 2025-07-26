@@ -20,7 +20,11 @@ import org.yellowcat.backend.product.promotion.dto.CreatePromotionDTO;
 import org.yellowcat.backend.product.promotion.dto.PromotionRequest;
 import org.yellowcat.backend.product.promotion.dto.PromotionResponse;
 import org.yellowcat.backend.product.promotionproduct.PromotionProductService;
+import org.yellowcat.backend.product.productvariant.ProductVariant;
+import org.yellowcat.backend.product.productvariant.ProductVariantRepository;
+import org.yellowcat.backend.product.productvariant.ProductVariantAutoPromotionService;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -33,6 +37,9 @@ public class PromotionController {
 
     PromotionService promotionService;
     private final PromotionProductService promotionProductService;
+    private final PromotionScheduler promotionScheduler;
+    private final ProductVariantRepository productVariantRepository;
+    private final ProductVariantAutoPromotionService autoPromotionService;
 
 
     @GetMapping
@@ -91,6 +98,72 @@ public class PromotionController {
     public ResponseEntity<?> checkName(@RequestParam String name) {
         boolean exists = promotionRepository.existsByPromotionNameIgnoreCase(name);
         return ResponseEntity.ok(Map.of("exists", exists)); // 👈 JSON hợp lệ cho FE parse
+    }
+
+    // 🔧 ADMIN TEST ENDPOINTS - Chỉ dành cho testing logic reset promotion hết hạn
+    
+    @GetMapping("/admin/check-expired")
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    public ResponseEntity<?> checkExpiredPromotions() {
+        try {
+            String result = promotionScheduler.manualCheckExpiredPromotions();
+            return ResponseEntityBuilder.success(Map.of(
+                "message", "Kiểm tra promotion hết hạn thành công",
+                "details", result
+            ));
+        } catch (Exception e) {
+            return ResponseEntityBuilder.error(
+                HttpStatus.INTERNAL_SERVER_ERROR, 
+                "Lỗi khi kiểm tra promotion hết hạn: " + e.getMessage(),
+                e.getMessage()
+            );
+        }
+    }
+
+    @PostMapping("/admin/reset-expired")
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    public ResponseEntity<?> resetExpiredPromotions() {
+        try {
+            // Thực thi logic reset promotion hết hạn
+            promotionScheduler.updateExpiredPromotions();
+            return ResponseEntityBuilder.success(Map.of(
+                "message", "✅ Đã thực thi reset promotion hết hạn thành công!",
+                "note", "Kiểm tra log server để xem chi tiết"
+            ));
+        } catch (Exception e) {
+            return ResponseEntityBuilder.error(
+                HttpStatus.INTERNAL_SERVER_ERROR, 
+                "❌ Lỗi khi reset promotion hết hạn: " + e.getMessage(),
+                e.getMessage()
+            );
+        }
+    }
+
+    @PostMapping("/admin/sync-all-promotions")
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    public ResponseEntity<?> syncAllPromotions() {
+        try {
+            // Lấy tất cả variants và sync lại promotion
+            List<ProductVariant> allVariants = productVariantRepository.findAll();
+            int updatedCount = autoPromotionService.batchApplyPromotions(allVariants);
+            
+            // Lưu lại những variants đã được update
+            productVariantRepository.saveAll(allVariants);
+            
+            return ResponseEntityBuilder.success(Map.of(
+                "message", "✅ Đã sync promotion cho tất cả variants thành công!",
+                "totalVariants", allVariants.size(),
+                "updatedVariants", updatedCount,
+                "note", "Tất cả variants đã được áp dụng promotion đúng theo quy tắc hiện tại"
+            ));
+            
+        } catch (Exception e) {
+            return ResponseEntityBuilder.error(
+                HttpStatus.INTERNAL_SERVER_ERROR, 
+                "❌ Lỗi khi sync promotion: " + e.getMessage(),
+                e.getMessage()
+            );
+        }
     }
 
 

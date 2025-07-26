@@ -83,9 +83,11 @@ public class ProductVariant {
         if (sold == null) {
             sold = 0;
         }
-        if (salePrice == null) {
-            salePrice = BigDecimal.ZERO;
-        }
+        // 🔥 KHÔNG TỰ ĐỘNG SET salePrice = BigDecimal.ZERO NỮA
+        // Để null để ProductVariantAutoPromotionService có thể xử lý đúng
+        // if (salePrice == null) {
+        //     salePrice = BigDecimal.ZERO;
+        // }
     }
 
     @PreUpdate

@@ -570,32 +570,32 @@ INSERT INTO product_variants (product_id, sku, color_id, size_id, price, sale_pr
 VALUES
 -- Nike Revolution 6
 
-(1, 'NK-REV6-BLK-40', 3, 1, 1800000.00, 1620000.00, 50, 25, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.1),
-(1, 'NK-REV6-BLK-41', 1, 1, 1800000.00, 1620000.00, 45, 30, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.2),
-(1, 'NK-REV6-WHT-40', 2, 1, 1800000.00, NULL, 35, 15, 'YellowCatWeb/nike-rev6-white', 0.3),
-(1, 'NK-REV6-WHT-42', 2, 3, 1800000.00, NULL, 40, 20, 'YellowCatWeb/nike-rev6-white', 0.4),
+(1, 'NK-REV6-BLK-40', 3, 1, 1800000.00, 1800000.00, 50, 25, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.1),
+(1, 'NK-REV6-BLK-41', 1, 1, 1800000.00, 1800000.00, 45, 30, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 0.2),
+(1, 'NK-REV6-WHT-40', 2, 1, 1800000.00, 1800000.00, 35, 15, 'YellowCatWeb/nike-rev6-white', 0.3),
+(1, 'NK-REV6-WHT-42', 2, 3, 1800000.00, 1800000.00, 40, 20, 'YellowCatWeb/nike-rev6-white', 0.4),
 
 -- Adidas Duramo SL
-(2, 'AD-DURSL-WHT-41', 2, 2, 1650000.00, 1485000.00, 55, 35, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 0.1),
-(2, 'AD-DURSL-WHT-42', 2, 3, 1650000.00, 1485000.00, 65, 40, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 0.2),
-(2, 'AD-DURSL-NVY-43', 3, 4, 1650000.00, NULL, 40, 25, 'YellowCatWeb/adidas-duramo-navy', 0.3),
-(2, 'AD-DURSL-BLK-41', 1, 2, 1650000.00, NULL, 30, 18, 'YellowCatWeb/adidas-duramo-black', 0.4),
+(2, 'AD-DURSL-WHT-41', 2, 2, 1650000.00, 1650000.00, 55, 35, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 0.1),
+(2, 'AD-DURSL-WHT-42', 2, 3, 1650000.00, 1650000.00, 65, 40, 'YellowCatWeb/o7sariwjck0tzocfsfsi', 0.2),
+(2, 'AD-DURSL-NVY-43', 3, 4, 1650000.00, 1650000.00, 40, 25, 'YellowCatWeb/adidas-duramo-navy', 0.3),
+(2, 'AD-DURSL-BLK-41', 1, 2, 1650000.00, 1650000.00, 30, 18, 'YellowCatWeb/adidas-duramo-black', 0.4),
 
 -- Under Armour Curry Flow 9
-(3, 'UA-CUR9-BLU-42', 4, 3, 3500000.00, 3150000.00, 30, 12, 'YellowCatWeb/ejzjv3cxkyyjtokkgh1t', 0.2),
-(3, 'UA-CUR9-GRY-44', 5, 5, 3500000.00, NULL, 22, 5, 'YellowCatWeb/ua-curry-grey', 0.3),
-(3, 'UA-CUR9-RED-43', 6, 4, 3550000.00, NULL, 25, 8, 'YellowCatWeb/bqttubnjqa5qzb64kjnm', 0.4),
-(3, 'UA-CUR9-BLK-41', 1, 2, 3500000.00, NULL, 20, 10, 'YellowCatWeb/ua-curry-black', 0.1),
+(3, 'UA-CUR9-BLU-42', 4, 3, 3500000.00, 3500000.00, 30, 12, 'YellowCatWeb/ejzjv3cxkyyjtokkgh1t', 0.2),
+(3, 'UA-CUR9-GRY-44', 5, 5, 3500000.00, 3500000.00, 22, 5, 'YellowCatWeb/ua-curry-grey', 0.3),
+(3, 'UA-CUR9-RED-43', 6, 4, 3550000.00, 3500000.00, 25, 8, 'YellowCatWeb/bqttubnjqa5qzb64kjnm', 0.4),
+(3, 'UA-CUR9-BLK-41', 1, 2, 3500000.00, 3500000.00, 20, 10, 'YellowCatWeb/ua-curry-black', 0.1),
 
 -- Puma Suede Classic XXI
-(4, 'PU-SUED-BLK-40', 1, 1, 2200000.00, 1980000.00, 35, 22, 'YellowCatWeb/sx6bwsntnuwyfwx89tqt', 0.2),
-(4, 'PU-SUED-RED-41', 6, 2, 2200000.00, NULL, 30, 15, 'YellowCatWeb/lq1yqclrqebutga5pmrk', 0.3),
-(4, 'PU-SUED-GRY-42', 5, 3, 2200000.00, NULL, 28, 12, 'YellowCatWeb/puma-suede-grey', 0.2),
+(4, 'PU-SUED-BLK-40', 1, 1, 2200000.00, 2200000.00, 22, 25,'YellowCatWeb/sx6bwsntnuwyfwx89tqt', 0.2),
+(4, 'PU-SUED-RED-41', 6, 2, 2200000.00, 2200000.00, 30, 15, 'YellowCatWeb/lq1yqclrqebutga5pmrk', 0.3),
+(4, 'PU-SUED-GRY-42', 5, 3, 2200000.00, 2200000.00, 28, 12, 'YellowCatWeb/puma-suede-grey', 0.2),
 
 -- Nike Air Zoom Pegasus 40
-(5, 'NK-PEG40-BLK-41', 1, 2, 3200000.00, 2880000.00, 50, 30, 'YellowCatWeb/byshsl4qboscrdnmuoix', 0.3),
-(5, 'NK-PEG40-WHT-42', 2, 3, 3200000.00, NULL, 55, 25, 'YellowCatWeb/acs7ki8v43lrjorsfnwb', 0.3),
-(5, 'NK-PEG40-GRY-43', 5, 4, 3200000.00, NULL, 40, 18, 'YellowCatWeb/nike-pegasus-grey', 0.1);
+(5, 'NK-PEG40-BLK-41', 1, 2, 3200000.00, 3200000.00, 50, 30, 'YellowCatWeb/byshsl4qboscrdnmuoix', 0.3),
+(5, 'NK-PEG40-WHT-42', 2, 3, 3200000.00, 3200000.00, 55, 25, 'YellowCatWeb/acs7ki8v43lrjorsfnwb', 0.3),
+(5, 'NK-PEG40-GRY-43', 5, 4, 3200000.00, 3200000.00, 40, 18, 'YellowCatWeb/nike-pegasus-grey', 0.1);
 
 -- 5. Dữ liệu cho bảng AppUsers
 INSERT INTO app_users (keycloak_id, email, full_name, phone_number, avatar_url)
@@ -690,65 +690,65 @@ VALUES (1, 1, 5, 'Giày rất thoải mái, đi chạy bộ rất êm. Chất l�
        (3, 1, 4, 'Giày bóng rổ chất lượng cao, grip tốt trên sân.', '2024-01-09 18:20:00'),
        (4, 4, 3, 'Style đẹp nhưng chất liệu không bền như mong đợi.', '2024-01-10 12:10:00');
 
--- 1. Dữ liệu cho bảng promotions
-INSERT INTO promotions
-(app_user_id, promotion_code, promotion_name, description, discount_type, discount_value, start_date, end_date,
- is_active)
-VALUES (1, 'NEWUSER10', 'Giảm giá 10% cho khách hàng mới', 'Chào mừng khách hàng mới với ưu đãi giảm 10%', 'percentage',
-        10.00, '2025-01-01 00:00:00', '2025-12-31 23:59:59', TRUE),
-
-       (1, 'SALE50K', 'Giảm 50K cho đơn hàng trên 1 triệu', 'Giảm giá cố định 50K', 'fixed_amount',
-        50000.00, '2025-01-01 00:00:00', '2025-06-30 23:59:59', TRUE),
-
-       (1, 'SUMMER2025', 'Sale mùa hè 2025', 'Giảm 15% tất cả sản phẩm mùa hè', 'percentage',
-        15.00, '2025-06-01 00:00:00', '2025-08-31 23:59:59', TRUE),
-
-       (1, 'FREESHIP', 'Miễn phí vận chuyển', 'Miễn phí ship cho đơn hàng trên 500K', 'free_shipping',
-        0.00, '2025-01-01 00:00:00', '2025-12-31 23:59:59', TRUE),
-
-       (1, 'NIKE20', 'Giảm 20% sản phẩm Nike', 'Khuyến mãi đặc biệt cho thương hiệu Nike', 'percentage',
-        20.00, '2025-02-01 00:00:00', '2025-02-28 23:59:59', TRUE);
-
--- 2. Dữ liệu cho bảng promotion_products
--- Giả sử các product_variant_id có sẵn lần lượt là 1,2,3,4
-INSERT INTO promotion_products
-    (promotion_id, variant_id)
-VALUES
-    -- NEWUSER10 áp dụng cho variant 1 và 2
-    (1, 1),
-    (1, 2),
-    -- SUMMER2024 áp dụng cho variant 3 và 4
-    (3, 3),
-    (3, 4),
-    -- NIKE20 áp dụng cho variant 5 (nếu có)
-    (5, 5);
-
--- 3. Dữ liệu cho bảng promotion_orders
--- Giả sử các order_id tồn tại lần lượt là 1001,1002,1003,1004
-INSERT INTO promotion_programs
-(created_by, updated_by, promotion_code, promotion_name, description, discount_type,
- discount_value, start_date, end_date, is_active, minimum_order_value,
- usage_limit_per_user, usage_limit_total)
-VALUES
-    -- NEWUSER10 (tối thiểu 500K, 1 lần/người, tổng 1.000 lượt)
-    (1, 1, 'NEWUSER10', 'Khuyến mãi cho người dùng mới', 'Giảm giá cho đơn đầu tiên',
-     'VNĐ', 100000, '2025-07-01 00:00:00', '2025-08-31 23:59:59', TRUE,
-     500000.00, 1, 1000),
-
-    -- SALE50K (tối thiểu 1.000K, 5 lần/người, không giới hạn tổng)
-    (1, 1, 'SALE50K', 'Giảm 50K cho đơn từ 1 triệu', 'Ưu đãi mùa hè',
-     'VNĐ', 50000, '2025-07-01 00:00:00', '2025-08-31 23:59:59', TRUE,
-     1000000.00, 5, NULL),
-
-    -- FREESHIP (tối thiểu 500K, không giới hạn số lượt)
-    (1, 1, 'FREESHIP', 'Miễn phí vận chuyển', 'Áp dụng cho đơn từ 500K',
-     'free_shipping', 0, '2025-07-01 00:00:00', '2025-12-31 23:59:59', TRUE,
-     500000.00, NULL, NULL),
-
-    -- SUMMER2024 (tối thiểu 800K, 3 lần/người, tổng 5.000 lượt)
-    (1, 1, 'SUMMER2024', 'Khuyến mãi mùa hè', 'Chương trình khuyến mãi lớn',
-     'VNĐ', 70000, '2025-07-01 00:00:00', '2025-09-30 23:59:59', TRUE,
-     800000.00, 3, 5000);
+-- -- 1. Dữ liệu cho bảng promotions
+-- INSERT INTO promotions
+-- (app_user_id, promotion_code, promotion_name, description, discount_type, discount_value, start_date, end_date,
+--  is_active)
+-- VALUES (1, 'NEWUSER10', 'Giảm giá 10% cho khách hàng mới', 'Chào mừng khách hàng mới với ưu đãi giảm 10%', 'percentage',
+--         10.00, '2025-01-01 00:00:00', '2025-12-31 23:59:59', TRUE),
+--
+--        (1, 'SALE50K', 'Giảm 50K cho đơn hàng trên 1 triệu', 'Giảm giá cố định 50K', 'fixed_amount',
+--         50000.00, '2025-01-01 00:00:00', '2025-06-30 23:59:59', TRUE),
+--
+--        (1, 'SUMMER2025', 'Sale mùa hè 2025', 'Giảm 15% tất cả sản phẩm mùa hè', 'percentage',
+--         15.00, '2025-06-01 00:00:00', '2025-08-31 23:59:59', TRUE),
+--
+--        (1, 'FREESHIP', 'Miễn phí vận chuyển', 'Miễn phí ship cho đơn hàng trên 500K', 'free_shipping',
+--         0.00, '2025-01-01 00:00:00', '2025-12-31 23:59:59', TRUE),
+--
+--        (1, 'NIKE20', 'Giảm 20% sản phẩm Nike', 'Khuyến mãi đặc biệt cho thương hiệu Nike', 'percentage',
+--         20.00, '2025-02-01 00:00:00', '2025-02-28 23:59:59', TRUE);
+--
+-- -- 2. Dữ liệu cho bảng promotion_products
+-- -- Giả sử các product_variant_id có sẵn lần lượt là 1,2,3,4
+-- INSERT INTO promotion_products
+--     (promotion_id, variant_id)
+-- VALUES
+--     -- NEWUSER10 áp dụng cho variant 1 và 2
+--     (1, 1),
+--     (1, 2),
+--     -- SUMMER2024 áp dụng cho variant 3 và 4
+--     (3, 3),
+--     (3, 4),
+--     -- NIKE20 áp dụng cho variant 5 (nếu có)
+--     (5, 5);
+--
+-- -- 3. Dữ liệu cho bảng promotion_orders
+-- -- Giả sử các order_id tồn tại lần lượt là 1001,1002,1003,1004
+-- INSERT INTO promotion_programs
+-- (created_by, updated_by, promotion_code, promotion_name, description, discount_type,
+--  discount_value, start_date, end_date, is_active, minimum_order_value,
+--  usage_limit_per_user, usage_limit_total)
+-- VALUES
+--     -- NEWUSER10 (tối thiểu 500K, 1 lần/người, tổng 1.000 lượt)
+--     (1, 1, 'NEWUSER10', 'Khuyến mãi cho người dùng mới', 'Giảm giá cho đơn đầu tiên',
+--      'VNĐ', 100000, '2025-07-01 00:00:00', '2025-08-31 23:59:59', TRUE,
+--      500000.00, 1, 1000),
+--
+--     -- SALE50K (tối thiểu 1.000K, 5 lần/người, không giới hạn tổng)
+--     (1, 1, 'SALE50K', 'Giảm 50K cho đơn từ 1 triệu', 'Ưu đãi mùa hè',
+--      'VNĐ', 50000, '2025-07-01 00:00:00', '2025-08-31 23:59:59', TRUE,
+--      1000000.00, 5, NULL),
+--
+--     -- FREESHIP (tối thiểu 500K, không giới hạn số lượt)
+--     (1, 1, 'FREESHIP', 'Miễn phí vận chuyển', 'Áp dụng cho đơn từ 500K',
+--      'free_shipping', 0, '2025-07-01 00:00:00', '2025-12-31 23:59:59', TRUE,
+--      500000.00, NULL, NULL),
+--
+--     -- SUMMER2024 (tối thiểu 800K, 3 lần/người, tổng 5.000 lượt)
+--     (1, 1, 'SUMMER2024', 'Khuyến mãi mùa hè', 'Chương trình khuyến mãi lớn',
+--      'VNĐ', 70000, '2025-07-01 00:00:00', '2025-09-30 23:59:59', TRUE,
+--      800000.00, 3, 5000);
 
 -- thêm dữ liệu bảng return_requests
 INSERT INTO return_requests (order_id, app_user_id, request_date, return_reason, status, refund_amount, note)
@@ -903,3 +903,38 @@ CREATE TABLE chat_message
     sender_type VARCHAR(50),
     timestamp   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+
+CREATE OR REPLACE FUNCTION check_promotion_product_overlap()
+RETURNS TRIGGER AS $$
+DECLARE
+    cnt INT;
+    new_start TIMESTAMP;
+    new_end   TIMESTAMP;
+BEGIN
+    -- Lấy khoảng thời gian của promotion mới
+    SELECT start_date, end_date INTO new_start, new_end
+    FROM promotions
+    WHERE promotion_id = NEW.promotion_id;
+
+    -- Đếm số khuyến mãi trùng lặp
+    SELECT COUNT(*) INTO cnt
+    FROM promotion_products pp
+             JOIN promotions p ON p.promotion_id = pp.promotion_id
+    WHERE pp.variant_id = NEW.variant_id
+      AND pp.promotion_id <> NEW.promotion_id
+      AND p.start_date <= new_end
+      AND p.end_date >= new_start;
+
+    IF cnt > 0 THEN
+        RAISE EXCEPTION 'Đã tồn tại khuyến mãi khác cho sản phẩm này trong khoảng thời gian trùng lặp.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_check_promotion_overlap
+BEFORE INSERT OR UPDATE ON promotion_products
+FOR EACH ROW
+EXECUTE FUNCTION check_promotion_product_overlap();
+

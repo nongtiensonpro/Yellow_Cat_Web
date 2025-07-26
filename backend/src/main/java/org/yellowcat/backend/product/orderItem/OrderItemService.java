@@ -68,7 +68,9 @@ public class OrderItemService {
 
             // Cập nhật order item
             existingOrderItem.setQuantity(newQuantity);
-            existingOrderItem.setTotalPrice(productVariant.getPrice().multiply(BigDecimal.valueOf(newQuantity)));
+            // Sử dụng giá sau giảm (salePrice nếu có) để tính tổng tiền
+            BigDecimal unitPrice = getEffectivePrice(productVariant);
+            existingOrderItem.setTotalPrice(unitPrice.multiply(BigDecimal.valueOf(newQuantity)));
             orderItemRepository.save(existingOrderItem);
         } else {
             // Thêm mới order item
@@ -85,8 +87,10 @@ public class OrderItemService {
             orderItem.setOrder(order);
             orderItem.setVariant(productVariant);
             orderItem.setQuantity(request.getQuantity());
-            orderItem.setPriceAtPurchase(productVariant.getPrice());
-            orderItem.setTotalPrice(productVariant.getPrice().multiply(BigDecimal.valueOf(request.getQuantity())));
+            // Giá tại thời điểm mua = giá sau giảm (salePrice nếu có)
+            BigDecimal unitPrice = getEffectivePrice(productVariant);
+            orderItem.setPriceAtPurchase(unitPrice);
+            orderItem.setTotalPrice(unitPrice.multiply(BigDecimal.valueOf(request.getQuantity())));
             orderItemRepository.save(orderItem);
         }
 
@@ -107,7 +111,9 @@ public class OrderItemService {
         ProductVariant variant = getProductVariant(request, orderItem);
 
         orderItem.setQuantity(request.getNewQuantity());
-        orderItem.setTotalPrice(variant.getPrice().multiply(BigDecimal.valueOf(request.getNewQuantity())));
+        // Cập nhật totalPrice dựa trên giá sau giảm (salePrice nếu có)
+        BigDecimal unitPrice = getEffectivePrice(variant);
+        orderItem.setTotalPrice(unitPrice.multiply(BigDecimal.valueOf(request.getNewQuantity())));
 
         productVariantRepository.save(variant);
         orderItemRepository.save(orderItem);
@@ -163,5 +169,12 @@ public class OrderItemService {
         order.setSubTotalAmount(subTotal);
         order.setFinalAmount(finalAmount);
         orderRepository.save(order);
+    }
+
+    /**
+     * Trả về giá hiệu lực của variant: ưu tiên salePrice nếu có, ngược lại dùng price gốc.
+     */
+    private BigDecimal getEffectivePrice(ProductVariant variant) {
+        return variant.getSalePrice() != null ? variant.getSalePrice() : variant.getPrice();
     }
 }

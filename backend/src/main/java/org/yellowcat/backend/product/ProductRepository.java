@@ -182,7 +182,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
             WITH base AS (
                 SELECT pv.variant_id,
                        pv.price,
-                       COALESCE(pv.sale_price, pv.price) AS base_price
+                       pv.sale_price
                 FROM product_variants pv
                 WHERE pv.variant_id = :variantId
             ),
@@ -198,7 +198,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                        p.end_date,
                        p.is_active,
                        CASE
-                           WHEN p.discount_type = 'percentage' THEN b.base_price * p.discount_value / 100
+                           WHEN p.discount_type = 'percentage' THEN b.price * p.discount_value / 100
                            WHEN p.discount_type IN ('fixed_amount','VNĐ') THEN p.discount_value
                            ELSE 0
                        END AS discount_amount
@@ -222,7 +222,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                    r.promotion_name,
                    r.promotion_description,
                    r.discount_amount,
-                   b.base_price - r.discount_amount AS final_price,
+                   b.price - r.discount_amount AS final_price,
                    r.discount_type,
                    r.discount_value,
                    r.start_date,

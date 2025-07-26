@@ -796,7 +796,17 @@ export default function EditFromOrder() {
                                                                 <TableCell>
                                                                     <span className="px-4">{item.quantity}</span>
                                                                 </TableCell>
-                                                                <TableCell className="text-right">{item.priceAtPurchase.toLocaleString('vi-VN')} VND</TableCell>
+                                                                <TableCell className="text-right">
+                                                                    {item.bestPromo ? (
+                                                                        <div className="flex flex-col items-end">
+                                                                            <span className="font-semibold text-red-600">{item.priceAtPurchase.toLocaleString('vi-VN')} VND</span>
+                                                                            <span className="text-xs line-through text-gray-400">{item.originalPrice?.toLocaleString('vi-VN')}</span>
+                                                                            <span className="text-[10px] text-orange-600">KM: {item.bestPromo.promotionCode}</span>
+                                                                        </div>
+                                                                    ) : (
+                                                                        item.priceAtPurchase.toLocaleString('vi-VN') + ' VND'
+                                                                    )}
+                                                                </TableCell>
                                                                 <TableCell className="text-right">{item.totalPrice.toLocaleString('vi-VN')} VND</TableCell>
                                                             </TableRow>
                                                         )}
@@ -849,7 +859,17 @@ export default function EditFromOrder() {
                                                                     >+</Button>
                                                                 </div>
                                                             </TableCell>
-                                                            <TableCell className="text-right">{item.priceAtPurchase.toLocaleString('vi-VN')} VND</TableCell>
+                                                            <TableCell className="text-right">
+                                                                    {item.bestPromo ? (
+                                                                        <div className="flex flex-col items-end">
+                                                                            <span className="font-semibold text-red-600">{item.priceAtPurchase.toLocaleString('vi-VN')} VND</span>
+                                                                            <span className="text-xs line-through text-gray-400">{item.originalPrice?.toLocaleString('vi-VN')}</span>
+                                                                            <span className="text-[10px] text-orange-600">KM: {item.bestPromo.promotionCode}</span>
+                                                                        </div>
+                                                                    ) : (
+                                                                        item.priceAtPurchase.toLocaleString('vi-VN') + ' VND'
+                                                                    )}
+                                                                </TableCell>
                                                             <TableCell className="text-right">{item.totalPrice.toLocaleString('vi-VN')} VND</TableCell>
                                                             <TableCell>
                                                                 <Button

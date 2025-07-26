@@ -17,6 +17,7 @@ import org.yellowcat.backend.product.material.Material;
 import org.yellowcat.backend.product.material.MaterialRepository;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
 import org.yellowcat.backend.product.productvariant.ProductVariantRepository;
+import org.yellowcat.backend.product.productvariant.ProductVariantAutoPromotionService;
 import org.yellowcat.backend.product.size.Size;
 import org.yellowcat.backend.product.size.SizeRepository;
 import org.yellowcat.backend.product.targetaudience.TargetAudience;
@@ -46,6 +47,7 @@ public class ProductService {
     private final ProductHistoryRepository productHistoryRepository;
     private final ProductVariantHistoryRepository productVariantHistoryRepository;
     private final AppUserRepository appUserRepository;
+    private final ProductVariantAutoPromotionService autoPromotionService;
 
     public List<ProductListItemDTO> getTop5BestSellingProducts() {
         return productRepository.findTop5BestSellingProducts();
@@ -163,13 +165,21 @@ public class ProductService {
             variant.setColor(color);
             variant.setSize(size);
             variant.setPrice(variantDto.getPrice());
-            variant.setSalePrice(variantDto.getSalePrice());
+            // Không set salePrice từ DTO nữa, sẽ để auto-promotion service xử lý
             variant.setQuantityInStock(variantDto.getStockLevel());
             variant.setSold(variantDto.getSold() != null ? variantDto.getSold() : 0);
             variant.setImageUrl(variantDto.getImageUrl());
             variant.setWeight(variantDto.getWeight());
             variant.setCreatedBy(appUser);
-            productVariantRepository.save(variant);
+            
+            // Lưu variant trước để có ID
+            variant = productVariantRepository.save(variant);
+            
+            // 🔥 TỰ ĐỘNG ÁP DỤNG PROMOTION (nếu có)
+            boolean promotionApplied = autoPromotionService.autoApplyBestPromotion(variant);
+            if (promotionApplied) {
+                productVariantRepository.save(variant); // Save lại nếu có thay đổi salePrice
+            }
         }
     }
 
@@ -268,11 +278,16 @@ public class ProductService {
             v.setColor(colors.get(vDto.getColorId()));
             v.setSize(sizes.get(vDto.getSizeId()));
             v.setPrice(vDto.getPrice());
-            v.setSalePrice(vDto.getSalePrice());
+            // Không set salePrice từ DTO nữa, sẽ để auto-promotion service xử lý
             v.setQuantityInStock(vDto.getStockLevel());
             v.setSold(vDto.getSold() != null ? vDto.getSold() : 0);
             v.setImageUrl(vDto.getImageUrl());
             v.setWeight(vDto.getWeight());
+            
+            // 🔥 TỰ ĐỘNG ÁP DỤNG PROMOTION (nếu có)
+            // Điều này sẽ tự động tính lại salePrice dựa trên promotion đang active
+            autoPromotionService.autoApplyBestPromotion(v);
+            
             toSave.add(v);
         }
         productVariantRepository.saveAll(toSave);

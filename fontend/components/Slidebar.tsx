@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import {
     Package,
     Percent,
@@ -11,10 +12,10 @@ import {
     Tag,
     Palette,
     Ruler,
+    MessageCircle,
     Store,
     ChevronRight,
-    TicketPercent, // Icon mới
-    MessageCircle // Thêm icon ô chat
+    TicketPercent
 } from "lucide-react";
 
 // NOTE: Next.js specific imports (Link, Image, usePathname) have been replaced
@@ -127,7 +128,7 @@ const MenuItemComponent = ({ item, currentPath, openMenus, toggleMenu }: MenuIte
 
 // Component Sidebar chính
 export default function Sidebar() {
-    const pathname: string = typeof window !== "undefined" ? window.location.pathname : "";
+    const pathname = usePathname();
 
     // BẮT ĐẦU THAY ĐỔI: Logic quản lý trạng thái mở/đóng cho nhiều menu
     const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});

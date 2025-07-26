@@ -29,6 +29,13 @@ interface OrderItem {
     quantity: number;
     priceAtPurchase: number;
     totalPrice: number;
+    // Thông tin khuyến mãi
+    bestPromo?: {
+        promotionCode: string;
+        promotionName: string;
+        discountAmount: number;
+    };
+    originalPrice?: number; // Giá gốc (chưa giảm)
     productName?: string;
     variantInfo?: string;
 }
@@ -522,12 +529,33 @@ export const useOrderStore = create<OrderState>()(
                         });
                     });
 
+                    // Lấy promo cho các variant duy nhất
+                    const uniqueVariantIds = Array.from(new Set(items.map(i => i.productVariantId)));
+                    const promoMap = new Map<number, { promotionCode: string; promotionName: string; discountAmount: number }>();
+
+                    await Promise.all(uniqueVariantIds.map(async (vid) => {
+                        try {
+                            const res = await fetch(`http://localhost:8080/api/products/variant/${vid}/promotions`);
+                            if (!res.ok) return;
+                            const json = await res.json();
+                            if (json?.data?.bestPromo) {
+                                promoMap.set(vid, json.data.bestPromo);
+                            }
+                        } catch (e) {
+                            console.warn('Cannot fetch promo for variant', vid);
+                        }
+                    }));
+
                     const enrichedItems = items.map((item) => {
                         const details = variantMap.get(item.productVariantId);
+                        const promo = promoMap.get(item.productVariantId);
+                        const originalPrice = promo ? item.priceAtPurchase + promo.discountAmount : undefined;
                         return {
                             ...item,
                             productName: details?.productName || 'Không tìm thấy sản phẩm',
-                            variantInfo: details?.variantInfo || `ID Biến thể: ${item.productVariantId}`
+                            variantInfo: details?.variantInfo || '',
+                            bestPromo: promo,
+                            originalPrice,
                         };
                     });
                     
