@@ -350,6 +350,17 @@ export default function CreatePromotionPage() {
                                 <p className="text-red-600 text-sm">{errors.promotionName}</p>
                             )}
                         </div>
+                        <div>
+                            <label className="block mb-1 font-medium">Mô tả</label>
+                            <textarea
+                                name="description"
+                                value={form.description}
+                                onChange={handleChange}
+                                rows={3}
+                                className="w-full border px-3 py-2 rounded"
+                                placeholder="Nhập mô tả cho đợt giảm giá..."
+                            />
+                        </div>
 
                         <div>
                             <label className="block mb-1 font-medium">

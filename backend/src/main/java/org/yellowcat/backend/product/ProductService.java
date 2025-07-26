@@ -23,6 +23,8 @@ import org.yellowcat.backend.product.targetaudience.TargetAudience;
 import org.yellowcat.backend.product.targetaudience.TargetAudienceRepository;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserRepository;
+import org.yellowcat.backend.product.dto.VariantPromoItemDTO;
+import org.yellowcat.backend.product.dto.VariantPromosDTO;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -491,6 +493,51 @@ public class ProductService {
 
     public void activeornotactive(Integer productId) {
         productRepository.activeornotactive(productId);
+    }
+
+    // ----------------------- Khuyến mãi cho variant -----------------------
+    public VariantPromosDTO getVariantPromotions(Integer variantId) {
+        List<Object[]> rows = productRepository.findVariantPromotions(variantId);
+        VariantPromosDTO result = new VariantPromosDTO();
+        List<VariantPromoItemDTO> usable = new ArrayList<>();
+
+        for (Object[] r : rows) {
+            VariantPromoItemDTO item = new VariantPromoItemDTO();
+            item.setPromotionCode((String) r[0]);
+            item.setPromotionName((String) r[1]);
+            item.setDescription((String) r[2]);
+            item.setDiscountAmount((java.math.BigDecimal) r[3]);
+            item.setFinalPrice((java.math.BigDecimal) r[4]);
+            
+            // Transform discount type to match frontend expectations
+            String discountType = (String) r[5];
+            if ("percentage".equalsIgnoreCase(discountType)) {
+                item.setDiscountType("PERCENTAGE");
+            } else if ("fixed_amount".equalsIgnoreCase(discountType) || "VNĐ".equalsIgnoreCase(discountType)) {
+                item.setDiscountType("FIXED_AMOUNT");
+            } else {
+                item.setDiscountType(discountType != null ? discountType.toUpperCase() : "FIXED_AMOUNT");
+            }
+            
+            item.setDiscountValue((java.math.BigDecimal) r[6]);
+            
+            // Convert Timestamp to LocalDateTime
+            if (r[7] != null) {
+                item.setStartDate(((java.sql.Timestamp) r[7]).toLocalDateTime());
+            }
+            if (r[8] != null) {
+                item.setEndDate(((java.sql.Timestamp) r[8]).toLocalDateTime());
+            }
+            
+            item.setIsActive((Boolean) r[9]);
+            Boolean isBest = (Boolean) r[10];
+            if (Boolean.TRUE.equals(isBest) && result.getBestPromo() == null) {
+                result.setBestPromo(item);
+            }
+            usable.add(item);
+        }
+        result.setUsablePromos(usable);
+        return result;
     }
 
     private ProductsHistory createProductHistory(Product product, AppUser user, char op) {

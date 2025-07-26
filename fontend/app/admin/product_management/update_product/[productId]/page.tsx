@@ -620,6 +620,14 @@ export default function UpdateProductPage() {
             variants: prev.variants.map(v =>
                 v.id === variantId ? {...v, [field]: value} : v
             )
+
+
+
+
+
+
+
+
         }));
 
         // Clear error

@@ -15,6 +15,7 @@ import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
 import org.yellowcat.backend.product.dto.*;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserService;
+import org.yellowcat.backend.product.dto.VariantPromosDTO;
 
 import java.util.List;
 import java.util.Optional;
@@ -174,5 +175,11 @@ public class ProductController {
         } catch (Exception e) {
             return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Error retrieving product history", "Error retrieving product history");
         }
+    }
+
+    @GetMapping("/variant/{variantId}/promotions")
+    public ResponseEntity<?> getVariantPromotions(@PathVariable("variantId") Integer variantId) {
+        VariantPromosDTO dto = productService.getVariantPromotions(variantId);
+        return ResponseEntityBuilder.success(dto);
     }
 }

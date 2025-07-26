@@ -236,8 +236,8 @@ export default function AddProductPage() {
 
                 // Success toast with loaded data info
                 const totalItems = extractedBrands.length + extractedCategories.length +
-                                 extractedMaterials.length + extractedAudiences.length +
-                                 extractedColors.length + extractedSizes.length;
+                    extractedMaterials.length + extractedAudiences.length +
+                    extractedColors.length + extractedSizes.length;
 
                 showInfoToast(
                     "Tải dữ liệu thành công",
@@ -423,7 +423,7 @@ export default function AddProductPage() {
             const colorName = variantId ? getColorName(parseInt(variantId.split('-')[0])) : "";
             const sizeName = variantId ? getSizeName(parseInt(variantId.split('-')[1])) : "";
             const variantInfo = variantId ? ` (${colorName} - ${sizeName})` : "";
-            
+
             showErrorToast(
                 "Lỗi giá khuyến mãi",
                 `Giá khuyến mãi (${salePrice.toLocaleString()} VNĐ) không được lớn hơn giá gốc (${price.toLocaleString()} VNĐ)${variantInfo}`
@@ -519,7 +519,7 @@ export default function AddProductPage() {
         if (field === 'price' || field === 'salePrice') {
             const newPrice = field === 'price' ? (value as number) : currentVariant.price;
             const newSalePrice = field === 'salePrice' ? (value as number) : currentVariant.salePrice;
-            
+
             // Validate và hiển thị toast nếu có lỗi
             if (!validatePriceWithToast(newPrice, newSalePrice, variantId)) {
                 // Nếu có lỗi, vẫn cập nhật giá trị nhưng hiển thị thông báo
@@ -531,6 +531,14 @@ export default function AddProductPage() {
             variants: prev.variants.map(v =>
                 v.id === variantId ? { ...v, [field]: value } : v
             )
+
+
+
+
+
+
+
+
         }));
 
         // Clear error
@@ -844,6 +852,7 @@ export default function AddProductPage() {
 
                         <div>
                             <p className="text-sm font-medium mb-2">Ảnh đại diện <span className="text-red-500">*</span></p>
+
                             <ProductImageUpload
                                 onUpload={(imageUrl) => handleInputChange("thumbnail", imageUrl)}
                                 onRemove={() => handleInputChange("thumbnail", "")}
@@ -927,92 +936,93 @@ export default function AddProductPage() {
                                     Áp Dụng Cho Tất Cả
                                 </Button>
                             </div>
-                                                                        <div className="grid grid-cols-3 gap-4 mb-4">
-                                                <Input
-                                                    label="Giá gốc (VNĐ)"
-                                                    type="number"
-                                                    size="sm"
-                                                    min={0}
-                                                    max={999999999}
-                                                    value={bulkSettings.price.toString()}
-                                                    onChange={(e) => {
-                                                        const value = handleNumberInput(e.target.value, 0, 999999999);
-                                                        setBulkSettings(prev => ({ ...prev, price: value }));
-                                                        // Validate real-time với giá khuyến mãi hiện tại
-                                                        if (bulkSettings.salePrice > 0) {
-                                                            validatePriceWithToast(value, bulkSettings.salePrice);
-                                                        }
-                                                    }}
-                                                    onKeyDown={handleKeyDown}
-                                                    onPaste={handlePaste}
-                                                />
-                                                <Input
-                                                    label="Giá khuyến mãi (VNĐ)"
-                                                    type="number"
-                                                    size="sm"
-                                                    min={0}
-                                                    max={999999999}
-                                                    value={bulkSettings.salePrice.toString()}
-                                                    onChange={(e) => {
-                                                        const value = handleNumberInput(e.target.value, 0, 999999999);
-                                                        setBulkSettings(prev => ({ ...prev, salePrice: value }));
-                                                        // Validate real-time với giá gốc hiện tại
-                                                        if (bulkSettings.price > 0) {
-                                                            validatePriceWithToast(bulkSettings.price, value);
-                                                        }
-                                                    }}
-                                                    onKeyDown={handleKeyDown}
-                                                    onPaste={handlePaste}
-                                                />
-                                                <Input
-                                                    label="Trọng lượng (g)"
-                                                    type="number"
-                                                    size="sm"
-                                                    min={0}
-                                                    max={50000}
-                                                    value={bulkSettings.weight.toString()}
-                                                    onChange={(e) => {
-                                                        const value = handleNumberInput(e.target.value, 0, 50000);
-                                                        setBulkSettings(prev => ({ ...prev, weight: value }));
-                                                    }}
-                                                    onKeyDown={handleKeyDown}
-                                                    onPaste={handlePaste}
-                                                />
-                                            </div>
-                                            <div className="grid grid-cols-1 gap-4 mb-4">
-                                                <Input
-                                                    label="Tồn kho"
-                                                    type="number"
-                                                    size="sm"
-                                                    min={0}
-                                                    max={999999}
-                                                    value={bulkSettings.stockLevel.toString()}
-                                                    onChange={(e) => {
-                                                        const value = handleIntegerInput(e.target.value, 0, 999999);
-                                                        setBulkSettings(prev => ({ ...prev, stockLevel: value }));
-                                                    }}
-                                                    onKeyDown={handleKeyDown}
-                                                    onPaste={handlePaste}
-                                                />
-                                            </div>
+                            <div className="grid grid-cols-3 gap-4 mb-4">
+                                <Input
+                                    label="Giá gốc (VNĐ)"
+                                    type="number"
+                                    size="sm"
+                                    min={0}
+                                    max={999999999}
+                                    value={bulkSettings.price.toString()}
+                                    onChange={(e) => {
+                                        const value = handleNumberInput(e.target.value, 0, 999999999);
+                                        setBulkSettings(prev => ({ ...prev, price: value }));
+                                        // Validate real-time với giá khuyến mãi hiện tại
+                                        if (bulkSettings.salePrice > 0) {
+                                            validatePriceWithToast(value, bulkSettings.salePrice);
+                                        }
+                                    }}
+                                    onKeyDown={handleKeyDown}
+                                    onPaste={handlePaste}
+                                />
+                                <Input
+                                    label="Giá khuyến mãi (VNĐ)"
+                                    type="number"
+                                    size="sm"
+                                    min={0}
+                                    max={999999999}
+                                    value={bulkSettings.salePrice.toString()}
+                                    onChange={(e) => {
+                                        const value = handleNumberInput(e.target.value, 0, 999999999);
+                                        setBulkSettings(prev => ({ ...prev, salePrice: value }));
+                                        // Validate real-time với giá gốc hiện tại
+                                        if (bulkSettings.price > 0) {
+                                            validatePriceWithToast(bulkSettings.price, value);
+                                        }
+                                    }}
+                                    onKeyDown={handleKeyDown}
+                                    onPaste={handlePaste}
+                                />
+                                <Input
+                                    label="Trọng lượng (g)"
+                                    type="number"
+                                    size="sm"
+                                    min={0}
+                                    max={50000}
+                                    value={bulkSettings.weight.toString()}
+                                    onChange={(e) => {
+                                        const value = handleNumberInput(e.target.value, 0, 50000);
+                                        setBulkSettings(prev => ({ ...prev, weight: value }));
+                                    }}
+                                    onKeyDown={handleKeyDown}
+                                    onPaste={handlePaste}
+                                />
+                            </div>
+                            <div className="grid grid-cols-1 gap-4 mb-4">
+                                <Input
+                                    label="Tồn kho"
+                                    type="number"
+                                    size="sm"
+                                    min={0}
+                                    max={999999}
+                                    value={bulkSettings.stockLevel.toString()}
+                                    onChange={(e) => {
+                                        const value = handleIntegerInput(e.target.value, 0, 999999);
+                                        setBulkSettings(prev => ({ ...prev, stockLevel: value }));
+                                    }}
+                                    onKeyDown={handleKeyDown}
+                                    onPaste={handlePaste}
+                                />
+                            </div>
                         </div>
 
                         {/* Bảng danh sách biến thể */}
                         {formData.variants.length > 0 && (
                             <div>
                                 <h3 className="font-medium mb-3">📋 Danh Sách Biến Thể ({formData.variants.filter(v => v.enabled).length}/{formData.variants.length})</h3>
+
                                 {errors.variants && (
                                     <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
                                         <p className="text-red-600 text-sm">{errors.variants}</p>
                                     </div>
                                 )}
                                 <div className="border rounded-lg overflow-x-auto">
-                                                                    <Table
-                                    aria-label="Bảng biến thể sản phẩm"
-                                    classNames={{
-                                        table: "min-h-[200px] min-w-[1000px]", // Tăng min-width để chứa thêm cột
-                                    }}
-                                >
+                                    <Table
+                                        aria-label="Bảng biến thể sản phẩm"
+                                        classNames={{
+                                            table: "min-h-[200px] min-w-[1000px]", // Tăng min-width để chứa thêm cột
+                                        }}
+                                    >
                                         <TableHeader>
                                             <TableColumn>KÍCH HOẠT</TableColumn>
                                             <TableColumn>BIẾN THỂ</TableColumn>
@@ -1136,6 +1146,7 @@ export default function AddProductPage() {
                                 <div className="text-4xl mb-4">🎯</div>
                                 <h3 className="text-lg font-medium mb-2">Chưa có biến thể nào</h3>
                                 <p className="text-sm">Chọn màu sắc và kích thước, sau đó nhấn &quot;Tạo Biến Thể&quot; để bắt đầu</p>
+
                             </div>
                         )}
                     </CardBody>

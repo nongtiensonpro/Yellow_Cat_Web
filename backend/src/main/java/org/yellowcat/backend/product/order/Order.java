@@ -15,13 +15,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Table(name = "Orders") // Tên bảng vẫn là "Orders"
+@Table(name = "orders")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Order { // Tên class là Order (số ít)
+public class Order {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,7 +32,7 @@ public class Order { // Tên class là Order (số ít)
     private String orderCode;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "app_user_id") // Allow NULL as per ON DELETE SET NULL
+    @JoinColumn(name = "app_user_id")
     private AppUser user;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -41,6 +41,9 @@ public class Order { // Tên class là Order (số ít)
 
     @Column(name = "order_date", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime orderDate;
+
+    @Column(name = "delivery_date")
+    private LocalDateTime deliveryDate;
 
     @Column(name = "phone_number", length = 15)
     private String phoneNumber;
@@ -68,7 +71,6 @@ public class Order { // Tên class là Order (số ít)
     private ShippingMethod shippingMethod;
 
     @Column(name = "customer_notes", columnDefinition = "TEXT")
-//    @Column(name = "customer_notes")
     private String customerNotes;
 
     @Enumerated(EnumType.STRING)
@@ -109,6 +111,7 @@ public class Order { // Tên class là Order (số ít)
     public boolean isPaid() {
         return PaymentStatus.PAID.equals(this.paymentStatus);
     }
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 }

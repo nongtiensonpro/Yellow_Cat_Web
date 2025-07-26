@@ -1,5 +1,3 @@
-
-// DTO: PromotionProductResponse.java
 package org.yellowcat.backend.product.promotionproduct.dto;
 
 import lombok.AllArgsConstructor;
@@ -16,6 +14,7 @@ public class PromotionProductResponse {
     private Integer promotionProductId;
     private String promotionCode;
     private String promotionName;
+    private String description;
     private String discountType;
     private BigDecimal discountValue;
     private LocalDateTime startDate;

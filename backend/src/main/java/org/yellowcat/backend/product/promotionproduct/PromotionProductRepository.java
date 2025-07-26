@@ -1,4 +1,3 @@
-// Repository: PromotionProductRepository.java
 package org.yellowcat.backend.product.promotionproduct;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -45,6 +44,7 @@ public interface PromotionProductRepository extends JpaRepository<PromotionProdu
                     pp.promotionProductId,
                     p.promotionCode,
                     p.promotionName,
+                    p.description,
                     p.discountType,
                     p.discountValue,
                     p.startDate,
@@ -71,6 +71,7 @@ public interface PromotionProductRepository extends JpaRepository<PromotionProdu
                     pp.promotionProductId,
                     p.promotionCode,
                     p.promotionName,
+                    p.description,
                     p.discountType,
                     p.discountValue,
                     p.startDate,
@@ -204,6 +205,7 @@ public interface PromotionProductRepository extends JpaRepository<PromotionProdu
                 pp.promotionProductId,
                 p.promotionCode,
                 p.promotionName,
+                p.description,
                 p.discountType,
                 p.discountValue,
                 p.startDate,
@@ -271,7 +273,9 @@ public interface PromotionProductRepository extends JpaRepository<PromotionProdu
     @Query("""
             SELECT new org.yellowcat.backend.product.promotionproduct.dto.PromotionSummaryResponse(
                 MIN(pp.promotionProductId),
+                p.promotionCode,
                 p.promotionName,
+                p.description,
                 p.discountType,
                 p.discountValue,
                 p.startDate,
@@ -280,7 +284,7 @@ public interface PromotionProductRepository extends JpaRepository<PromotionProdu
             )
             FROM PromotionProduct pp
             JOIN pp.promotion p
-            GROUP BY p.promotionName, p.discountType, p.discountValue, p.startDate, p.endDate, p.isActive
+            GROUP BY p.promotionCode,p.promotionName, p.description, p.discountType, p.discountValue, p.startDate, p.endDate, p.isActive
             ORDER BY MIN(pp.promotionProductId) DESC
             """)
     List<PromotionSummaryResponse> findDistinctPromotions();
