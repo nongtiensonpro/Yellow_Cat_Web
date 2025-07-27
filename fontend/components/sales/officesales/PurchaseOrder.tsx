@@ -485,7 +485,7 @@
 
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
@@ -683,11 +683,16 @@ export default function PurchaseOrder() {
             return;
         }
 
-        // Check if the maximum order creation limit has been reached
-        if (orders.length >= MAX_ORDER_CREATION_LIMIT) {
-            showToast(`Bạn chỉ được phép tạo tối đa ${MAX_ORDER_CREATION_LIMIT} đơn hàng.`, 'warning');
+        // --- MODIFICATION START ---
+        // Filter for "Pending" orders only
+        const pendingOrders = orders.filter(order => order.orderStatus === 'Pending');
+
+        // Check if the maximum order creation limit has been reached for PENDING orders
+        if (pendingOrders.length >= MAX_ORDER_CREATION_LIMIT) {
+            showToast(`Bạn chỉ được phép tạo tối đa ${MAX_ORDER_CREATION_LIMIT} đơn hàng ở trạng thái 'Chờ thanh toán'. Vui lòng hoàn tất hoặc xóa các đơn hàng đang chờ trước khi tạo mới.`, 'warning');
             return; // Stop the function execution
         }
+        // --- MODIFICATION END ---
 
         // If limits are not met, proceed to create the order
         // No success toast for creation as requested.
@@ -764,8 +769,8 @@ export default function PurchaseOrder() {
                             <TableCell>
                                 <div className="flex flex-col gap-1">
                                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${order.orderStatus === 'Paid' ? 'bg-green-100 text-green-800' :
-                                            'bg-gray-100 text-gray-800'
-                                        }`}>
+                                        'bg-gray-100 text-gray-800'
+                                    }`}>
                                         {order.orderStatus === 'Paid' ? '✅' : '⭕'}
                                         {' '}
                                         {statusMap[order.orderStatus as keyof typeof statusMap] || order.orderStatus}
