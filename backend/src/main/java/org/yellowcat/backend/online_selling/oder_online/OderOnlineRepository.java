@@ -36,4 +36,5 @@ public interface OderOnlineRepository extends JpaRepository<Order, Integer> {
             @Param("cutoffTime") LocalDateTime cutoffTime);
 
     List<Order> findByUserAndOrderStatus(AppUser user, String orderStatus);
+    List<Order> findByPhoneNumber(String phoneNumber);
 }

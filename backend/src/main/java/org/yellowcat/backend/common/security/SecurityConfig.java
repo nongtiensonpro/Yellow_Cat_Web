@@ -59,6 +59,7 @@ public class SecurityConfig {
                                 "/api/ghtk/**",
                                 "/api/chat/**",
                                 "/api/bot/**",
+                                "/api/admin/vouchers/**",
                                 "/api/orders/**",
                                 "/api/waitlist/**",
                                 "/api/cart/**",
