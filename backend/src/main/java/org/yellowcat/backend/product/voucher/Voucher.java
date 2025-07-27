@@ -20,14 +20,14 @@ public class Voucher {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "voucher_id")
+    @Column(name = "id")
     private Integer voucherId;
 
     @ManyToOne
     @JoinColumn(name = "created_by", nullable = false)
     private AppUser createdBy;
 
-    @Column(unique = true, length = 50, name = "voucher_code")
+    @Column(unique = true, length = 50, name = "code")
     private String voucherCode;
 
     @Column(nullable = false, name = "voucher_name")

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.yellowcat.backend.common.security.keycloak.UserDTO;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,7 +18,7 @@ public interface AppUserRepository extends JpaRepository<AppUser, Integer> {
 //    Optional<AppUser> findByKeycloakUserId(String keycloakUserId);
 
     Optional<AppUser> findByEmail(String email);
-    Optional<AppUser> findByUsername(String username);
+    Optional<AppUser> findByPhoneNumber(String phoneNumber);
     Optional<AppUser> findByKeycloakId(UUID keycloakId);
 
     @Modifying
@@ -25,4 +26,8 @@ public interface AppUserRepository extends JpaRepository<AppUser, Integer> {
     int deleteByKeycloakId(@Param("id") UUID id);
 
     boolean existsByKeycloakId(UUID keycloakId);
+
+    List<AppUser> findAllByPhoneNumber(String phoneNumber);
+
+
 }

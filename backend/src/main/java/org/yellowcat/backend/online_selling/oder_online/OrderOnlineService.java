@@ -18,6 +18,7 @@ import org.yellowcat.backend.online_selling.orderTimeline.OrderTimeline;
 import org.yellowcat.backend.online_selling.orderTimeline.OrderTimelineRepository;
 import org.yellowcat.backend.online_selling.orderTimeline.OrderTimelineService;
 import org.yellowcat.backend.online_selling.order_item_online.OrderItemOnlineDTO;
+import org.yellowcat.backend.online_selling.voucher.VoucherService1;
 import org.yellowcat.backend.product.cartItem.CartItem;
 import org.yellowcat.backend.product.order.Order;
 import org.yellowcat.backend.product.orderItem.OrderItem;
@@ -49,6 +50,7 @@ public class OrderOnlineService {
     private final PaymentRepository paymentRepository;
     private final OrderTimelineRepository orderTimelineRepository;
     private final ShippingMethodRepository shippingMethodRepository;
+    private final VoucherService1 voucherService1;
 
     @Autowired
     OrderTimelineService orderTimelineService;
@@ -63,6 +65,8 @@ public class OrderOnlineService {
     public Order createOrderFromOnlineRequest(OrderOnlineRequestDTO request) {
         List<OrderItem> orderItems = new ArrayList<>();
         BigDecimal subTotal = BigDecimal.ZERO;
+        BigDecimal discountAfterAmount = BigDecimal.ZERO;
+        BigDecimal subTotal_use_voucher = subTotal;
 
         // Xử lý sản phẩm
         for (ProductOnlineDTO p : request.getProducts()) {
@@ -82,9 +86,20 @@ public class OrderOnlineService {
             orderItems.add(item);
             subTotal = subTotal.add(totalPrice);
         }
+        System.out.println("Tổng tiền tất cả sản phẩm " + subTotal);
+
+        if (request.getCodeVoucher() != null) {
+             discountAfterAmount = voucherService1.calculateDiscountedAmount(
+                    request.getCodeVoucher(), subTotal, request.getShippingFee()
+            );
+            subTotal_use_voucher = subTotal.subtract(discountAfterAmount);
+            System.out.println("Số tiền được giảm: "+ discountAfterAmount);
+            System.out.println("Tổng tiền sau khi được áp mã giảm giá: " + subTotal_use_voucher);
+        }
 
         BigDecimal shippingFee = request.getShippingFee() != null ? request.getShippingFee() : BigDecimal.ZERO;
-        BigDecimal finalAmount = subTotal.add(shippingFee);
+        BigDecimal finalAmount = subTotal_use_voucher.add(shippingFee);
+        System.out.println("Só cuối cùng cua hoa don: "+ finalAmount);
 
         // Tìm AppUser
         AppUser user = null;
@@ -113,11 +128,11 @@ public class OrderOnlineService {
                 .orderCode(generateOrderCode())
                 .user(user)
                 .shippingAddress(shippingAddress)
-                .phoneNumber(request.getAppUser() != null ? request.getAppUser().getPhoneNumber() : null)
-                .customerName(request.getAppUser() != null ? request.getAppUser().getUsername() : null)
+                .phoneNumber(request.getShippingAddress().getPhoneNumber())
+                .customerName(request.getShippingAddress().getRecipientName())
                 .subTotalAmount(subTotal)
                 .shippingFee(shippingFee)
-                .discountAmount(BigDecimal.ZERO)
+                .discountAmount(discountAfterAmount)
                 .finalAmount(finalAmount)
                 .customerNotes(request.getNote())
                 .orderItems(orderItems)
@@ -135,6 +150,11 @@ public class OrderOnlineService {
 
         // Lưu order
         Order savedOrder = orderRepository.save(order);
+
+        // gắn voucher cho đơn hàng
+        if(request.getCodeVoucher() != null) {
+            voucherService1.applyVoucher(request.getCodeVoucher(), savedOrder, user != null ? user.getAppUserId() : null);
+        }
 
         // Tạo timeline
         OrderTimeline timeline = new OrderTimeline();
