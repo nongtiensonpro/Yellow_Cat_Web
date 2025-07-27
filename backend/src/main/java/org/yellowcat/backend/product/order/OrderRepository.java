@@ -27,14 +27,15 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
                     "o.final_amount AS finalAmount, " +
                     "o.order_status AS orderStatus " +
                     "FROM orders o " +
-                    "WHERE o.order_code LIKE CONCAT('%', :keyword, '%') " +
+                    "WHERE o.shipping_address_id IS NULL " +
+                    "AND (o.order_code LIKE CONCAT('%', :keyword, '%') " +
                     "OR o.phone_number LIKE CONCAT('%', :keyword, '%') " +
-                    "OR o.customer_name LIKE CONCAT('%', :keyword, '%') " +
+                    "OR o.customer_name LIKE CONCAT('%', :keyword, '%')) " +
                     "ORDER BY o.order_date DESC")
     Page<OrderResponse> findAllByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
 
-    @Query("SELECT o.orderStatus, COUNT(o) FROM Order o GROUP BY o.orderStatus")
+    @Query("SELECT o.orderStatus, COUNT(o) FROM Order o WHERE o.shippingAddress IS NULL GROUP BY o.orderStatus")
     List<Object[]> countOrdersGroupByStatus();
 
 
@@ -60,6 +61,7 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
                     "o.final_amount AS finalAmount, " +
                     "o.order_status AS orderStatus " +
                     "FROM orders o " +
+                    "WHERE o.shipping_address_id IS NULL " +
                     "ORDER BY o.order_date DESC"
     )
     Page<OrderResponse> findAllOrders(Pageable pageable);
@@ -76,6 +78,7 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
                     "o.order_status AS orderStatus " +
                     "FROM orders o " +
                     "WHERE o.order_status = :orderStatus " +
+                    "AND o.shipping_address_id IS NULL " +
                     "ORDER BY o.order_date DESC"
     )
     Page<OrderResponse> findAllByOrderStatus(String orderStatus, Pageable pageable);
@@ -92,12 +95,13 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
                     "o.order_status AS orderStatus " +
                     "FROM orders o " +
                     "WHERE o.order_code = :orderCode " +
+                    "AND o.shipping_address_id IS NULL " +
                     "ORDER BY o.order_date DESC")
     OrderResponse findOrderByOrderCodeOld(@Param("orderCode") String orderCode);
 
-    // Query đơn giản để lấy app_user_id từ order
+    // Query đơn giản để lấy app_user_id từ order tại quầy
     @Query(nativeQuery = true,
-            value = "SELECT o.app_user_id FROM orders o WHERE o.order_code = :orderCode")
+            value = "SELECT o.app_user_id FROM orders o WHERE o.order_code = :orderCode AND o.shipping_address_id IS NULL")
     Integer findAppUserIdByOrderCode(@Param("orderCode") String orderCode);
 
     @Modifying
@@ -109,7 +113,8 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
                     "  app_user_id   = :appUserId, " +
                     "  updated_at    = CURRENT_TIMESTAMP " +
                     "WHERE " +
-                    "  order_code    = :orderCode"
+                    "  order_code    = :orderCode " +
+                    "  AND shipping_address_id IS NULL"
     )
     int updateOrderByOrderCode(
             @Param("orderCode") String orderCode,
@@ -128,19 +133,16 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
                     "o.sub_total_amount AS subTotalAmount, " +
                     "o.shipping_fee AS shippingFee, " +
                     "o.discount_amount AS discountAmount, " +
-                    "sm.method_name AS shippingMethod, " +
-                    "a.recipient_name AS recipientName, " +
-                    "CASE WHEN a.street_address IS NOT NULL " +
-                    "     THEN CONCAT(a.street_address, ', ', a.ward_commune, ', ', a.district, ', ', a.city_province) " +
-                    "     ELSE NULL END AS fullAddress, " +
+                    "'Giao tại cửa hàng' AS shippingMethod, " +
+                    "o.customer_name AS recipientName, " +
+                    "'Nhận tại cửa hàng - Không cần giao hàng' AS fullAddress, " +
                     "u.email AS email, " +
                     "u.full_name AS fullName, " +
                     "o.customer_notes AS customerNotes " +
                     "FROM orders o " +
                     "LEFT JOIN app_users u ON o.app_user_id = u.app_user_id " +
-                    "LEFT JOIN shipping_methods sm ON o.shipping_method_id = sm.shipping_method_id " +
-                    "LEFT JOIN addresses a ON o.shipping_address_id = a.address_id " +
-                    "WHERE o.phone_number LIKE CONCAT('%', :phoneNumber, '%') " +
+                    "WHERE o.shipping_address_id IS NULL " +
+                    "AND o.phone_number LIKE CONCAT('%', :phoneNumber, '%') " +
                     "ORDER BY o.order_date DESC")
     List<OrderDetailProjection> findOrdersByPhoneNumber(@Param("phoneNumber") String phoneNumber);
 
@@ -156,19 +158,16 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
                     "o.sub_total_amount AS subTotalAmount, " +
                     "o.shipping_fee AS shippingFee, " +
                     "o.discount_amount AS discountAmount, " +
-                    "sm.method_name AS shippingMethod, " +
-                    "a.recipient_name AS recipientName, " +
-                    "CASE WHEN a.street_address IS NOT NULL " +
-                    "     THEN CONCAT(a.street_address, ', ', a.ward_commune, ', ', a.district, ', ', a.city_province) " +
-                    "     ELSE NULL END AS fullAddress, " +
+                    "'Giao tại cửa hàng' AS shippingMethod, " +
+                    "o.customer_name AS recipientName, " +
+                    "'Nhận tại cửa hàng - Không cần giao hàng' AS fullAddress, " +
                     "u.email AS email, " +
                     "u.full_name AS fullName, " +
                     "o.customer_notes AS customerNotes " +
                     "FROM orders o " +
                     "LEFT JOIN app_users u ON o.app_user_id = u.app_user_id " +
-                    "LEFT JOIN shipping_methods sm ON o.shipping_method_id = sm.shipping_method_id " +
-                    "LEFT JOIN addresses a ON o.shipping_address_id = a.address_id " +
-                    "WHERE u.email LIKE CONCAT('%', :email, '%') " +
+                    "WHERE o.shipping_address_id IS NULL " +
+                    "AND u.email LIKE CONCAT('%', :email, '%') " +
                     "ORDER BY o.order_date DESC")
     List<OrderDetailProjection> findOrdersByEmail(@Param("email") String email);
 
@@ -184,21 +183,19 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
                     "o.sub_total_amount AS subTotalAmount, " +
                     "o.shipping_fee AS shippingFee, " +
                     "o.discount_amount AS discountAmount, " +
-                    "sm.method_name AS shippingMethod, " +
-                    "a.recipient_name AS recipientName, " +
-                    "CASE WHEN a.street_address IS NOT NULL " +
-                    "     THEN CONCAT(a.street_address, ', ', a.ward_commune, ', ', a.district, ', ', a.city_province) " +
-                    "     ELSE NULL END AS fullAddress, " +
+                    "'Giao tại cửa hàng' AS shippingMethod, " +
+                    "o.customer_name AS recipientName, " +
+                    "'Nhận tại cửa hàng - Không cần giao hàng' AS fullAddress, " +
                     "u.email AS email, " +
                     "u.full_name AS fullName, " +
                     "o.customer_notes AS customerNotes " +
                     "FROM orders o " +
                     "LEFT JOIN app_users u ON o.app_user_id = u.app_user_id " +
-                    "LEFT JOIN shipping_methods sm ON o.shipping_method_id = sm.shipping_method_id " +
-                    "LEFT JOIN addresses a ON o.shipping_address_id = a.address_id " +
-                    "WHERE (o.phone_number LIKE CONCAT('%', :searchValue, '%') OR u.email LIKE CONCAT('%', :searchValue, '%')) " +
+                    "WHERE o.shipping_address_id IS NULL " +
+                    "AND (o.phone_number LIKE CONCAT('%', :searchValue, '%') OR u.email LIKE CONCAT('%', :searchValue, '%')) " +
                     "ORDER BY o.order_date DESC")
     List<OrderDetailProjection> findOrdersByPhoneNumberOrEmail(@Param("searchValue") String searchValue);
 
-    Order getOrderByOrderCode(String orderCode);
+    @Query("SELECT o FROM Order o WHERE o.orderCode = :orderCode AND o.shippingAddress IS NULL")
+    Order getOrderByOrderCode(@Param("orderCode") String orderCode);
 }

@@ -262,15 +262,16 @@ public class OrderService {
 
     // Tạo order mới
     public Order createOrder() {
-        // Logic to create a new order
+        // Logic to create a new order for in-store sales (no shipping address)
         Order order = Order.builder()
                 .orderCode(generateOrderCode())
-                .orderDate(LocalDateTime.now()) // Thêm dòng này
+                .orderDate(LocalDateTime.now())
                 .subTotalAmount(BigDecimal.ZERO)
-                .shippingFee(BigDecimal.ZERO)
+                .shippingFee(BigDecimal.ZERO) // No shipping fee for in-store pickup
                 .discountAmount(BigDecimal.ZERO)
                 .finalAmount(BigDecimal.ZERO)
                 .paymentStatus(PaymentStatus.UNPAID)
+                // shippingAddress is intentionally left NULL for in-store orders
                 .build();
 
         // Save the order to the repository
@@ -692,16 +693,10 @@ public class OrderService {
         response.setShippingFee(order.getShippingFee());
         response.setDiscountAmount(order.getDiscountAmount());
 
-        // Lấy thông tin từ relations
-        response.setShippingMethod(
-                order.getShippingMethod() != null ? order.getShippingMethod().getMethodName() : null);
-        response.setRecipientName(
-                order.getShippingAddress() != null ? order.getShippingAddress().getRecipientName() : null);
-        response.setFullAddress(order.getShippingAddress() != null ? String.format("%s, %s, %s, %s",
-                order.getShippingAddress().getStreetAddress(),
-                order.getShippingAddress().getWardCommune(),
-                order.getShippingAddress().getDistrict(),
-                order.getShippingAddress().getCityProvince()) : null);
+        // Lấy thông tin từ relations - Đơn hàng tại quầy không có địa chỉ giao hàng
+        response.setShippingMethod("Giao tại cửa hàng"); // Fixed value for in-store orders
+        response.setRecipientName(order.getCustomerName()); // Use customer name as recipient
+        response.setFullAddress("Nhận tại cửa hàng - Không cần giao hàng"); // Fixed address for in-store pickup
         response.setEmail(order.getUser() != null ? order.getUser().getEmail() : null);
         response.setFullName(order.getUser() != null ? order.getUser().getFullName() : null);
         response.setCustomerNotes(order.getCustomerNotes());

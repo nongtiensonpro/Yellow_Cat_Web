@@ -23,10 +23,9 @@ import EditFromOrder from './EditFromOrder';
 import { useOrderStore } from './orderStore';
 
 const statusMap: { [key: string]: string } = {
-    all: 'Tất cả',
-    Pending: 'Chờ xử lý',
-    Partial: 'Thanh toán một phần',
-    Paid: 'Đã thanh toán',
+    all: 'Tất cả đơn hàng',
+    Pending: 'Chờ thanh toán',
+    Paid: 'Đã giao & thanh toán',
 };
 
 interface AppUser {
@@ -64,12 +63,12 @@ interface ApiResponse {
 export default function PurchaseOrder() {
     const { data: session } = useSession();
     const router = useRouter();
-    
+
     // State để lưu thông tin user từ backend
     const [userProfile, setUserProfile] = useState<AppUser | null>(null);
     const [userProfileLoading, setUserProfileLoading] = useState(true);
     const [userProfileError, setUserProfileError] = useState<string | null>(null);
-    
+
     // Zustand store - Tất cả state và logic từ store
     const {
         // States
@@ -81,12 +80,12 @@ export default function PurchaseOrder() {
         totalPages,
         activeTab,
         isEditMode,
-        
+
         // Actions
         setPage,
         setActiveTab,
         resetError,
-        
+
         // API Actions
         fetchOrders,
         createOrder,
@@ -117,11 +116,11 @@ export default function PurchaseOrder() {
             }
 
             const apiResponse: ApiResponse = await response.json();
-            
+
             if (apiResponse.status >= 200 && apiResponse.status < 300 && apiResponse.data) {
                 return apiResponse.data;
             }
-            
+
             throw new Error(apiResponse.error || 'Không có dữ liệu người dùng');
         } catch (error) {
             console.error('❌ Error fetching user profile:', error);
@@ -140,14 +139,14 @@ export default function PurchaseOrder() {
             try {
                 setUserProfileLoading(true);
                 setUserProfileError(null);
-                
+
                 const profile = await fetchUserProfile(sessionUserId);
                 setUserProfile(profile);
-                
+
                 console.log('✅ User profile loaded:', profile);
                 console.log('📱 Phone number:', profile?.phoneNumber);
                 console.log('🔓 Can access features:', !!profile?.phoneNumber);
-                
+
             } catch (error: unknown) {
                 console.error('❌ Failed to load user profile:', error);
                 const errorMessage = error instanceof Error ? error.message : 'Không thể tải thông tin người dùng';
@@ -206,7 +205,13 @@ export default function PurchaseOrder() {
         }
 
         if (orders.length === 0) {
-            return <div className="text-center text-gray-500 p-4 h-64">Không có đơn hàng nào để hiển thị.</div>;
+            return (
+                <div className="text-center text-gray-500 p-8 h-64 flex flex-col items-center justify-center">
+                    <span className="text-4xl mb-4">🏪</span>
+                    <p className="text-lg font-medium mb-2">Chưa có đơn hàng tại quầy nào</p>
+                    <p className="text-sm">Tạo đơn hàng mới để bắt đầu bán hàng trực tiếp</p>
+                </div>
+            );
         }
 
         return (
@@ -232,43 +237,53 @@ export default function PurchaseOrder() {
                     <TableColumn>MÃ ĐƠN HÀNG</TableColumn>
                     <TableColumn>KHÁCH HÀNG</TableColumn>
                     <TableColumn>SỐ ĐIỆN THOẠI</TableColumn>
-                    <TableColumn>TRẠNG THÁI</TableColumn>
+                    <TableColumn>TRẠNG THÁI & GIAO HÀNG</TableColumn>
                     <TableColumn className="text-right">TỔNG TIỀN</TableColumn>
                     <TableColumn>HÀNH ĐỘNG</TableColumn>
                 </TableHeader>
-                <TableBody emptyContent={"Không có đơn hàng."}>
+                <TableBody emptyContent={"🏪 Không có đơn hàng tại quầy nào."}>
                     {orders.map((order) => (
                         <TableRow key={order.orderId}>
                             <TableCell>{order.orderCode}</TableCell>
-                            <TableCell>{order.customerName || 'Không có thông tin'}</TableCell>
+                            <TableCell>{order.customerName || 'Khách lẻ'}</TableCell>
                             <TableCell>{order.phoneNumber || 'Không có thông tin'}</TableCell>
-                            <TableCell>{statusMap[order.orderStatus as keyof typeof statusMap] || order.orderStatus}</TableCell>
+                            <TableCell>
+                                <div className="flex flex-col gap-1">
+                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${order.orderStatus === 'Paid' ? 'bg-green-100 text-green-800' :
+                                            'bg-gray-100 text-gray-800'
+                                        }`}>
+                                        {order.orderStatus === 'Paid' ? '✅' : '⭕'}
+                                        {' '}
+                                        {statusMap[order.orderStatus as keyof typeof statusMap] || order.orderStatus}
+                                    </span>
+                                </div>
+                            </TableCell>
                             <TableCell className="text-right">{order.finalAmount.toLocaleString('vi-VN')} VND</TableCell>
                             <TableCell className="flex gap-2">
-                                <Button 
-                                    size="sm" 
-                                    color="primary" 
-                                    variant="flat" 
+                                <Button
+                                    size="sm"
+                                    color={order.orderStatus === 'Paid' ? "success" : "primary"}
+                                    variant="flat"
                                     onPress={() => handleViewDetails(order)}
                                     disabled={userProfileLoading || userProfileError !== null || !hasPhoneNumber}
                                     title={
                                         userProfileLoading ? "Đang tải thông tin tài khoản..." :
-                                        userProfileError ? "Có lỗi khi tải thông tin tài khoản" :
-                                        !hasPhoneNumber ? "Vui lòng cập nhật số điện thoại để sử dụng tính năng này" : ""
+                                            userProfileError ? "Có lỗi khi tải thông tin tài khoản" :
+                                                !hasPhoneNumber ? "Vui lòng cập nhật số điện thoại để sử dụng tính năng này" : ""
                                     }
                                 >
-                                    Xem & Sửa
+                                    {order.orderStatus === 'Paid' ? '📄 Xem hóa đơn đã giao' : '✏️ Xử lý đơn hàng'}
                                 </Button>
-                                {order.orderStatus!='Paid' &&<Button
-                                    size="sm" 
-                                    color="danger" 
-                                    variant="flat" 
+                                {order.orderStatus != 'Paid' && <Button
+                                    size="sm"
+                                    color="danger"
+                                    variant="flat"
                                     onPress={() => handleDeleteOrder(order.orderId)}
                                     disabled={userProfileLoading || userProfileError !== null || !hasPhoneNumber}
                                     title={
                                         userProfileLoading ? "Đang tải thông tin tài khoản..." :
-                                        userProfileError ? "Có lỗi khi tải thông tin tài khoản" :
-                                        !hasPhoneNumber ? "Vui lòng cập nhật số điện thoại để sử dụng tính năng này" : ""
+                                            userProfileError ? "Có lỗi khi tải thông tin tài khoản" :
+                                                !hasPhoneNumber ? "Vui lòng cập nhật số điện thoại để sử dụng tính năng này" : ""
                                     }
                                 >
                                     Xóa
@@ -342,10 +357,10 @@ export default function PurchaseOrder() {
             <CardBody className="pt-0">
                 <div className="space-y-3">
                     <p className="text-warning-700">
-                        Bạn cần cập nhật số điện thoại trong hồ sơ cá nhân để có thể sử dụng tính năng quản lý đơn hàng.
+                        Bạn cần cập nhật số điện thoại trong hồ sơ cá nhân để có thể sử dụng tính năng bán hàng tại quầy.
                     </p>
                     <p className="text-sm text-warning-600">
-                        Số điện thoại là thông tin bắt buộc để liên hệ và xác nhận đơn hàng với khách hàng.
+                        Số điện thoại nhân viên là thông tin bắt buộc để xác định người phụ trách và liên hệ với khách hàng khi cần thiết.
                     </p>
                     <div className="flex gap-3 mt-4">
                         <p className="text-sm text-gray-600 bg-gray-100 p-2 rounded">
@@ -383,38 +398,66 @@ export default function PurchaseOrder() {
     return (
         <div className="flex w-full flex-col gap-4 p-4">
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold">Quản lý Đơn hàng</h1>
-                <Button
-                    color="default"
-                    onClick={handleCreateOrder}
-                    disabled={isCreating || userProfileLoading || userProfileError !== null || !hasPhoneNumber}
-                    title={
-                        userProfileLoading ? "Đang tải thông tin tài khoản..." :
-                        userProfileError ? "Có lỗi khi tải thông tin tài khoản" :
-                        !hasPhoneNumber ? "Vui lòng cập nhật số điện thoại trước khi tạo đơn hàng" : ""
-                    }
-                >
-                    {isCreating ? <Spinner color="white" size="sm" /> : "Tạo Đơn Hàng Mới"}
-                </Button>
+                <div>
+                    <h1 className="text-2xl font-bold flex items-center gap-2">
+                        🏪 Quản lý Đơn hàng Tại Quầy
+                    </h1>
+                </div>
+                <div className="flex items-center gap-4">
+                    {/* Quick Stats */}
+                    {!userProfileLoading && !userProfileError && hasPhoneNumber && orders.length > 0 && (
+                        <div className="flex gap-4 text-sm bg-blue-50 p-3 rounded-lg border border-blue-200">
+                            <div className="text-center">
+                                <p className="font-bold text-blue-600">{orders.length}</p>
+                                <p className="text-gray-500">Đơn tại quầy</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="font-bold text-green-600">
+                                    {orders.filter(o => o.orderStatus === 'Paid').length}
+                                </p>
+                                <p className="text-gray-500">Đã giao & thanh toán</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="font-bold text-orange-600">
+                                    {orders.filter(o => o.orderStatus === 'Pending').length}
+                                </p>
+                                <p className="text-gray-500">Chờ thanh toán</p>
+                            </div>
+                        </div>
+                    )}
+                    <Button
+                        color="primary"
+                        onClick={handleCreateOrder}
+                        disabled={isCreating || userProfileLoading || userProfileError !== null || !hasPhoneNumber}
+                        title={
+                            userProfileLoading ? "Đang tải thông tin tài khoản..." :
+                                userProfileError ? "Có lỗi khi tải thông tin tài khoản" :
+                                    !hasPhoneNumber ? "Vui lòng cập nhật số điện thoại trước khi tạo đơn hàng" : ""
+                        }
+                        startContent="🛒"
+                    >
+                        {isCreating ? <Spinner color="white" size="sm" /> : "Tạo Đơn Hàng Tại Quầy"}
+                    </Button>
+                </div>
             </div>
-            
+
             {/* Hiển thị trạng thái loading user profile */}
             {userProfileLoading && renderUserProfileLoading()}
-            
+
             {/* Hiển thị lỗi khi load user profile */}
             {userProfileError && renderUserProfileError()}
-            
+
             {/* Hiển thị cảnh báo nếu không có số điện thoại (chỉ khi đã load xong profile) */}
             {!userProfileLoading && !userProfileError && !hasPhoneNumber && renderPhoneWarning()}
-            
+
             {/* Error handling from store */}
             {error && !isCreating && (
                 <div className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
                     <span className="font-medium">Lỗi!</span> {error}
-                    <Button 
-                        size="sm" 
-                        variant="light" 
-                        color="danger" 
+                    <Button
+                        size="sm"
+                        variant="light"
+                        color="danger"
                         className="ml-2"
                         onPress={resetError}
                     >
@@ -422,13 +465,13 @@ export default function PurchaseOrder() {
                     </Button>
                 </div>
             )}
-            
+
             {/* Tabs with store state - Disable khi không có số điện thoại hoặc đang loading */}
             <div className={userProfileLoading || userProfileError || !hasPhoneNumber ? "pointer-events-none opacity-50" : ""}>
                 <Tabs
                     aria-label="Lọc đơn hàng theo trạng thái"
                     items={Object.keys(statusMap).map(statusKey => ({
-                        id: statusKey, 
+                        id: statusKey,
                         label: statusMap[statusKey as keyof typeof statusMap]
                     }))}
                     selectedKey={activeTab}
@@ -463,7 +506,7 @@ export default function PurchaseOrder() {
                     )}
                 </Tabs>
             </div>
-            
+
             {/* Overlay cảnh báo khi không thể sử dụng tính năng */}
             {(!userProfileLoading && !userProfileError && !hasPhoneNumber) && (
                 <div className="fixed inset-0 bg-black bg-opacity-20 pointer-events-none z-10 flex items-center justify-center">
@@ -472,7 +515,7 @@ export default function PurchaseOrder() {
                             <span className="text-4xl mb-4 block">🔒</span>
                             <h3 className="text-lg font-bold mb-2 text-gray-800">Tính năng bị khóa</h3>
                             <p className="text-sm text-gray-600">
-                                Cập nhật số điện thoại để mở khóa tất cả tính năng quản lý đơn hàng
+                                Cập nhật số điện thoại để mở khóa tính năng bán hàng tại quầy
                             </p>
                         </div>
                     </div>
