@@ -510,7 +510,7 @@ import { useOrderStore } from './orderStore';
 const statusMap: { [key: string]: string } = {
     all: 'Tất cả đơn hàng',
     Pending: 'Chờ thanh toán',
-    Paid: 'Đã giao & thanh toán',
+    Paid: 'Đã thanh toán',
 };
 
 interface AppUser {
@@ -726,7 +726,6 @@ export default function PurchaseOrder() {
         if (orders.length === 0) {
             return (
                 <div className="text-center text-gray-500 p-8 h-64 flex flex-col items-center justify-center">
-                    <span className="text-4xl mb-4">🏪</span>
                     <p className="text-lg font-medium mb-2">Chưa có đơn hàng tại quầy nào</p>
                     <p className="text-sm">Tạo đơn hàng mới để bắt đầu bán hàng trực tiếp</p>
                 </div>
@@ -756,11 +755,11 @@ export default function PurchaseOrder() {
                     <TableColumn>MÃ ĐƠN HÀNG</TableColumn>
                     <TableColumn>KHÁCH HÀNG</TableColumn>
                     <TableColumn>SỐ ĐIỆN THOẠI</TableColumn>
-                    <TableColumn>TRẠNG THÁI & GIAO HÀNG</TableColumn>
+                    <TableColumn>TRẠNG THÁI</TableColumn>
                     <TableColumn className="text-right">TỔNG TIỀN</TableColumn>
                     <TableColumn>HÀNH ĐỘNG</TableColumn>
                 </TableHeader>
-                <TableBody emptyContent={"🏪 Không có đơn hàng tại quầy nào."}>
+                <TableBody emptyContent={" Không có đơn hàng tại quầy nào."}>
                     {orders.map((order) => (
                         <TableRow key={order.orderId}>
                             <TableCell>{order.orderCode}</TableCell>
@@ -771,7 +770,7 @@ export default function PurchaseOrder() {
                                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${order.orderStatus === 'Paid' ? 'bg-green-100 text-green-800' :
                                         'bg-gray-100 text-gray-800'
                                     }`}>
-                                        {order.orderStatus === 'Paid' ? '✅' : '⭕'}
+                                        {order.orderStatus === 'Paid' ? '' : ''}
                                         {' '}
                                         {statusMap[order.orderStatus as keyof typeof statusMap] || order.orderStatus}
                                     </span>
@@ -791,7 +790,7 @@ export default function PurchaseOrder() {
                                                 !hasPhoneNumber ? "Vui lòng cập nhật số điện thoại để sử dụng tính năng này" : ""
                                     }
                                 >
-                                    {order.orderStatus === 'Paid' ? '📄 Xem hóa đơn đã giao' : '✏️ Xử lý đơn hàng'}
+                                    {order.orderStatus === 'Paid' ? ' Xem chi tiết' : ' Xử lý đơn hàng'}
                                 </Button>
                                 {order.orderStatus!='Paid' &&<Button
                                     size="sm"
@@ -832,7 +831,7 @@ export default function PurchaseOrder() {
         <Card className="mb-6 border-red-200 bg-red-50">
             <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
-                    <span className="text-2xl">❌</span>
+                    <span className="text-2xl"></span>
                     <h3 className="text-lg font-bold text-red-800">Lỗi tải thông tin tài khoản</h3>
                 </div>
             </CardHeader>
