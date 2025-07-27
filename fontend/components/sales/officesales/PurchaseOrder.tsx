@@ -508,10 +508,9 @@ import EditFromOrder from './EditFromOrder';
 import { useOrderStore } from './orderStore';
 
 const statusMap: { [key: string]: string } = {
-    all: 'Tất cả',
-    Pending: 'Chờ xử lý',
-    Partial: 'Thanh toán một phần',
-    Paid: 'Đã thanh toán',
+    all: 'Tất cả đơn hàng',
+    Pending: 'Chờ thanh toán',
+    Paid: 'Đã giao & thanh toán',
 };
 
 interface AppUser {
@@ -554,7 +553,6 @@ export default function PurchaseOrder() {
     const [userProfile, setUserProfile] = useState<AppUser | null>(null);
     const [userProfileLoading, setUserProfileLoading] = useState(true);
     const [userProfileError, setUserProfileError] = useState<string | null>(null);
-
     // Định nghĩa giới hạn tạo hóa đơn mới
     const MAX_ORDER_CREATION_LIMIT = 5;
 
@@ -721,7 +719,13 @@ export default function PurchaseOrder() {
         }
 
         if (orders.length === 0) {
-            return <div className="text-center text-gray-500 p-4 h-64">Không có đơn hàng nào để hiển thị.</div>;
+            return (
+                <div className="text-center text-gray-500 p-8 h-64 flex flex-col items-center justify-center">
+                    <span className="text-4xl mb-4">🏪</span>
+                    <p className="text-lg font-medium mb-2">Chưa có đơn hàng tại quầy nào</p>
+                    <p className="text-sm">Tạo đơn hàng mới để bắt đầu bán hàng trực tiếp</p>
+                </div>
+            );
         }
 
         return (
@@ -747,17 +751,27 @@ export default function PurchaseOrder() {
                     <TableColumn>MÃ ĐƠN HÀNG</TableColumn>
                     <TableColumn>KHÁCH HÀNG</TableColumn>
                     <TableColumn>SỐ ĐIỆN THOẠI</TableColumn>
-                    <TableColumn>TRẠNG THÁI</TableColumn>
+                    <TableColumn>TRẠNG THÁI & GIAO HÀNG</TableColumn>
                     <TableColumn className="text-right">TỔNG TIỀN</TableColumn>
                     <TableColumn>HÀNH ĐỘNG</TableColumn>
                 </TableHeader>
-                <TableBody emptyContent={"Không có đơn hàng."}>
+                <TableBody emptyContent={"🏪 Không có đơn hàng tại quầy nào."}>
                     {orders.map((order) => (
                         <TableRow key={order.orderId}>
                             <TableCell>{order.orderCode}</TableCell>
-                            <TableCell>{order.customerName || 'Không có thông tin'}</TableCell>
+                            <TableCell>{order.customerName || 'Khách lẻ'}</TableCell>
                             <TableCell>{order.phoneNumber || 'Không có thông tin'}</TableCell>
-                            <TableCell>{statusMap[order.orderStatus as keyof typeof statusMap] || order.orderStatus}</TableCell>
+                            <TableCell>
+                                <div className="flex flex-col gap-1">
+                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${order.orderStatus === 'Paid' ? 'bg-green-100 text-green-800' :
+                                            'bg-gray-100 text-gray-800'
+                                        }`}>
+                                        {order.orderStatus === 'Paid' ? '✅' : '⭕'}
+                                        {' '}
+                                        {statusMap[order.orderStatus as keyof typeof statusMap] || order.orderStatus}
+                                    </span>
+                                </div>
+                            </TableCell>
                             <TableCell className="text-right">{order.finalAmount.toLocaleString('vi-VN')} VND</TableCell>
                             <TableCell className="flex gap-2">
                                 <Button
@@ -772,7 +786,7 @@ export default function PurchaseOrder() {
                                                 !hasPhoneNumber ? "Vui lòng cập nhật số điện thoại để sử dụng tính năng này" : ""
                                     }
                                 >
-                                    Xem & Sửa
+                                    {order.orderStatus === 'Paid' ? '📄 Xem hóa đơn đã giao' : '✏️ Xử lý đơn hàng'}
                                 </Button>
                                 {order.orderStatus!='Paid' &&<Button
                                     size="sm"
@@ -857,10 +871,10 @@ export default function PurchaseOrder() {
             <CardBody className="pt-0">
                 <div className="space-y-3">
                     <p className="text-warning-700">
-                        Bạn cần cập nhật số điện thoại trong hồ sơ cá nhân để có thể sử dụng tính năng quản lý đơn hàng.
+                        Bạn cần cập nhật số điện thoại trong hồ sơ cá nhân để có thể sử dụng tính năng bán hàng tại quầy.
                     </p>
                     <p className="text-sm text-warning-600">
-                        Số điện thoại là thông tin bắt buộc để liên hệ và xác nhận đơn hàng với khách hàng.
+                        Số điện thoại nhân viên là thông tin bắt buộc để xác định người phụ trách và liên hệ với khách hàng khi cần thiết.
                     </p>
                     <div className="flex gap-3 mt-4">
                         <p className="text-sm text-gray-600 bg-gray-100 p-2 rounded">
@@ -1009,7 +1023,7 @@ export default function PurchaseOrder() {
                             <span className="text-4xl mb-4 block">🔒</span>
                             <h3 className="text-lg font-bold text-gray-800">Tính năng bị khóa</h3>
                             <p className="text-sm text-gray-600">
-                                Cập nhật số điện thoại để mở khóa tất cả tính năng quản lý đơn hàng
+                                Cập nhật số điện thoại để mở khóa tính năng bán hàng tại quầy
                             </p>
                         </div>
                     </div>

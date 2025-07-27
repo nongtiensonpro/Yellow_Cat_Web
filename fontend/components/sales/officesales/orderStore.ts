@@ -112,6 +112,7 @@ interface OrderState {
     
     // View State
     isEditMode: boolean;
+    currentScreen: 'addProducts' | 'payment' | 'invoice';
     
     // Order Items State
     orderItems: OrderItem[];
@@ -140,6 +141,7 @@ interface OrderState {
     setTotalPages: (totalPages: number) => void;
     setActiveTab: (tab: string | number) => void;
     setIsEditMode: (isEdit: boolean) => void;
+    setCurrentScreen: (screen: 'addProducts' | 'payment' | 'invoice') => void;
     
     // Order Items Actions
     setOrderItems: (items: OrderItem[]) => void;
@@ -202,6 +204,7 @@ export const useOrderStore = create<OrderState>()(
             totalPages: 1,
             activeTab: 'all',
             isEditMode: false,
+            currentScreen: 'addProducts',
             
             // Order Items State
             orderItems: [],
@@ -242,6 +245,7 @@ export const useOrderStore = create<OrderState>()(
             setTotalPages: (totalPages) => set({ totalPages }),
             setActiveTab: (tab) => set({ activeTab: tab, page: 1 }),
             setIsEditMode: (isEdit) => set({ isEditMode: isEdit }),
+            setCurrentScreen: (screen) => set({ currentScreen: screen }),
             
             // Order Items Setters
             setOrderItems: (items) => set({ orderItems: items }),
@@ -861,9 +865,20 @@ export const useOrderStore = create<OrderState>()(
             
             openEditOrder: (order) => {
                 console.log('📂 Opening edit order:', order.orderCode);
+                
+                // Determine initial screen based on order status
+                let initialScreen: 'addProducts' | 'payment' | 'invoice' = 'addProducts';
+                if (order.orderStatus === 'Paid' || order.orderStatus === 'PAID') {
+                    initialScreen = 'invoice';
+                    console.log('💰 Order is paid, opening invoice view');
+                } else {
+                    console.log('📝 Order is not paid, opening add products view');
+                }
+                
                 set({ 
                     currentOrder: order, 
-                    isEditMode: true 
+                    isEditMode: true,
+                    currentScreen: initialScreen
                 });
                 get().syncEditableOrderWithCurrent();
             },
@@ -873,6 +888,7 @@ export const useOrderStore = create<OrderState>()(
                 set({ 
                     currentOrder: null, 
                     isEditMode: false,
+                    currentScreen: 'addProducts',
                     orderItems: [],
                     searchTerm: '',
                     editableOrder: {

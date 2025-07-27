@@ -133,12 +133,12 @@ export default function PaymentResultPage() {
                 const order = await getOrderStatus(orderCode, token);
                 console.log(`🎯 Attempt ${attempt} - Order received:`, order);
                 console.log(`🎯 Order Status: "${order?.orderStatus}" (type: ${typeof order?.orderStatus})`);
-                console.log(`🎯 Status check: Paid=${order?.orderStatus === 'Paid'}, Partial=${order?.orderStatus === 'Partial'}`);
+                console.log(`🎯 Status check: Paid=${order?.orderStatus === 'Paid'}`);
                 
                 setOrderData(order); // Cập nhật UI ngay cả khi đang chờ
 
-                // Điều kiện thành công: trạng thái là 'Paid' hoặc 'Partial'
-                if (order && (order.orderStatus === 'Paid' || order.orderStatus === 'Partial')) {
+                // Điều kiện thành công: trạng thái là 'Paid'
+                if (order && order.orderStatus === 'Paid') {
                     console.log('✅ Xác nhận thành công! Trạng thái:', order.orderStatus);
                     setIsConfirming(false);
                     setConfirmationComplete(true);
@@ -341,13 +341,12 @@ export default function PaymentResultPage() {
                                 <span className="text-gray-600">Trạng thái đơn hàng:</span>
                                 <span className={`font-medium px-3 py-1 rounded-full text-sm ${
                                     orderData.orderStatus === 'Paid' ? 'bg-green-100 text-green-800' :
-                                        orderData.orderStatus === 'Partial' ? 'bg-yellow-100 text-yellow-800' :
+                                        orderData.orderStatus === 'Pending' ? 'bg-orange-100 text-orange-800' :
                                             'bg-gray-100 text-gray-800'
                                 }`}>
                                     {
                                         orderData.orderStatus === 'Paid' ? 'Đã thanh toán' :
-                                            orderData.orderStatus === 'Partial' ? 'Thanh toán một phần' :
-                                                orderData.orderStatus === 'Pending' ? 'Chờ thanh toán' : orderData.orderStatus
+                                            orderData.orderStatus === 'Pending' ? 'Chờ thanh toán' : orderData.orderStatus
                                     }
                                 </span>
                             </div>
