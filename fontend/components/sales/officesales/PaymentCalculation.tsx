@@ -43,8 +43,38 @@ const getStatusDisplay = (status: string): string => {
     return status;
 };
 
+// Định nghĩa interface cho editable order
+interface EditableOrder {
+    customerName: string;
+    phoneNumber: string;
+    discountAmount: number;
+}
+
+// Định nghĩa interface cho order item (phù hợp với store)
+interface OrderItem {
+    orderItemId: number;
+    orderId: number;
+    productVariantId: number;
+    quantity: number;
+    priceAtPurchase: number;
+    totalPrice: number;
+    // Thông tin khuyến mãi
+    bestPromo?: {
+        promotionCode: string;
+        promotionName: string;
+        discountAmount: number;
+    };
+    originalPrice?: number; // Giá gốc (chưa giảm)
+    productName?: string;
+    variantInfo?: string;
+}
+
 // Helper function để kiểm tra trạng thái thanh toán
-const getPaymentStatus = (editableOrder: any, orderItems: unknown[], calculateOrderTotals: () => { calculatedStatus: string; finalAmount: number; subTotalAmount: number }) => {
+const getPaymentStatus = (
+    editableOrder: EditableOrder, 
+    orderItems: OrderItem[], 
+    calculateOrderTotals: () => { calculatedStatus: string; finalAmount: number; subTotalAmount: number }
+) => {
     const totals = calculateOrderTotals();
     const isPaidStatus = totals.calculatedStatus.toUpperCase() === 'PAID';
 
@@ -109,9 +139,9 @@ const getPaymentStatus = (editableOrder: any, orderItems: unknown[], calculateOr
 
 // Validation function
 const validateCustomerInfoWithPhoneRegex = (
-    editableOrder: any,
-    orderItems: unknown[],
-    setValidationErrors: (errors: any) => void
+    editableOrder: EditableOrder,
+    orderItems: OrderItem[],
+    setValidationErrors: (errors: { customerName: string; phoneNumber: string }) => void
 ): boolean => {
     const errors = {
         customerName: '',
@@ -163,7 +193,6 @@ export default function PaymentCalculation() {
         onOpen: onCashPaymentOpen,
         onOpenChange: onCashPaymentOpenChange
     } = useDisclosure();
-    const [cashPaymentCountdown, setCashPaymentCountdown] = useState(5);
     const [isCashPaymentProcessing, setIsCashPaymentProcessing] = useState(false);
     const [forceRefresh, setForceRefresh] = useState(0);
 
@@ -199,7 +228,7 @@ export default function PaymentCalculation() {
         ];
 
         // Remove duplicates and amounts equal to total
-        return [...new Set(roundedAmounts)].filter(amount => amount > total).slice(0, 4);
+        return Array.from(new Set(roundedAmounts)).filter(amount => amount > total).slice(0, 4);
     };
 
     // Zustand store
@@ -246,8 +275,8 @@ export default function PaymentCalculation() {
         setCurrentScreen('addProducts');
     };
 
-    // Update order handler
-    const handleUpdateOrder = async () => {
+    // Update order handler - wrapped in useCallback
+    const handleUpdateOrder = useCallback(async () => {
         if (!currentOrder || !session?.accessToken) return;
 
         try {
@@ -262,10 +291,10 @@ export default function PaymentCalculation() {
         } catch {
             // Error handled in store
         }
-    };
+    }, [currentOrder, session, editableOrder, updateOrder]);
 
-    // Cash payment handlers
-    const handleCashPaymentOpen = async () => {
+    // Cash payment handlers - wrapped in useCallback
+    const handleCashPaymentOpen = useCallback(async () => {
         setValidationErrors({ customerName: '', phoneNumber: '' });
 
         if (orderItems.length === 0) {
@@ -287,9 +316,8 @@ export default function PaymentCalculation() {
         // Reset cash payment states
         setCashReceived('');
         setShowChangeCalculation(false);
-        setCashPaymentCountdown(5);
         onCashPaymentOpen();
-    };
+    }, [orderItems, editableOrder, calculateOrderTotals, handleUpdateOrder, setValidationErrors, onCashPaymentOpen, setCashReceived, setShowChangeCalculation]);
 
     const handleConfirmCashPayment = useCallback(async () => {
         if (!currentOrder || !session?.accessToken) return;
@@ -332,8 +360,6 @@ export default function PaymentCalculation() {
             setCashReceived('');
         }
     }, [isCashPaymentOpen, isCashPaymentProcessing, showChangeCalculation]);
-
-
 
     // VNPay payment handler
     const handlePaymentOpen = async () => {
@@ -410,21 +436,12 @@ export default function PaymentCalculation() {
         }
     };
 
-    if (!currentOrder) {
-        return (
-            <div className="flex w-full flex-col gap-4 p-4">
-                <div className="text-center py-20">
-                    <Spinner label="Đang tải thông tin đ�n hàng..." />
-                </div>
-            </div>
-        );
-    }
-
-    const paymentStatus = getPaymentStatus(editableOrder, orderItems, calculateOrderTotals);
-    const totals = calculateOrderTotals();
-
-    // Keyboard shortcuts - moved after paymentStatus is defined
+    // Keyboard shortcuts - moved before early return
     useEffect(() => {
+        if (!currentOrder) return;
+
+        const paymentStatus = getPaymentStatus(editableOrder, orderItems, calculateOrderTotals);
+        
         const handleKeyPress = (event: KeyboardEvent) => {
             if (event.key === 'F1' && paymentStatus.canPayment && !isCashPaymentOpen) {
                 event.preventDefault();
@@ -437,7 +454,21 @@ export default function PaymentCalculation() {
 
         window.addEventListener('keydown', handleKeyPress);
         return () => window.removeEventListener('keydown', handleKeyPress);
-    }, [paymentStatus.canPayment, isCashPaymentOpen, isCashPaymentProcessing, handleCashPaymentOpen, onCashPaymentOpenChange]);
+    }, [currentOrder, editableOrder, orderItems, calculateOrderTotals, isCashPaymentOpen, isCashPaymentProcessing, handleCashPaymentOpen, onCashPaymentOpenChange]);
+
+    // Early return if no current order
+    if (!currentOrder) {
+        return (
+            <div className="flex w-full flex-col gap-4 p-4">
+                <div className="text-center py-20">
+                    <Spinner label="Đang tải thông tin đơn hàng..." />
+                </div>
+            </div>
+        );
+    }
+
+    const paymentStatus = getPaymentStatus(editableOrder, orderItems, calculateOrderTotals);
+    const totals = calculateOrderTotals();
 
     return (
         <div className="flex w-full flex-col gap-4 p-4 min-h-screen">
@@ -649,22 +680,22 @@ export default function PaymentCalculation() {
                                             {itemsWithPromotions.length > 0 && (
                                                 <div className="mb-3">
                                                     <p className="text-sm font-medium text-orange-700 mb-1">Khuyến mãi sản phẩm:</p>
-                                                    {itemsWithPromotions.map((item, index) => (
+                                                    {itemsWithPromotions.map((item) => (
                                                         <div key={item.orderItemId} className="text-xs mb-1 p-2 bg-white rounded border-l-2 border-orange-300">
                                                             <div className="flex justify-between items-start">
                                                                 <div className="flex-1">
                                                                     <p className="font-medium">{item.productName}</p>
                                                                     <p className="text-gray-600">{item.variantInfo}</p>
                                                                     <p className="text-orange-600 font-medium">
-                                                                        🏷️ {item.bestPromo.promotionCode}: {item.bestPromo.promotionName}
+                                                                        🏷️ {item.bestPromo?.promotionCode}: {item.bestPromo?.promotionName}
                                                                     </p>
                                                                 </div>
                                                                 <div className="text-right ml-2">
                                                                     <p className="text-gray-500 line-through">
-                                                                        {(item.originalPrice * item.quantity).toLocaleString('vi-VN')} VND
+                                                                        {((item.originalPrice || item.priceAtPurchase) * item.quantity).toLocaleString('vi-VN')} VND
                                                                     </p>
                                                                     <p className="text-red-600 font-bold">
-                                                                        -{((item.originalPrice - item.priceAtPurchase) * item.quantity).toLocaleString('vi-VN')} VND
+                                                                        -{(((item.originalPrice || item.priceAtPurchase) - item.priceAtPurchase) * item.quantity).toLocaleString('vi-VN')} VND
                                                                     </p>
                                                                 </div>
                                                             </div>

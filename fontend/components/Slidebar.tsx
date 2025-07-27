@@ -136,7 +136,7 @@ export default function Sidebar() {
     useEffect(() => {
         const activeMenus: Record<string, boolean> = {};
         menuItems.forEach(item => {
-            if (item.children && item.href && pathname.startsWith(item.href)) {
+            if (item.children && item.href && pathname && pathname.startsWith(item.href)) {
                 activeMenus[item.label] = true;
             }
         });
@@ -165,7 +165,7 @@ export default function Sidebar() {
                     <MenuItemComponent
                         key={item.label}
                         item={item}
-                        currentPath={pathname}
+                        currentPath={pathname || ''}
                         openMenus={openMenus}
                         toggleMenu={handleMenuToggle}
                     />

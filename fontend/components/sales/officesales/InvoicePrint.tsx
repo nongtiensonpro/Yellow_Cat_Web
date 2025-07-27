@@ -223,7 +223,6 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order, orderItems, totals, 
 
   // Promotion info
   const [promos, setPromos] = useState<PromoItem[]>([]);
-  const [promoLoading, setPromoLoading] = useState<boolean>(false);
 
   // Fetch thông tin nhân viên đơn giản theo order code
   const fetchStaffInfo = useCallback(async () => {
@@ -270,7 +269,6 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order, orderItems, totals, 
     // Fetch promotions
     if (isOpen && promos.length === 0 && orderItems.length > 0) {
       (async () => {
-        setPromoLoading(true);
         try {
           const uniqueVariantIds = Array.from(new Set(orderItems.map(i => i.productVariantId)));
           const promoResults = await Promise.all(uniqueVariantIds.map(async (vid) => {
@@ -285,8 +283,8 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order, orderItems, totals, 
           }));
           const filtered = promoResults.filter((p): p is PromoItem => p !== null);
           setPromos(filtered);
-        } finally {
-          setPromoLoading(false);
+        } catch (error) {
+          console.error('Error fetching promotions:', error);
         }
       })();
     }

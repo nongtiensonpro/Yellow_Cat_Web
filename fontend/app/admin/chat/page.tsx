@@ -4,9 +4,38 @@ import { useEffect, useRef, useState } from 'react';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { useSession } from 'next-auth/react';
+// import type { Session } from 'next-auth';
 
 const WS_URL = 'http://localhost:8080/ws';
 const API_URL = 'http://localhost:8080/api/chat';
+
+interface ChatSession {
+  id?: number;
+  sessionId?: number;
+  customerId?: string;
+  status: string;
+  lastMessage?: {
+    content: string;
+  };
+}
+
+interface ChatMessage {
+  id?: number;
+  messageId?: number;
+  content: string;
+  fromStaff?: boolean;
+  senderType?: 'admin' | 'customer' | 'guest';
+  timestamp?: string;
+  sessionId?: number;
+  keycloakId?: string;
+}
+
+// interface SessionWithUser extends Session {
+//   user?: {
+//     id?: string;
+//     [key: string]: unknown;
+//   };
+// }
 
 export default function AdminChatPage() {
   const { data: session } = useSession();
@@ -14,9 +43,9 @@ export default function AdminChatPage() {
   const userKeycloakId = session?.user?.id || '';
 
   const [keycloakId, setKeycloakId] = useState('');
-  const [waitingSessions, setWaitingSessions] = useState<any[]>([]);
-  const [selectedSession, setSelectedSession] = useState<any>(null);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [waitingSessions, setWaitingSessions] = useState<ChatSession[]>([]);
+  const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [status, setStatus] = useState('Chưa chọn session');
   const [error, setError] = useState('');
@@ -39,14 +68,15 @@ export default function AdminChatPage() {
       if (!res.ok) throw new Error('Không thể tải session chờ');
       const data = await res.json();
       setWaitingSessions(Array.isArray(data) ? data : data.data || []);
-    } catch (err: any) {
-      setError('Lỗi khi tải session chờ: ' + (err?.message || ''));
-      alert('Lỗi khi tải session chờ: ' + (err?.message || ''));
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
+      setError('Lỗi khi tải session chờ: ' + errorMessage);
+      alert('Lỗi khi tải session chờ: ' + errorMessage);
     }
   };
 
   // Chọn session, gán nhân viên, lấy lịch sử, subscribe WS
-  const handleSelectSession = async (sessionObj: any) => {
+  const handleSelectSession = async (sessionObj: ChatSession) => {
     setError('');
     const id = isLoggedIn ? userKeycloakId : keycloakId.trim();
     if (!id) {
@@ -104,9 +134,10 @@ export default function AdminChatPage() {
       });
       client.activate();
       stompRef.current = client;
-    } catch (err: any) {
-      setError('Lỗi khi chọn session: ' + (err?.message || ''));
-      alert('Lỗi khi chọn session: ' + (err?.message || ''));
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
+      setError('Lỗi khi chọn session: ' + errorMessage);
+      alert('Lỗi khi chọn session: ' + errorMessage);
     }
   };
 
@@ -130,9 +161,10 @@ export default function AdminChatPage() {
         }),
       });
       setNewMessage('');
-    } catch (err: any) {
-      setError('Lỗi khi gửi tin nhắn: ' + (err?.message || ''));
-      alert('Lỗi khi gửi tin nhắn: ' + (err?.message || ''));
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
+      setError('Lỗi khi gửi tin nhắn: ' + errorMessage);
+      alert('Lỗi khi gửi tin nhắn: ' + errorMessage);
     }
   };
 
@@ -141,7 +173,7 @@ export default function AdminChatPage() {
     console.log('selectedSession:', selectedSession);
     console.log('keycloakIdToUse:', isLoggedIn ? userKeycloakId : keycloakId);
     console.log('WebSocket connected:', stompRef.current?.connected);
-  }, [selectedSession, userKeycloakId, keycloakId, stompRef.current?.connected]);
+  }, [selectedSession, userKeycloakId, keycloakId, stompRef.current?.connected, isLoggedIn]);
 
   // UI
     return (

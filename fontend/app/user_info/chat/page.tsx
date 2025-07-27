@@ -7,13 +7,25 @@ import { useSession } from 'next-auth/react';
 
 const WS_URL = 'http://localhost:8080/ws';
 
+// Định nghĩa interface cho Message
+interface Message {
+  id?: string | number;
+  messageId?: string | number;
+  content: string;
+  fromStaff?: boolean;
+  senderType?: 'admin' | 'customer' | 'guest';
+  timestamp?: string | number;
+  sessionId?: number;
+  keycloakId?: string;
+}
+
 export default function ChatPage() {
   const { data: session } = useSession();
   const isLoggedIn = !!session?.user?.id;
   const userKeycloakId = session?.user?.id || '';
 
   const [sessionId, setSessionId] = useState<number | null>(null);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [keycloakId, setKeycloakId] = useState('');
   const stompRef = useRef<Client | null>(null);
@@ -109,17 +121,15 @@ export default function ChatPage() {
       </div>
       <div className="flex gap-2">
         <input
-          className="flex-1 border rounded px-3 py-2 focus:outline-none"
+          className="flex-1 border rounded px-3 py-2"
           placeholder="Nhập tin nhắn..."
           value={input}
           onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSend()}
-          disabled={!!sessionId && !stompRef.current?.connected}
+          onKeyPress={e => e.key === 'Enter' && handleSend()}
         />
         <button
           className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
           onClick={handleSend}
-          disabled={!!sessionId && !stompRef.current?.connected}
         >
           Gửi
         </button>

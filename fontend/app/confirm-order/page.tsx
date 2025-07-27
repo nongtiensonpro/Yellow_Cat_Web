@@ -188,6 +188,7 @@ export default function ConfirmOrderPage() {
                 setShippingFee(0);
             }
         } catch (error) {
+            console.error('Error fetching shipping fee:', error);
             setShippingFee(0);
         } finally {
             setLoadingShippingFee(false);
@@ -249,21 +250,21 @@ export default function ConfirmOrderPage() {
         setShippingFee(0);
     };
     // Fetch districts khi chọn tỉnh
-    const handleDistrictChange = async (districtCode: string) => {
-        setNewAddress({ ...newAddress, district: districtCode, wardCommune: '' });
-        setWardsVN([]);
-        // setLoadingWards(true); // Removed
-        try {
-            const res = await fetch(`http://localhost:8080/api/address/districts/${districtCode}`);
-            const data = await res.json();
-            setDistrictsVN(data);
-        } catch {}
-        // setLoadingDistricts(false); // Removed
-    };
+    // const handleDistrictChange = async (districtCode: string) => {
+    //     setNewAddress({ ...newAddress, district: districtCode, wardCommune: '' });
+    //     setWardsVN([]);
+    //     // setLoadingWards(true); // Removed
+    //     try {
+    //         const res = await fetch(`http://localhost:8080/api/address/districts/${districtCode}`);
+    //         const data = await res.json();
+    //         setDistrictsVN(data);
+    //     } catch {}
+    //     // setLoadingDistricts(false); // Removed
+    // };
     // Fetch wards khi chọn huyện
-    const handleWardChange = (wardCode: string) => {
-        setNewAddress({ ...newAddress, wardCommune: wardCode });
-    };
+    // const handleWardChange = (wardCode: string) => {
+    //     setNewAddress({ ...newAddress, wardCommune: wardCode });
+    // };
     // Validate số điện thoại VN
     const isValidPhone = (phone: string) => /^0\d{9}$/.test(phone);
 

@@ -1,6 +1,6 @@
 "use client"
 
-import {useState, useEffect} from "react";
+import { useEffect} from "react";
 import {useSession} from "next-auth/react";
 import {
     Card, CardHeader, CardBody, Button, Spinner,
@@ -10,7 +10,7 @@ import {OptimizedProductItem} from "./OptimizedProductItem";
 import {useOrderStore} from './orderStore';
 
 // Helper function để kiểm tra trạng thái đơn hàng cho việc thêm sản phẩm
-const getAddProductStatus = (orderItems: unknown[], editableOrder: any) => {
+const getAddProductStatus = (orderItems: unknown[]) => {
     // Chưa có sản phẩm
     if (orderItems.length === 0) {
         return {
@@ -48,7 +48,6 @@ export default function AddProductsToOrder() {
         productsLoading,
         productsError,
         searchTerm,
-        editableOrder,
         error: storeError,
 
         // Actions
@@ -91,7 +90,7 @@ export default function AddProductsToOrder() {
         );
     }
 
-    const productStatus = getAddProductStatus(orderItems, editableOrder);
+    const productStatus = getAddProductStatus(orderItems);
 
     return (
         <div className="flex w-full flex-col gap-4 p-4 min-h-screen">
@@ -245,7 +244,7 @@ export default function AddProductsToOrder() {
                                                                 🏷️ {item.bestPromo.promotionCode}
                                                             </span>
                                                             <span className="text-[10px] text-green-600 font-medium">
-                                                                Tiết kiệm: {((item.originalPrice - item.priceAtPurchase)).toLocaleString('vi-VN')} VND
+                                                                Tiết kiệm: {((item.originalPrice || item.priceAtPurchase) - item.priceAtPurchase).toLocaleString('vi-VN')} VND
                                                             </span>
                                                         </div>
                                                     ) : (

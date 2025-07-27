@@ -357,7 +357,7 @@ export default function OrderListPage() {
         }
 
         // Construct API URL and parameters
-        let url = `http://localhost:8080/api/orders/status`; // Base URL for status filtered orders
+        const url = `http://localhost:8080/api/orders/status`; // Base URL for status filtered orders
         const params: string[] = [`page=${page}`, `size=10`]; // Pagination parameters
 
         // Add status and orderType parameters (always included as they have default values)
@@ -464,7 +464,7 @@ export default function OrderListPage() {
     };
 
     // Calculate the total count for the single 'Paid' tab
-    const totalCount = statusCounts['Paid'] || 0;
+    //const totalCount = statusCounts['Paid'] || 0;
 
     return (
         <main className="p-6 bg-gray-50 min-h-screen font-sans">

@@ -38,6 +38,58 @@ interface OrderTimeline {
     changedAt: string;
 }
 
+interface User {
+    fullName?: string;
+    username?: string;
+    email?: string;
+    phoneNumber?: string;
+    avatarUrl?: string;
+}
+
+interface Order {
+    orderId: number;
+    orderCode: string;
+    customerName: string;
+    orderStatus: string;
+    finalAmount: number;
+    discountAmount: number;
+    createdAt: string;
+}
+
+interface OrderItem {
+    productName: string;
+    variantName: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+}
+
+interface OrderDetail {
+    orderId: number;
+    orderCode: string;
+    orderStatus: string;
+    customerName: string;
+    phoneNumber: string;
+    wardCommune: string;
+    streetAddress: string;
+    district: string;
+    cityProvince: string;
+    country: string;
+    orderDate: string;
+    subTotal: number;
+    shippingFee: number;
+    finalAmount: number;
+    paymentStatus: string;
+    paymentMethod: string;
+    customerNotes?: string;
+    items: OrderItem[];
+}
+
+interface TokenData {
+    sub: string;
+    [key: string]: unknown;
+}
+
 const tabList = [
   { key: "Pending", label: "Chờ xác nhận" },
   { key: "Confirmed", label: "Chờ giao hàng" },
@@ -61,13 +113,13 @@ const RETURN_REASONS = [
 
 export default function OrderOnlinePage() {
     const { data: session, status } = useSession();
-    const [user, setUser] = useState<any>(null);
-    const [orders, setOrders] = useState<any[]>([]);
+    const [user, setUser] = useState<User | null>(null);
+    const [orders, setOrders] = useState<Order[]>([]);
     const [activeTab, setActiveTab] = useState("Pending");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [openDetailOrderId, setOpenDetailOrderId] = useState<number | null>(null);
-    const [orderDetailCache, setOrderDetailCache] = useState<Record<number, any>>({});
+    const [orderDetailCache, setOrderDetailCache] = useState<Record<number, OrderDetail>>({});
     const [loadingDetail, setLoadingDetail] = useState(false);
     const [detailError, setDetailError] = useState<string | null>(null);
     const [orderTimeline, setOrderTimeline] = useState<Record<number, OrderTimeline[]>>({});
@@ -122,7 +174,7 @@ export default function OrderOnlinePage() {
             });
             const data = await res.json();
             setOrders(Array.isArray(data) ? data : data.data || []);
-        } catch (err: any) {
+        } catch {
             setError('Không lấy được danh sách đơn hàng');
             setOrders([]);
         } finally {
@@ -139,9 +191,9 @@ export default function OrderOnlinePage() {
                 return;
             }
             try {
-                const accessToken = session.accessToken || (session as any).user?.accessToken;
+                const accessToken = session.accessToken || (session as { user?: { accessToken?: string } }).user?.accessToken;
                 if (!accessToken) throw new Error('Không tìm thấy accessToken');
-                const tokenData = jwtDecode<any>(accessToken);
+                const tokenData = jwtDecode<TokenData>(accessToken);
                 const keycloakId = tokenData.sub;
                 if (!keycloakId) throw new Error('Không tìm thấy keycloakId');
                 // Lấy user
@@ -149,8 +201,9 @@ export default function OrderOnlinePage() {
                 setUser(userData);
                 // Lấy orders theo tab
                 await fetchOrdersByStatus(keycloakId, activeTab, accessToken);
-            } catch (err: any) {
-                setError(err.message || 'Lỗi không xác định');
+            } catch (error: unknown) {
+                const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định';
+                setError(errorMessage);
             }
         };
         getUserAndOrders();
@@ -195,7 +248,7 @@ const getStatusColor = (status: string) => {
     };
 
     // Hàm lấy chi tiết đơn hàng (có cache)
-    const fetchOrderDetail = async (orderId: number) => {
+    const fetchOrderDetail = useCallback(async (orderId: number) => {
         setLoadingDetail(true);
         setDetailError(null);
         if (orderDetailCache[orderId]) {
@@ -206,18 +259,15 @@ const getStatusColor = (status: string) => {
             const res = await fetch(`http://localhost:8080/api/orders/detail-online/${orderId}`);
             const data = await res.json();
             setOrderDetailCache(prev => ({ ...prev, [orderId]: data }));
-            
-            // Fetch timeline for this order
-            fetchOrderTimeline(orderId);
-        } catch (err) {
+        } catch {
             setDetailError('Không lấy được chi tiết đơn hàng');
         } finally {
             setLoadingDetail(false);
         }
-    };
+    }, [orderDetailCache]);
 
     // Hàm fetch order timeline
-    const fetchOrderTimeline = async (orderId: number) => {
+    const fetchOrderTimeline = useCallback(async (orderId: number) => {
         if (orderTimeline[orderId]) return;
 
         try {
@@ -244,8 +294,8 @@ const getStatusColor = (status: string) => {
                     [orderId]: []
                 }));
             }
-        } catch (err) {
-            console.error('Error fetching order timeline:', err);
+        } catch {
+            console.error('Error fetching order timeline');
             setOrderTimeline(prev => ({
                 ...prev,
                 [orderId]: []
@@ -253,7 +303,7 @@ const getStatusColor = (status: string) => {
         } finally {
             setTimelineLoading(prev => ({ ...prev, [orderId]: false }));
         }
-    };
+    }, [orderTimeline]);
 
     // Khi openDetailOrderId thay đổi, fetch chi tiết nếu chưa có
     useEffect(() => {
@@ -262,7 +312,14 @@ const getStatusColor = (status: string) => {
         } else {
             setDetailError(null);
         }
-    }, [openDetailOrderId]);
+    }, [openDetailOrderId, fetchOrderDetail]);
+
+    // Fetch timeline khi có detail order và chưa có timeline
+    useEffect(() => {
+        if (openDetailOrderId && orderDetailCache[openDetailOrderId] && !orderTimeline[openDetailOrderId]) {
+            fetchOrderTimeline(openDetailOrderId);
+        }
+    }, [openDetailOrderId, orderDetailCache, orderTimeline, fetchOrderTimeline]);
 
     // Hàm xác nhận nhận hàng
     const handleConfirmReceived = async (orderId: number) => {
@@ -282,7 +339,7 @@ const getStatusColor = (status: string) => {
             } else {
                 setConfirmError(data.message || 'Không thể xác nhận nhận hàng');
             }
-        } catch (err) {
+        } catch {
             setConfirmError('Lỗi hệ thống');
         } finally {
             setConfirmLoading(false);
@@ -293,7 +350,7 @@ const getStatusColor = (status: string) => {
         setReturnLoading(true);
         setReturnError(null);
         setReturnSuccess(null);
-        let note = returnReason === 'Khác' ? customReason : returnReason;
+        const note = returnReason === 'Khác' ? customReason : returnReason;
         try {
             const res = await fetch('http://localhost:8080/api/order-timelines/request-return', {
                 method: 'POST',
@@ -307,7 +364,7 @@ const getStatusColor = (status: string) => {
             } else {
                 setReturnError(data.message || 'Không thể gửi yêu cầu hoàn hàng');
             }
-        } catch (err) {
+        } catch {
             setReturnError('Lỗi hệ thống');
         } finally {
             setReturnLoading(false);
@@ -621,7 +678,7 @@ const getStatusColor = (status: string) => {
                                                                             </tr>
                                                                         </thead>
                                                                         <tbody>
-                                                                            {orderDetailCache[order.orderId].items?.map((item: any, idx: number) => (
+                                                                            {orderDetailCache[order.orderId].items?.map((item: OrderItem, idx: number) => (
                                                                                 <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
                                                                                     <td className="px-4 py-2 font-medium text-gray-900">{item.productName}</td>
                                                                                     <td className="px-4 py-2 text-gray-700">{item.variantName}</td>
@@ -710,7 +767,7 @@ const getStatusColor = (status: string) => {
             {/* Popup yêu cầu hoàn hàng */}
             <Dialog open={showReturnPopup} onClose={() => setShowReturnPopup(false)} className="fixed z-50 inset-0 overflow-y-auto">
                 <div className="flex items-center justify-center min-h-screen">
-                    <Dialog.Overlay className="fixed inset-0 bg-black opacity-30" />
+                    <div className="fixed inset-0 bg-black opacity-30" />
                     <div className="relative bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-auto z-10">
                         <Dialog.Title className="text-lg font-bold mb-4">Yêu cầu hoàn hàng</Dialog.Title>
                         <div className="mb-3">
@@ -759,7 +816,7 @@ const getStatusColor = (status: string) => {
             {/* Dialog xác nhận huỷ đơn */}
             <Dialog open={!!showCancelConfirm} onClose={() => setShowCancelConfirm(null)} className="fixed z-50 inset-0 overflow-y-auto">
                 <div className="flex items-center justify-center min-h-screen">
-                    <Dialog.Overlay className="fixed inset-0 bg-black opacity-30" />
+                    <div className="fixed inset-0 bg-black opacity-30" />
                     <div className="relative bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-auto z-10">
                         <Dialog.Title className="text-lg font-bold mb-4 text-red-700">Xác nhận huỷ đơn hàng</Dialog.Title>
                         <div className="mb-4 text-gray-700">Bạn có chắc chắn muốn huỷ đơn hàng <span className="font-semibold">{showCancelConfirm?.orderCode}</span> không?</div>

@@ -547,8 +547,8 @@ export const useOrderStore = create<OrderState>()(
                             if (json?.data?.bestPromo) {
                                 promoMap.set(vid, json.data.bestPromo);
                             }
-                        } catch (e) {
-                            console.warn('Cannot fetch promo for variant', vid);
+                        } catch (err : unknown) {
+                            console.warn('Cannot fetch promo for variant', vid + getErrorMessage(err));
                         }
                     }));
 

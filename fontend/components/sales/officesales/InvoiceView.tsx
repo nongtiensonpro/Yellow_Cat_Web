@@ -244,7 +244,7 @@ export default function InvoiceView() {
                                                                     🏷️ {item.bestPromo.promotionCode}
                                                                 </span>
                                                                 <span className="text-xs text-green-600 font-medium">
-                                                                    -{((item.originalPrice - item.priceAtPurchase)).toLocaleString('vi-VN')} VND
+                                                                    -{((item.originalPrice || item.priceAtPurchase) - item.priceAtPurchase).toLocaleString('vi-VN')} VND
                                                                 </span>
                                                                 <span className="text-xs text-gray-500">
                                                                     ({item.bestPromo.promotionName})
@@ -313,10 +313,10 @@ export default function InvoiceView() {
                                                             <p className="text-xs text-gray-600 mb-2">{item.variantInfo}</p>
                                                             <div className="flex flex-wrap items-center gap-2">
                                                                 <span className="text-xs bg-orange-200 text-orange-800 px-2 py-1 rounded font-medium">
-                                                                    🏷️ {item.bestPromo.promotionCode}
+                                                                    🏷️ {item.bestPromo?.promotionCode}
                                                                 </span>
                                                                 <span className="text-xs text-gray-600">
-                                                                    {item.bestPromo.promotionName}
+                                                                    {item.bestPromo?.promotionName}
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -328,10 +328,10 @@ export default function InvoiceView() {
                                                                 Giá bán: <span className="font-medium">{item.priceAtPurchase.toLocaleString('vi-VN')} VND</span>
                                                             </div>
                                                             <div className="text-xs text-gray-600">
-                                                                SL: {item.quantity} × Giảm: {((item.originalPrice - item.priceAtPurchase)).toLocaleString('vi-VN')} VND
+                                                                SL: {item.quantity} × Giảm: {((item.originalPrice || item.priceAtPurchase) - item.priceAtPurchase).toLocaleString('vi-VN')} VND
                                                             </div>
                                                             <div className="text-sm font-bold text-green-600 border-t pt-1">
-                                                                Tiết kiệm: {((item.originalPrice - item.priceAtPurchase) * item.quantity).toLocaleString('vi-VN')} VND
+                                                                Tiết kiệm: {(((item.originalPrice || item.priceAtPurchase) - item.priceAtPurchase) * item.quantity).toLocaleString('vi-VN')} VND
                                                             </div>
                                                         </div>
                                                     </div>

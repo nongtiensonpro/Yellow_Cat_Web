@@ -274,9 +274,6 @@ export default function OrdersManagementPage() {
             const data = await response.json();
             const detail = data.data || data;
             setDetailOrderCache(prev => ({ ...prev, [orderId]: detail }));
-            
-            // Fetch timeline for this order
-            fetchOrderTimeline(orderId);
         } catch (err) {
             setDetailError(err instanceof Error ? err.message : 'Lỗi khi tải dữ liệu');
         } finally {
@@ -451,6 +448,13 @@ export default function OrdersManagementPage() {
             setDetailError(null);
         }
     }, [openDetailOrderId, fetchOrderDetail]);
+
+    // Fetch timeline khi có detail order và chưa có timeline
+    useEffect(() => {
+        if (openDetailOrderId && detailOrderCache[openDetailOrderId] && !orderTimeline[openDetailOrderId]) {
+            fetchOrderTimeline(openDetailOrderId);
+        }
+    }, [openDetailOrderId, detailOrderCache, orderTimeline, fetchOrderTimeline]);
 
     // Danh sách trạng thái sẽ auto update không cần popup
     const AUTO_UPDATE_STATES = [
