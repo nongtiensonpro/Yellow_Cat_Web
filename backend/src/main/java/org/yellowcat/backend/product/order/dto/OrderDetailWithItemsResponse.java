@@ -39,4 +39,11 @@ public class OrderDetailWithItemsResponse {
     // Thống kê
     private Integer totalItems;
     private Integer totalQuantity;
+
+    private String appliedVoucherCode;
+    private String appliedVoucherName;
+    private String voucherType;
+    private BigDecimal voucherValue;
+    private String voucherDescription;
+    private BigDecimal voucherDiscountAmount;
 } 

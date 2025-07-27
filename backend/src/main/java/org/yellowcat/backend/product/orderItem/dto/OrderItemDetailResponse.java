@@ -34,4 +34,10 @@ public class OrderItemDetailResponse {
     private String imageUrl;
     private Double weight;
     private Integer quantityInStock;
+
+    // Khuyến mãi áp dụng (nếu có)
+    private String promotionCode;
+    private String promotionName;
+    private java.math.BigDecimal discountAmount;
+    private java.math.BigDecimal originalPrice;
 } 

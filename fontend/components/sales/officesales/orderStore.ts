@@ -112,6 +112,7 @@ interface OrderState {
     
     // View State
     isEditMode: boolean;
+    currentScreen: 'addProducts' | 'payment' | 'invoice';
     
     // Order Items State
     orderItems: OrderItem[];
@@ -140,6 +141,7 @@ interface OrderState {
     setTotalPages: (totalPages: number) => void;
     setActiveTab: (tab: string | number) => void;
     setIsEditMode: (isEdit: boolean) => void;
+    setCurrentScreen: (screen: 'addProducts' | 'payment' | 'invoice') => void;
     
     // Order Items Actions
     setOrderItems: (items: OrderItem[]) => void;
@@ -202,6 +204,7 @@ export const useOrderStore = create<OrderState>()(
             totalPages: 1,
             activeTab: 'all',
             isEditMode: false,
+            currentScreen: 'addProducts',
             
             // Order Items State
             orderItems: [],
@@ -242,6 +245,7 @@ export const useOrderStore = create<OrderState>()(
             setTotalPages: (totalPages) => set({ totalPages }),
             setActiveTab: (tab) => set({ activeTab: tab, page: 1 }),
             setIsEditMode: (isEdit) => set({ isEditMode: isEdit }),
+            setCurrentScreen: (screen) => set({ currentScreen: screen }),
             
             // Order Items Setters
             setOrderItems: (items) => set({ orderItems: items }),
@@ -529,8 +533,10 @@ export const useOrderStore = create<OrderState>()(
                         });
                     });
 
-                    // Lấy promo cho các variant duy nhất
-                    const uniqueVariantIds = Array.from(new Set(items.map(i => i.productVariantId)));
+                    // Lấy promo cho các variant CHƯA có bestPromo
+                    const uniqueVariantIds = Array.from(new Set(items
+                        .filter(i => !i.bestPromo)
+                        .map(i => i.productVariantId)));
                     const promoMap = new Map<number, { promotionCode: string; promotionName: string; discountAmount: number }>();
 
                     await Promise.all(uniqueVariantIds.map(async (vid) => {
@@ -548,13 +554,13 @@ export const useOrderStore = create<OrderState>()(
 
                     const enrichedItems = items.map((item) => {
                         const details = variantMap.get(item.productVariantId);
-                        const promo = promoMap.get(item.productVariantId);
+                        const promo = item.bestPromo ?? promoMap.get(item.productVariantId);
                         const originalPrice = promo ? item.priceAtPurchase + promo.discountAmount : undefined;
                         return {
                             ...item,
                             productName: details?.productName || 'Không tìm thấy sản phẩm',
                             variantInfo: details?.variantInfo || '',
-                            bestPromo: promo,
+                            bestPromo: promo ?? undefined,
                             originalPrice,
                         };
                     });
@@ -859,9 +865,20 @@ export const useOrderStore = create<OrderState>()(
             
             openEditOrder: (order) => {
                 console.log('📂 Opening edit order:', order.orderCode);
+                
+                // Determine initial screen based on order status
+                let initialScreen: 'addProducts' | 'payment' | 'invoice' = 'addProducts';
+                if (order.orderStatus === 'Paid' || order.orderStatus === 'PAID') {
+                    initialScreen = 'invoice';
+                    console.log('💰 Order is paid, opening invoice view');
+                } else {
+                    console.log('📝 Order is not paid, opening add products view');
+                }
+                
                 set({ 
                     currentOrder: order, 
-                    isEditMode: true 
+                    isEditMode: true,
+                    currentScreen: initialScreen
                 });
                 get().syncEditableOrderWithCurrent();
             },
@@ -871,6 +888,7 @@ export const useOrderStore = create<OrderState>()(
                 set({ 
                     currentOrder: null, 
                     isEditMode: false,
+                    currentScreen: 'addProducts',
                     orderItems: [],
                     searchTerm: '',
                     editableOrder: {

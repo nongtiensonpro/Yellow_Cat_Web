@@ -544,7 +544,7 @@ export default function OrderListPage() {
                             <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Khách Hàng</th>
                             <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SĐT</th>
                             {/* The 'Loại Đơn' (Order Type) column is removed as orderType is fixed to 'Retail' */}
-                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày Tạo</th>
+                            {/*<th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày Tạo</th>*/}
                             <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tổng Tiền</th>
                             <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng Thái</th>
                             <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Hành Động</th>
@@ -569,11 +569,11 @@ export default function OrderListPage() {
                                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-600">{o.orderCode}</td>
                                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{o.customerName || 'Khách lẻ'}</td>
                                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{o.phoneNumber || 'Không có'}</td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
-                                        {o.orderDate
-                                            ? new Date(o.orderDate).toLocaleDateString('vi-VN') // Using toLocaleDateString
-                                            : '--'}
-                                    </td>
+                                    {/*<td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">*/}
+                                    {/*    {o.orderDate*/}
+                                    {/*        ? new Date(o.orderDate).toLocaleDateString('vi-VN') // Using toLocaleDateString*/}
+                                    {/*        : '--'}*/}
+                                    {/*</td>*/}
                                     <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-800">
                                         {o.finalAmount.toLocaleString('vi-VN')} ₫
                                     </td>

@@ -42,7 +42,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         return (
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
                 <Slidebar />
-                <main className="flex-1 p-6 max-w-full overflow-auto">
+                <main className="flex-1 max-w-full overflow-auto">
                     {children}
                 </main>
             </div>
@@ -54,7 +54,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             {/* Sidebar */}
             <Slidebar />
             {/* Main content */}
-            <main className="flex-1 p-6 max-w-full overflow-auto">
+            <main className="flex-1 max-w-full overflow-auto">
                 {children}
             </main>
         </div>

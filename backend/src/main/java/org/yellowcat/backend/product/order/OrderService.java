@@ -29,6 +29,8 @@ import org.yellowcat.backend.product.promotionorder.UsedPromotionRepository;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserService;
 import org.yellowcat.backend.online_selling.PaymentStatus;
+import org.yellowcat.backend.product.promotionapplied.AppliedPromotionRepository;
+import org.yellowcat.backend.product.promotionapplied.AppliedPromotion;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -45,12 +47,12 @@ public class OrderService {
     AppUserService appUserService;
     PromotionProgramRepository promotionProgramRepository;
     UsedPromotionRepository usedPromotionRepository;
+    AppliedPromotionRepository appliedPromotionRepository;
 
     public Page<OrderResponse> getOrdersByKeyword(int page, int size, String keyword) {
         Pageable pageable = PageRequest.of(page, size);
         return orderRepository.findAllByKeyword(keyword, pageable);
     }
-
 
     public Order findOrderById(Integer orderId) {
         return orderRepository.findById(orderId).orElse(null);
@@ -66,7 +68,6 @@ public class OrderService {
         }
         return result;
     }
-
 
     public Page<OrderResponse> getOrders(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -104,11 +105,14 @@ public class OrderService {
         BigDecimal maxDiscount = BigDecimal.ZERO;
 
         for (PromotionProgram promo : activePromotions) {
-            if (now.isBefore(promo.getStartDate()) || now.isAfter(promo.getEndDate())) continue;
-            if (subTotalAmount.compareTo(promo.getMinimumOrderValue()) < 0) continue;
+            if (now.isBefore(promo.getStartDate()) || now.isAfter(promo.getEndDate()))
+                continue;
+            if (subTotalAmount.compareTo(promo.getMinimumOrderValue()) < 0)
+                continue;
             if (promo.getUsageLimitTotal() != null) {
                 int usedCount = usedPromotionRepository.countByPromotionProgram(promo);
-                if (usedCount >= promo.getUsageLimitTotal()) continue;
+                if (usedCount >= promo.getUsageLimitTotal())
+                    continue;
             }
 
             BigDecimal discount;
@@ -145,7 +149,8 @@ public class OrderService {
                     promotionProgramRepository.save(bestPromotion);
                 }
 
-                System.out.println("🎁 Áp dụng khuyến mãi: " + bestPromotion.getPromotionCode() + " → Giảm " + discountAmount);
+                System.out.println(
+                        "🎁 Áp dụng khuyến mãi: " + bestPromotion.getPromotionCode() + " → Giảm " + discountAmount);
             } else {
                 System.out.println("⚠️ Đơn hàng đã áp dụng khuyến mãi trước đó, không cập nhật lại.");
             }
@@ -193,7 +198,8 @@ public class OrderService {
                 } else {
                     hasNewPayments = true;
                     Payment existing = paymentRepository.findById(paymentReq.getPaymentId())
-                            .orElseThrow(() -> new IllegalArgumentException("Payment not found: " + paymentReq.getPaymentId()));
+                            .orElseThrow(() -> new IllegalArgumentException(
+                                    "Payment not found: " + paymentReq.getPaymentId()));
                     existing.setAmount(paymentReq.getAmount());
                     existing.setPaymentMethod(paymentReq.getPaymentMethod());
                     existing.setTransactionId(paymentReq.getTransactionId());
@@ -254,17 +260,18 @@ public class OrderService {
         return orderMapper.toOrderUpdateResponse(order);
     }
 
-    //Tạo order mới
+    // Tạo order mới
     public Order createOrder() {
-        // Logic to create a new order
+        // Logic to create a new order for in-store sales (no shipping address)
         Order order = Order.builder()
                 .orderCode(generateOrderCode())
-                .orderDate(LocalDateTime.now()) // Thêm dòng này
+                .orderDate(LocalDateTime.now())
                 .subTotalAmount(BigDecimal.ZERO)
-                .shippingFee(BigDecimal.ZERO)
+                .shippingFee(BigDecimal.ZERO) // No shipping fee for in-store pickup
                 .discountAmount(BigDecimal.ZERO)
                 .finalAmount(BigDecimal.ZERO)
                 .paymentStatus(PaymentStatus.UNPAID)
+                // shippingAddress is intentionally left NULL for in-store orders
                 .build();
 
         // Save the order to the repository
@@ -316,7 +323,8 @@ public class OrderService {
         }
 
         System.out.println("✅ Found Order entity: " + order.getOrderCode());
-        System.out.println("💳 Payments already loaded: " + (order.getPayments() != null ? order.getPayments().size() : 0));
+        System.out.println(
+                "💳 Payments already loaded: " + (order.getPayments() != null ? order.getPayments().size() : 0));
 
         // Convert to OrderUpdateResponse (có payments)
         OrderUpdateResponse response = orderMapper.toOrderUpdateResponse(order);
@@ -451,7 +459,8 @@ public class OrderService {
                 .findFirst()
                 .orElse(null);
 
-        // Tính tổng số tiền đã thanh toán trước đó (loại trừ CASH để tránh double count)
+        // Tính tổng số tiền đã thanh toán trước đó (loại trừ CASH để tránh double
+        // count)
         BigDecimal totalPaidExcludeCash = existingPayments.stream()
                 .filter(p -> "COMPLETED".equalsIgnoreCase(p.getPaymentStatus()) &&
                         !"CASH".equalsIgnoreCase(p.getPaymentMethod()))
@@ -531,7 +540,6 @@ public class OrderService {
         return orderMapper.toOrderUpdateResponse(order);
     }
 
-
     @Transactional
     public void updateUserIDOrder(String orderCode, UUID userId) {
         AppUser appUser = appUserService
@@ -586,7 +594,8 @@ public class OrderService {
         }
 
         // Lấy order items
-        List<OrderItemDetailProjection> itemProjections = orderItemRepository.findOrderItemsDetailByOrderCode(orderCode);
+        List<OrderItemDetailProjection> itemProjections = orderItemRepository
+                .findOrderItemsDetailByOrderCode(orderCode);
         List<OrderItemDetailResponse> orderItems = itemProjections.stream()
                 .map(this::convertToOrderItemDetailResponse)
                 .toList();
@@ -619,6 +628,23 @@ public class OrderService {
         response.setTotalItems(totalItems);
         response.setTotalQuantity(totalQuantity);
 
+        // Lấy thông tin voucher/mã giảm giá đã áp dụng (nếu có)
+        // Lấy entity Order để truyền vào UsedPromotionRepository
+        Order orderEntity = orderRepository.findById(orderProjection.getOrderId()).orElse(null);
+        if (orderEntity != null) {
+            UsedPromotion usedPromotion = usedPromotionRepository.findByOrder(orderEntity);
+            if (usedPromotion != null && usedPromotion.getPromotionProgram() != null) {
+                PromotionProgram promo = usedPromotion.getPromotionProgram();
+                response.setAppliedVoucherCode(promo.getPromotionCode());
+                response.setAppliedVoucherName(promo.getPromotionName());
+                response.setVoucherType(promo.getDiscountType());
+                response.setVoucherValue(promo.getDiscountValue());
+                response.setVoucherDescription(promo.getDescription());
+                // Số tiền đã giảm từ voucher = discountAmount (nếu discountAmount > 0)
+                response.setVoucherDiscountAmount(orderProjection.getDiscountAmount());
+            }
+        }
+
         System.out.println("✅ Tìm thấy đơn hàng với " + totalItems + " sản phẩm, tổng " + totalQuantity + " số lượng");
 
         return response;
@@ -642,7 +668,8 @@ public class OrderService {
         }
 
         // Lấy order items với chi tiết
-        List<OrderItemDetailProjection> itemProjections = orderItemRepository.findOrderItemsDetailByOrderCode(orderCode);
+        List<OrderItemDetailProjection> itemProjections = orderItemRepository
+                .findOrderItemsDetailByOrderCode(orderCode);
         List<OrderItemDetailResponse> orderItems = itemProjections.stream()
                 .map(this::convertToOrderItemDetailResponse)
                 .toList();
@@ -666,15 +693,10 @@ public class OrderService {
         response.setShippingFee(order.getShippingFee());
         response.setDiscountAmount(order.getDiscountAmount());
 
-        // Lấy thông tin từ relations
-        response.setShippingMethod(order.getShippingMethod() != null ? order.getShippingMethod().getMethodName() : null);
-        response.setRecipientName(order.getShippingAddress() != null ? order.getShippingAddress().getRecipientName() : null);
-        response.setFullAddress(order.getShippingAddress() != null ?
-                String.format("%s, %s, %s, %s",
-                        order.getShippingAddress().getStreetAddress(),
-                        order.getShippingAddress().getWardCommune(),
-                        order.getShippingAddress().getDistrict(),
-                        order.getShippingAddress().getCityProvince()) : null);
+        // Lấy thông tin từ relations - Đơn hàng tại quầy không có địa chỉ giao hàng
+        response.setShippingMethod("Giao tại cửa hàng"); // Fixed value for in-store orders
+        response.setRecipientName(order.getCustomerName()); // Use customer name as recipient
+        response.setFullAddress("Nhận tại cửa hàng - Không cần giao hàng"); // Fixed address for in-store pickup
         response.setEmail(order.getUser() != null ? order.getUser().getEmail() : null);
         response.setFullName(order.getUser() != null ? order.getUser().getFullName() : null);
         response.setCustomerNotes(order.getCustomerNotes());
@@ -682,6 +704,79 @@ public class OrderService {
         response.setOrderItems(orderItems);
         response.setTotalItems(totalItems);
         response.setTotalQuantity(totalQuantity);
+
+        // Lấy thông tin voucher/mã giảm giá đã áp dụng (nếu có)
+        System.out.println("🔍 Tìm kiếm thông tin voucher cho orderId: " + order.getOrderId());
+        UsedPromotion usedPromotion = usedPromotionRepository.findByOrderWithPromotionProgram(order);
+        System.out.println("📋 UsedPromotion result: " + usedPromotion);
+
+        if (usedPromotion != null) {
+            System.out.println("✅ Tìm thấy UsedPromotion với ID: " + usedPromotion.getUsedPromotionId());
+            PromotionProgram promo = usedPromotion.getPromotionProgram();
+            System.out.println("🎁 PromotionProgram: " + promo);
+
+            if (promo != null) {
+                System.out.println(
+                        "✅ Tìm thấy PromotionProgram: " + promo.getPromotionCode() + " - " + promo.getPromotionName());
+                response.setAppliedVoucherCode(promo.getPromotionCode());
+                response.setAppliedVoucherName(promo.getPromotionName());
+                response.setVoucherType(promo.getDiscountType());
+                response.setVoucherValue(promo.getDiscountValue());
+                response.setVoucherDescription(promo.getDescription());
+                // Số tiền đã giảm từ voucher = discountAmount (nếu discountAmount > 0)
+                response.setVoucherDiscountAmount(order.getDiscountAmount());
+                System.out.println("💰 Voucher discount amount: " + order.getDiscountAmount());
+            } else {
+                System.out.println("❌ PromotionProgram is null");
+            }
+        } else {
+            System.out.println("❌ Không tìm thấy UsedPromotion cho đơn hàng này");
+            
+            // Kiểm tra xem có item-level promotions không
+            boolean hasItemPromotions = orderItems.stream()
+                .anyMatch(item -> item.getPromotionCode() != null && item.getDiscountAmount() != null);
+            
+            System.out.println("🔍 Kiểm tra item-level promotions: " + hasItemPromotions);
+            
+            if (hasItemPromotions) {
+                // Tính tổng discount từ items
+                BigDecimal totalItemDiscount = orderItems.stream()
+                    .filter(item -> item.getDiscountAmount() != null)
+                    .map(OrderItemDetailResponse::getDiscountAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+                
+                System.out.println("💰 Tổng discount từ items: " + totalItemDiscount);
+                
+                // Lấy promotion code từ item đầu tiên có promotion
+                String firstPromotionCode = orderItems.stream()
+                    .filter(item -> item.getPromotionCode() != null)
+                    .map(OrderItemDetailResponse::getPromotionCode)
+                    .findFirst()
+                    .orElse("ITEM_DISCOUNT");
+                
+                response.setAppliedVoucherCode(firstPromotionCode);
+                response.setAppliedVoucherName("Khuyến mãi sản phẩm");
+                response.setVoucherType("VND");
+                response.setVoucherValue(totalItemDiscount);
+                response.setVoucherDescription("Khuyến mãi được áp dụng cho các sản phẩm trong đơn hàng");
+                response.setVoucherDiscountAmount(totalItemDiscount);
+                
+                System.out.println("✅ Đã set voucher info từ item promotions");
+            } else if (order.getDiscountAmount() != null
+                    && order.getDiscountAmount().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                System.out.println("💰 Có giảm giá nhưng không có thông tin voucher chi tiết - sử dụng fallback");
+
+                // Fallback: Hiển thị thông tin giảm giá cơ bản
+                response.setAppliedVoucherCode("DISCOUNT");
+                response.setAppliedVoucherName("Giảm giá đơn hàng");
+                response.setVoucherType("VND");
+                response.setVoucherValue(order.getDiscountAmount());
+                response.setVoucherDescription("Giảm giá đã được áp dụng cho đơn hàng này");
+                response.setVoucherDiscountAmount(order.getDiscountAmount());
+
+                System.out.println("✅ Đã set fallback voucher info với discount amount: " + order.getDiscountAmount());
+            }
+        }
 
         System.out.println("✅ Tìm thấy đơn hàng với " + totalItems + " sản phẩm, tổng " + totalQuantity + " số lượng");
 
@@ -706,33 +801,43 @@ public class OrderService {
                 projection.getFullAddress(),
                 projection.getEmail(),
                 projection.getFullName(),
-                projection.getCustomerNotes()
-        );
+                projection.getCustomerNotes());
     }
 
-    // Helper method để convert OrderItemDetailProjection sang OrderItemDetailResponse
+    // Helper method để convert OrderItemDetailProjection sang
+    // OrderItemDetailResponse
     private OrderItemDetailResponse convertToOrderItemDetailResponse(OrderItemDetailProjection projection) {
-        return new OrderItemDetailResponse(
-                projection.getOrderItemId(),
-                projection.getOrderId(),
-                projection.getQuantity(),
-                projection.getPriceAtPurchase(),
-                projection.getTotalPrice(),
-                projection.getVariantId(),
-                projection.getSku(),
-                projection.getProductName(),
-                projection.getColorName(),
-                projection.getSizeName(),
-                projection.getMaterialName(),
-                projection.getBrandName(),
-                projection.getCategoryName(),
-                projection.getTargetAudienceName(),
-                projection.getCurrentPrice(),
-                projection.getSalePrice(),
-                projection.getImageUrl(),
-                projection.getWeight(),
-                projection.getQuantityInStock()
-        );
+        OrderItemDetailResponse dto = new OrderItemDetailResponse();
+        dto.setOrderItemId(projection.getOrderItemId());
+        dto.setOrderId(projection.getOrderId());
+        dto.setQuantity(projection.getQuantity());
+        dto.setPriceAtPurchase(projection.getPriceAtPurchase());
+        dto.setTotalPrice(projection.getTotalPrice());
+        dto.setVariantId(projection.getVariantId());
+        dto.setSku(projection.getSku());
+        dto.setProductName(projection.getProductName());
+        dto.setColorName(projection.getColorName());
+        dto.setSizeName(projection.getSizeName());
+        dto.setMaterialName(projection.getMaterialName());
+        dto.setBrandName(projection.getBrandName());
+        dto.setCategoryName(projection.getCategoryName());
+        dto.setTargetAudienceName(projection.getTargetAudienceName());
+        dto.setCurrentPrice(projection.getCurrentPrice());
+        dto.setSalePrice(projection.getSalePrice());
+        dto.setImageUrl(projection.getImageUrl());
+        dto.setWeight(projection.getWeight());
+        dto.setQuantityInStock(projection.getQuantityInStock());
+
+        // Lấy applied promotion nếu có
+        AppliedPromotion ap = appliedPromotionRepository.findFirstByOrderItem_OrderItemId(projection.getOrderItemId());
+        if (ap != null) {
+            dto.setPromotionCode(ap.getPromotionCode());
+            dto.setPromotionName(ap.getPromotionName());
+            dto.setDiscountAmount(ap.getDiscountAmount());
+            dto.setOriginalPrice(dto.getPriceAtPurchase().add(ap.getDiscountAmount()));
+        }
+
+        return dto;
     }
 
     // Method để debug và log thông tin thanh toán

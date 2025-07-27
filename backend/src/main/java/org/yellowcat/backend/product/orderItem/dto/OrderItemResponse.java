@@ -12,4 +12,13 @@ public class OrderItemResponse {
     private Integer quantity;
     private BigDecimal priceAtPurchase;
     private BigDecimal totalPrice;
+    private BestPromo bestPromo;
+    private BigDecimal originalPrice;
+
+    @Data
+    public static class BestPromo {
+        private String promotionCode;
+        private String promotionName;
+        private BigDecimal discountAmount;
+    }
 }

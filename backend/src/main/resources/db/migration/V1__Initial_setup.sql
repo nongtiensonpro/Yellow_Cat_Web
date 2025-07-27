@@ -984,3 +984,25 @@ CREATE TABLE voucher_redemption (
                               discount_amount DECIMAL(10,2)   -- Số tiền đã giảm
 );
 
+
+CREATE TABLE applied_promotions (
+                                    applied_promotion_id SERIAL PRIMARY KEY,
+                                    order_item_id        INT                        NOT NULL,
+                                    promo_type           VARCHAR(20)                NOT NULL, -- PRODUCT / ORDER / VOUCHER
+                                    promotion_code       VARCHAR(50)                NOT NULL,
+                                    promotion_name       VARCHAR(255),
+                                    discount_type        VARCHAR(20),
+                                    discount_value       NUMERIC(10,2),
+                                    discount_amount      NUMERIC(12,2)             NOT NULL,
+                                    applied_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    -- Tham chiếu mềm (nullable) tới bảng gốc (giúp truy vết khi cần)
+                                    promotion_id         INT,
+                                    promotion_program_id INT,
+                                    voucher_id           INT,
+
+                                    CONSTRAINT fk_applied_order_item FOREIGN KEY (order_item_id)
+                                        REFERENCES order_items(order_item_id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_applied_promotions_item ON applied_promotions(order_item_id);

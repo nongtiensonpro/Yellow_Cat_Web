@@ -29,6 +29,15 @@ import { jwtDecode } from 'jwt-decode';
 import { useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 
+interface OrderTimeline {
+    id: number;
+    orderId: number;
+    fromStatus: string;
+    toStatus: string;
+    note: string;
+    changedAt: string;
+}
+
 const tabList = [
   { key: "Pending", label: "Chờ xác nhận" },
   { key: "Confirmed", label: "Chờ giao hàng" },
@@ -61,6 +70,8 @@ export default function OrderOnlinePage() {
     const [orderDetailCache, setOrderDetailCache] = useState<Record<number, any>>({});
     const [loadingDetail, setLoadingDetail] = useState(false);
     const [detailError, setDetailError] = useState<string | null>(null);
+    const [orderTimeline, setOrderTimeline] = useState<Record<number, OrderTimeline[]>>({});
+    const [timelineLoading, setTimelineLoading] = useState<Record<number, boolean>>({});
     const [showReturnPopup, setShowReturnPopup] = useState(false);
     const [returnReason, setReturnReason] = useState('');
     const [customReason, setCustomReason] = useState('');
@@ -145,14 +156,14 @@ export default function OrderOnlinePage() {
         getUserAndOrders();
     }, [session, status, activeTab, fetchUserByKeycloakId, fetchOrdersByStatus]);
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND'
-        }).format(amount);
-    };
+const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND'
+    }).format(amount);
+};
 
-    const formatDate = (dateString: string) => {
+const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         const day = String(date.getDate()).padStart(2, '0');
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -160,18 +171,18 @@ export default function OrderOnlinePage() {
         const hours = String(date.getHours()).padStart(2, '0');
         const minutes = String(date.getMinutes()).padStart(2, '0');
         return `${day}/${month}/${year} ${hours}:${minutes}`;
-    };
+};
 
-    const getStatusColor = (status: string) => {
-        switch (status.toLowerCase()) {
-            case 'pending': return 'warning';
-            case 'paid': return 'success';
-            case 'partial': return 'secondary';
-            case 'completed': return 'success';
-            case 'cancelled': return 'danger';
-            default: return 'default';
-        }
-    };
+const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+        case 'pending': return 'warning';
+        case 'paid': return 'success';
+        case 'partial': return 'secondary';
+        case 'completed': return 'success';
+        case 'cancelled': return 'danger';
+        default: return 'default';
+    }
+};
 
     // Thêm hàm getStatusBadgeClass cho orderStatus và paymentStatus
     const getStatusBadgeClass = (status: string) => {
@@ -195,10 +206,52 @@ export default function OrderOnlinePage() {
             const res = await fetch(`http://localhost:8080/api/orders/detail-online/${orderId}`);
             const data = await res.json();
             setOrderDetailCache(prev => ({ ...prev, [orderId]: data }));
+            
+            // Fetch timeline for this order
+            fetchOrderTimeline(orderId);
         } catch (err) {
             setDetailError('Không lấy được chi tiết đơn hàng');
         } finally {
             setLoadingDetail(false);
+        }
+    };
+
+    // Hàm fetch order timeline
+    const fetchOrderTimeline = async (orderId: number) => {
+        if (orderTimeline[orderId]) return;
+
+        try {
+            setTimelineLoading(prev => ({ ...prev, [orderId]: true }));
+            
+            const res = await fetch(`http://localhost:8080/api/order-timelines/${orderId}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.data) {
+                    setOrderTimeline(prev => ({
+                        ...prev,
+                        [orderId]: data.data
+                    }));
+                } else {
+                    setOrderTimeline(prev => ({
+                        ...prev,
+                        [orderId]: []
+                    }));
+                }
+            } else {
+                console.error('Failed to fetch order timeline');
+                setOrderTimeline(prev => ({
+                    ...prev,
+                    [orderId]: []
+                }));
+            }
+        } catch (err) {
+            console.error('Error fetching order timeline:', err);
+            setOrderTimeline(prev => ({
+                ...prev,
+                [orderId]: []
+            }));
+        } finally {
+            setTimelineLoading(prev => ({ ...prev, [orderId]: false }));
         }
     };
 
@@ -284,6 +337,42 @@ export default function OrderOnlinePage() {
         }
     };
 
+    const formatTimelineNote = (timeline: OrderTimeline) => {
+        const toStatus = timeline.toStatus;
+        
+        // Mapping trạng thái cho timeline
+        const TIMELINE_STATUS_MAP: Record<string, string> = {
+            Pending: 'Đơn hàng đang chờ xác nhận',
+            WaitingForStock: 'Sản phẩm hiện chưa có sẵn. Đơn hàng được thêm vào danh sách chờ',
+            Confirmed: 'Đơn hàng đã được xác nhận',
+            Shipping: 'Đơn hàng đang được vận chuyển',
+            Delivered: 'Đơn hàng đã được giao thành công',
+            DeliveryFailed: 'Giao hàng không thành công',
+            ReturnedToSeller: 'Đơn hàng đã được trả về người bán',
+            CustomerReceived: 'Khách hàng đã xác nhận nhận hàng',
+            ReturnRequested: 'Khách hàng yêu cầu trả hàng',
+            ReturnApproved: 'Yêu cầu trả hàng đã được chấp nhận',
+            ReturnRejected: 'Yêu cầu trả hàng đã bị từ chối',
+            Refunded: 'Đơn hàng đã được hoàn tiền',
+            Completed: 'Đơn hàng đã hoàn tất',
+            Cancelled: 'Đơn hàng đã bị hủy',
+        };
+        
+        return TIMELINE_STATUS_MAP[toStatus] || toStatus;
+    };
+
+    const formatDateTime = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleString('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    };
+
     return (
         <div className="container mx-auto p-6 space-y-6">
             <OrderTabs />
@@ -292,13 +381,13 @@ export default function OrderOnlinePage() {
                 <CardHeader className="flex gap-3">
                     <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
                         {user?.avatarUrl ? (
-                            <CldImage
-                                width={64}
-                                height={64}
-                                src={user.avatarUrl}
-                                alt="Avatar"
-                                className="w-full h-full object-cover"
-                            />
+                        <CldImage
+                            width={64}
+                            height={64}
+                            src={user.avatarUrl}
+                            alt="Avatar"
+                            className="w-full h-full object-cover"
+                        />
                         ) : (
                             <div className="w-full h-full bg-default-200 flex items-center justify-center">
                                 <span className="text-default-500 text-lg font-medium">
@@ -313,10 +402,10 @@ export default function OrderOnlinePage() {
                             {user?.fullName || user?.username} • {user?.email}
                         </p>
                         {user?.phoneNumber && (
-                            <p className="text-small text-default-500 flex items-center gap-1">
-                                <Phone size={12} />
-                                {user.phoneNumber}
-                            </p>
+                        <p className="text-small text-default-500 flex items-center gap-1">
+                            <Phone size={12} />
+                            {user.phoneNumber}
+                        </p>
                         )}
                     </div>
                 </CardHeader>
@@ -411,43 +500,43 @@ export default function OrderOnlinePage() {
                                 {orders.map((order) => (
                                     <React.Fragment key={order.orderId}>
                                         <TableRow>
-                                            <TableCell>
-                                                <div>
-                                                    <p className="font-medium">{order.orderCode}</p>
-                                                    <p className="text-small text-default-500">{order.customerName}</p>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    <Calendar size={16} className="text-default-400" />
+                                        <TableCell>
+                                            <div>
+                                                <p className="font-medium">{order.orderCode}</p>
+                                                <p className="text-small text-default-500">{order.customerName}</p>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <Calendar size={16} className="text-default-400" />
                                                     {formatDate(order.createdAt)}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Chip 
-                                                    color={getStatusColor(order.orderStatus)} 
-                                                    variant="flat"
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Chip 
+                                                color={getStatusColor(order.orderStatus)} 
+                                                variant="flat"
+                                                size="sm"
+                                            >
+                                                {order.orderStatus}
+                                            </Chip>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div>
+                                                <p className="font-medium">{formatCurrency(order.finalAmount)}</p>
+                                                {order.discountAmount > 0 && (
+                                                    <p className="text-small text-success">
+                                                        Giảm: {formatCurrency(order.discountAmount)}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex gap-2">
+                                                <Button
                                                     size="sm"
-                                                >
-                                                    {order.orderStatus}
-                                                </Chip>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div>
-                                                    <p className="font-medium">{formatCurrency(order.finalAmount)}</p>
-                                                    {order.discountAmount > 0 && (
-                                                        <p className="text-small text-success">
-                                                            Giảm: {formatCurrency(order.discountAmount)}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex gap-2">
-                                                    <Button
-                                                        size="sm"
-                                                        color="primary"
-                                                        variant="flat"
+                                                    color="primary"
+                                                    variant="flat"
                                                         onClick={() => setOpenDetailOrderId(openDetailOrderId === order.orderId ? null : order.orderId)}
                                                     >
                                                         {openDetailOrderId === order.orderId ? 'Đóng' : 'Chi tiết đầy đủ'}
@@ -462,11 +551,11 @@ export default function OrderOnlinePage() {
                                                             disabled={cancelLoading}
                                                         >
                                                             {cancelLoading ? 'Đang huỷ...' : 'Huỷ đơn'}
-                                                        </Button>
+                                                </Button>
                                                     )}
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
                                         {/* Hiển thị chi tiết nếu openDetailOrderId === order.orderId */}
                                         {openDetailOrderId === order.orderId && (
                                             <TableRow>
@@ -550,6 +639,50 @@ export default function OrderOnlinePage() {
                                                                 <div className="font-semibold text-gray-700">Tổng thanh toán:</div>
                                                                 <div className="text-2xl font-bold text-blue-700">{formatCurrency(orderDetailCache[order.orderId].finalAmount)}</div>
                                                             </div>
+
+                                                            {/* Order Timeline */}
+                                                            <div className="mt-6">
+                                                                <h3 className="text-lg font-bold text-orange-700 mb-4">Lịch sử trạng thái đơn hàng</h3>
+                                                                <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-4">
+                                                                    {timelineLoading[order.orderId] ? (
+                                                                        <div className="text-center py-4">
+                                                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
+                                                                            <p className="text-sm text-gray-500 mt-2">Đang tải lịch sử...</p>
+                                                                        </div>
+                                                                    ) : orderTimeline[order.orderId]?.length > 0 ? (
+                                                                        <div className="space-y-4">
+                                                                            {orderTimeline[order.orderId].slice().reverse().map((timeline, index) => (
+                                                                                <div key={timeline.id} className="relative">
+                                                                                    {/* Timeline line */}
+                                                                                    {index < orderTimeline[order.orderId].length - 1 && (
+                                                                                        <div className="absolute left-3 top-6 w-0.5 h-8 bg-gray-200"></div>
+                                                                                    )}
+                                                                                    
+                                                                                    <div className="flex items-start space-x-3">
+                                                                                        {/* Timeline dot */}
+                                                                                        <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 ${
+                                                                                            index === 0 ? 'bg-blue-500 border-blue-500' : 'bg-white border-gray-300'
+                                                                                        }`}></div>
+                                                                                        
+                                                                                        {/* Timeline content */}
+                                                                                        <div className="flex-1 min-w-0">
+                                                                                            <p className="text-sm text-gray-900 font-medium">
+                                                                                                {formatTimelineNote(timeline)}
+                                                                                            </p>
+                                                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                                                {formatDateTime(timeline.changedAt)}
+                                                                                            </p>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <p className="text-gray-500 text-sm text-center">Chưa có lịch sử trạng thái</p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
                                                             {orderDetailCache[order.orderId].orderStatus === 'Delivered' && (
                                                                 <div className="flex gap-4 mt-4">
                                                                     <Button color="success" onClick={() => handleConfirmReceived(order.orderId)} disabled={confirmLoading}>
