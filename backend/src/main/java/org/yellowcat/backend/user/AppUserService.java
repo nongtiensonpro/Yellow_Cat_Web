@@ -7,6 +7,7 @@ import org.yellowcat.backend.user.UserDTO.fromFE.UserRequestDTO;
 import org.yellowcat.backend.user.UserDTO.fromFE.UserUpdateDTO;
 
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,6 +28,10 @@ public class AppUserService {
 
     public Optional<AppUser> findByKeycloakId(UUID keycloakId) {
         return appUserRepository.findByKeycloakId(keycloakId);
+    }
+
+    public List<AppUser> findAll() {
+        return appUserRepository.findAll();
     }
 
     public UserRequestDTO create(UserRequestDTO user) {

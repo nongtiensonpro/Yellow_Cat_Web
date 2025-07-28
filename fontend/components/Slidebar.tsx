@@ -54,12 +54,12 @@ const menuItems: MenuItem[] = [
         children: [
             { href: "/admin/promotion_management/vouchers", icon: <Percent size={18} />, label: "Phiếu giảm giá" },
             { href: "/admin/promotion_products", icon: <Percent size={18} />, label: "Đợt giảm giá" },
-            { href: "/admin/promotion_order", icon: <Percent size={18} />, label: "Giảm giá theo hóa đơn" },
+            // { href: "/admin/promotion_order", icon: <Percent size={18} />, label: "Giảm giá theo hóa đơn" },
         ],
     },
     { href: "/admin/return_management", icon: <RotateCcw size={18} />, label: "Trả hàng" },
     { href: "/admin/account_management", icon: <User size={18} />, label: "Tài khoản" },
-    { href: "http://localhost:3000/admin/chat", icon: <MessageCircle size={18} />, label: "Chat" },
+    { href: "/admin/chat", icon: <MessageCircle size={18} />, label: "Chat" },
 ];
 
 interface MenuItemComponentProps {

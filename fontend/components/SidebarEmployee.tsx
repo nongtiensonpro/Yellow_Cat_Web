@@ -14,7 +14,7 @@ import {
     Palette,
     Ruler,
     Store,
-    ListOrdered
+    ListOrdered, MessageCircle
 } from "lucide-react";
 import { useState } from "react";
 interface MenuItem {
@@ -48,6 +48,7 @@ const menuItems: MenuItem[] = [
     { href: "/admin/return_management", icon: <RotateCcw size={18} />, label: "Trả hàng" },
     { href: "/admin/invoice_management", icon: <FileText size={18} />, label: "Hóa đơn" },
     { href: "/admin/account_management", icon: <User size={18} />, label: "Tài khoản" },
+    { href: "/admin/chat", icon: <MessageCircle size={18} />, label: "Chat" },
 ];
 
 // Component Sidebar chính

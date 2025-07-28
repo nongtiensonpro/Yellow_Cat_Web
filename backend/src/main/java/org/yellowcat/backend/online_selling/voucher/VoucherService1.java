@@ -4,6 +4,7 @@ import jakarta.persistence.EntityNotFoundException;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -16,13 +17,16 @@ import org.yellowcat.backend.product.ProductRepository;
 import org.yellowcat.backend.product.category.Category;
 import org.yellowcat.backend.product.category.CategoryRepository;
 import org.yellowcat.backend.product.order.Order;
+import org.yellowcat.backend.product.productvariant.ProductVariantRepository;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserRepository;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -48,8 +52,20 @@ public class VoucherService1 {
     @Autowired private AppUserRepository userRepository;
     @Autowired private CategoryRepository categoryRepository;
     @Autowired private OderOnlineRepository orderRepository;
+    @Autowired private ProductVariantRepository productVariantRepository;
 
     // ===== CRUD OPERATIONS =====
+
+
+    @Scheduled(cron = "0 0 * * * *", zone = "Asia/Ho_Chi_Minh") // Chạy mỗi đầu giờ theo giờ VN
+    public void deactivateExpiredVouchers() {
+        List<Voucher> expiredVouchers = voucherRepository.findAllByEndDateBeforeAndIsActiveTrue(LocalDateTime.now());
+        for (Voucher v : expiredVouchers) {
+            v.setIsActive(false);
+        }
+        voucherRepository.saveAll(expiredVouchers);
+    }
+
 
     /**
      * Tạo mới voucher với danh sách phạm vi áp dụng
@@ -62,22 +78,34 @@ public class VoucherService1 {
     //done
     @Transactional
     public Voucher createVoucher(Voucher voucher, List<VoucherScope> scopes) {
-        System.out.println("===> chạy vào hàm tạo vocher");
+        System.out.println("===> chạy vào hàm tạo voucher");
 
         if (voucher == null) {
-            throw new IllegalArgumentException("Voucher cannot be null");
+            throw new IllegalArgumentException("Voucher không được null");
         }
 
-        // Gọi hàm validate ở đây
-        validateVoucher(voucher, false); // false vì đây là tạo mới
+        // ✅ Normalize code trước khi validate
+        System.out.println("===> Code nhận được: '" + voucher.getCode() + "'");
+        if (voucher.getCode() == null || voucher.getCode().trim().isEmpty()) {
+            System.out.println("===> Code null hoặc rỗng, tạo mã random");
+            String generatedCode = generateUniqueVoucherCode();
+            System.out.println("===> Mã được tạo: " + generatedCode);
+            voucher.setCode(generatedCode);
+        } else {
+            System.out.println("===> Code không null, normalize");
+            voucher.setCode(normalizeCode(voucher.getCode()));
+        }
 
-        // Set các giá trị mặc định
-        voucher.setCode(generateUniqueVoucherCode());
+        // ✅ Validate sau khi normalize
+        validateVoucher(voucher, false);
+
         voucher.setIsActive(voucher.getIsActive() != null ? voucher.getIsActive() : true);
         voucher.setUsageCount(voucher.getUsageCount() != null ? voucher.getUsageCount() : 0);
         voucher.setCreatedAt(LocalDateTime.now());
 
         Voucher savedVoucher = voucherRepository.save(voucher);
+
+        // Gán scope
         associateScopesWithVoucher(scopes, savedVoucher);
 
         return savedVoucher;
@@ -89,7 +117,10 @@ public class VoucherService1 {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tên đợt giảm giá không được để trống");
         }
 
-        // Check trùng tên
+        if (voucher.getName().length() > 50) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tên đợt giảm giá không được vượt quá 50 ký tự");
+        }
+
         boolean nameExists = isUpdate
                 ? voucherRepository.existsByNameAndIdNot(voucher.getName(), voucher.getId())
                 : voucherRepository.existsByName(voucher.getName());
@@ -98,15 +129,31 @@ public class VoucherService1 {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tên đợt giảm giá đã tồn tại");
         }
 
-        if (voucher.getDiscountValue() == null || voucher.getDiscountValue().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giá trị giảm giá phải lớn hơn 0");
+        if (voucher.getCode() != null) {
+            if (voucher.getCode().length() > 50) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá không được vượt quá 50 ký tự");
+            }
+
+            boolean codeExists = isUpdate
+                    ? voucherRepository.existsByCodeAndIdNot(voucher.getCode(), voucher.getId())
+                    : voucherRepository.existsByCode(voucher.getCode());
+
+            if (codeExists) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá đã tồn tại");
+            }
+        }
+
+        // Với FREE_SHIPPING, discountValue có thể là null hoặc 0
+        if (voucher.getDiscountType() != DiscountType.FREE_SHIPPING) {
+            if (voucher.getDiscountValue() == null || voucher.getDiscountValue().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giá trị giảm giá phải lớn hơn 0");
+            }
         }
 
         if (voucher.getStartDate() != null && voucher.getEndDate() != null &&
                 voucher.getEndDate().isBefore(voucher.getStartDate())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ngày kết thúc không được trước ngày bắt đầu");
         }
-
     }
 
 
@@ -186,7 +233,6 @@ public class VoucherService1 {
                         }
                     })
                     .toList();
-
             VoucherScopeDTO scopeDTO = new VoucherScopeDTO();
             scopeDTO.setScopeType(scopeType);
             scopeDTO.setTargetNames(targetNames);
@@ -225,10 +271,31 @@ public class VoucherService1 {
                 .orElseThrow(() -> new EntityNotFoundException("Voucher not found with ID: " + voucherUpdate.getId()));
         System.out.println("====> lấy ra id voucher cần update : " + voucherUpdate.getId());
 
-        // ✅ Gọi validate
+        // Kiểm tra trạng thái voucher để quyết định có cho phép sửa không
+        LocalDateTime now = LocalDateTime.now();
+        boolean isNotStarted = now.isBefore(existingVoucher.getStartDate());
+        boolean isExpired = now.isAfter(existingVoucher.getEndDate());
+        boolean isOutOfUsage = existingVoucher.getMaxUsage() != null && 
+                              existingVoucher.getUsageCount() != null && 
+                              existingVoucher.getUsageCount() >= existingVoucher.getMaxUsage();
+        boolean isInactive = !existingVoucher.getIsActive();
+
+        // Chỉ cho phép sửa voucher chưa bắt đầu hoặc hết lượt sử dụng
+        if (!isNotStarted && !isOutOfUsage && !isInactive) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Không thể cập nhật vì voucher đang hoạt động");
+        }
+
+        // Normalize code trước
+        if (voucherUpdate.getCode() != null) {
+            voucherUpdate.setCode(normalizeCode(voucherUpdate.getCode()));
+        }
+
+        // Validate sau khi normalize
         validateVoucher(voucherUpdate, true); // true vì đang update
 
-        // Cập nhật thông tin cơ bản
+        // Cập nhật thông tin
+        existingVoucher.setName(voucherUpdate.getName());
+        existingVoucher.setCode(voucherUpdate.getCode());
         existingVoucher.setDescription(voucherUpdate.getDescription());
         existingVoucher.setDiscountType(voucherUpdate.getDiscountType());
         existingVoucher.setDiscountValue(voucherUpdate.getDiscountValue());
@@ -240,10 +307,8 @@ public class VoucherService1 {
         existingVoucher.setIsActive(voucherUpdate.getIsActive());
         existingVoucher.setUpdatedAt(LocalDateTime.now());
 
-        // Xóa scope cũ
+        // Cập nhật scope
         scopeRepository.deleteByVoucherId(existingVoucher.getId());
-
-        // Tạo scope mới từ dữ liệu cập nhật
         if (voucherUpdate.getScopes() != null) {
             for (VoucherScope scope : voucherUpdate.getScopes()) {
                 scope.setVoucher(existingVoucher);
@@ -253,6 +318,23 @@ public class VoucherService1 {
 
         voucherRepository.save(existingVoucher);
     }
+
+    @Transactional
+    public void deactivateVoucher(Integer voucherId) {
+        Voucher voucher = voucherRepository.findById(voucherId)
+                .orElseThrow(() -> new EntityNotFoundException("Voucher không tìm thấy"));
+
+        if (!voucher.getIsActive()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Voucher đã bị vô hiệu trước đó");
+        }
+
+        voucher.setIsActive(false);
+        voucher.setUpdatedAt(LocalDateTime.now());
+        voucherRepository.save(voucher);
+    }
+
+
+
 
     /**
      * Xóa mềm voucher (đánh dấu không hoạt động)
@@ -307,16 +389,13 @@ public class VoucherService1 {
             );
             System.out.println("✅ Số tiền giảm ban đầu: " + discountAmount);
 
-            discountAmount = applyDiscountCap(discountAmount, voucher, order.getSubTotalAmount());
+            discountAmount = applyDiscountCap(discountAmount, voucher, order.getSubTotalAmount(), order.getShippingFee());
             System.out.println("✅ Số tiền giảm sau khi giới hạn: " + discountAmount);
 
-            if (userId != null) {
+
                 System.out.println("🔍 Cập nhật lượt sử dụng cho userId: " + userId);
                 updateVoucherUsage(voucher, userId);
                 System.out.println("✅ Đã cập nhật lượt sử dụng");
-            } else {
-                System.out.println("⚠ Không có userId, bỏ qua cập nhật lượt sử dụng");
-            }
 
             System.out.println("🔍 Lưu lịch sử áp dụng voucher");
             saveRedemptionRecord(voucher, order, userId, discountAmount);
@@ -349,7 +428,7 @@ public class VoucherService1 {
     public BigDecimal calculateDiscountedAmount(String code, BigDecimal subtotal, BigDecimal shippingFee) {
         Voucher voucher = getVoucherByCode(code);
         BigDecimal discountAmount = calculateDiscountAmount(subtotal, voucher, shippingFee);
-        discountAmount = applyDiscountCap(discountAmount, voucher, subtotal);
+        discountAmount = applyDiscountCap(discountAmount, voucher, subtotal, shippingFee);
         return discountAmount;
     }
 
@@ -357,7 +436,7 @@ public class VoucherService1 {
     public BigDecimal calculateAmountAfterDiscout(String code, BigDecimal subtotal, BigDecimal shippingFee) {
         Voucher voucher = getVoucherByCode(code);
         BigDecimal discountAmount = calculateDiscountAmount(subtotal, voucher, shippingFee);
-        discountAmount = applyDiscountCap(discountAmount, voucher, subtotal);
+        discountAmount = applyDiscountCap(discountAmount, voucher, subtotal, shippingFee);
         return subtotal.subtract(discountAmount);
     }
 
@@ -473,7 +552,14 @@ public class VoucherService1 {
         dto.setIsActive(voucher.getIsActive());
         dto.setCreatedAt(voucher.getCreatedAt());
 
-        int remaining = voucher.getMaxUsage() - voucher.getUsageCount();
+        // Kiểm tra null cho maxUsage và usageCount
+        Integer maxUsage = voucher.getMaxUsage();
+        Integer usageCount = voucher.getUsageCount();
+        
+        int remaining = 0;
+        if (maxUsage != null && usageCount != null) {
+            remaining = maxUsage - usageCount;
+        }
         dto.setRemainingUsage(Math.max(remaining, 0));
 
         boolean isUsed = isVoucherUsedByUser(voucher, userId);
@@ -577,8 +663,21 @@ public class VoucherService1 {
      */
     private void validateVoucherForOrder(Voucher voucher, Integer userId, Order order) {
         validateBasicConditions(voucher);
-        validateOrderRequirements(voucher, order);
         validateUserEligibility(voucher, userId);
+        validateOrderRequirements(voucher, order);
+
+    }
+
+    private String normalizeCode(String input) {
+        if (input == null) return null;
+
+        // Bỏ dấu tiếng Việt
+        String normalized = Normalizer.normalize(input, Normalizer.Form.NFD);
+        Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
+        String noDiacritics = pattern.matcher(normalized).replaceAll("");
+
+        // Thay khoảng trắng bằng dấu gạch dưới, chuyển in hoa
+        return noDiacritics.trim().replaceAll("\\s+", "_").toUpperCase();
     }
 
     /**
@@ -593,13 +692,21 @@ public class VoucherService1 {
             throw new RuntimeException(ERR_VOUCHER_NOT_STARTED + voucher.getStartDate());
         }
         if (now.isAfter(voucher.getEndDate())) {
+            if (voucher.getIsActive()) {
+                voucher.setIsActive(false);
+                voucherRepository.save(voucher);
+            }
             throw new RuntimeException(ERR_VOUCHER_EXPIRED + voucher.getEndDate());
         }
         if (!voucher.getIsActive()) {
             throw new RuntimeException(ERR_VOUCHER_INACTIVE);
         }
-        if (voucher.getUsageCount() >= voucher.getMaxUsage()) {
-            throw new RuntimeException(ERR_MAX_USAGE_REACHED + voucher.getMaxUsage());
+        // Kiểm tra null cho maxUsage và usageCount
+        Integer maxUsage = voucher.getMaxUsage();
+        Integer usageCount = voucher.getUsageCount();
+        
+        if (maxUsage != null && usageCount != null && usageCount >= maxUsage) {
+            throw new RuntimeException(ERR_MAX_USAGE_REACHED + maxUsage);
         }
     }
 
@@ -702,12 +809,18 @@ public class VoucherService1 {
      * @param orderTotal Tổng giá trị đơn hàng
      * @return Số tiền giảm giá sau khi áp giới hạn
      */
-    private BigDecimal applyDiscountCap(BigDecimal discount, Voucher voucher, BigDecimal orderTotal) {
-        // Áp dụng giới hạn tối đa cho voucher phần trăm
-        if (voucher.getMaxDiscountAmount() != null && voucher.getDiscountType() == DiscountType.PERCENT) {
+    private BigDecimal applyDiscountCap(BigDecimal discount, Voucher voucher, BigDecimal orderTotal, BigDecimal shippingFee) {
+        if (voucher.getDiscountType() == DiscountType.PERCENT && voucher.getMaxDiscountAmount() != null) {
             discount = discount.min(voucher.getMaxDiscountAmount());
         }
-        // Đảm bảo không giảm vượt quá tổng đơn hàng
+        if (voucher.getDiscountType() == DiscountType.FREE_SHIPPING) {
+
+            BigDecimal maxShippingDiscount = voucher.getMaxDiscountAmount() != null
+                    ? voucher.getMaxDiscountAmount()
+                    : shippingFee;
+
+            discount = shippingFee.min(maxShippingDiscount);
+        }
         return discount.min(orderTotal);
     }
 
@@ -731,7 +844,8 @@ public class VoucherService1 {
         int newCount = voucher.getUsageCount() + 1;
         voucher.setUsageCount(newCount);
         // Tự động vô hiệu hóa nếu hết lượt sử dụng
-        if (newCount >= voucher.getMaxUsage()) {
+        Integer maxUsage = voucher.getMaxUsage();
+        if (maxUsage != null && newCount >= maxUsage) {
             voucher.setIsActive(false);
         }
         voucherRepository.save(voucher);
@@ -744,14 +858,18 @@ public class VoucherService1 {
      * @param userId ID người dùng
      */
     private void updateUserVoucherUsage(Voucher voucher, Integer userId) {
-        VoucherUser userUsage = voucherUserRepository.findByVoucherIdAndUserId(voucher.getId(), userId);
+        // Nếu userId là null (khách chưa đăng nhập), gán mặc định là 0
+        int effectiveUserId = (userId == null) ? 0 : userId;
+
+        VoucherUser userUsage = voucherUserRepository.findByVoucherIdAndUserId(voucher.getId(), effectiveUserId);
         if (userUsage == null) {
-            userUsage = new VoucherUser(null, userId, voucher, 1);
+            userUsage = new VoucherUser(null, effectiveUserId, voucher, 1);
         } else {
             userUsage.setUsageCount(userUsage.getUsageCount() + 1);
         }
         voucherUserRepository.save(userUsage);
     }
+
 
     /**
      * Lưu lịch sử sử dụng voucher
@@ -764,8 +882,8 @@ public class VoucherService1 {
     private void saveRedemptionRecord(Voucher voucher, Order order, Integer userId, BigDecimal discountAmount) {
         VoucherRedemption redemption = new VoucherRedemption();
         redemption.setVoucher(voucher);
-        redemption.setOrderId(order.getOrderId());
         redemption.setUserId(userId);
+        redemption.setOrderId(order.getOrderId());
         redemption.setDiscountAmount(discountAmount);
         voucherRedemptionRepository.save(redemption);
     }
@@ -846,8 +964,18 @@ public class VoucherService1 {
      * @return true nếu còn lượt sử dụng
      */
     private boolean hasRemainingUsage(Voucher voucher) {
-        Boolean check =  voucher.getUsageCount() < voucher.getMaxUsage();
-        System.out.println("=====> S lượt còn lại đ không "+ check );
+        // Kiểm tra null cho maxUsage và usageCount
+        Integer maxUsage = voucher.getMaxUsage();
+        Integer usageCount = voucher.getUsageCount();
+        
+        // Nếu maxUsage là null, coi như không giới hạn
+        if (maxUsage == null) {
+            System.out.println("=====> MaxUsage null, không giới hạn lượt sử dụng");
+            return true;
+        }
+        
+        Boolean check = usageCount < maxUsage;
+        System.out.println("=====> Số lượt còn lại: " + check);
         return check;
     }
 
@@ -885,11 +1013,18 @@ public class VoucherService1 {
      * Kiểm tra voucher áp dụng cho sản phẩm trong giỏ hàng
      *
      * @param voucher Voucher cần kiểm tra
-     * @param productIds Danh sách ID sản phẩm
+     * @param variantIds Danh sách ID sản phẩm
      * @return true nếu voucher áp dụng cho ít nhất 1 sản phẩm trong giỏ
      */
-    private boolean matchesProductScope(Voucher voucher, List<Integer> productIds) {
-        System.out.println("===> Product cần check: " + productIds);
+    private boolean matchesProductScope(Voucher voucher, List<Integer> variantIds) {
+        System.out.println("===> Variant cần check: " + variantIds);
+
+        // Lấy danh sách ID sản phẩm từ ID biến thể
+        List<Integer> productIds = variantIds.stream()
+                .map(id -> productVariantRepository.findById(id)
+                        .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy biến thể sản phẩm ID = " + id)))
+                .map(variant -> variant.getProduct().getProductId())
+                .toList();
 
         // Lọc ra các scope áp dụng cho sản phẩm cụ thể
         List<Integer> scopedProductIds = voucher.getScopes().stream()
@@ -900,7 +1035,7 @@ public class VoucherService1 {
         // Nếu không có scope loại sản phẩm cụ thể thì coi như hợp lệ
         if (scopedProductIds.isEmpty()) return true;
 
-        // Kiểm tra tất cả productId trong giỏ hàng phải nằm trong scopedProductIds
+        // Kiểm tra tất cả sản phẩm trong giỏ hàng phải nằm trong scopedProductIds
         boolean allMatch = productIds.stream().allMatch(scopedProductIds::contains);
 
         System.out.println("Tất cả sản phẩm đều nằm trong danh sách giảm giá? " + allMatch);
@@ -912,10 +1047,10 @@ public class VoucherService1 {
      * Kiểm tra voucher áp dụng cho danh mục sản phẩm trong giỏ hàng
      *
      * @param voucher Voucher cần kiểm tra
-     * @param productIds Danh sách ID sản phẩm
+     * @param variantIds Danh sách ID biến thể sản phẩm
      * @return true nếu voucher áp dụng cho ít nhất 1 danh mục trong giỏ
      */
-    private boolean matchesCategoryScope(Voucher voucher, List<Integer> productIds) {
+    private boolean matchesCategoryScope(Voucher voucher, List<Integer> variantIds) {
         // Lấy danh sách ID danh mục được giảm giá theo scope
         Set<Integer> scopedCategoryIds = voucher.getScopes().stream()
                 .filter(s -> s.getScopeType() == ScopeType.PRODUCT_CATEGORY)
@@ -927,8 +1062,18 @@ public class VoucherService1 {
             return true;
         }
 
-        // Lấy danh sách categoryId của các sản phẩm trong giỏ
-        Set<Integer> cartCategoryIds = getCartCategoryIds(productIds);
+        // Lấy danh sách categoryId của các sản phẩm trong giỏ từ danh sách variantId
+        Set<Integer> cartCategoryIds = variantIds.stream()
+                .map(id -> productVariantRepository.findById(id)
+                        .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy biến thể sản phẩm ID = " + id)))
+                .map(variant -> {
+                    Category category = variant.getProduct().getCategory();
+                    if (category == null) {
+                        throw new IllegalStateException("Sản phẩm không có danh mục.");
+                    }
+                    return category.getId();
+                })
+                .collect(Collectors.toSet());
 
         // Kiểm tra tất cả categoryId của giỏ hàng đều phải nằm trong scope
         boolean allValid = cartCategoryIds.stream().allMatch(scopedCategoryIds::contains);
@@ -936,27 +1081,24 @@ public class VoucherService1 {
 
         return allValid;
     }
-
-
-
-
-    /**
-     * Lấy danh sách ID danh mục từ danh sách sản phẩm
-     *
-     * @param productIds Danh sách ID sản phẩm
-     * @return Tập hợp ID danh mục
-     */
-    private Set<Integer> getCartCategoryIds(List<Integer> productIds) {
-        return productIds.stream()
-                .map(productRepository::findById)
-                .filter(Optional::isPresent)
-                .map(Optional::get) // chính là Product
-                .filter(Objects::nonNull)
-                .map(Product::getCategory)
-                .filter(Objects::nonNull)
-                .map(Category::getId)
-                .collect(Collectors.toSet());
-    }
+//
+//    /**
+//     * Lấy danh sách ID danh mục từ danh sách sản phẩm
+//     *
+//     * @param productIds Danh sách ID sản phẩm
+//     * @return Tập hợp ID danh mục
+//     */
+//    private Set<Integer> getCartCategoryIds(List<Integer> productIds) {
+//        return productIds.stream()
+//                .map(productRepository::findById)
+//                .filter(Optional::isPresent)
+//                .map(Optional::get) // chính là Product
+//                .filter(Objects::nonNull)
+//                .map(Product::getCategory)
+//                .filter(Objects::nonNull)
+//                .map(Category::getId)
+//                .collect(Collectors.toSet());
+//    }
 
 
     /**
@@ -967,10 +1109,33 @@ public class VoucherService1 {
      * @return Chuỗi mô tả trạng thái
      */
     private String determineStatusMessage(Voucher voucher, boolean isEligible) {
-        if (!isEligible) return "Không đủ điều kiện";
-        if (!voucher.getIsActive()) return "Ngừng hoạt động";
-        if (voucher.getUsageCount() >= voucher.getMaxUsage()) return "Hết lượt sử dụng";
-        return "Đang hoạt động";
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startDate = voucher.getStartDate();
+        LocalDateTime endDate = voucher.getEndDate();
+        
+        // Kiểm tra trạng thái active trước tiên - nếu bị vô hiệu hóa thì thành "Đã kết thúc"
+        if (!voucher.getIsActive()) {
+            return "Đã kết thúc";
+        }
+        
+        // Kiểm tra thời gian hiệu lực
+        if (now.isBefore(startDate)) {
+            return "Chưa bắt đầu";
+        }
+        
+        if (now.isAfter(endDate)) {
+            return "Đã kết thúc";
+        }
+        
+        // Kiểm tra lượt sử dụng
+        Integer maxUsage = voucher.getMaxUsage();
+        Integer usageCount = voucher.getUsageCount();
+        
+        if (maxUsage != null && usageCount != null && usageCount >= maxUsage) {
+            return "Hết lượt sử dụng";
+        }
+        
+        return "Đang diễn ra";
     }
 
     /**
@@ -1000,6 +1165,24 @@ public class VoucherService1 {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public List<VoucherSummaryAllDTO> getAllVouchersDiscountType( DiscountType discountType) {
+        List<Voucher> listvoucher = voucherRepository.findAllByDiscountType(discountType);
+
+        return listvoucher.stream()
+                .map(this::buildVoucherSummaryAllDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<VoucherSummaryAllDTO> getAllVouchersScopeType( ScopeType scopeType) {
+        List<Voucher> listvoucher = voucherRepository.findAllByScopes(scopeType);
+
+        return listvoucher.stream()
+                .map(this::buildVoucherSummaryAllDTO)
+                .collect(Collectors.toList());
+    }
+
     /**
      * Xây dựng DTO tóm tắt đơn giản (cho trang quản trị)
      *
@@ -1012,6 +1195,7 @@ public class VoucherService1 {
         System.out.println(">>> Bắt đầu chuyển đổi Voucher sang DTO");
         System.out.println("Voucher ID: " + voucher.getId());
         System.out.println("Code: " + voucher.getCode());
+        System.out.println("Name: " + voucher.getName());
         System.out.println("Description: " + voucher.getDescription());
         System.out.println("Start Date: " + voucher.getStartDate());
         System.out.println("End Date: " + voucher.getEndDate());
@@ -1019,7 +1203,8 @@ public class VoucherService1 {
 
         dto.setId(voucher.getId());
         dto.setCode(voucher.getCode());
-        dto.setName(voucher.getDescription());
+        // Sử dụng name thực sự của voucher
+        dto.setName(voucher.getName() != null ? voucher.getName() : voucher.getDescription());
         dto.setStartDate(voucher.getStartDate());
         dto.setEndDate(voucher.getEndDate());
 
@@ -1032,7 +1217,7 @@ public class VoucherService1 {
 
         if (voucherScopes == null || voucherScopes.isEmpty()) {
             dto.setUsedStatus("Không giới hạn");
-            System.out.println("Scope rỗng -> UsedStatus: Không giới hạn");
+            System.out.println("Scope rỗng -> UsedStatus: Tất cả sản phẩm");
         } else {
             for (VoucherScope scope : voucherScopes) {
                 ScopeType type = scope.getScopeType();
@@ -1040,7 +1225,7 @@ public class VoucherService1 {
 
                 if (ScopeType.ALL_PRODUCTS.equals(type)) {
                     dto.setUsedStatus("Không giới hạn");
-                    System.out.println("Scope là ALL_PRODUCTS -> UsedStatus: Không giới hạn");
+                    System.out.println("Scope là ALL_PRODUCTS -> UsedStatus: Dành cho taats cả sản phẩm");
                     break;
                 } else if (ScopeType.SPECIFIC_USERS.equals(type)) {
                     dto.setUsedStatus("Voucher dành cho khách hàng đặc biệt");
@@ -1081,33 +1266,111 @@ public class VoucherService1 {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Lấy voucher theo trạng thái cụ thể
+     *
+     * @param status Trạng thái cụ thể ("Đang diễn ra", "Đã kết thúc", "Hết lượt sử dụng", "Chưa bắt đầu")
+     * @return Danh sách voucher theo trạng thái
+     */
+    public List<VoucherSummaryAllDTO> getAllVouchersByStatusFilter(String status) {
+        System.out.println("=== getAllVouchersByStatusFilter ===");
+        System.out.println("Requested status: '" + status + "'");
+        System.out.println("Status length: " + status.length());
+        System.out.println("Status bytes: " + Arrays.toString(status.getBytes()));
+        
+        // Trim và normalize status để tránh lỗi khoảng trắng
+        String normalizedStatus = status != null ? status.trim() : "";
+        System.out.println("Normalized status: '" + normalizedStatus + "'");
+        
+        List<Voucher> allVouchers = voucherRepository.findAll();
+        System.out.println("Total vouchers found: " + allVouchers.size());
+
+        List<Voucher> filteredVouchers = allVouchers.stream()
+                .filter(voucher -> {
+                    String voucherStatus = determineStatusMessage(voucher, false);
+                    String normalizedVoucherStatus = voucherStatus != null ? voucherStatus.trim() : "";
+                    
+                    System.out.println("Voucher " + voucher.getId() + " status: '" + voucherStatus + "'");
+                    System.out.println("Normalized voucher status: '" + normalizedVoucherStatus + "'");
+                    System.out.println("Comparing: '" + normalizedVoucherStatus + "' == '" + normalizedStatus + "'");
+                    System.out.println("Equals result: " + normalizedVoucherStatus.equals(normalizedStatus));
+                    
+                    return normalizedVoucherStatus.equals(normalizedStatus);
+                })
+                .collect(Collectors.toList());
+
+        System.out.println("Filtered vouchers count: " + filteredVouchers.size());
+        System.out.println("=== End getAllVouchersByStatusFilter ===");
+
+        return filteredVouchers.stream()
+                .map(this::buildVoucherSummaryAllDTO)
+                .collect(Collectors.toList());
+    }
+
 
     /**
      * Lấy voucher trong khoảng thời gian
      *
      * @param startDate Ngày bắt đầu
      * @param endDate Ngày kết thúc
-     * @return Danh sách voucher có ngày bắt đầu/kết thúc trong khoảng
+     * @return Danh sách voucher có thời gian hoạt động giao với khoảng thời gian được chọn
      */
-    //done
     public List<VoucherSummaryAllDTO> getAllVouchersByPeriod(LocalDateTime startDate, LocalDateTime endDate) {
-        List<Voucher> listVoucher = voucherRepository
-                .findByStartDateBetweenOrEndDateBetween(startDate, endDate, startDate, endDate);
+        System.out.println("=== getAllVouchersByPeriod ===");
+        System.out.println("Filter period: " + startDate + " to " + endDate);
+        
+        List<Voucher> allVouchers = voucherRepository.findAll();
+        System.out.println("Total vouchers found: " + allVouchers.size());
 
-        return listVoucher.stream()
+        List<Voucher> filteredVouchers = allVouchers.stream()
+                .filter(voucher -> {
+                    LocalDateTime voucherStart = voucher.getStartDate();
+                    LocalDateTime voucherEnd = voucher.getEndDate();
+                    
+                    // Kiểm tra xem voucher có thời gian hoạt động nằm hoàn toàn trong khoảng thời gian được chọn không
+                    // Voucher nằm hoàn toàn trong khoảng thời gian khi:
+                    // - voucherStart >= startDate AND voucherEnd <= endDate
+                    boolean withinRange = !voucherStart.isBefore(startDate) && !voucherEnd.isAfter(endDate);
+                    
+                    System.out.println("Voucher " + voucher.getId() + ": " + voucherStart + " to " + voucherEnd + " - withinRange: " + withinRange);
+                    System.out.println("  - voucherStart.isBefore(startDate): " + voucherStart.isBefore(startDate));
+                    System.out.println("  - voucherEnd.isAfter(endDate): " + voucherEnd.isAfter(endDate));
+                    System.out.println("  - !voucherStart.isBefore(startDate): " + !voucherStart.isBefore(startDate));
+                    System.out.println("  - !voucherEnd.isAfter(endDate): " + !voucherEnd.isAfter(endDate));
+                    
+                    return withinRange;
+                })
+                .collect(Collectors.toList());
+
+        System.out.println("Filtered vouchers count: " + filteredVouchers.size());
+        System.out.println("=== End getAllVouchersByPeriod ===");
+
+        return filteredVouchers.stream()
                 .map(this::buildVoucherSummaryAllDTO)
                 .collect(Collectors.toList());
     }
 
     private VoucherSummaryAllDTO buildVoucherSummaryAllDTO(Voucher voucher) {
+        System.out.println("Building DTO for voucher ID: " + voucher.getId());
+        
         VoucherSummaryAllDTO dto = new VoucherSummaryAllDTO();
         dto.setId(voucher.getId());
         dto.setCode(voucher.getCode());
-        dto.setName(voucher.getName());
+        // Sử dụng name thực sự của voucher
+        String voucherName = voucher.getName() != null ? voucher.getName() : voucher.getDescription();
+        System.out.println("Voucher " + voucher.getId() + " - Name: '" + voucher.getName() + "', Description: '" + voucher.getDescription() + "', Final Name: '" + voucherName + "'");
+        dto.setName(voucherName);
         dto.setStartDate(voucher.getStartDate());
         dto.setEndDate(voucher.getEndDate());
         dto.setDiscountValue(voucher.getDiscountValue());
         dto.setIsActive(voucher.getIsActive());
+        
+        // Thêm status vào DTO để frontend có thể hiển thị
+        String status = determineStatusMessage(voucher, false);
+        dto.setStatus(status);
+        
+        System.out.println("Built DTO: " + dto);
+        
         return dto;
     }
 }

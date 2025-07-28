@@ -476,10 +476,10 @@ export default function AdminDashboard() {
                     <CardFooter className="pt-2">
                         <div className="flex gap-2 w-full">
                             <Button as={Link} href="/admin/promotion_management/vouchers" variant="flat" size="sm" className="flex-1">
-                                KM chung
+                                Phiếu giảm giá
                             </Button>
                             <Button as={Link} href="/admin/promotion_products" color="primary" size="sm" className="flex-1">
-                                KM theo sản phẩm
+                                Đợt giảm giá
                             </Button>
                         </div>
                     </CardFooter>
