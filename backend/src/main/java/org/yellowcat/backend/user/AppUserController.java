@@ -35,6 +35,12 @@ public class AppUserController {
         return ResponseEntityBuilder.success(users);
     }
 
+    @GetMapping("/app-users")
+    public ResponseEntity<?> getAllAppUsers() {
+        List<AppUser> appUsers = appUserService.findAll();
+        return ResponseEntityBuilder.success(appUsers);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable Integer id) {
         Optional<AppUser> appUser = appUserService.findById(id);

@@ -91,9 +91,9 @@ public class CartItemOnlineService {
      * - Không vượt quá tồn kho
      */
     private void validateQuantityRules(ProductVariant variant, int requestedQuantity) {
-        if (variant.getQuantityInStock() < MIN_STOCK_FOR_ONLINE) {
-            throw new RuntimeException("Sản phẩm tạm hết hàng để ưu tiên bán tại cửa hàng. Vui lòng chọn sản phẩm khác.");
-        }
+//        if (variant.getQuantityInStock() < MIN_STOCK_FOR_ONLINE) {
+//            throw new RuntimeException("Sản phẩm tạm hết hàng để ưu tiên bán tại cửa hàng. Vui lòng chọn sản phẩm khác.");
+//        }
 
         if (requestedQuantity >= LARGE_QUANTITY_THRESHOLD) {
             throw new RuntimeException("Số lượng đặt hàng lớn. Vui lòng liên hệ tư vấn viên để được hỗ trợ.");

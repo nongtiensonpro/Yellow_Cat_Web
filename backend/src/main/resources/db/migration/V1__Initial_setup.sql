@@ -940,21 +940,21 @@ EXECUTE FUNCTION check_promotion_product_overlap();
 
 -- Bảng chính lưu trữ thông tin voucher
 CREATE TABLE voucher1 (
-                         id SERIAL PRIMARY KEY,  -- ID tự tăng
-                         code VARCHAR(50) UNIQUE ,  -- Mã voucher (duy nhất)
-                         name VARCHAR(100),
-                         description TEXT,  -- Mô tả voucher
-                         discount_type VARCHAR(10),
-                         discount_value DECIMAL(10,2),  -- Giá trị giảm (10% hoặc 100.000đ)
-                         start_date TIMESTAMP ,  -- Ngày bắt đầu hiệu lực
-                         end_date TIMESTAMP ,  -- Ngày hết hiệu lực
-                         max_usage INT ,  -- Số lần sử dụng tối đa
-                         usage_count INT DEFAULT 0 ,  -- Đếm số lần đã sử dụng
-                         min_order_value DECIMAL(10,2) DEFAULT 0,  -- Giá trị đơn hàng tối thiểu
-                         max_discount_amount DECIMAL(10,2),  -- Giảm tối đa (cho loại PERCENT)
-                         is_active BOOLEAN DEFAULT TRUE,  -- Trạng thái kích hoạt
-                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- Thời điểm tạo
-                         update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP  -- Thời điểm tạo
+                          id SERIAL PRIMARY KEY,  -- ID tự tăng
+                          code VARCHAR(50) UNIQUE ,  -- Mã voucher (duy nhất)
+                          name VARCHAR(100),
+                          description TEXT,  -- Mô tả voucher
+                          discount_type VARCHAR(20),
+                          discount_value DECIMAL(10,2),  -- Giá trị giảm (10% hoặc 100.000đ)
+                          start_date TIMESTAMP ,  -- Ngày bắt đầu hiệu lực
+                          end_date TIMESTAMP ,  -- Ngày hết hiệu lực
+                          max_usage INT ,  -- Số lần sử dụng tối đa
+                          usage_count INT DEFAULT 0 ,  -- Đếm số lần đã sử dụng
+                          min_order_value DECIMAL(10,2) DEFAULT 0,  -- Giá trị đơn hàng tối thiểu
+                          max_discount_amount DECIMAL(10,2),  -- Giảm tối đa (cho loại PERCENT)
+                          is_active BOOLEAN DEFAULT TRUE,  -- Trạng thái kích hoạt
+                          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- Thời điểm tạo
+                          update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP  -- Thời điểm tạo
 );
 
 -- Bảng xác định phạm vi áp dụng voucher
@@ -969,19 +969,19 @@ CREATE TABLE voucher_scope (
 CREATE TABLE voucher_user (
                               id SERIAL PRIMARY KEY,
                               voucher_id INT REFERENCES voucher1(id) ON DELETE CASCADE,
-                              user_id INT  REFERENCES app_users(app_user_id) ON DELETE CASCADE,
+                              user_id INT,
                               usage_count INT DEFAULT 0 ,  -- Đếm số lần user đã dùng
                               UNIQUE (voucher_id, user_id)  -- Mỗi user chỉ có 1 bản ghi per voucher
 );
 
 -- Bảng lưu lịch sử sử dụng voucher
 CREATE TABLE voucher_redemption (
-                              id SERIAL PRIMARY KEY,
-                              voucher_id INT  REFERENCES voucher1(id) ON DELETE CASCADE,
-                              order_id INT  REFERENCES orders(order_id) ON DELETE CASCADE,  -- Đơn hàng áp dụng
-                              user_id INT  REFERENCES app_users(app_user_id) ON DELETE CASCADE,  -- User sử dụng
-                              applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- Thời điểm sử dụng
-                              discount_amount DECIMAL(10,2)   -- Số tiền đã giảm
+                                    id SERIAL PRIMARY KEY,
+                                    voucher_id INT  REFERENCES voucher1(id) ON DELETE CASCADE,
+                                    order_id INT  REFERENCES orders(order_id) ON DELETE CASCADE,  -- Đơn hàng áp dụng
+                                    user_id INT,
+                                    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- Thời điểm sử dụng
+                                    discount_amount DECIMAL(10,2)   -- Số tiền đã giảm
 );
 
 
