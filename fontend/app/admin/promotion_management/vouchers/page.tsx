@@ -39,10 +39,10 @@ interface VoucherDetail {
 }
 
 // Component AddVoucherModal
-function AddVoucherModal({ isOpen, onClose, onSuccess }: { 
-    isOpen: boolean; 
-    onClose: () => void; 
-    onSuccess: () => void; 
+function AddVoucherModal({ isOpen, onClose, onSuccess }: {
+    isOpen: boolean;
+    onClose: () => void;
+    onSuccess: () => void;
 }) {
     const { data: session } = useSession();
     const [loading, setLoading] = useState(false);
@@ -54,7 +54,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
     const [categories, setCategories] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
     const [loadingTargets, setLoadingTargets] = useState(false);
-    
+
     const [form, setForm] = useState({
         promotionName: '',
         voucherCode: '',
@@ -101,7 +101,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
         if (!session?.accessToken) return;
         setLoadingTargets(true);
         const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-        
+
         try {
             // Fetch products
             const productsRes = await fetch(`${API_URL}/api/products?page=0&size=100`, {
@@ -180,11 +180,11 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
             // Lấy thời gian hiện tại theo múi giờ VN (UTC+7)
             const now = new Date();
             const vnTime = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // UTC+7
-            
+
             // So sánh theo ngày, không theo thời gian chính xác
             const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
             const vnDateOnly = new Date(vnTime.getFullYear(), vnTime.getMonth(), vnTime.getDate());
-            
+
             if (startDateOnly < vnDateOnly) {
                 newErrors.startDate = 'Ngày bắt đầu phải là ngày hôm nay hoặc trong tương lai.';
             }
@@ -228,16 +228,16 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!validateForm()) return;
 
         setLoading(true);
         const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-        
+
         try {
             // Tạo scopes array từ các đối tượng được chọn
             const scopes: Array<{scopeType: string, targetId: number}> = [];
-            
+
             // Thêm products được chọn
             selectedProducts.forEach(productId => {
                 scopes.push({
@@ -245,7 +245,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                     targetId: productId
                 });
             });
-            
+
             // Thêm categories được chọn
             selectedCategories.forEach(categoryId => {
                 scopes.push({
@@ -253,7 +253,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                     targetId: categoryId
                 });
             });
-            
+
             // Thêm users được chọn
             selectedUsers.forEach(userId => {
                 scopes.push({
@@ -261,7 +261,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                     targetId: parseInt(userId)
                 });
             });
-            
+
             // Nếu không chọn gì thì áp dụng cho tất cả sản phẩm
             if (scopes.length === 0) {
                 scopes.push({
@@ -274,8 +274,8 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                 name: form.promotionName,
                 code: (form.voucherCode || '').trim() || null, // Gửi null nếu không nhập
                 description: form.description,
-                discountType: form.discountType === 'percentage' ? 'PERCENT' : 
-                             form.discountType === 'fixed_amount' ? 'FIXED_AMOUNT' : 'FREE_SHIPPING',
+                discountType: form.discountType === 'percentage' ? 'PERCENT' :
+                    form.discountType === 'fixed_amount' ? 'FIXED_AMOUNT' : 'FREE_SHIPPING',
                 discountValue: form.discountType === 'free_shipping' ? 0 : form.discountValue,
                 startDate: form.startDate,
                 endDate: form.endDate,
@@ -324,20 +324,20 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
 
     const handleTargetToggle = (type: 'products' | 'categories' | 'users', id: number | string) => {
         if (type === 'products') {
-            setSelectedProducts(prev => 
-                prev.includes(id as number) 
+            setSelectedProducts(prev =>
+                prev.includes(id as number)
                     ? prev.filter(p => p !== id)
                     : [...prev, id as number]
             );
         } else if (type === 'categories') {
-            setSelectedCategories(prev => 
-                prev.includes(id as number) 
+            setSelectedCategories(prev =>
+                prev.includes(id as number)
                     ? prev.filter(c => c !== id)
                     : [...prev, id as number]
             );
         } else if (type === 'users') {
-            setSelectedUsers(prev => 
-                prev.includes(id as string) 
+            setSelectedUsers(prev =>
+                prev.includes(id as string)
                     ? prev.filter(u => u !== id)
                     : [...prev, id as string]
             );
@@ -364,7 +364,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                             <X size={24} />
                         </button>
                     </div>
-                    
+
                     <form onSubmit={handleSubmit} className="p-6 space-y-6">
                         {/* Thông tin cơ bản */}
                         <div className="bg-blue-50 p-4 rounded-lg">
@@ -431,9 +431,9 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                                 </div>
                                 <div>
                                     <Label text={
-                                        form.discountType === 'percentage' ? "Giá trị giảm (%)" : 
-                                        form.discountType === 'fixed_amount' ? "Giá trị giảm (₫)" : 
-                                        "Giá trị giảm (%)"
+                                        form.discountType === 'percentage' ? "Giá trị giảm (%)" :
+                                            form.discountType === 'fixed_amount' ? "Giá trị giảm (₫)" :
+                                                "Giá trị giảm (%)"
                                     } required={form.discountType !== 'free_shipping'} />
                                     <input
                                         name="discountValue"
@@ -782,7 +782,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
 
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
-    
+
     // Target selection states
     const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'users'>('products');
     const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
@@ -797,7 +797,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
     useEffect(() => {
         if (voucher && isOpen) {
             console.log('Filling form with voucher data:', voucher);
-            
+
             // Map discount type from backend to frontend format
             let mappedDiscountType = 'percentage';
             if (voucher.discountType) {
@@ -815,7 +815,8 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                         mappedDiscountType = 'percentage';
                 }
             }
-            
+
+            // Cập nhật form
             setForm({
                 promotionName: voucher.name || '',
                 voucherCode: voucher.code || '',
@@ -829,30 +830,77 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                 endDate: voucher.endDate ? voucher.endDate.slice(0, 16) : '',
                 isStackable: false,
             });
-            
-            console.log('Form filled with:', {
-                promotionName: voucher.name || '',
-                voucherCode: voucher.code || '',
-                description: voucher.description || '',
-                discountType: mappedDiscountType,
-                discountValue: voucher.discountValue?.toString() || '',
-                maximumDiscountValue: voucher.maxDiscountAmount?.toString() || '',
-                minimumOrderValue: voucher.minOrderValue?.toString() || '',
-                usageLimitTotal: voucher.maxUsage?.toString() || '',
-                startDate: voucher.startDate ? voucher.startDate.slice(0, 16) : '',
-                endDate: voucher.endDate ? voucher.endDate.slice(0, 16) : '',
-            });
-            
-            // Load existing scopes and map them to IDs
+
             console.log('Voucher scopes:', voucher.scopes);
-            
-            // Reset scopes selection first
+
+            // Reset hoàn toàn scope selection
             setSelectedProducts([]);
             setSelectedCategories([]);
             setSelectedUsers([]);
-            
-            // Fetch target data to populate the selection lists
-            fetchTargetData();
+
+            // Tạo bản sao của scope để mapping sau khi fetch dữ liệu
+            const voucherScopes = voucher.scopes ? [...voucher.scopes] : [];
+
+            // Fetch target data và mapping scope sau khi có dữ liệu
+            const fetchAndMapScopes = async () => {
+                try {
+                    await fetchTargetData();
+
+                    // Chờ cho state products/categories/users được cập nhật
+                    setTimeout(() => {
+                        // Map scopes sử dụng dữ liệu mới nhất
+                        const tempProducts: number[] = [];
+                        const tempCategories: number[] = [];
+                        const tempUsers: string[] = [];
+
+                        voucherScopes.forEach(scope => {
+                            if (scope.scopeType === 'SPECIFIC_PRODUCTS') {
+                                scope.targetNames.forEach(productName => {
+                                    const product = products.find(p =>
+                                        (p.displayName === productName) ||
+                                        (p.name === productName) ||
+                                        (p.productName === productName)
+                                    );
+                                    if (product) {
+                                        tempProducts.push(product.productId);
+                                    }
+                                });
+                            }
+                            else if (scope.scopeType === 'PRODUCT_CATEGORY') {
+                                scope.targetNames.forEach(categoryName => {
+                                    const category = categories.find(c => c.name === categoryName);
+                                    if (category) {
+                                        tempCategories.push(category.id);
+                                    }
+                                });
+                            }
+                            else if (scope.scopeType === 'SPECIFIC_USERS') {
+                                scope.targetNames.forEach(userEmail => {
+                                    const user = users.find(u => u.email === userEmail);
+                                    if (user) {
+                                        tempUsers.push(user.appUserId.toString());
+                                    }
+                                });
+                            }
+                        });
+
+                        // Cập nhật state scope
+                        setSelectedProducts(tempProducts);
+                        setSelectedCategories(tempCategories);
+                        setSelectedUsers(tempUsers);
+
+                        console.log('Mapped scopes:', {
+                            products: tempProducts,
+                            categories: tempCategories,
+                            users: tempUsers
+                        });
+                    }, 100);
+                } catch (error) {
+                    console.error('Error fetching or mapping scopes:', error);
+                }
+            };
+
+            fetchAndMapScopes();
         }
     }, [voucher, isOpen]);
 
@@ -865,7 +913,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                 users: users.length,
                 scopes: voucher.scopes
             });
-            
+
             if (voucher.scopes && voucher.scopes.length > 0) {
                 voucher.scopes.forEach(scope => {
                     if (scope.scopeType === 'SPECIFIC_PRODUCTS') {
@@ -873,23 +921,23 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                         scope.targetNames.forEach(productName => {
                             console.log('Looking for product:', productName);
                             console.log('Available products:', products.map(p => ({ productId: p.productId, name: p.name })));
-                            
+
                             // Try exact match first
                             let product = products.find(p => p.displayName && p.displayName === productName);
                             console.log('Exact match result:', product ? 'found' : 'not found');
-                            
+
                             // If not found, try partial match
                             if (!product) {
                                 product = products.find(p => p.displayName && (p.displayName.includes(productName) || productName.includes(p.displayName)));
                                 console.log('Partial match result:', product ? 'found' : 'not found');
                             }
-                            
+
                             // If still not found, try case-insensitive match
                             if (!product) {
                                 product = products.find(p => p.displayName && p.displayName.toLowerCase() === productName.toLowerCase());
                                 console.log('Case-insensitive match result:', product ? 'found' : 'not found');
                             }
-                            
+
                             // If still not found, try fuzzy match (remove extra spaces, punctuation)
                             if (!product) {
                                 const cleanProductName = productName.replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
@@ -900,14 +948,14 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                 });
                                 console.log('Fuzzy match result:', product ? 'found' : 'not found');
                             }
-                            
+
                             if (product) {
                                 console.log('Mapping product:', productName, 'to ID:', product.productId);
-                                console.log('Product details:', { 
-                                    productId: product.productId, 
-                                    name: product.name, 
+                                console.log('Product details:', {
+                                    productId: product.productId,
+                                    name: product.name,
                                     displayName: product.displayName,
-                                    productName: product.productName 
+                                    productName: product.productName
                                 });
                                 setSelectedProducts(prev => {
                                     const newSelection = [...prev, product.productId];
@@ -923,17 +971,17 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                         scope.targetNames.forEach(categoryName => {
                             console.log('Looking for category:', categoryName);
                             console.log('Available categories:', categories.map(c => ({ id: c.id, name: c.name })));
-                            
+
                             // Try exact match first
                             let category = categories.find(c => c.name && c.name === categoryName);
                             console.log('Exact match result:', category ? 'found' : 'not found');
-                            
+
                             // If not found, try case-insensitive match
                             if (!category) {
                                 category = categories.find(c => c.name && c.name.toLowerCase() === categoryName.toLowerCase());
                                 console.log('Case-insensitive match result:', category ? 'found' : 'not found');
                             }
-                            
+
                             // If still not found, try fuzzy match
                             if (!category) {
                                 const cleanCategoryName = categoryName.replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
@@ -944,7 +992,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                 });
                                 console.log('Fuzzy match result:', category ? 'found' : 'not found');
                             }
-                            
+
                             if (category) {
                                 console.log('Mapping category:', categoryName, 'to ID:', category.id);
                                 setSelectedCategories(prev => {
@@ -961,23 +1009,23 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                         scope.targetNames.forEach(userEmail => {
                             console.log('Looking for user:', userEmail);
                             console.log('Available users:', users.map(u => ({ appUserId: u.appUserId, email: u.email })));
-                            
+
                             // Try exact match first
                             let user = users.find(u => u.email && u.email === userEmail);
                             console.log('Exact match result:', user ? 'found' : 'not found');
-                            
+
                             // If not found, try case-insensitive match
                             if (!user) {
                                 user = users.find(u => u.email && u.email.toLowerCase() === userEmail.toLowerCase());
                                 console.log('Case-insensitive match result:', user ? 'found' : 'not found');
                             }
-                            
+
                             // If still not found, try partial match
                             if (!user) {
                                 user = users.find(u => u.email && (u.email.includes(userEmail) || userEmail.includes(u.email)));
                                 console.log('Partial match result:', user ? 'found' : 'not found');
                             }
-                            
+
                             if (user) {
                                 console.log('Mapping user:', userEmail, 'to ID:', user.appUserId);
                                 setSelectedUsers(prev => {
@@ -1005,9 +1053,9 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
 
     // Log render state
     useEffect(() => {
-        console.log('Render state:', { 
-            loadingTargets, 
-            productsLength: products.length, 
+        console.log('Render state:', {
+            loadingTargets,
+            productsLength: products.length,
             activeTab,
             selectedProducts: selectedProducts.length,
             selectedCategories: selectedCategories.length,
@@ -1020,7 +1068,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
         if (!session?.accessToken) return;
         console.log('Fetching target data for edit modal...');
         setLoadingTargets(true);
-        
+
         try {
             // Fetch products
             console.log('Fetching products...');
@@ -1030,11 +1078,11 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
             if (productsRes.ok) {
                 const productsData = await productsRes.json();
                 console.log('Products API response:', productsData);
-                
+
                 // Check different possible data structures
                 const productsArray = productsData.data?.content || productsData.content || productsData.data || productsData;
                 console.log('Raw products array:', productsArray);
-                
+
                 // Log detailed product structure
                 console.log('Raw product objects:', productsArray.slice(0, 3).map((p: any) => ({
                     keys: Object.keys(p),
@@ -1044,21 +1092,21 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                     productId: p.productId,
                     id: p.id
                 })));
-                
+
                 // Filter out products with undefined names and validate structure
                 const validProducts = productsArray.filter((product: any) => {
                     if (!product || typeof product !== 'object') {
                         console.log('Invalid product object:', product);
                         return false;
                     }
-                    
+
                     // Check for different possible name fields
                     const hasName = product.name || product.productName || product.title || product.productTitle;
                     if (!hasName) {
                         console.log('Product missing name:', product);
                         return false;
                     }
-                    
+
                     // Normalize the name field
                     if (product.name) {
                         product.displayName = product.name;
@@ -1069,10 +1117,10 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                     } else if (product.productTitle) {
                         product.displayName = product.productTitle;
                     }
-                    
+
                     return true;
                 });
-                
+
                 console.log('Valid products:', validProducts.length, 'items');
                 console.log('Valid products structure:', validProducts.slice(0, 2));
                 setProducts(validProducts);
@@ -1121,20 +1169,20 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
 
     const handleTargetToggle = (type: 'products' | 'categories' | 'users', id: number | string) => {
         if (type === 'products') {
-            setSelectedProducts(prev => 
-                prev.includes(id as number) 
+            setSelectedProducts(prev =>
+                prev.includes(id as number)
                     ? prev.filter(p => p !== id)
                     : [...prev, id as number]
             );
         } else if (type === 'categories') {
-            setSelectedCategories(prev => 
-                prev.includes(id as number) 
+            setSelectedCategories(prev =>
+                prev.includes(id as number)
                     ? prev.filter(c => c !== id)
                     : [...prev, id as number]
             );
         } else if (type === 'users') {
-            setSelectedUsers(prev => 
-                prev.includes(id as string) 
+            setSelectedUsers(prev =>
+                prev.includes(id as string)
                     ? prev.filter(u => u !== id)
                     : [...prev, id as string]
             );
@@ -1154,7 +1202,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
 
         if (!form.promotionName.trim()) newErrors.promotionName = 'Tên khuyến mãi là bắt buộc';
         // Mã voucher không bắt buộc, nếu không nhập sẽ tự động generate
-        
+
         // Validation cho ngày bắt đầu
         if (!form.startDate) {
             newErrors.startDate = 'Ngày bắt đầu là bắt buộc.';
@@ -1163,11 +1211,11 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
             // Lấy thời gian hiện tại theo múi giờ VN (UTC+7)
             const now = new Date();
             const vnTime = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // UTC+7
-            
+
             // So sánh theo ngày, không theo thời gian chính xác
             const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
             const vnDateOnly = new Date(vnTime.getFullYear(), vnTime.getMonth(), vnTime.getDate());
-            
+
             if (startDateOnly < vnDateOnly) {
                 newErrors.startDate = 'Ngày bắt đầu phải là ngày hôm nay hoặc trong tương lai.';
             }
@@ -1183,7 +1231,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                 newErrors.endDate = 'Ngày kết thúc phải lớn hơn ngày bắt đầu.';
             }
         }
-        
+
         // Validation cho giá trị giảm
         if (form.discountType === 'percentage') {
             const discountValue = typeof form.discountValue === 'string' ? parseFloat(form.discountValue) : form.discountValue;
@@ -1195,7 +1243,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
         } else if (form.discountType !== 'free_shipping' && !form.discountValue) {
             newErrors.discountValue = 'Giá trị giảm là bắt buộc';
         }
-        
+
         if (!form.minimumOrderValue) newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu là bắt buộc';
 
         if ((form.discountType === 'percentage' || form.discountType === 'free_shipping') && (!form.maximumDiscountValue || (typeof form.maximumDiscountValue === 'string' ? parseFloat(form.maximumDiscountValue) : form.maximumDiscountValue) <= 0)) {
@@ -1216,7 +1264,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
         try {
             // Tạo scopes array từ các đối tượng được chọn
             const scopes: Array<{scopeType: string, targetId: number}> = [];
-            
+
             // Thêm products được chọn
             selectedProducts.forEach(productId => {
                 scopes.push({
@@ -1224,7 +1272,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                     targetId: productId
                 });
             });
-            
+
             // Thêm categories được chọn
             selectedCategories.forEach(categoryId => {
                 scopes.push({
@@ -1232,7 +1280,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                     targetId: categoryId
                 });
             });
-            
+
             // Thêm users được chọn
             selectedUsers.forEach(userId => {
                 scopes.push({
@@ -1240,7 +1288,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                     targetId: parseInt(userId)
                 });
             });
-            
+
             // Nếu không chọn gì thì áp dụng cho tất cả sản phẩm
             if (scopes.length === 0) {
                 scopes.push({
@@ -1254,8 +1302,8 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                 name: form.promotionName,
                 code: (form.voucherCode || '').trim() || null, // Gửi null nếu không nhập
                 description: form.description,
-                discountType: form.discountType === 'percentage' ? 'PERCENT' : 
-                             form.discountType === 'fixed_amount' ? 'FIXED_AMOUNT' : 'FREE_SHIPPING',
+                discountType: form.discountType === 'percentage' ? 'PERCENT' :
+                    form.discountType === 'fixed_amount' ? 'FIXED_AMOUNT' : 'FREE_SHIPPING',
                 discountValue: form.discountType === 'free_shipping' ? 0 : parseFloat(form.discountValue),
                 maxDiscountAmount: form.maximumDiscountValue ? parseFloat(form.maximumDiscountValue) : null,
                 minOrderValue: parseFloat(form.minimumOrderValue),
@@ -1312,7 +1360,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                         <X size={24} />
                     </button>
                 </div>
-                
+
                 <form onSubmit={handleSubmit} className="p-6">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Main Form - 2/3 width */}
@@ -1382,9 +1430,9 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                     </div>
                                     <div>
                                         <Label text={
-                                            form.discountType === 'percentage' ? "Giá trị giảm (%)" : 
-                                            form.discountType === 'fixed_amount' ? "Giá trị giảm (₫)" : 
-                                            "Giá trị giảm (%)"
+                                            form.discountType === 'percentage' ? "Giá trị giảm (%)" :
+                                                form.discountType === 'fixed_amount' ? "Giá trị giảm (₫)" :
+                                                    "Giá trị giảm (%)"
                                         } required={form.discountType !== 'free_shipping'} />
                                         <input
                                             name="discountValue"
@@ -1500,9 +1548,9 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                                 <div key={index} className="text-xs">
                                                     <span className="font-medium text-yellow-700">
                                                         {scope.scopeType === 'PRODUCT_CATEGORY' ? 'Danh mục:' :
-                                                         scope.scopeType === 'SPECIFIC_PRODUCTS' ? 'Sản phẩm:' :
-                                                         scope.scopeType === 'SPECIFIC_USERS' ? 'Người dùng:' :
-                                                         scope.scopeType}
+                                                            scope.scopeType === 'SPECIFIC_PRODUCTS' ? 'Sản phẩm:' :
+                                                                scope.scopeType === 'SPECIFIC_USERS' ? 'Người dùng:' :
+                                                                    scope.scopeType}
                                                     </span>
                                                     <div className="text-yellow-600 ml-2">
                                                         {scope.targetNames.join(', ')}
@@ -1749,20 +1797,20 @@ export default function VouchersPage() {
 
     const { data: session, status } = useSession();
 
-        const fetchVouchers = async () => {
+    const fetchVouchers = async () => {
         if (status !== 'authenticated') return;
             setLoading(true);
             const token = (session as { accessToken: string }).accessToken;
-        
+
         try {
             let url = `${API_URL}/api/admin/vouchers`;
-            
+
             // Xử lý bộ lọc
             const queryParams = new URLSearchParams();
-            
+
             // Xử lý các bộ lọc
             let hasFilter = false;
-            
+
             // Bộ lọc theo thời gian
             if (filters.startDate && filters.endDate) {
                 url = `${API_URL}/api/admin/vouchers/period`;
@@ -1775,7 +1823,7 @@ export default function VouchersPage() {
                 console.log('Query params:', queryParams.toString());
                 hasFilter = true;
             }
-            
+
             // Bộ lọc theo loại giảm giá (chỉ khi không có filter ngày)
             if (!hasFilter && filters.discountType) {
                 url = `${API_URL}/api/admin/vouchers/discount-type`;
@@ -1783,7 +1831,7 @@ export default function VouchersPage() {
                 console.log('Discount type filter applied:', filters.discountType);
                 hasFilter = true;
             }
-            
+
             // Bộ lọc theo phạm vi áp dụng (chỉ khi không có filter ngày)
             if (!hasFilter && filters.scopeType) {
                 url = `${API_URL}/api/admin/vouchers/scope-type`;
@@ -1791,7 +1839,7 @@ export default function VouchersPage() {
                 console.log('Scope filter applied:', filters.scopeType);
                 hasFilter = true;
             }
-            
+
             // Bộ lọc theo trạng thái (chỉ khi không có filter ngày)
             if (!hasFilter && filters.status) {
                 url = `${API_URL}/api/admin/vouchers/status-filter`;
@@ -1799,48 +1847,48 @@ export default function VouchersPage() {
                 console.log('Status filter applied:', filters.status);
                 hasFilter = true;
             }
-            
+
             // Thêm query params nếu có
             if (queryParams.toString()) {
                 url += '?' + queryParams.toString();
             }
-            
+
             console.log('Fetching vouchers with URL:', url);
-            
+
             const res = await fetch(url, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-            
+
             if (res.ok) {
                 const data = await res.json();
                 console.log('Vouchers API response:', data);
-                
+
                 // Xử lý dữ liệu trả về
                 let voucherList = Array.isArray(data) ? data : [];
                 console.log('Raw voucher data:', voucherList);
-                
+
                 // Bộ lọc theo keyword (xử lý ở frontend)
                 if (filters.keyword) {
                     const keyword = filters.keyword.toLowerCase();
-                    voucherList = voucherList.filter(voucher => 
+                    voucherList = voucherList.filter(voucher =>
                         voucher.code?.toLowerCase().includes(keyword) ||
                         voucher.name?.toLowerCase().includes(keyword)
                     );
                 }
-                
+
                 setVouchers(voucherList);
                 // Tính toán phân trang
                 const total = voucherList.length;
                 setTotalPages(Math.ceil(total / itemsPerPage));
             } else {
                 console.error('Failed to fetch vouchers:', res.status);
-                
+
                 if (res.status === 401) {
                     alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
                     signOut({ callbackUrl: '/login' });
                     return;
                 }
-                
+
                 setVouchers([]);
             }
             } catch (e) {
@@ -1859,14 +1907,14 @@ export default function VouchersPage() {
         try {
             console.log('Fetching voucher detail for ID:', voucherId);
             const res = await fetch(`${API_URL}/api/admin/vouchers/detail_admin/${voucherId}`, {
-                headers: { 
+                headers: {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
             });
-            
+
             console.log('Voucher detail response status:', res.status);
-            
+
             if (res.ok) {
                 const data = await res.json();
                 console.log('Voucher detail data:', data);
@@ -1874,7 +1922,7 @@ export default function VouchersPage() {
             } else {
                 const errorText = await res.text();
                 console.error('Failed to fetch voucher detail:', res.status, errorText);
-                
+
                 if (res.status === 401) {
                     alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
                     signOut({ callbackUrl: '/login' });
@@ -1928,20 +1976,20 @@ export default function VouchersPage() {
                     return { status: voucher.status, color: 'bg-blue-500' };
             }
         }
-        
+
         // Fallback: tính toán dựa trên thời gian (chỉ khi backend không trả về status)
         const now = new Date();
         const startDate = new Date(voucher.startDate);
         const endDate = new Date(voucher.endDate);
-        
+
         if (now < startDate) {
             return { status: 'Chưa bắt đầu', color: 'bg-gray-400' };
         }
-        
+
         if (now > endDate) {
             return { status: 'Đã kết thúc', color: 'bg-red-500' };
         }
-        
+
         return { status: 'Đang diễn ra', color: 'bg-green-500' };
     };
 
@@ -1952,7 +2000,7 @@ export default function VouchersPage() {
 
         // Chỉ lọc theo keyword ở frontend, các filter khác đã được xử lý ở backend
         if (filters.keyword) {
-            filtered = filtered.filter(v => 
+            filtered = filtered.filter(v =>
                 v.code.toLowerCase().includes(filters.keyword.toLowerCase()) ||
                 v.name.toLowerCase().includes(filters.keyword.toLowerCase())
             );
@@ -2013,21 +2061,21 @@ export default function VouchersPage() {
         try {
             const res = await fetch(`${API_URL}/api/admin/vouchers/deactivate/${id}`, {
                 method: 'PUT',
-                headers: { 
-                    Authorization: `Bearer ${token}`, 
-                    'Content-Type': 'application/json' 
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json'
                 },
             });
-            
+
             if (!res.ok) {
                 const errorData = await res.json();
-                
+
                 if (res.status === 401) {
                     alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
                     signOut({ callbackUrl: '/login' });
                     return;
                 }
-                
+
                 throw new Error(errorData.message || 'Vô hiệu hóa không thành công');
             }
             alert('Vô hiệu hóa voucher thành công!');
@@ -2041,15 +2089,15 @@ export default function VouchersPage() {
     const handleEdit = async (voucherId: number) => {
         if (status !== 'authenticated') return;
         const token = (session as { accessToken: string }).accessToken;
-        
+
         try {
             console.log('Fetching voucher detail for edit, ID:', voucherId);
             const res = await fetch(`${API_URL}/api/admin/vouchers/detail_admin/${voucherId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            
+
             console.log('Response status:', res.status);
-            
+
             if (res.ok) {
                 const data = await res.json();
                 console.log('Voucher detail data:', data);
@@ -2069,26 +2117,26 @@ export default function VouchersPage() {
         const now = new Date();
         const startDate = new Date(voucher.startDate);
         const endDate = new Date(voucher.endDate);
-        
+
         // Kiểm tra thời gian hiệu lực trước
         if (now < startDate) {
             return { status: 'Chưa bắt đầu', color: 'bg-gray-400' };
         }
-        
+
         if (now > endDate) {
             return { status: 'Đã kết thúc', color: 'bg-red-500' };
         }
-        
+
         // Kiểm tra lượt sử dụng
         if (voucher.usageCount >= voucher.maxUsage) {
             return { status: 'Hết lượt sử dụng', color: 'bg-orange-500' };
         }
-        
+
         // Kiểm tra trạng thái active - nếu bị vô hiệu hóa thì thành "Đã kết thúc"
         if (!voucher.isActive) {
             return { status: 'Đã kết thúc', color: 'bg-red-500' };
         }
-        
+
         // Đang diễn ra
         return { status: 'Đang diễn ra', color: 'bg-green-500' };
     };
@@ -2288,14 +2336,14 @@ export default function VouchersPage() {
                                     {(currentPage - 1) * itemsPerPage + idx + 1}
                                 </td>
                                 <td className="px-4 py-2 border font-mono text-blue-600">
-                                            {v.code}
+                                        {v.code}
                                 </td>
-                                        <td className="px-4 py-2 border">{v.name}</td>
+                                    <td className="px-4 py-2 border">{v.name}</td>
                                 <td className="px-4 py-2 border text-center">
-                                            {formatDateTime(v.startDate)}
+                                        {formatDateTime(v.startDate)}
                                 </td>
                                 <td className="px-4 py-2 border text-center">
-                                            {formatDateTime(v.endDate)}
+                                        {formatDateTime(v.endDate)}
                                 </td>
                                 <td className="px-4 py-2 border text-center">
                                         {(() => {
@@ -2308,53 +2356,53 @@ export default function VouchersPage() {
                                         })()}
                                 </td>
                                 <td className="px-4 py-2 border text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <button
-                                                    onClick={() => {
-                                                        if (selectedVoucherDetail && selectedVoucherDetail.id === v.id) {
-                                                            setSelectedVoucherDetail(null);
-                                                        } else {
-                                                            fetchVoucherDetail(v.id);
-                                                        }
-                                                    }}
-                                                    disabled={loadingDetail}
-                                                    className={`px-3 py-1 rounded text-xs transition-colors disabled:opacity-50 ${
-                                                        selectedVoucherDetail && selectedVoucherDetail.id === v.id
-                                                            ? 'bg-red-500 hover:bg-red-600 text-white'
-                                                            : 'bg-blue-500 hover:bg-blue-600 text-white'
-                                                    }`}
-                                                >
-                                                    {loadingDetail ? 'Đang tải...' : 
-                                                     selectedVoucherDetail && selectedVoucherDetail.id === v.id ? 'Đóng' : 'Xem chi tiết'}
-                                                </button>
+                                        <div className="flex items-center justify-center gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    if (selectedVoucherDetail && selectedVoucherDetail.id === v.id) {
+                                                        setSelectedVoucherDetail(null);
+                                                    } else {
+                                                        fetchVoucherDetail(v.id);
+                                                    }
+                                                }}
+                                                disabled={loadingDetail}
+                                                className={`px-3 py-1 rounded text-xs transition-colors disabled:opacity-50 ${
+                                                    selectedVoucherDetail && selectedVoucherDetail.id === v.id
+                                                        ? 'bg-red-500 hover:bg-red-600 text-white'
+                                                        : 'bg-blue-500 hover:bg-blue-600 text-white'
+                                                }`}
+                                            >
+                                                {loadingDetail ? 'Đang tải...' :
+                                                    selectedVoucherDetail && selectedVoucherDetail.id === v.id ? 'Đóng' : 'Xem chi tiết'}
+                                            </button>
                                         <button
-                                                    onClick={() => handleEdit(v.id)}
-                                                    disabled={getVoucherStatus(v).status === 'Đang diễn ra' || getVoucherStatus(v).status === 'Đã kết thúc'}
-                                                    className={`px-3 py-1 rounded text-xs transition-colors ${
-                                                        getVoucherStatus(v).status === 'Đang diễn ra' || getVoucherStatus(v).status === 'Đã kết thúc'
-                                                            ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                                                            : 'bg-green-500 hover:bg-green-600 text-white'
-                                                    }`}
-                                        >
-                                                    Sửa
-                                        </button>
-                                        <button
-                                                    onClick={() => handleDeactivate(v.id)}
-                                                    disabled={getVoucherStatus(v).status === 'Đã kết thúc' || getVoucherStatus(v).status === 'Hết lượt sử dụng'}
-                                                    className={`px-3 py-1 rounded text-xs transition-colors ${
-                                                        getVoucherStatus(v).status === 'Đã kết thúc' || getVoucherStatus(v).status === 'Hết lượt sử dụng'
-                                                            ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                                                            : 'bg-red-500 hover:bg-red-600 text-white'
-                                                    }`}
-                                        >
-                                                    Vô hiệu hóa
+                                                onClick={() => handleEdit(v.id)}
+                                                disabled={getVoucherStatus(v).status === 'Đang diễn ra' || getVoucherStatus(v).status === 'Đã kết thúc'}
+                                                className={`px-3 py-1 rounded text-xs transition-colors ${
+                                                    getVoucherStatus(v).status === 'Đang diễn ra' || getVoucherStatus(v).status === 'Đã kết thúc'
+                                                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                                                        : 'bg-green-500 hover:bg-green-600 text-white'
+                                                }`}
+                                            >
+                                                Sửa
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeactivate(v.id)}
+                                                disabled={getVoucherStatus(v).status === 'Đã kết thúc' || getVoucherStatus(v).status === 'Hết lượt sử dụng'}
+                                                className={`px-3 py-1 rounded text-xs transition-colors ${
+                                                    getVoucherStatus(v).status === 'Đã kết thúc' || getVoucherStatus(v).status === 'Hết lượt sử dụng'
+                                                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                                                        : 'bg-red-500 hover:bg-red-600 text-white'
+                                                }`}
+                                            >
+                                                Vô hiệu hóa
                                         </button>
                                     </div>
                                 </td>
-                                    </tr>
-                                    {/* Voucher Detail Row */}
-                                    {selectedVoucherDetail && selectedVoucherDetail.id === v.id && (
-                                        <tr key={`detail-${v.id}`} className="bg-gray-50">
+                                </tr>
+                                {/* Voucher Detail Row */}
+                                {selectedVoucherDetail && selectedVoucherDetail.id === v.id && (
+                                    <tr key={`detail-${v.id}`} className="bg-gray-50">
                                         <td colSpan={7} className="px-4 py-4">
                                             <div className="bg-white rounded border shadow-sm p-4">
                                                 <div className="flex items-center justify-between mb-4">
@@ -2368,7 +2416,7 @@ export default function VouchersPage() {
                                                         ✕
                                                     </button>
                                                 </div>
-                                                
+
                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                                     {/* Thông tin cơ bản */}
                                                     <div className="space-y-3">
@@ -2466,9 +2514,9 @@ export default function VouchersPage() {
                                                                     <div key={index} className="bg-gray-50 p-3 rounded border">
                                                                         <div className="font-medium text-sm text-gray-700 mb-2">
                                                                             {scope.scopeType === 'PRODUCT_CATEGORY' ? 'Danh mục sản phẩm:' :
-                                                                             scope.scopeType === 'SPECIFIC_PRODUCTS' ? 'Sản phẩm cụ thể:' :
-                                                                             scope.scopeType === 'SPECIFIC_USERS' ? 'Người dùng cụ thể:' :
-                                                                             scope.scopeType}
+                                                                                scope.scopeType === 'SPECIFIC_PRODUCTS' ? 'Sản phẩm cụ thể:' :
+                                                                                    scope.scopeType === 'SPECIFIC_USERS' ? 'Người dùng cụ thể:' :
+                                                                                        scope.scopeType}
                                                                         </div>
                                                                         <div className="space-y-1">
                                                                             {scope.targetNames.map((name, nameIndex) => (
@@ -2488,7 +2536,7 @@ export default function VouchersPage() {
                                             </div>
                                         </td>
                             </tr>
-                                    )}
+                                )}
                             </>
                         ))
                     )}
@@ -2501,7 +2549,7 @@ export default function VouchersPage() {
                 const startIndex = (currentPage - 1) * itemsPerPage + 1;
                 const endIndex = Math.min(currentPage * itemsPerPage, vouchers.length);
                 const totalItems = vouchers.length;
-                
+
                 return !loading ? (
                     <div className="bg-white rounded border p-4 shadow-sm">
                         {/* Thông tin phân trang */}
@@ -2513,7 +2561,7 @@ export default function VouchersPage() {
                                 Trang {currentPage} / {totalPages}
                             </div>
                         </div>
-                        
+
                         {/* Nút phân trang */}
                         {totalPages > 1 && (
                             <div className="flex justify-center items-center gap-2">
@@ -2531,29 +2579,29 @@ export default function VouchersPage() {
                         >
                             Trước
                         </button>
-                                
+
                                 {/* Hiển thị số trang */}
                                 {(() => {
                                     const pages = [];
                                     const maxVisiblePages = 5;
                                     let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
                                     let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-                                    
+
                                     if (endPage - startPage + 1 < maxVisiblePages) {
                                         startPage = Math.max(1, endPage - maxVisiblePages + 1);
                                     }
-                                    
+
                                     for (let i = startPage; i <= endPage; i++) {
                                         pages.push(i);
                                     }
-                                    
+
                                     return pages.map(p => (
                             <button
                                 key={p}
                                 onClick={() => handlePageChange(p)}
                                 className={`w-8 h-8 rounded-full text-sm border flex items-center justify-center ${
-                                                p === currentPage 
-                                                    ? 'bg-blue-600 text-white border-blue-600' 
+                                                p === currentPage
+                                                    ? 'bg-blue-600 text-white border-blue-600'
                                                     : 'hover:bg-gray-200 border-gray-300'
                                 }`}
                             >
@@ -2561,7 +2609,7 @@ export default function VouchersPage() {
                             </button>
                                     ));
                                 })()}
-                                
+
                         <button
                             onClick={() => handlePageChange(currentPage + 1)}
                             disabled={currentPage === totalPages}
@@ -2583,16 +2631,16 @@ export default function VouchersPage() {
             })()}
 
             {/* Add Voucher Modal */}
-            <AddVoucherModal 
-                isOpen={showAddModal} 
-                onClose={() => setShowAddModal(false)} 
+            <AddVoucherModal
+                isOpen={showAddModal}
+                onClose={() => setShowAddModal(false)}
                 onSuccess={fetchVouchers}
             />
 
             {/* Edit Voucher Modal */}
-            <EditVoucherModal 
-                isOpen={showEditModal} 
-                onClose={() => setShowEditModal(false)} 
+            <EditVoucherModal
+                isOpen={showEditModal}
+                onClose={() => setShowEditModal(false)}
                 onSuccess={() => {
                     fetchVouchers();
                     setShowEditModal(false);

@@ -6,7 +6,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { jwtDecode } from "jwt-decode";
 import { CldImage } from "next-cloudinary";
-import { Package, Wallet } from 'lucide-react';
+import { Package, Wallet, Tag } from 'lucide-react';
+import VoucherSelector from '../../components/VoucherSelector';
 
 // --- Interfaces ---
 interface CartItem {
@@ -22,6 +23,17 @@ interface CartItem {
     stockLevel: number;
     colorName?: string;
     sizeName?: string;
+}
+
+interface VoucherSummaryDTO {
+    id: number;
+    code: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    status: string;
+    usedStatus: string;
+    eligible: boolean;
 }
 interface Province {
     code: number;
@@ -104,6 +116,9 @@ export default function ConfirmOrderPage() {
     const [wardsVN, setWardsVN] = useState<unknown[]>([]);
     const [placingOrder, setPlacingOrder] = useState(false);
     const [orderError, setOrderError] = useState('');
+    const [selectedVoucher, setSelectedVoucher] = useState<VoucherSummaryDTO | null>(null);
+    const [showVoucherSelector, setShowVoucherSelector] = useState(false);
+    const [loadingDiscount, setLoadingDiscount] = useState(false);
 
     const revertedRef = useRef(false);
     const pathname = usePathname();
@@ -173,7 +188,7 @@ export default function ConfirmOrderPage() {
         (total, item) => total + ((item.salePrice != null && item.salePrice < item.price ? item.salePrice : item.price) * item.quantity),
         0
     );
-    const discount = 0;
+    const [discount, setDiscount] = useState(0);
 
     const fetchShippingFee = useCallback(async (provinceName: string, districtName: string, total: number) => {
         setLoadingShippingFee(true);
@@ -241,6 +256,13 @@ export default function ConfirmOrderPage() {
             setShippingFee(0);
         }
     }, [selectedAddress, selectedProvinceCode, selectedDistrictCode, cartItems, provinces, districts, fetchShippingFee]);
+
+    // useEffect tính lại discount khi shippingFee thay đổi
+    useEffect(() => {
+        if (selectedVoucher && session?.accessToken) {
+            calculateDiscount(selectedVoucher.code, totalBeforeDiscount, shippingFee);
+        }
+    }, [shippingFee, selectedVoucher, totalBeforeDiscount, session]);
 
     // Thay đổi hàm chọn tỉnh để reset huyện, xã và phí giao hàng
     const handleProvinceChange = (code: number | null) => {
@@ -336,6 +358,94 @@ export default function ConfirmOrderPage() {
         }
     };
 
+    const calculateDiscount = async (voucherCode: string, subtotal: number, shippingFee: number) => {
+        if (!session?.accessToken) return;
+        
+        setLoadingDiscount(true);
+        try {
+            // Lấy appUserId từ keycloakId
+            let appUserId: number | null = null;
+            try {
+                const tokenData: JWTTokenData = jwtDecode(session.accessToken);
+                const keycloakId = tokenData.sub;
+                
+                const userResponse = await fetch(`http://localhost:8080/api/users/keycloak-user/${keycloakId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${session.accessToken}`
+                    }
+                });
+                
+                if (userResponse.ok) {
+                    const response = await userResponse.json();
+                    const appUserData = response.data || response;
+                    if (appUserData && appUserData.appUserId) {
+                        appUserId = appUserData.appUserId;
+                    }
+                }
+            } catch (error) {
+                console.error('Error getting appUserId:', error);
+            }
+
+            console.log('Frontend API call:', {
+                code: voucherCode,
+                subtotal: subtotal,
+                shippingFee: shippingFee
+            });
+            
+            const response = await fetch(
+                `http://localhost:8080/api/admin/vouchers/totle-discount?code=${encodeURIComponent(voucherCode)}&subtotal=${subtotal}&shippingFee=${shippingFee}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${session.accessToken}`
+                    }
+                }
+            );
+            
+            if (response.ok) {
+                const discountAmount = await response.json();
+                console.log('Backend discount response:', discountAmount);
+                setDiscount(discountAmount);
+            } else {
+                console.log('Backend error response:', response.status, response.statusText);
+                setDiscount(0);
+            }
+        } catch (error) {
+            console.error('Error calculating discount:', error);
+            setDiscount(0);
+        } finally {
+            setLoadingDiscount(false);
+        }
+    };
+
+    const handleSelectVoucher = (voucher: VoucherSummaryDTO | null) => {
+        console.log('=== handleSelectVoucher ===');
+        if (voucher) {
+            console.log('Selected voucher details:', {
+                id: voucher.id,
+                code: voucher.code,
+                name: voucher.name,
+                status: voucher.status,
+                usedStatus: voucher.usedStatus,
+                eligible: voucher.eligible
+            });
+            console.log('Order details:', {
+                totalBeforeDiscount: totalBeforeDiscount,
+                shippingFee: shippingFee
+            });
+            setSelectedVoucher(voucher);
+            // Tính toán discount
+            calculateDiscount(voucher.code, totalBeforeDiscount, shippingFee);
+        } else {
+            console.log('=== confirm-order page: Deselecting voucher ===');
+            console.log('Setting selectedVoucher to null');
+            console.log('Setting discount to 0');
+            setSelectedVoucher(null);
+            setDiscount(0);
+            console.log('=== End confirm-order page: Deselecting voucher ===');
+        }
+        console.log('=== End handleSelectVoucher ===');
+    };
+
     const handlePlaceOrder = async () => {
         setOrderError('');
         const isGuest = !session?.user;
@@ -364,6 +474,8 @@ export default function ConfirmOrderPage() {
                 keycloakId: guestId,
                 username: fullName,
                 phoneNumber: phone,
+                email: '', // Guest không có email
+                enabled: true
             };
             shippingAddress = {
                 recipientName: fullName,
@@ -375,6 +487,7 @@ export default function ConfirmOrderPage() {
                 country: 'Việt Nam',
                 isDefault: false,
                 addressType: 'home',
+                // Không cần appUser vì sẽ được set trong service
             };
         } else {
             // Đã đăng nhập, dùng selectedAddress
@@ -388,6 +501,8 @@ export default function ConfirmOrderPage() {
                 keycloakId: user?.id || user?.email || '',
                 username: user?.name || '',
                 phoneNumber: selectedAddress?.phoneNumber || '',
+                email: user?.email || '',
+                enabled: true
             };
             shippingAddress = selectedAddress;
         }
@@ -398,16 +513,25 @@ export default function ConfirmOrderPage() {
         }
         setPlacingOrder(true);
         try {
-            // Chuẩn bị body
+            // Chuẩn bị body theo OrderOnlineRequestDTO
             const body = {
                 appUser,
                 shippingAddress,
-                shippingMethodId: 1, // hardcode shipping method id, có thể lấy từ state nếu có
+                shippingMethodId: 1, // hardcode shipping method id
                 shippingFee: shippingFee,
                 note: note,
                 paymentMethod: paymentMethod,
                 orderStatus: 'Pending',
-                products: cartItems.map(item => ({ id: item.productId, quantity: item.quantity }))
+                products: cartItems.map(item => ({
+                    id: item.productId,
+                    quantity: item.quantity,
+                    unitPrice: item.price,
+                    salePrice: item.salePrice || item.price,
+                    totalPrice: (item.salePrice || item.price) * item.quantity
+                })),
+                codeVoucher: selectedVoucher?.code || null,
+                codeOrderInGHK: null, // Chưa có mã GHTK
+                isSyncedToGhtk: false
             };
             console.log('Order body gửi lên:', body);
             const res = await fetch('http://localhost:8080/api/orders/online', {
@@ -515,6 +639,13 @@ export default function ConfirmOrderPage() {
         };
         loadInitialData();
     }, [session, fetchUserAddresses, handleSelectAddress, fetchProvinces]);
+
+    // Tự động tính lại discount khi shippingFee hoặc selectedVoucher thay đổi
+    useEffect(() => {
+        if (selectedVoucher && session?.accessToken) {
+            calculateDiscount(selectedVoucher.code, totalBeforeDiscount, shippingFee);
+        }
+    }, [shippingFee, selectedVoucher, totalBeforeDiscount, session?.accessToken]);
 
     useEffect(() => {
         if (!selectedProvinceCode) {
@@ -886,14 +1017,76 @@ export default function ConfirmOrderPage() {
                                                 <span>{formatPrice(shippingFee)}</span>
                                             )}
                                         </div>
-                                        <div className="flex justify-between">
-                                            <span>Giảm giá:</span>
-                                            <span>- {formatPrice(discount)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-lg font-bold text-red-700">
-                                            <span>Tổng cộng:</span>
+                                        
+                                        {/* Tổng trước khi giảm giá */}
+                                        <div className="flex justify-between text-base font-medium text-gray-800 border-t pt-2">
+                                            <span>Tổng trước giảm giá:</span>
                                             <span>{formatPrice(totalBeforeDiscount + (shippingFee || 0))}</span>
                                         </div>
+                                        
+                                        {/* Voucher Section - Chỉ hiển thị cho user đã đăng nhập */}
+                                        {session?.user ? (
+                                            <div className="border-t pt-3 mt-3">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span>Voucher:</span>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="bordered"
+                                                        color="primary"
+                                                        onClick={() => setShowVoucherSelector(true)}
+                                                        className="text-xs"
+                                                    >
+                                                        <Tag className="w-3 h-3 mr-1" />
+                                                        Chọn voucher
+                                                    </Button>
+                                                </div>
+                                                {selectedVoucher ? (
+                                                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-2">
+                                                        <div className="flex justify-between items-start">
+                                                            <div className="flex-1">
+                                                                <p className="text-sm font-semibold text-green-800">
+                                                                    {selectedVoucher.name}
+                                                                </p>
+                                                                <p className="text-xs text-green-600">
+                                                                    Mã: {selectedVoucher.code}
+                                                                </p>
+                                                            </div>
+
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-sm text-gray-500 italic">
+                                                        Chưa chọn voucher
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="border-t pt-3 mt-3">
+                                                <div className="text-sm text-gray-500 italic text-center">
+                                                    Đăng nhập để sử dụng voucher
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        {selectedVoucher && (
+                                            <div className="flex justify-between text-green-600 font-medium">
+                                                <span>Giảm giá voucher:</span>
+                                                {loadingDiscount ? (
+                                                    <span>Đang tính...</span>
+                                                ) : (
+                                                    <span>- {formatPrice(discount)}</span>
+                                                )}
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between text-lg font-bold text-red-700 border-t pt-2">
+                                            <span>Tổng cộng:</span>
+                                            <span>{formatPrice(totalBeforeDiscount + (shippingFee || 0) - discount)}</span>
+                                        </div>
+                                        {selectedVoucher && discount > 0 && (
+                                            <div className="text-xs text-green-600 text-center mt-1">
+                                                Tiết kiệm: {formatPrice(discount)}
+                                            </div>
+                                        )}
                                     </>
                                 )}
                             </div>
@@ -1053,6 +1246,22 @@ export default function ConfirmOrderPage() {
                     </ModalFooter>
                 </ModalContent>
             </Modal>
+            
+            {/* Voucher Selector Modal */}
+            <VoucherSelector
+                isOpen={showVoucherSelector}
+                onClose={() => setShowVoucherSelector(false)}
+                onSelectVoucher={handleSelectVoucher}
+                selectedVoucher={selectedVoucher}
+                cartItems={cartItems.map(item => ({
+                    productId: item.productId,
+                    quantity: item.quantity,
+                    price: item.price,
+                    salePrice: item.salePrice
+                }))}
+                totalAmount={totalBeforeDiscount + (shippingFee || 0)}
+                hasSelectedAddress={selectedAddress !== null}
+            />
         </div>
     );
 }
