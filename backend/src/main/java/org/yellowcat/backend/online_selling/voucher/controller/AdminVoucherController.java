@@ -255,7 +255,7 @@ public class AdminVoucherController {
         return voucherService.getAllVouchersByStatusFilter(status);
     }
 
-    //hính giá trả ra sau khi áp dụng voucher
+    //tính giá trả ra sau khi áp dụng voucher
     @GetMapping("/preview-discount")
     public ResponseEntity<?> previewDiscountedAmount(
             @RequestParam String code,
@@ -281,8 +281,15 @@ public class AdminVoucherController {
             @RequestParam BigDecimal subtotal,
             @RequestParam BigDecimal shippingFee
     ) {
+        System.out.println("=== /totle-discount API ===");
+        System.out.println("Code: " + code);
+        System.out.println("Subtotal: " + subtotal);
+        System.out.println("ShippingFee: " + shippingFee);
+        
         try {
             BigDecimal finalAmount = voucherService.calculateAmountAfterDiscout(code, subtotal, shippingFee);
+            System.out.println("API Response: " + finalAmount);
+            System.out.println("=== End /totle-discount API ===");
             return ResponseEntity.ok(finalAmount);
         } catch (EntityNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -305,7 +312,7 @@ public class AdminVoucherController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/user_get_list_vouchers")
+    @PostMapping("/user_get_list_vouchers")
     public ResponseEntity<List<VoucherSummaryDTO>> getAvailableVouchers(
             @RequestBody VoucherDetailUserRequest request) {
 
