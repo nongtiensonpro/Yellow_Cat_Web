@@ -168,7 +168,40 @@ public class VoucherService1 {
     public VoucherDetailDTO getVoucherById(Integer id) {
         Voucher voucher = voucherRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Voucher not found"));
-        return mapToDetalDTO(voucher);
+        VoucherDetailDTO dto = mapToDetalDTO(voucher);
+
+        // Tính toán các chỉ số hiệu suất
+        dto.setRedemptionCount(voucher.getUsageCount());
+        dto.setTotalDiscount(calculateTotalDiscount(voucher));
+        dto.setTotalSales(calculateTotalSales(voucher));
+
+        // Tính toán số voucher còn lại
+        if (voucher.getMaxUsage() != null) {
+            dto.setRemainingUsage(voucher.getMaxUsage() - voucher.getUsageCount());
+        } else {
+            dto.setRemainingUsage(null); // Không giới hạn
+        }
+
+        // Tính tỉ lệ sử dụng: (số lần dùng / maxUsage) * 100
+        if (voucher.getMaxUsage() != null && voucher.getMaxUsage() > 0) {
+            double rate = (double) voucher.getUsageCount() / voucher.getMaxUsage() * 100;
+            dto.setRedemptionRate(Math.round(rate * 100.0) / 100.0); // Làm tròn 2 chữ số
+        } else {
+            dto.setRedemptionRate(null); // Không có maxUsage
+        }
+
+        return dto;
+    }
+
+
+    private BigDecimal calculateTotalDiscount(Voucher voucher) {
+        return voucherRedemptionRepository.sumDiscountAmountByVoucherId(voucher.getId())
+                .orElse(BigDecimal.ZERO);
+    }
+
+    private BigDecimal calculateTotalSales(Voucher voucher) {
+        return voucherRedemptionRepository.sumOrderValuesByVoucherId(voucher.getId())
+                .orElse(BigDecimal.ZERO);
     }
 
     public String getProductName(Integer id) {
@@ -243,6 +276,84 @@ public class VoucherService1 {
         dto.setScopes(scopeDTOs);
         return dto;
     }
+    /**
+     * Lấy danh sách người dùng đã sử dụng voucher
+     */
+    @Transactional
+    public VoucherUsageDTO getVoucherUsageDetails(Integer voucherId) {
+        // Lấy thông tin voucher để kiểm tra tồn tại
+        Voucher voucher = voucherRepository.findById(voucherId)
+                .orElseThrow(() -> new RuntimeException("Voucher not found"));
+
+        // Lấy danh sách lịch sử sử dụng voucher
+        List<VoucherRedemption> redemptions = voucherRedemptionRepository.findAllByVoucher_Id((voucherId));
+
+        // Tạo đối tượng kết quả
+        VoucherUsageDTO usageDTO = new VoucherUsageDTO();
+        usageDTO.setTotalRedemptions(redemptions.size());
+
+        // Lấy danh sách chi tiết người dùng
+        List<VoucherUserDetailDTO> userDetails = redemptions.stream()
+                .map(this::mapToUserDetailDTO)
+                .collect(Collectors.toList());
+
+        usageDTO.setUserDetails(userDetails);
+
+        // Tính số lượng người dùng duy nhất
+        long uniqueUserCount = redemptions.stream()
+                .map(VoucherRedemption::getUserId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .count();
+
+        usageDTO.setTotalUsers((int) uniqueUserCount);
+
+        return usageDTO;
+    }
+
+    private VoucherUserDetailDTO mapToUserDetailDTO(VoucherRedemption redemption) {
+        VoucherUserDetailDTO dto = new VoucherUserDetailDTO();
+        dto.setUserId(redemption.getUserId());
+        dto.setUsedAt(redemption.getAppliedAt());
+        dto.setDiscountAmount(redemption.getDiscountAmount());
+        dto.setOrderId(redemption.getOrderId());
+
+        // Lấy thông tin người dùng
+        if (redemption.getUserId() != null) {
+            AppUser user = userRepository.findById(redemption.getUserId()).orElse(null);
+            if (user != null) {
+                dto.setEmail(user.getEmail());
+                dto.setPhone(user.getPhoneNumber());
+                dto.setFullName(user.getFullName());
+            }
+        }
+
+        // Lấy thông tin đơn hàng
+        Order order = orderRepository.findById(redemption.getOrderId()).orElse(null);
+        if (order != null) {
+            dto.setOrderCode(order.getOrderCode());
+            // Tính giá trị đơn hàng trước giảm giá
+            BigDecimal orderValue = order.getFinalAmount().add(redemption.getDiscountAmount());
+            dto.setOrderValue(orderValue);
+
+            // Nếu không có thông tin user từ userRepository, lấy từ đơn hàng
+            if (dto.getFullName() == null) {
+                dto.setFullName(order.getCustomerName());
+            }
+            if (dto.getPhone() == null) {
+                dto.setPhone(order.getPhoneNumber());
+            }
+        } else {
+            // Xử lý trường hợp đơn hàng không tồn tại
+            dto.setOrderValue(BigDecimal.ZERO);
+            dto.setOrderCode("Đơn hàng đã bị xóa");
+        }
+
+        return dto;
+    }
+
+
+
 
     /**
      * Lấy voucher theo mã code

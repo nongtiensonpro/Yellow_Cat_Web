@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface VoucherUserRepository extends JpaRepository<VoucherUser, Integer> {
     VoucherUser findByVoucherIdAndUserId(Integer voucherId, Integer userId);
 
+    int countByVoucherId(Integer voucherId);
 }

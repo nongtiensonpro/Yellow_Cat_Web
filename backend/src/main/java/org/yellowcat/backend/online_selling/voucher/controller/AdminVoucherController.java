@@ -199,6 +199,13 @@ public class AdminVoucherController {
         return ResponseEntity.ok(voucher);
     }
 
+    @GetMapping("/{voucherId}/usage")
+    public ResponseEntity<VoucherUsageDTO> getVoucherUsageDetails(
+            @PathVariable Integer voucherId) {
+        VoucherUsageDTO usageDetails = voucherService.getVoucherUsageDetails(voucherId);
+        return ResponseEntity.ok(usageDetails);
+    }
+
     /**
      * Lấy voucher theo mã code
      * GET /api/vouchers/code?value=VC123ABC

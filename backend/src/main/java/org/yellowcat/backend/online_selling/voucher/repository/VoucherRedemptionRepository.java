@@ -6,6 +6,10 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.yellowcat.backend.online_selling.voucher.entity.VoucherRedemption;
 
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
+
 @Repository
 public interface VoucherRedemptionRepository extends JpaRepository<VoucherRedemption, Integer> {
     @Query(value = """
@@ -16,4 +20,22 @@ public interface VoucherRedemptionRepository extends JpaRepository<VoucherRedemp
         """, nativeQuery = true)
     VoucherRedemption findByVoucherIdAndPhoneNumber(@Param("voucherId") Integer voucherId,
                                                     @Param("phoneNumber") String phoneNumber);
+
+    @Query("SELECT SUM(vr.discountAmount) FROM VoucherRedemption vr WHERE vr.voucher.id = :voucherId")
+    Optional<BigDecimal> sumDiscountAmountByVoucherId(@Param("voucherId") Integer voucherId);
+
+    @Query("SELECT SUM(o.finalAmount) FROM VoucherRedemption vr " +
+            "JOIN Order o ON vr.orderId = o.orderId " +
+            "WHERE vr.voucher.id = :voucherId")
+    Optional<BigDecimal> sumOrderValuesByVoucherId(@Param("voucherId") Integer voucherId);
+
+    List<VoucherRedemption> findByVoucherId(Integer voucherId);
+
+    List<VoucherRedemption> findAllByVoucher_Id(Integer voucherId);
+
+    @Query("SELECT vr FROM VoucherRedemption vr " +
+            "LEFT JOIN FETCH vr.orderId o " +
+            "LEFT JOIN FETCH vr.userId u " +
+            "WHERE vr.voucher.id = :voucherId")
+    List<VoucherRedemption> findWithDetailsByVoucherId(@Param("voucherId") Integer voucherId);
 }
