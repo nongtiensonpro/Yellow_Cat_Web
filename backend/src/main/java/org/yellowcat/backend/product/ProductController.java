@@ -32,6 +32,19 @@ public class ProductController {
         this.productService = productService;
         this.appUserService = appUserService;
     }
+    @GetMapping("/low-stock")
+    @Operation(summary = "Get products with low stock", description = "Returns a list of products with total stock below a specified threshold.")
+    @PreAuthorize("hasAnyAuthority('Admin_Web')") // Assuming this is an admin-only feature
+    public ResponseEntity<?> getLowStockProducts(@RequestParam(defaultValue = "10") int threshold) {
+        try {
+            List<ProductListItemDTO> lowStockProducts = productService.getLowStockProducts(threshold);
+            return ResponseEntityBuilder.success(lowStockProducts);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Error retrieving low stock products", e.getMessage());
+        }
+    }
+
 
     @GetMapping("/top-selling")
     @Operation(summary = "Get top 5 best-selling products", description = "Returns a list of the top 5 products ordered by purchase count.")
