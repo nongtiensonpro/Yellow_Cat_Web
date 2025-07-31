@@ -209,15 +209,24 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
             newErrors.startDate = 'Ngày bắt đầu là bắt buộc.';
         } else {
             const startDate = new Date(form.startDate);
-            // Lấy thời gian hiện tại theo múi giờ VN (UTC+7)
+            // Lấy thời gian hiện tại (đã là giờ local)
             const now = new Date();
-            const vnTime = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // UTC+7
 
             // So sánh theo ngày, không theo thời gian chính xác
             const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-            const vnDateOnly = new Date(vnTime.getFullYear(), vnTime.getMonth(), vnTime.getDate());
+            const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-            if (startDateOnly < vnDateOnly) {
+            console.log('=== AddVoucherModal Date Validation Debug ===');
+            console.log('form.startDate:', form.startDate);
+            console.log('startDate:', startDate);
+            console.log('startDateOnly:', startDateOnly);
+            console.log('now:', now);
+            console.log('todayOnly:', todayOnly);
+            console.log('startDateOnly < todayOnly:', startDateOnly < todayOnly);
+            console.log('startDateOnly.getTime():', startDateOnly.getTime());
+            console.log('todayOnly.getTime():', todayOnly.getTime());
+
+            if (startDateOnly < todayOnly) {
                 newErrors.startDate = 'Ngày bắt đầu phải là ngày hôm nay hoặc trong tương lai.';
             }
         }
@@ -1319,15 +1328,24 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
             newErrors.startDate = 'Ngày bắt đầu là bắt buộc.';
         } else {
             const startDate = new Date(form.startDate);
-            // Lấy thời gian hiện tại theo múi giờ VN (UTC+7)
+            // Lấy thời gian hiện tại (đã là giờ local)
             const now = new Date();
-            const vnTime = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // UTC+7
 
             // So sánh theo ngày, không theo thời gian chính xác
             const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-            const vnDateOnly = new Date(vnTime.getFullYear(), vnTime.getMonth(), vnTime.getDate());
+            const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-            if (startDateOnly < vnDateOnly) {
+            console.log('=== EditVoucherModal Date Validation Debug ===');
+            console.log('form.startDate:', form.startDate);
+            console.log('startDate:', startDate);
+            console.log('startDateOnly:', startDateOnly);
+            console.log('now:', now);
+            console.log('todayOnly:', todayOnly);
+            console.log('startDateOnly < todayOnly:', startDateOnly < todayOnly);
+            console.log('startDateOnly.getTime():', startDateOnly.getTime());
+            console.log('todayOnly.getTime():', todayOnly.getTime());
+
+            if (startDateOnly < todayOnly) {
                 newErrors.startDate = 'Ngày bắt đầu phải là ngày hôm nay hoặc trong tương lai.';
             }
         }
