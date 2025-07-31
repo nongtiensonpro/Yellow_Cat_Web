@@ -13,6 +13,35 @@ import java.util.List;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Integer> {
+    @Query(nativeQuery = true, value = """
+            SELECT
+                p.product_id,
+                p.product_name,
+                COALESCE(p.purchases, 0) AS purchases,
+                c.category_name,
+                b.brand_name,
+                b.logo_public_id,
+                -- Đảm bảo MIN(price) và MIN(sale_price) được cast thành NUMERIC/DECIMAL và COALESCE với 0.00
+                COALESCE(CAST((SELECT MIN(pv.price) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS NUMERIC), 0.00) AS min_price,
+                COALESCE(CAST((SELECT MIN(pv.sale_price) FROM Product_Variants pv WHERE pv.product_id = p.product_id AND pv.sale_price > 0.00 AND pv.sale_price IS NOT NULL) AS NUMERIC), 0.00) AS min_sale_price,
+                -- Đảm bảo tổng kho là Long (BIGINT) và COALESCE với 0
+                COALESCE(CAST((SELECT SUM(pv.quantity_in_stock) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS BIGINT), 0) AS total_stock,
+                p.thumbnail
+            FROM Products p
+            LEFT JOIN Categories c ON p.category_id = c.category_id
+            LEFT JOIN Brands b ON p.brand_id = b.brand_id
+            JOIN (
+                SELECT pv.product_id, COALESCE(SUM(pv.quantity_in_stock), 0) AS calculated_total_stock
+                FROM Product_Variants pv
+                GROUP BY pv.product_id
+            ) pv_sum ON p.product_id = pv_sum.product_id
+            WHERE p.is_active = true AND pv_sum.calculated_total_stock <= :threshold
+            ORDER BY pv_sum.calculated_total_stock ASC
+            LIMIT 10
+            """)
+    List<ProductListItemDTO> findLowStockProducts(@Param("threshold") int threshold);
+
+
 
     @Query(nativeQuery = true, value = """
             SELECT

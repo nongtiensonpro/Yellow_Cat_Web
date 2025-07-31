@@ -49,6 +49,11 @@ public class ProductService {
     private final AppUserRepository appUserRepository;
     private final ProductVariantAutoPromotionService autoPromotionService;
 
+    public List<ProductListItemDTO> getLowStockProducts(int threshold) {
+        return productRepository.findLowStockProducts(threshold);
+    }
+
+
     public List<ProductListItemDTO> getTop5BestSellingProducts() {
         return productRepository.findTop5BestSellingProducts();
     }
