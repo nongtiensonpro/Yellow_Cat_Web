@@ -1013,6 +1013,7 @@ public class VoucherService1 {
             result.addFailureReason("Có sản phẩm không nằm trong phạm vi danh mục giảm giá.");
         }
 
+
         // Nếu không có lỗi nào, đánh dấu hợp lệ với thông điệp thành công
         if (result.isEligible()) {
             result.markEligible();
@@ -1170,6 +1171,7 @@ public class VoucherService1 {
         // Kiểm tra tất cả categoryId của giỏ hàng đều phải nằm trong scope
         boolean allValid = cartCategoryIds.stream().allMatch(scopedCategoryIds::contains);
         System.out.println("Check tất cả danh mục sản phẩm hợp lệ không: " + allValid);
+
 
         return allValid;
     }
