@@ -427,6 +427,7 @@ export default function CreatePromotionPage() {
                                 type="datetime-local"
                                 value={form.startDate}
                                 onChange={handleChange}
+                                step="60"
                                 className="w-full border px-3 py-2 rounded"
                             />
                             {errors.startDate && (
@@ -442,6 +443,7 @@ export default function CreatePromotionPage() {
                                 type="datetime-local"
                                 value={form.endDate}
                                 onChange={handleChange}
+                                step="60"
                                 className="w-full border px-3 py-2 rounded"
                             />
                             {errors.endDate && (

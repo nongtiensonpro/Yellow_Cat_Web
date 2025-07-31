@@ -374,12 +374,12 @@ export default function EditPromotionProductPage() {
                         </div>
                         <div>
                             <label className="block mb-1 font-medium">Từ ngày <span className="text-red-500">*</span></label>
-                            <input name="startDate" type="datetime-local" value={form.startDate} onChange={handleChange} className="w-full border px-3 py-2 rounded" />
+                            <input name="startDate" type="datetime-local" value={form.startDate} onChange={handleChange} step="60" className="w-full border px-3 py-2 rounded" />
                             {errors.startDate && <p className="text-red-600 text-sm">{errors.startDate}</p>}
                         </div>
                         <div>
                             <label className="block mb-1 font-medium">Đến ngày <span className="text-red-500">*</span></label>
-                            <input name="endDate" type="datetime-local" value={form.endDate} onChange={handleChange} className="w-full border px-3 py-2 rounded" />
+                            <input name="endDate" type="datetime-local" value={form.endDate} onChange={handleChange} step="60" className="w-full border px-3 py-2 rounded" />
                             {errors.endDate && <p className="text-red-600 text-sm">{errors.endDate}</p>}
                         </div>
                         <div>

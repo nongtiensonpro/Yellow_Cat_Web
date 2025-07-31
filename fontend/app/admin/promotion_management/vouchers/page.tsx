@@ -148,15 +148,47 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
         }
     }, [isOpen, session?.accessToken]);
 
+    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        // Chặn việc nhập ký tự không phải số và dấu chấm
+        const char = String.fromCharCode(e.which);
+        if (!/[0-9.]/.test(char)) {
+            e.preventDefault();
+        }
+    };
+
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
     ) => {
         const { name, value, type } = e.target;
         const checked = 'checked' in e.target ? e.target.checked : false;
 
+        // Log để debug format datetime
+        if (name === 'startDate' || name === 'endDate') {
+            console.log(`=== ${name} Change ===`);
+            console.log('Raw value from input:', value);
+            console.log('Value type:', typeof value);
+            console.log('Value length:', value.length);
+            console.log('Is valid date:', !isNaN(Date.parse(value)));
+            if (value) {
+                const date = new Date(value);
+                console.log('Parsed date:', date);
+                console.log('ISO string:', date.toISOString());
+                console.log('Locale string:', date.toLocaleString('vi-VN'));
+                console.log('=== End ===');
+            }
+        }
+
+        // Validation cho input số - chỉ cho phép số và dấu chấm
+        if (type === 'number') {
+            // Kiểm tra nếu có ký tự không phải số hoặc dấu chấm
+            if (value && !/^[0-9]*\.?[0-9]*$/.test(value)) {
+                return; // Không cập nhật nếu có ký tự không hợp lệ
+            }
+        }
+
         let newValue: string | number | boolean = value;
         if (type === 'checkbox') newValue = checked;
-        if (type === 'number') newValue = parseFloat(value);
+        if (type === 'number') newValue = parseFloat(value) || '';
 
         setForm((prev) => ({
             ...prev,
@@ -306,11 +338,45 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                 onClose();
             } else {
                 const errorData = await res.json();
-                alert(`Lỗi: ${errorData.message || 'Không thể tạo voucher'}`);
+                console.error('Backend error:', errorData);
+                
+                // Parse error message từ backend
+                let errorMessage = errorData.message || 'Không thể tạo voucher';
+                console.log('Error message from backend:', errorMessage);
+                console.log('Error message length:', errorMessage.length);
+                console.log('Error message bytes:', Array.from(errorMessage).map((c: any) => c.charCodeAt(0)));
+                
+                // Map backend errors to form fields
+                if (errorMessage.includes('Tên đợt giảm giá đã tồn tại')) {
+                    console.log('Mapping to promotionName error');
+                    setErrors(prev => ({ ...prev, promotionName: 'Tên khuyến mãi đã tồn tại' }));
+                } else if (errorMessage.includes('Mã giảm giá đã tồn tại')) {
+                    console.log('Mapping to voucherCode error');
+                    setErrors(prev => ({ ...prev, voucherCode: 'Mã voucher đã tồn tại' }));
+                } else if (errorMessage.includes('Tên đợt giảm giá không được để trống')) {
+                    console.log('Mapping to promotionName error');
+                    setErrors(prev => ({ ...prev, promotionName: 'Tên khuyến mãi không được để trống' }));
+                } else if (errorMessage.includes('Tên đợt giảm giá không được vượt quá 50 ký tự')) {
+                    console.log('Mapping to promotionName error');
+                    setErrors(prev => ({ ...prev, promotionName: 'Tên khuyến mãi không được vượt quá 50 ký tự' }));
+                } else if (errorMessage.includes('Mã giảm giá không được vượt quá 50 ký tự')) {
+                    console.log('Mapping to voucherCode error');
+                    setErrors(prev => ({ ...prev, voucherCode: 'Mã voucher không được vượt quá 50 ký tự' }));
+                } else if (errorMessage.includes('Giá trị giảm giá phải lớn hơn 0')) {
+                    console.log('Mapping to discountValue error');
+                    setErrors(prev => ({ ...prev, discountValue: 'Giá trị giảm phải lớn hơn 0' }));
+                } else if (errorMessage.includes('Ngày kết thúc không được trước ngày bắt đầu')) {
+                    console.log('Mapping to endDate error');
+                    setErrors(prev => ({ ...prev, endDate: 'Ngày kết thúc không được trước ngày bắt đầu' }));
+                } else {
+                    // Hiển thị lỗi chung nếu không map được
+                    console.log('No mapping found, showing alert');
+                    alert(`Lỗi: ${errorMessage}`);
+                }
             }
         } catch (error) {
             console.error('Error creating voucher:', error);
-            alert('Lỗi khi tạo voucher');
+            alert('Có lỗi xảy ra khi tạo voucher');
         } finally {
             setLoading(false);
         }
@@ -440,6 +506,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                                         type="number"
                                         value={form.discountType === 'free_shipping' ? 100 : (form.discountValue || '')}
                                         onChange={handleChange}
+                                        onKeyPress={handleKeyPress}
                                         className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
                                         disabled={form.discountType === 'free_shipping'}
                                         placeholder={form.discountType === 'percentage' ? 'VD: 10' : 'VD: 50000'}
@@ -453,6 +520,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                                         type="number"
                                         value={form.maximumDiscountValue || ''}
                                         onChange={handleChange}
+                                        onKeyPress={handleKeyPress}
                                         className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
                                         disabled={form.discountType === 'fixed_amount'}
                                         placeholder="VD: 100000"
@@ -476,6 +544,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                                         type="number"
                                         value={form.minimumOrderValue || ''}
                                         onChange={handleChange}
+                                        onKeyPress={handleKeyPress}
                                         className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                                         placeholder="VD: 200000"
                                     />
@@ -488,6 +557,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                                         type="number"
                                         value={form.usageLimitTotal || ''}
                                         onChange={handleChange}
+                                        onKeyPress={handleKeyPress}
                                         className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                                         placeholder="VD: 100"
                                     />
@@ -509,7 +579,13 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                                         type="datetime-local"
                                         value={form.startDate}
                                         onChange={handleChange}
+                                        step="60"
+                                        min="2024-01-01T00:00"
                                         className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
+                                        style={{ 
+                                            '--webkit-calendar-picker-indicator': 'none',
+                                            '--moz-calendar-picker-indicator': 'none'
+                                        } as React.CSSProperties}
                                     />
                                     {errors.startDate && <p className="text-red-600 text-sm mt-1">{errors.startDate}</p>}
                                 </div>
@@ -520,6 +596,8 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                                         type="datetime-local"
                                         value={form.endDate}
                                         onChange={handleChange}
+                                        step="60"
+                                        min="2024-01-01T00:00"
                                         className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
                                     />
                                     {errors.endDate && <p className="text-red-600 text-sm mt-1">{errors.endDate}</p>}
@@ -1189,8 +1267,41 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
         }
     };
 
+    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        // Chặn việc nhập ký tự không phải số và dấu chấm
+        const char = String.fromCharCode(e.which);
+        if (!/[0-9.]/.test(char)) {
+            e.preventDefault();
+        }
+    };
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
+        
+        // Log để debug format datetime
+        if (name === 'startDate' || name === 'endDate') {
+            console.log(`=== EditVoucherModal ${name} Change ===`);
+            console.log('Raw value from input:', value);
+            console.log('Value type:', typeof value);
+            console.log('Value length:', value.length);
+            console.log('Is valid date:', !isNaN(Date.parse(value)));
+            if (value) {
+                const date = new Date(value);
+                console.log('Parsed date:', date);
+                console.log('ISO string:', date.toISOString());
+                console.log('Locale string:', date.toLocaleString('vi-VN'));
+                console.log('=== End ===');
+            }
+        }
+
+        // Validation cho input số - chỉ cho phép số và dấu chấm
+        if (type === 'number') {
+            // Kiểm tra nếu có ký tự không phải số hoặc dấu chấm
+            if (value && !/^[0-9]*\.?[0-9]*$/.test(value)) {
+                return; // Không cập nhật nếu có ký tự không hợp lệ
+            }
+        }
+        
         setForm(prev => ({
             ...prev,
             [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
@@ -1332,11 +1443,47 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
             } else {
                 const errorData = await res.text();
                 console.error('Update error:', res.status, errorData);
-                alert('Lỗi: ' + errorData);
+                
+                // Parse error message từ backend
+                let errorMessage = errorData || 'Không thể cập nhật voucher';
+                console.log('EditVoucherModal - Error message from backend:', errorMessage);
+                console.log('EditVoucherModal - Error message length:', errorMessage.length);
+                console.log('EditVoucherModal - Error message bytes:', Array.from(errorMessage).map((c: any) => c.charCodeAt(0)));
+                
+                // Map backend errors to form fields
+                if (errorMessage.includes('Tên đợt giảm giá đã tồn tại')) {
+                    console.log('EditVoucherModal - Mapping to promotionName error');
+                    setErrors(prev => ({ ...prev, promotionName: 'Tên khuyến mãi đã tồn tại' }));
+                } else if (errorMessage.includes('Mã giảm giá đã tồn tại')) {
+                    console.log('EditVoucherModal - Mapping to voucherCode error');
+                    setErrors(prev => ({ ...prev, voucherCode: 'Mã voucher đã tồn tại' }));
+                } else if (errorMessage.includes('Tên đợt giảm giá không được để trống')) {
+                    console.log('EditVoucherModal - Mapping to promotionName error');
+                    setErrors(prev => ({ ...prev, promotionName: 'Tên khuyến mãi không được để trống' }));
+                } else if (errorMessage.includes('Tên đợt giảm giá không được vượt quá 50 ký tự')) {
+                    console.log('EditVoucherModal - Mapping to promotionName error');
+                    setErrors(prev => ({ ...prev, promotionName: 'Tên khuyến mãi không được vượt quá 50 ký tự' }));
+                } else if (errorMessage.includes('Mã giảm giá không được vượt quá 50 ký tự')) {
+                    console.log('EditVoucherModal - Mapping to voucherCode error');
+                    setErrors(prev => ({ ...prev, voucherCode: 'Mã voucher không được vượt quá 50 ký tự' }));
+                } else if (errorMessage.includes('Giá trị giảm giá phải lớn hơn 0')) {
+                    console.log('EditVoucherModal - Mapping to discountValue error');
+                    setErrors(prev => ({ ...prev, discountValue: 'Giá trị giảm phải lớn hơn 0' }));
+                } else if (errorMessage.includes('Ngày kết thúc không được trước ngày bắt đầu')) {
+                    console.log('EditVoucherModal - Mapping to endDate error');
+                    setErrors(prev => ({ ...prev, endDate: 'Ngày kết thúc không được trước ngày bắt đầu' }));
+                } else if (errorMessage.includes('Không thể cập nhật vì voucher đang hoạt động')) {
+                    console.log('EditVoucherModal - Showing alert for active voucher');
+                    alert('Không thể cập nhật voucher đang hoạt động');
+                } else {
+                    // Hiển thị lỗi chung nếu không map được
+                    console.log('EditVoucherModal - No mapping found, showing alert');
+                    alert(`Lỗi: ${errorMessage}`);
+                }
             }
         } catch (e) {
             console.error('Error updating voucher:', e);
-            alert('Lỗi khi cập nhật voucher: ' + e);
+            alert('Có lỗi xảy ra khi cập nhật voucher');
         } finally {
             setLoading(false);
         }
@@ -1439,6 +1586,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                             type="number"
                                             value={form.discountType === 'free_shipping' ? 100 : form.discountValue}
                                             onChange={handleChange}
+                                            onKeyPress={handleKeyPress}
                                             className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
                                             disabled={form.discountType === 'free_shipping'}
                                             placeholder={form.discountType === 'percentage' ? 'VD: 10' : 'VD: 50000'}
@@ -1452,6 +1600,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                             type="number"
                                             value={form.maximumDiscountValue}
                                             onChange={handleChange}
+                                            onKeyPress={handleKeyPress}
                                             className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
                                             disabled={form.discountType === 'fixed_amount'}
                                             placeholder="VD: 100000"
@@ -1475,6 +1624,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                             type="number"
                                             value={form.minimumOrderValue}
                                             onChange={handleChange}
+                                            onKeyPress={handleKeyPress}
                                             className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                                             placeholder="VD: 200000"
                                         />
@@ -1487,6 +1637,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                             type="number"
                                             value={form.usageLimitTotal}
                                             onChange={handleChange}
+                                            onKeyPress={handleKeyPress}
                                             className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                                             placeholder="VD: 100 (0 = không giới hạn)"
                                         />
@@ -1500,6 +1651,9 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                     <span className="w-2 h-2 bg-purple-500 rounded-full mr-3"></span>
                                     Thời gian hiệu lực
                                 </h3>
+                                <p className="text-xs text-blue-600 mb-4 bg-blue-50 p-2 rounded">
+                                    ⏰ <strong>Lưu ý:</strong> Vui lòng sử dụng định dạng 24 giờ (VD: 14:30 thay vì 2:30 PM)
+                                </p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <Label text="Ngày bắt đầu" required />
@@ -1508,6 +1662,8 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                             type="datetime-local"
                                             value={form.startDate}
                                             onChange={handleChange}
+                                            step="60"
+                                            min="2024-01-01T00:00"
                                             className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
                                         />
                                         {errors.startDate && <p className="text-red-600 text-sm mt-1">{errors.startDate}</p>}
@@ -1519,6 +1675,8 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                             type="datetime-local"
                                             value={form.endDate}
                                             onChange={handleChange}
+                                            step="60"
+                                            min="2024-01-01T00:00"
                                             className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
                                         />
                                         {errors.endDate && <p className="text-red-600 text-sm mt-1">{errors.endDate}</p>}
