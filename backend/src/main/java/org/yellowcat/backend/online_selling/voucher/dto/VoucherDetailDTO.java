@@ -26,11 +26,5 @@ public class VoucherDetailDTO {
     private LocalDateTime updatedAt;
     private List<VoucherScopeDTO> scopes;
 
-    // Thêm các trường thống kê hiệu suất
-    private Integer redemptionCount;      // Số lần voucher đã được sử dụng
-    private BigDecimal totalSales;        // Tổng doanh số từ voucher
-    private Double redemptionRate;        // Tỉ lệ sử dụng (%): (redemptionCount / maxUsage) * 100
-    private BigDecimal totalDiscount;     // Tổng tiền giảm giá
-    private Integer remainingUsage;       // Số lượt s dụng voucher còn lại: maxUsage - redemptionCount
 }
 

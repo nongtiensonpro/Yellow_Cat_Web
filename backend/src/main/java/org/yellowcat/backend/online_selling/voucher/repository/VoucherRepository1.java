@@ -58,6 +58,8 @@ public interface VoucherRepository1 extends JpaRepository<Voucher, Integer> {
     List<Voucher> findAllByScopes(@Param("scopeType") ScopeType scopeType);
 
     List<Voucher> findAllByEndDateBeforeAndIsActiveTrue(LocalDateTime dateTime);
+
+
 }
 
 

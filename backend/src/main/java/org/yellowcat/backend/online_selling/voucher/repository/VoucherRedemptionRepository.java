@@ -38,4 +38,15 @@ public interface VoucherRedemptionRepository extends JpaRepository<VoucherRedemp
             "LEFT JOIN FETCH vr.userId u " +
             "WHERE vr.voucher.id = :voucherId")
     List<VoucherRedemption> findWithDetailsByVoucherId(@Param("voucherId") Integer voucherId);
+
+
+    @Query("SELECT FUNCTION('DATE', COALESCE(v.appliedAt, CURRENT_DATE)) as usageDate, " + // Xử lý null
+            "COUNT(v) as usageCount, " +
+            "SUM(COALESCE(o.finalAmount, 0) + COALESCE(v.discountAmount, 0)) as sales " + // Xử lý null
+            "FROM VoucherRedemption v " +
+            "LEFT JOIN Order o ON o.orderId = v.orderId " + // Sử dụng LEFT JOIN
+            "WHERE v.voucher.id = :voucherId " +
+            "GROUP BY FUNCTION('DATE', COALESCE(v.appliedAt, CURRENT_DATE)) " + // Nhóm theo ngày đã xử lý
+            "ORDER BY FUNCTION('DATE', COALESCE(v.appliedAt, CURRENT_DATE))")
+    List<Object[]> findDailyUsageWithSalesByVoucherId(@Param("voucherId") Integer voucherId);
 }
