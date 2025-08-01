@@ -25,4 +25,6 @@ public class VoucherDetailDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<VoucherScopeDTO> scopes;
+
 }
+

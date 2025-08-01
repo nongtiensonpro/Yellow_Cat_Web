@@ -199,6 +199,21 @@ public class AdminVoucherController {
         return ResponseEntity.ok(voucher);
     }
 
+    // lấy danh sách người dũng đã sử dụng voucher
+    @GetMapping("/{voucherId}/usage")
+    public ResponseEntity<VoucherUsageDTO> getVoucherUsageDetails(
+            @PathVariable Integer voucherId) {
+        VoucherUsageDTO usageDetails = voucherService.getVoucherUsageDetails(voucherId);
+        return ResponseEntity.ok(usageDetails);
+    }
+
+    // thống kê hiệu suất
+    @GetMapping("/{id}/performance-stats")
+    public ResponseEntity<VoucherPerformanceDTO> getVoucherPerformanceStats(@PathVariable Integer id) {
+        VoucherPerformanceDTO stats = voucherService.getVoucherPerformanceStats(id);
+        return ResponseEntity.ok(stats);
+    }
+
     /**
      * Lấy voucher theo mã code
      * GET /api/vouchers/code?value=VC123ABC

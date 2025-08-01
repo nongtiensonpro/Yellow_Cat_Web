@@ -24,7 +24,9 @@ import org.yellowcat.backend.user.AppUserRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.Normalizer;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -168,7 +170,154 @@ public class VoucherService1 {
     public VoucherDetailDTO getVoucherById(Integer id) {
         Voucher voucher = voucherRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Voucher not found"));
-        return mapToDetalDTO(voucher);
+        return mapToDetalDTO(voucher); // Chỉ trả về thông tin cơ bản
+    }
+
+    @Transactional
+    public VoucherPerformanceDTO getVoucherPerformanceStats(Integer id) {
+        Voucher voucher = voucherRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Voucher not found"));
+
+        // Tạo đối tượng DTO
+        VoucherPerformanceDTO stats = new VoucherPerformanceDTO();
+
+        // 1. Tính toán các thông số cơ bản
+        stats.setRedemptionCount(voucher.getUsageCount());
+        stats.setTotalDiscount(calculateTotalDiscount(voucher));
+        stats.setTotalSales(calculateTotalSales(voucher));
+
+        if (voucher.getMaxUsage() != null) {
+            stats.setRemainingUsage(voucher.getMaxUsage() - voucher.getUsageCount());
+        } else {
+            stats.setRemainingUsage(null);
+        }
+
+        if (voucher.getMaxUsage() != null && voucher.getMaxUsage() > 0) {
+            double rate = (double) voucher.getUsageCount() / voucher.getMaxUsage() * 100;
+            stats.setRedemptionRate(Math.round(rate * 100.0) / 100.0);
+        } else {
+            stats.setRedemptionRate(null);
+        }
+
+        // 2. Đánh giá hiệu quả
+        stats.setEffectivenessStatus(determineEffectiveness(stats.getRedemptionRate()));
+
+        // 3. Chuẩn bị dữ liệu biểu đồ (thay thế cho dailyUsage cũ)
+        stats.setDailyUsageChart(prepareChartData(voucher));
+
+        return stats;
+    }
+
+    private Map<String, DailyUsageStats> calculateDailyUsage(Voucher voucher) {
+        List<Object[]> dailyUsageData = voucherRedemptionRepository.findDailyUsageWithSalesByVoucherId(voucher.getId());
+
+        return dailyUsageData.stream()
+                .filter(data -> data[0] != null) // Lọc bỏ bản ghi có ngày null
+                .collect(Collectors.toMap(
+                        data -> {
+                            // Xử lý cả Date và LocalDate
+                            if (data[0] instanceof java.sql.Date) {
+                                return ((java.sql.Date) data[0]).toLocalDate().toString();
+                            } else if (data[0] instanceof java.time.LocalDate) {
+                                return ((java.time.LocalDate) data[0]).toString();
+                            } else {
+                                return LocalDate.now().toString(); // Fallback
+                            }
+                        },
+                        data -> {
+                            int usageCount = data[1] != null ? ((Number) data[1]).intValue() : 0;
+                            BigDecimal sales = data[2] != null ? (BigDecimal) data[2] : BigDecimal.ZERO;
+                            return new DailyUsageStats(usageCount, sales);
+                        }
+                ));
+    }
+
+    private String determineEffectiveness(Double redemptionRate) {
+        if (redemptionRate == null) return "KHÔNG XÁC ĐỊNH";
+
+        if (redemptionRate >= 70) {
+            return "HIỆU QUẢ CAO";
+        } else if (redemptionRate >= 40) {
+            return "HIỆU QUẢ";
+        } else if (redemptionRate >= 20) {
+            return "TRUNG BÌNH";
+        } else {
+            return "THẤP";
+        }
+    }
+
+    private VoucherPerformanceDTO calculatePerformanceStats(Voucher voucher) {
+        VoucherPerformanceDTO stats = new VoucherPerformanceDTO();
+
+        stats.setRedemptionCount(voucher.getUsageCount());
+        stats.setTotalDiscount(calculateTotalDiscount(voucher));
+        stats.setTotalSales(calculateTotalSales(voucher));
+
+        if (voucher.getMaxUsage() != null) {
+            stats.setRemainingUsage(voucher.getMaxUsage() - voucher.getUsageCount());
+        } else {
+            stats.setRemainingUsage(null);
+        }
+
+        if (voucher.getMaxUsage() != null && voucher.getMaxUsage() > 0) {
+            double rate = (double) voucher.getUsageCount() / voucher.getMaxUsage() * 100;
+            stats.setRedemptionRate(Math.round(rate * 100.0) / 100.0);
+        } else {
+            stats.setRedemptionRate(null);
+        }
+
+        return stats;
+    }
+
+
+    private BigDecimal calculateTotalDiscount(Voucher voucher) {
+        return voucherRedemptionRepository.sumDiscountAmountByVoucherId(voucher.getId())
+                .orElse(BigDecimal.ZERO);
+    }
+
+    private BigDecimal calculateTotalSales(Voucher voucher) {
+        return voucherRedemptionRepository.sumOrderValuesByVoucherId(voucher.getId())
+                .orElse(BigDecimal.ZERO);
+    }
+
+    private ChartData prepareChartData(Voucher voucher) {
+        // Lấy dữ liệu thô từ database
+        List<Object[]> rawData = voucherRedemptionRepository.findDailyUsageWithSalesByVoucherId(voucher.getId());
+
+        // Tạo đối tượng ChartData
+        ChartData chartData = new ChartData();
+        chartData.setLabels(new ArrayList<>());
+        chartData.setUsageCounts(new ArrayList<>());
+        chartData.setSalesData(new ArrayList<>());
+        chartData.setDisplayLabels(new ArrayList<>());
+
+        // Sắp xếp dữ liệu theo ngày tăng dần
+        rawData.sort(Comparator.comparing(
+                data -> ((java.sql.Date) data[0]).toLocalDate()
+        ));
+
+        // Định dạng ngày tháng
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM");
+
+        for (Object[] data : rawData) {
+            if (data[0] == null) continue; // Bỏ qua nếu không có ngày
+
+            LocalDate date = ((java.sql.Date) data[0]).toLocalDate();
+            int usageCount = data[1] != null ? ((Number) data[1]).intValue() : 0;
+            BigDecimal sales = data[2] != null ? (BigDecimal) data[2] : BigDecimal.ZERO;
+
+            // Định dạng hiển thị
+            String formattedDate = date.format(formatter);
+            String displayLabel = String.format("%s: %d lượt", formattedDate, usageCount);
+
+            // Thêm dữ liệu vào biểu đồ
+            chartData.getLabels().add(date.toString());
+            chartData.getUsageCounts().add(usageCount);
+            chartData.getSalesData().add(sales);
+            chartData.getDisplayLabels().add(displayLabel);
+        }
+
+        return chartData;
     }
 
     public String getProductName(Integer id) {
@@ -243,6 +392,84 @@ public class VoucherService1 {
         dto.setScopes(scopeDTOs);
         return dto;
     }
+    /**
+     * Lấy danh sách người dùng đã sử dụng voucher
+     */
+    @Transactional
+    public VoucherUsageDTO getVoucherUsageDetails(Integer voucherId) {
+        // Lấy thông tin voucher để kiểm tra tồn tại
+        Voucher voucher = voucherRepository.findById(voucherId)
+                .orElseThrow(() -> new RuntimeException("Voucher not found"));
+
+        // Lấy danh sách lịch sử sử dụng voucher
+        List<VoucherRedemption> redemptions = voucherRedemptionRepository.findAllByVoucher_Id((voucherId));
+
+        // Tạo đối tượng kết quả
+        VoucherUsageDTO usageDTO = new VoucherUsageDTO();
+        usageDTO.setTotalRedemptions(redemptions.size());
+
+        // Lấy danh sách chi tiết người dùng
+        List<VoucherUserDetailDTO> userDetails = redemptions.stream()
+                .map(this::mapToUserDetailDTO)
+                .collect(Collectors.toList());
+
+        usageDTO.setUserDetails(userDetails);
+
+        // Tính số lượng người dùng duy nhất
+        long uniqueUserCount = redemptions.stream()
+                .map(VoucherRedemption::getUserId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .count();
+
+        usageDTO.setTotalUsers((int) uniqueUserCount);
+
+        return usageDTO;
+    }
+
+    private VoucherUserDetailDTO mapToUserDetailDTO(VoucherRedemption redemption) {
+        VoucherUserDetailDTO dto = new VoucherUserDetailDTO();
+        dto.setUserId(redemption.getUserId());
+        dto.setUsedAt(redemption.getAppliedAt());
+        dto.setDiscountAmount(redemption.getDiscountAmount());
+        dto.setOrderId(redemption.getOrderId());
+
+        // Lấy thông tin người dùng
+        if (redemption.getUserId() != null) {
+            AppUser user = userRepository.findById(redemption.getUserId()).orElse(null);
+            if (user != null) {
+                dto.setEmail(user.getEmail());
+                dto.setPhone(user.getPhoneNumber());
+                dto.setFullName(user.getFullName());
+            }
+        }
+
+        // Lấy thông tin đơn hàng
+        Order order = orderRepository.findById(redemption.getOrderId()).orElse(null);
+        if (order != null) {
+            dto.setOrderCode(order.getOrderCode());
+            // Tính giá trị đơn hàng trước giảm giá
+            BigDecimal orderValue = order.getFinalAmount().add(redemption.getDiscountAmount());
+            dto.setOrderValue(orderValue);
+
+            // Nếu không có thông tin user từ userRepository, lấy từ đơn hàng
+            if (dto.getFullName() == null) {
+                dto.setFullName(order.getCustomerName());
+            }
+            if (dto.getPhone() == null) {
+                dto.setPhone(order.getPhoneNumber());
+            }
+        } else {
+            // Xử lý trường hợp đơn hàng không tồn tại
+            dto.setOrderValue(BigDecimal.ZERO);
+            dto.setOrderCode("Đơn hàng đã bị xóa");
+        }
+
+        return dto;
+    }
+
+
+
 
     /**
      * Lấy voucher theo mã code
