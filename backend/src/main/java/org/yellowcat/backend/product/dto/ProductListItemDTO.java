@@ -22,4 +22,7 @@ public class ProductListItemDTO {
     private BigDecimal minSalePrice;
     private Long totalStock;
     private String thumbnail;
+
+    private String sizesStr;
+    private String colorsStr;
 }
