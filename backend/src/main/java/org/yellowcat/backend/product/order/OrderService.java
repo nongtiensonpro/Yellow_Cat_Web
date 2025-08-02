@@ -4,6 +4,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.flywaydb.core.internal.util.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -49,10 +50,29 @@ public class OrderService {
     UsedPromotionRepository usedPromotionRepository;
     AppliedPromotionRepository appliedPromotionRepository;
 
+    public Page<OrderResponse> searchByCodeNamePhone(int page, int size,
+                                                     String orderCode,
+                                                     String customerName,
+                                                     String phoneNumber) {
+        Pageable pageable = PageRequest.of(page, size);
+        String oc = orderCode != null ? orderCode.trim() : "";
+        String cn = customerName != null ? customerName.trim() : "";
+        String pn = phoneNumber != null ? phoneNumber.trim() : "";
+
+        if (oc.isEmpty() && cn.isEmpty() && pn.isEmpty()) {
+            return orderRepository.findAllOrders(pageable);
+        }
+        return orderRepository.searchByCodeNamePhone(oc, cn, pn, pageable);
+    }
+
+
+
     public Page<OrderResponse> getOrdersByKeyword(int page, int size, String keyword) {
         Pageable pageable = PageRequest.of(page, size);
         return orderRepository.findAllByKeyword(keyword, pageable);
     }
+
+
 
     public Order findOrderById(Integer orderId) {
         return orderRepository.findById(orderId).orElse(null);
@@ -731,36 +751,36 @@ public class OrderService {
             }
         } else {
             System.out.println("❌ Không tìm thấy UsedPromotion cho đơn hàng này");
-            
+
             // Kiểm tra xem có item-level promotions không
             boolean hasItemPromotions = orderItems.stream()
                 .anyMatch(item -> item.getPromotionCode() != null && item.getDiscountAmount() != null);
-            
+
             System.out.println("🔍 Kiểm tra item-level promotions: " + hasItemPromotions);
-            
+
             if (hasItemPromotions) {
                 // Tính tổng discount từ items
                 BigDecimal totalItemDiscount = orderItems.stream()
                     .filter(item -> item.getDiscountAmount() != null)
                     .map(OrderItemDetailResponse::getDiscountAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-                
+
                 System.out.println("💰 Tổng discount từ items: " + totalItemDiscount);
-                
+
                 // Lấy promotion code từ item đầu tiên có promotion
                 String firstPromotionCode = orderItems.stream()
                     .filter(item -> item.getPromotionCode() != null)
                     .map(OrderItemDetailResponse::getPromotionCode)
                     .findFirst()
                     .orElse("ITEM_DISCOUNT");
-                
+
                 response.setAppliedVoucherCode(firstPromotionCode);
                 response.setAppliedVoucherName("Khuyến mãi sản phẩm");
                 response.setVoucherType("VND");
                 response.setVoucherValue(totalItemDiscount);
                 response.setVoucherDescription("Khuyến mãi được áp dụng cho các sản phẩm trong đơn hàng");
                 response.setVoucherDiscountAmount(totalItemDiscount);
-                
+
                 System.out.println("✅ Đã set voucher info từ item promotions");
             } else if (order.getDiscountAmount() != null
                     && order.getDiscountAmount().compareTo(java.math.BigDecimal.ZERO) > 0) {

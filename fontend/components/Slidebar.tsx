@@ -12,14 +12,11 @@ import {
     Tag,
     Palette,
     Ruler,
-    MessageCircle,
     Store,
     ChevronRight,
     TicketPercent
 } from "lucide-react";
 
-// NOTE: Next.js specific imports (Link, Image, usePathname) have been replaced
-// with standard web APIs (a, img, window.location.pathname) for compatibility.
 
 interface MenuItem {
     href?: string;
@@ -59,7 +56,7 @@ const menuItems: MenuItem[] = [
     },
     { href: "/admin/return_management", icon: <RotateCcw size={18} />, label: "Trả hàng" },
     { href: "/admin/account_management", icon: <User size={18} />, label: "Tài khoản" },
-    { href: "/admin/chat", icon: <MessageCircle size={18} />, label: "Chat" },
+    // { href: "/admin/chat", icon: <MessageCircle size={18} />, label: "Chat" },
 ];
 
 interface MenuItemComponentProps {

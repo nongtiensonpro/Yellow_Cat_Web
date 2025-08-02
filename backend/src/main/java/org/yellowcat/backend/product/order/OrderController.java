@@ -35,6 +35,25 @@ public class OrderController {
     OrderService orderService;
     AppUserService appUserService;
 
+    @GetMapping("/search/simple")
+    @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
+    public ResponseEntity<?> searchSimple(
+            @RequestParam(required = false, defaultValue = "") String orderCode,
+            @RequestParam(required = false, defaultValue = "") String customerName,
+            @RequestParam(required = false, defaultValue = "") String phoneNumber,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        try {
+            Page<OrderResponse> result = orderService.searchByCodeNamePhone(page, size, orderCode, customerName, phoneNumber);
+            return ResponseEntityBuilder.success(new PageResponse<>(result));
+        } catch (Exception e) {
+            // log stacktrace để debug nguyên nhân 500
+            System.err.println("Error in /search/simple: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi khi tìm kiếm đơn hàng", e.getMessage());
+        }
+    }
 
 
 
@@ -92,34 +111,18 @@ public class OrderController {
 
 
 
-//    @GetMapping()
-//    @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
-//    public ResponseEntity<?> getOrders(
-//            @RequestParam(defaultValue = "0") int page,
-//            @RequestParam(defaultValue = "10") int size
-//    ) {
-//        Page<OrderResponse> orders = orderService.getOrders(page, size);
-//        PageResponse<OrderResponse> pageResponse = new PageResponse<>(orders);
-//
-//        return ResponseEntityBuilder.success(pageResponse);
-//    }
-
     @GetMapping()
     @PreAuthorize("hasAnyAuthority('Admin_Web', 'Staff_Web')")
     public ResponseEntity<?> getOrders(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String keyword
+            @RequestParam(defaultValue = "10") int size
     ) {
-        Page<OrderResponse> orders;
-        if (keyword != null && !keyword.isEmpty()) {
-            orders = orderService.getOrdersByKeyword(page, size, keyword);
-        } else {
-            orders = orderService.getOrders(page, size);
-        }
+        Page<OrderResponse> orders = orderService.getOrders(page, size);
         PageResponse<OrderResponse> pageResponse = new PageResponse<>(orders);
+
         return ResponseEntityBuilder.success(pageResponse);
     }
+
 
 
 
@@ -135,6 +138,7 @@ public class OrderController {
 
         return ResponseEntityBuilder.success(pageResponse);
     }
+
 
 
 
@@ -173,7 +177,7 @@ public class OrderController {
         System.out.println("Received order: " + order.toString());
         return ResponseEntityBuilder.success(order);
     }
-    
+
     // Endpoint để VNPAY callback tự động xác nhận thanh toán
     @PostMapping("/vnpay-confirm/{orderCode}")
     @PreAuthorize("hasAnyAuthority('Admin_Web','Staff_Web')")
@@ -220,7 +224,7 @@ public class OrderController {
 
             //Sử dụng method mới để lấy Order với payments
             OrderUpdateResponse order = orderService.findOrderWithPaymentsByOrderCode(orderCode);
-            
+
             if (order == null) {
 
                 return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Order not found with orderCode: " , orderCode);
@@ -246,7 +250,7 @@ public class OrderController {
             if (updatedOrder == null) {
                 return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Order not found with orderCode: ", orderCode);
             }
-            
+
             return ResponseEntityBuilder.success(updatedOrder);
         } catch (Exception e) {
             System.err.println("Error checking in cash payment: " + e.getMessage());
@@ -262,11 +266,11 @@ public class OrderController {
         System.out.println("=== GET /api/orders/search/phone called with phoneNumber: " + phoneNumber + " ===");
         try {
             List<OrderDetailResponse> orders = orderService.findOrdersByPhoneNumber(phoneNumber);
-            
+
             if (orders.isEmpty()) {
                 return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng nào với số điện thoại: ", phoneNumber);
             }
-            
+
             return ResponseEntityBuilder.success(orders);
         } catch (Exception e) {
             System.err.println("Error searching orders by phone number: " + e.getMessage());
@@ -282,11 +286,11 @@ public class OrderController {
         System.out.println("=== GET /api/orders/search/email called with email: " + email + " ===");
         try {
             List<OrderDetailResponse> orders = orderService.findOrdersByEmail(email);
-            
+
             if (orders.isEmpty()) {
                 return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng nào với email: ", email);
             }
-            
+
             return ResponseEntityBuilder.success(orders);
         } catch (Exception e) {
             System.err.println("Error searching orders by email: " + e.getMessage());
@@ -301,11 +305,11 @@ public class OrderController {
         System.out.println("=== GET /api/orders/search called with searchValue: " + searchValue + " ===");
         try {
             List<OrderDetailResponse> orders = orderService.findOrdersByPhoneNumberOrEmail(searchValue);
-            
+
             if (orders.isEmpty()) {
                 return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng nào với thông tin: ", searchValue);
             }
-            
+
             return ResponseEntityBuilder.success(orders);
         } catch (Exception e) {
             System.err.println("Error searching orders by phone number or email: " + e.getMessage());
@@ -321,11 +325,11 @@ public class OrderController {
         System.out.println("=== GET /api/orders/detail/" + orderCode + " called ===");
         try {
             OrderDetailWithItemsResponse orderDetail = orderService.getOrderDetailByCode(orderCode);
-            
+
             if (orderDetail == null) {
                 return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng với mã: ", orderCode);
             }
-            
+
             return ResponseEntityBuilder.success(orderDetail);
         } catch (Exception e) {
             System.err.println("Error getting order detail with items: " + e.getMessage());
@@ -341,11 +345,11 @@ public class OrderController {
         System.out.println("=== GET /api/orders/public/detail/" + orderCode + " called ===");
         try {
             OrderDetailWithItemsResponse orderDetail = orderService.getOrderDetailByCode(orderCode);
-            
+
             if (orderDetail == null) {
                 return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng với mã: ", orderCode);
             }
-            
+
             // Kiểm tra xem user hiện tại có quyền xem đơn hàng này không
             if (jwt != null) {
                 try {
@@ -368,7 +372,7 @@ public class OrderController {
                     return ResponseEntityBuilder.error(HttpStatus.FORBIDDEN, "Bạn không có quyền xem đơn hàng này", "");
                 }
             }
-            
+
             return ResponseEntityBuilder.success(orderDetail);
         } catch (Exception e) {
             System.err.println("Error getting public order detail: " + e.getMessage());
@@ -385,18 +389,18 @@ public class OrderController {
         try {
             // Lấy app_user_id từ order
             Integer appUserId = orderService.getAppUserIdByOrderCode(orderCode);
-            
+
             if (appUserId == null) {
                 return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Không tìm thấy thông tin nhân viên cho đơn hàng: ", orderCode);
             }
-            
+
             // Lấy thông tin nhân viên từ AppUserService
             Optional<AppUser> staffInfo = appUserService.findById(appUserId);
-            
+
             if (staffInfo == null) {
                 return ResponseEntityBuilder.error(HttpStatus.NOT_FOUND, "Không tìm thấy thông tin nhân viên với ID: ", appUserId.toString());
             }
-            
+
             return ResponseEntityBuilder.success(staffInfo);
         } catch (Exception e) {
             System.err.println("Error getting staff info by order code: " + e.getMessage());
