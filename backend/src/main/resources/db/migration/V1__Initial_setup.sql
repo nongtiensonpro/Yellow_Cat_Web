@@ -160,7 +160,7 @@ CREATE TABLE orders
     app_user_id         INT,
     shipping_address_id INT,
     order_date          TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
-    delivery_date       TIMESTAMP,
+    delivery_date       TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
     phone_number        VARCHAR(15),
     customer_name       VARCHAR(255),
     sub_total_amount    NUMERIC(14, 2) NOT NULL,
@@ -397,7 +397,7 @@ CREATE TABLE cart_items
 
 -- Cho PostgreSQL để sinh UUID
 CREATE
-    EXTENSION IF NOT EXISTS "pgcrypto";
+EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Bảng lịch sử product
 CREATE TABLE products_history
@@ -588,7 +588,7 @@ VALUES
 (3, 'UA-CUR9-BLK-41', 1, 2, 3500000.00, 3500000.00, 20, 10, 'YellowCatWeb/ua-curry-black', 0.1),
 
 -- Puma Suede Classic XXI
-(4, 'PU-SUED-BLK-40', 1, 1, 2200000.00, 2200000.00, 22, 25,'YellowCatWeb/sx6bwsntnuwyfwx89tqt', 0.2),
+(4, 'PU-SUED-BLK-40', 1, 1, 2200000.00, 2200000.00, 22, 25, 'YellowCatWeb/sx6bwsntnuwyfwx89tqt', 0.2),
 (4, 'PU-SUED-RED-41', 6, 2, 2200000.00, 2200000.00, 30, 15, 'YellowCatWeb/lq1yqclrqebutga5pmrk', 0.3),
 (4, 'PU-SUED-GRY-42', 5, 3, 2200000.00, 2200000.00, 28, 12, 'YellowCatWeb/puma-suede-grey', 0.2),
 
@@ -763,104 +763,101 @@ VALUES (1, 'YellowCatWeb/hiitwcruaqxpuaxthlbs', 'Ảnh mặt bên bị bung keo'
 
 -- 1. Trigger function: xử lý sau khi INSERT
 CREATE
-    OR REPLACE FUNCTION trg_after_insert_order_item()
+OR REPLACE FUNCTION trg_after_insert_order_item()
     RETURNS TRIGGER AS
 $$
 BEGIN
     -- 1.1 Cộng số lượng bán vào trường sold của variant
-    UPDATE product_variants
-    SET sold = sold + NEW.quantity
-    WHERE variant_id = NEW.variant_id;
+UPDATE product_variants
+SET sold = sold + NEW.quantity
+WHERE variant_id = NEW.variant_id;
 
 -- 1.2 Cộng số lượng bán vào trường purchases của product
-    UPDATE products
-    SET purchases = purchases + NEW.quantity
-    FROM product_variants pv
-    WHERE products.product_id = pv.product_id
-      AND pv.variant_id = NEW.variant_id;
+UPDATE products
+SET purchases = purchases + NEW.quantity FROM product_variants pv
+WHERE products.product_id = pv.product_id
+  AND pv.variant_id = NEW.variant_id;
 
-    RETURN NEW;
+RETURN NEW;
 END;
 $$
-    LANGUAGE plpgsql;
+LANGUAGE plpgsql;
 
 -- 2. Tạo trigger AFTER INSERT trên order_items
 CREATE TRIGGER after_insert_order_item
     AFTER INSERT
     ON order_items
     FOR EACH ROW
-EXECUTE FUNCTION trg_after_insert_order_item();
+    EXECUTE FUNCTION trg_after_insert_order_item();
 
 
 -- 3. Trigger function: xử lý sau khi UPDATE (thay đổi quantity)
 CREATE
-    OR REPLACE FUNCTION trg_after_update_order_item()
+OR REPLACE FUNCTION trg_after_update_order_item()
     RETURNS TRIGGER AS
 $$
 DECLARE
-    delta INT;
+delta INT;
 BEGIN
     -- Tính độ chênh giữa giá trị mới và cũ
     delta
-        := NEW.quantity - OLD.quantity;
+:= NEW.quantity - OLD.quantity;
 
     IF
-        delta <> 0 THEN
+delta <> 0 THEN
         -- 3.1 Cập nhật sold của variant
-        UPDATE product_variants
-        SET sold = sold + delta
-        WHERE variant_id = NEW.variant_id;
+UPDATE product_variants
+SET sold = sold + delta
+WHERE variant_id = NEW.variant_id;
 
 -- 3.2 Cập nhật purchases của product
-        UPDATE products
-        SET purchases = purchases + delta
-        FROM product_variants pv
-        WHERE products.product_id = pv.product_id
-          AND pv.variant_id = NEW.variant_id;
-    END IF;
+UPDATE products
+SET purchases = purchases + delta FROM product_variants pv
+WHERE products.product_id = pv.product_id
+  AND pv.variant_id = NEW.variant_id;
+END IF;
 
-    RETURN NEW;
+RETURN NEW;
 END;
 $$
-    LANGUAGE plpgsql;
+LANGUAGE plpgsql;
 
 -- 4. Tạo trigger AFTER UPDATE trên order_items
 CREATE TRIGGER after_update_order_item
     AFTER UPDATE OF quantity, variant_id
     ON order_items
     FOR EACH ROW
-EXECUTE FUNCTION trg_after_update_order_item();
+    EXECUTE FUNCTION trg_after_update_order_item();
 
 
 -- 5. Trigger function: xử lý sau khi DELETE
 CREATE
-    OR REPLACE FUNCTION trg_after_delete_order_item()
+OR REPLACE FUNCTION trg_after_delete_order_item()
     RETURNS TRIGGER AS
 $$
 BEGIN
     -- 5.1 Trừ số lượng đã xóa khỏi sold
-    UPDATE product_variants
-    SET sold = sold - OLD.quantity
-    WHERE variant_id = OLD.variant_id;
+UPDATE product_variants
+SET sold = sold - OLD.quantity
+WHERE variant_id = OLD.variant_id;
 
 -- 5.2 Trừ khỏi purchases của product
-    UPDATE products
-    SET purchases = purchases - OLD.quantity
-    FROM product_variants pv
-    WHERE products.product_id = pv.product_id
-      AND pv.variant_id = OLD.variant_id;
+UPDATE products
+SET purchases = purchases - OLD.quantity FROM product_variants pv
+WHERE products.product_id = pv.product_id
+  AND pv.variant_id = OLD.variant_id;
 
-    RETURN OLD;
+RETURN OLD;
 END;
 $$
-    LANGUAGE plpgsql;
+LANGUAGE plpgsql;
 
 -- 6. Tạo trigger AFTER DELETE trên order_items
 CREATE TRIGGER after_delete_order_item
     AFTER DELETE
     ON order_items
     FOR EACH ROW
-EXECUTE FUNCTION trg_after_delete_order_item();
+    EXECUTE FUNCTION trg_after_delete_order_item();
 
 CREATE TABLE product_waitlist_request
 (
@@ -905,104 +902,117 @@ CREATE TABLE chat_message
 );
 
 
-CREATE OR REPLACE FUNCTION check_promotion_product_overlap()
+CREATE
+OR REPLACE FUNCTION check_promotion_product_overlap()
 RETURNS TRIGGER AS $$
 DECLARE
-    cnt INT;
-    new_start TIMESTAMP;
-    new_end   TIMESTAMP;
+cnt INT;
+    new_start
+TIMESTAMP;
+    new_end
+TIMESTAMP;
 BEGIN
     -- Lấy khoảng thời gian của promotion mới
-    SELECT start_date, end_date INTO new_start, new_end
-    FROM promotions
-    WHERE promotion_id = NEW.promotion_id;
+SELECT start_date, end_date
+INTO new_start, new_end
+FROM promotions
+WHERE promotion_id = NEW.promotion_id;
 
-    -- Đếm số khuyến mãi trùng lặp
-    SELECT COUNT(*) INTO cnt
-    FROM promotion_products pp
-             JOIN promotions p ON p.promotion_id = pp.promotion_id
-    WHERE pp.variant_id = NEW.variant_id
-      AND pp.promotion_id <> NEW.promotion_id
-      AND p.start_date <= new_end
-      AND p.end_date >= new_start;
+-- Đếm số khuyến mãi trùng lặp
+SELECT COUNT(*)
+INTO cnt
+FROM promotion_products pp
+         JOIN promotions p ON p.promotion_id = pp.promotion_id
+WHERE pp.variant_id = NEW.variant_id
+  AND pp.promotion_id <> NEW.promotion_id
+  AND p.start_date <= new_end
+  AND p.end_date >= new_start;
 
-    IF cnt > 0 THEN
+IF
+cnt > 0 THEN
         RAISE EXCEPTION 'Đã tồn tại khuyến mãi khác cho sản phẩm này trong khoảng thời gian trùng lặp.';
-    END IF;
-    RETURN NEW;
+END IF;
+RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$
+LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_check_promotion_overlap
-BEFORE INSERT OR UPDATE ON promotion_products
-FOR EACH ROW
-EXECUTE FUNCTION check_promotion_product_overlap();
+    BEFORE INSERT OR
+UPDATE ON promotion_products
+    FOR EACH ROW
+    EXECUTE FUNCTION check_promotion_product_overlap();
 
 -- Bảng chính lưu trữ thông tin voucher
-CREATE TABLE voucher1 (
-                          id SERIAL PRIMARY KEY,  -- ID tự tăng
-                          code VARCHAR(50) UNIQUE ,  -- Mã voucher (duy nhất)
-                          name VARCHAR(100),
-                          description TEXT,  -- Mô tả voucher
-                          discount_type VARCHAR(20),
-                          discount_value DECIMAL(10,2),  -- Giá trị giảm (10% hoặc 100.000đ)
-                          start_date TIMESTAMP ,  -- Ngày bắt đầu hiệu lực
-                          end_date TIMESTAMP ,  -- Ngày hết hiệu lực
-                          max_usage INT ,  -- Số lần sử dụng tối đa
-                          usage_count INT DEFAULT 0 ,  -- Đếm số lần đã sử dụng
-                          min_order_value DECIMAL(10,2) DEFAULT 0,  -- Giá trị đơn hàng tối thiểu
-                          max_discount_amount DECIMAL(10,2),  -- Giảm tối đa (cho loại PERCENT)
-                          is_active BOOLEAN DEFAULT TRUE,  -- Trạng thái kích hoạt
-                          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- Thời điểm tạo
-                          update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP  -- Thời điểm tạo
+CREATE TABLE voucher1
+(
+    id                  SERIAL PRIMARY KEY,                       -- ID tự tăng
+    code                VARCHAR(50) UNIQUE,                       -- Mã voucher (duy nhất)
+    name                VARCHAR(100),
+    description         TEXT,                                     -- Mô tả voucher
+    discount_type       VARCHAR(20),
+    discount_value      DECIMAL(10, 2),                           -- Giá trị giảm (10% hoặc 100.000đ)
+    start_date          TIMESTAMP,                                -- Ngày bắt đầu hiệu lực
+    end_date            TIMESTAMP,                                -- Ngày hết hiệu lực
+    max_usage           INT,                                      -- Số lần sử dụng tối đa
+    usage_count         INT            DEFAULT 0,                 -- Đếm số lần đã sử dụng
+    min_order_value     DECIMAL(10, 2) DEFAULT 0,                 -- Giá trị đơn hàng tối thiểu
+    max_discount_amount DECIMAL(10, 2),                           -- Giảm tối đa (cho loại PERCENT)
+    is_active           BOOLEAN        DEFAULT TRUE,              -- Trạng thái kích hoạt
+    created_at          TIMESTAMP      DEFAULT CURRENT_TIMESTAMP, -- Thời điểm tạo
+    update_at           TIMESTAMP      DEFAULT CURRENT_TIMESTAMP  -- Thời điểm tạo
 );
 
 -- Bảng xác định phạm vi áp dụng voucher
-CREATE TABLE voucher_scope (
-                               id SERIAL PRIMARY KEY,
-                               voucher_id INT  REFERENCES voucher1(id) ON DELETE CASCADE,  -- Liên kết voucher
-                               scope_type VARCHAR(20),
-                               target_id INT  -- ID sản phẩm/danh mục
+CREATE TABLE voucher_scope
+(
+    id         SERIAL PRIMARY KEY,
+    voucher_id INT REFERENCES voucher1 (id) ON DELETE CASCADE, -- Liên kết voucher
+    scope_type VARCHAR(20),
+    target_id  INT                                             -- ID sản phẩm/danh mục
 );
 
 -- Bảng quản lý số lần sử dụng của user
-CREATE TABLE voucher_user (
-                              id SERIAL PRIMARY KEY,
-                              voucher_id INT REFERENCES voucher1(id) ON DELETE CASCADE,
-                              user_id INT,
-                              usage_count INT DEFAULT 0 ,  -- Đếm số lần user đã dùng
-                              UNIQUE (voucher_id, user_id)  -- Mỗi user chỉ có 1 bản ghi per voucher
+CREATE TABLE voucher_user
+(
+    id          SERIAL PRIMARY KEY,
+    voucher_id  INT REFERENCES voucher1 (id) ON DELETE CASCADE,
+    user_id     INT,
+    usage_count INT DEFAULT 0,   -- Đếm số lần user đã dùng
+    UNIQUE (voucher_id, user_id) -- Mỗi user chỉ có 1 bản ghi per voucher
 );
 
 -- Bảng lưu lịch sử sử dụng voucher
-CREATE TABLE voucher_redemption (
-                                    id SERIAL PRIMARY KEY,
-                                    voucher_id INT  REFERENCES voucher1(id) ON DELETE CASCADE,
-                                    order_id INT  REFERENCES orders(order_id) ON DELETE CASCADE,  -- Đơn hàng áp dụng
-                                    user_id INT,
-                                    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- Thời điểm sử dụng
-                                    discount_amount DECIMAL(10,2)   -- Số tiền đã giảm
+CREATE TABLE voucher_redemption
+(
+    id              SERIAL PRIMARY KEY,
+    voucher_id      INT REFERENCES voucher1 (id) ON DELETE CASCADE,
+    order_id        INT REFERENCES orders (order_id) ON DELETE CASCADE, -- Đơn hàng áp dụng
+    user_id         INT,
+    applied_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,                -- Thời điểm sử dụng
+    discount_amount DECIMAL(10, 2)                                      -- Số tiền đã giảm
 );
 
 
-CREATE TABLE applied_promotions (
-                                    applied_promotion_id SERIAL PRIMARY KEY,
-                                    order_item_id        INT                        NOT NULL,
-                                    promo_type           VARCHAR(20)                NOT NULL, -- PRODUCT / ORDER / VOUCHER
-                                    promotion_code       VARCHAR(50)                NOT NULL,
-                                    promotion_name       VARCHAR(255),
-                                    discount_type        VARCHAR(20),
-                                    discount_value       NUMERIC(10,2),
-                                    discount_amount      NUMERIC(12,2)             NOT NULL,
-                                    applied_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+CREATE TABLE applied_promotions
+(
+    applied_promotion_id SERIAL PRIMARY KEY,
+    order_item_id        INT            NOT NULL,
+    promo_type           VARCHAR(20)    NOT NULL, -- PRODUCT / ORDER / VOUCHER
+    promotion_code       VARCHAR(50)    NOT NULL,
+    promotion_name       VARCHAR(255),
+    discount_type        VARCHAR(20),
+    discount_value       NUMERIC(10, 2),
+    discount_amount      NUMERIC(12, 2) NOT NULL,
+    applied_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     -- Tham chiếu mềm (nullable) tới bảng gốc (giúp truy vết khi cần)
-                                    promotion_id         INT,
-                                    promotion_program_id INT,
-                                    voucher_id           INT,
+    promotion_id         INT,
+    promotion_program_id INT,
+    voucher_id           INT,
 
-                                    CONSTRAINT fk_applied_order_item FOREIGN KEY (order_item_id)
-                                        REFERENCES order_items(order_item_id) ON DELETE CASCADE
+    CONSTRAINT fk_applied_order_item FOREIGN KEY (order_item_id)
+        REFERENCES order_items (order_item_id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_applied_promotions_item ON applied_promotions(order_item_id);
+CREATE INDEX idx_applied_promotions_item ON applied_promotions (order_item_id);

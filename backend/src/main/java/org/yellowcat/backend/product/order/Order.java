@@ -106,6 +106,7 @@ public class Order {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+        if (orderStatus.equalsIgnoreCase("Paid")) deliveryDate = LocalDateTime.now();
     }
 
     public boolean isPaid() {
