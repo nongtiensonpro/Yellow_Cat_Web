@@ -3,15 +3,15 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-    User, ShoppingCart, Percent, Heart, MapPin, Home
+    User, ShoppingCart, Heart, MapPin, Home
 } from 'lucide-react';
 
 const MENU_ITEMS = [
     { label: 'Thông tin tài khoản', href: '/user_info', icon: <User size={18} /> },
     { label: 'Quản lý đơn hàng', href: '/user_info/order', icon: <ShoppingCart size={18} /> },
-    { label: 'Mã giảm giá', href: '/user_info/vouchers', icon: <Percent size={18} /> },
+    // { label: 'Mã giảm giá', href: '/user_info/vouchers', icon: <Percent size={18} /> },
     { label: 'Sản phẩm yêu thích', href: '/wishlist', icon: <Heart size={18} /> },
-    { label: 'Sổ địa chỉ', href: '/user_info/address_management', icon: <MapPin size={18} /> },
+    { label: 'Địa chỉ', href: '/user_info/address_management', icon: <MapPin size={18} /> },
     { label: 'Quay về trang chủ', href: '/', icon: <Home size={18} /> },
 ];
 
