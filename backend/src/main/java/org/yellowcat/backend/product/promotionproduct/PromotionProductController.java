@@ -77,7 +77,7 @@ public class PromotionProductController {
             promotionProductService.updatePromotionWithProducts(id, dto, userId);
             return ResponseEntityBuilder.success("Cập nhật đợt giảm giá thành công!");
         } catch (Exception e) {
-            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "Lỗi khi cập nhật đợt giảm giá: " + e.getMessage(), e.getMessage());
+            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, " " + e.getMessage(), e.getMessage());
         }
     }
 
