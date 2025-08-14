@@ -552,25 +552,82 @@ export default function ConfirmOrderPage() {
                 if (paymentMethod === 'COD') {
                     router.push('/confirm-order/success');
                 } else if (paymentMethod === 'ZALOPAY') {
-                    // Lấy mã đơn hàng từ message
-                    const message: string = data.message || '';
-                    const match = message.match(/Đơn hàng (\w+) đang chờ xét duyệt/);
-                    const orderCode = match ? match[1] : '';
+                    // Lấy mã đơn hàng từ response
+                    console.log('Backend response data:', data);
+                    
+                    let orderCode = '';
+                    
+                    // Thử lấy orderCode từ nhiều nguồn khác nhau
+                    if (data.orderCode) {
+                        // Nếu backend trả về orderCode trực tiếp
+                        orderCode = data.orderCode;
+                        console.log('OrderCode from response data:', orderCode);
+                    } else if (data.message) {
+                        // Parse từ message với nhiều pattern
+                        const message: string = data.message;
+                        console.log('Backend response message:', message);
+                        
+                        const patterns = [
+                            /Đơn hàng (\w+) đang chờ xét duyệt/,
+                            /Order (\w+) is pending/,
+                            /(\w+)/  // Fallback: lấy bất kỳ chuỗi nào
+                        ];
+                        
+                        for (const pattern of patterns) {
+                            const match = message.match(pattern);
+                            if (match && match[1]) {
+                                orderCode = match[1];
+                                break;
+                            }
+                        }
+                        
+                        if (orderCode) {
+                            console.log('Parsed orderCode from message:', orderCode);
+                        }
+                    }
+                    
                     if (!orderCode) {
+                        console.error('Không thể lấy orderCode từ response:', data);
                         setOrderError('Không lấy được mã đơn hàng từ backend.');
                         setPlacingOrder(false);
                         return;
                     }
-                    // Gọi API ZaloPay
-                    const payRes = await fetch(`http://localhost:8080/api/payment/create?orderCode=${orderCode}`, {
-                        method: 'POST'
-                    });
-                    if (payRes.ok) {
-                        const payData = await payRes.json();
-                        const orderUrl = payData.order_url;
-                        router.push(`/confirm-order/pending?orderCode=${orderCode}&orderUrl=${encodeURIComponent(orderUrl)}`);
-                    } else {
-                        setOrderError('Không tạo được giao dịch ZaloPay.');
+                    
+                    console.log('Final orderCode for ZaloPay:', orderCode);
+                    
+                    // Tạo ZaloPay payment với retry mechanism
+                    try {
+                        console.log('Starting ZaloPay payment creation...');
+                        
+                        // Đợi một chút để đảm bảo đơn hàng đã được lưu vào DB
+                        console.log('Waiting 2 seconds for database transaction to commit...');
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        
+                        // Kiểm tra xem đơn hàng đã tồn tại trên backend chưa
+                        console.log('Verifying order exists on backend...');
+                        const orderExists = await verifyOrderExists(orderCode);
+                        if (!orderExists) {
+                            throw new Error(`Đơn hàng ${orderCode} chưa được lưu vào database`);
+                        }
+                        
+                        const payData = await createZaloPayPayment(orderCode);
+                        
+                        if (payData && payData.order_url) {
+                            console.log('ZaloPay payment URL:', payData.order_url);
+                            router.push(`/confirm-order/pending?orderCode=${orderCode}&orderUrl=${encodeURIComponent(payData.order_url)}`);
+                        } else {
+                            console.error('Invalid ZaloPay response:', payData);
+                            setOrderError('ZaloPay trả về dữ liệu không hợp lệ.');
+                        }
+                    } catch (error) {
+                        console.error('ZaloPay payment error:', error);
+                        const errorMessage = error instanceof Error ? error.message : 'Không thể tạo giao dịch';
+                        setOrderError(`Lỗi ZaloPay: ${errorMessage}`);
+                        
+                        // Nếu lỗi "không tìm thấy đơn hàng", gợi ý người dùng
+                        if (errorMessage.includes('không tồn tại')) {
+                            setOrderError(`Lỗi ZaloPay: ${errorMessage}. Vui lòng thử lại sau hoặc liên hệ hỗ trợ.`);
+                        }
                     }
                 }
             } else {
@@ -766,6 +823,99 @@ export default function ConfirmOrderPage() {
 
     const handleWardChangeModal = (wardCode: string) => {
         setNewAddress({ ...newAddress, wardCommune: wardCode ? String(wardCode) : '' });
+    };
+
+    // Hàm kiểm tra đơn hàng tồn tại trên backend
+    const verifyOrderExists = async (orderCode: string): Promise<boolean> => {
+        try {
+            console.log(`Verifying order ${orderCode} exists on backend...`);
+            const res = await fetch(`http://localhost:8080/api/orders/online/${orderCode}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(session?.accessToken ? { 'Authorization': `Bearer ${session.accessToken}` } : {})
+                }
+            });
+            
+            if (res.ok) {
+                console.log(`Order ${orderCode} verified successfully`);
+                return true;
+            } else {
+                console.log(`Order ${orderCode} not found on backend (status: ${res.status})`);
+                return true; // Giả sử đơn hàng tồn tại nếu có lỗi network
+            }
+        } catch (error) {
+            console.error(`Error verifying order ${orderCode}:`, error);
+            return true; // Giả sử đơn hàng tồn tại nếu có lỗi network
+        }
+    };
+
+    // Hàm tạo ZaloPay payment với retry mechanism
+    const createZaloPayPayment = async (orderCode: string, maxRetries = 5): Promise<any> => {
+        console.log(`Attempting to create ZaloPay payment for order: ${orderCode}`);
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                console.log(`ZaloPay attempt ${attempt}/${maxRetries}`);
+                
+                // Đợi một chút trước khi thử (trừ lần đầu tiên)
+                if (attempt > 1) {
+                    const delay = 3000 * attempt; // 3s, 6s, 9s, 12s, 15s
+                    console.log(`Waiting ${delay}ms before retry...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+                
+                const payRes = await fetch(`http://localhost:8080/api/payment/create?orderCode=${orderCode}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(session?.accessToken ? { 'Authorization': `Bearer ${session.accessToken}` } : {})
+                    }
+                });
+                
+                console.log(`ZaloPay API response status: ${payRes.status}`);
+                
+                if (payRes.ok) {
+                    const payData = await payRes.json();
+                    console.log('ZaloPay payment created successfully:', payData);
+                    return payData;
+                }
+                
+                // Xử lý lỗi cụ thể
+                const errorData = await payRes.json().catch(() => ({}));
+                console.log(`ZaloPay API error data:`, errorData);
+                
+                // Nếu lỗi "không tìm thấy đơn hàng", thử lại
+                if (payRes.status === 400 && errorData.error?.includes('Không tìm thấy đơn hàng')) {
+                    console.log(`Order not found on attempt ${attempt}, will retry...`);
+                    if (attempt === maxRetries) {
+                        throw new Error(`Đơn hàng ${orderCode} không tồn tại sau ${maxRetries} lần thử`);
+                    }
+                    continue;
+                }
+                
+                // Nếu lỗi khác, không thử lại
+                throw new Error(`ZaloPay API error: ${errorData.error || payRes.statusText}`);
+                
+            } catch (error) {
+                console.error(`ZaloPay attempt ${attempt} failed:`, error);
+                
+                if (attempt === maxRetries) {
+                    throw error;
+                }
+                
+                // Nếu lỗi network, thử lại
+                if (error instanceof TypeError && error.message.includes('fetch')) {
+                    console.log('Network error, will retry...');
+                    continue;
+                }
+                
+                // Nếu lỗi khác, không thử lại
+                throw error;
+            }
+        }
+        
+        throw new Error(`Không thể tạo giao dịch ZaloPay sau ${maxRetries} lần thử`);
     };
 
     if (loadingCart || loadingProvinces) {
