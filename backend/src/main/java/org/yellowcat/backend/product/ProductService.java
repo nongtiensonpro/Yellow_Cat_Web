@@ -493,6 +493,8 @@ public class ProductService {
                     dto.setSku(h.getSku());
                     dto.setColor(colorMap.get(h.getColorId()));
                     dto.setSize(sizeMap.get(h.getSizeId()));
+                    dto.setPrice(h.getPrice());
+                    dto.setSalePrice(h.getSalePrice());
                     dto.setQuantityInStock(h.getQuantityInStock());
                     dto.setImageUrl(h.getImageUrl());
                     dto.setWeight(h.getWeight());
