@@ -2500,6 +2500,7 @@ export default function VouchersPage() {
 
                 setVouchers(voucherList);
                 // Tính toán phân trang
+                // Lưu ý: Vouchers sẽ được sắp xếp theo ngày tạo (mới nhất trước) trong filteredVouchers
                 const total = voucherList.length;
                 setTotalPages(Math.ceil(total / itemsPerPage));
             } else {
@@ -2615,7 +2616,7 @@ export default function VouchersPage() {
         return { status: 'Đang diễn ra', color: 'bg-green-500' };
     };
 
-    // Lọc dữ liệu theo filters
+    // Lọc dữ liệu theo filters và sắp xếp theo ngày tạo (mới nhất trước)
     const filteredVouchers = useMemo(() => {
         console.log('Filtering vouchers:', vouchers.length, 'items');
         let filtered = vouchers;
@@ -2628,7 +2629,14 @@ export default function VouchersPage() {
             );
         }
 
-        console.log('Filtered vouchers:', filtered.length, 'items');
+        // Sắp xếp theo ngày tạo (mới nhất trước)
+        filtered.sort((a, b) => {
+            const dateA = new Date(a.startDate);
+            const dateB = new Date(b.startDate);
+            return dateB.getTime() - dateA.getTime(); // Giảm dần (mới nhất trước)
+        });
+
+        console.log('Filtered and sorted vouchers:', filtered.length, 'items');
         return filtered;
     }, [vouchers, filters]);
 
@@ -2947,6 +2955,12 @@ export default function VouchersPage() {
 
             {/* Table */}
             <div className="overflow-x-auto bg-white shadow border rounded">
+                {/* Thông tin về thứ tự sắp xếp */}
+                <div className="bg-blue-50 border-b border-blue-200 px-4 py-2">
+                    <p className="text-sm text-blue-700">
+                        📅 <strong>Thứ tự hiển thị:</strong> Voucher được tạo gần nhất sẽ hiển thị đầu tiên
+                    </p>
+                </div>
                 <table className="min-w-full text-sm text-left border">
                     <thead className="bg-gray-100 text-gray-700 uppercase text-xs">
                     <tr>
@@ -3206,6 +3220,7 @@ export default function VouchersPage() {
                         <div className="flex justify-between items-center mb-4">
                             <div className="text-sm text-gray-600">
                                 Hiển thị {startIndex}-{endIndex} trong tổng số {totalItems} voucher
+                                <span className="ml-2 text-blue-600">(Sắp xếp theo ngày tạo, mới nhất trước)</span>
                             </div>
                             <div className="text-sm text-gray-600">
                                 Trang {currentPage} / {totalPages}

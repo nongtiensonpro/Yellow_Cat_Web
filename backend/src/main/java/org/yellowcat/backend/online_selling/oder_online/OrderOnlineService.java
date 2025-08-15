@@ -59,14 +59,23 @@ public class OrderOnlineService {
     OderOnlineRepository orderOnlineRepository;
 
     /**
-     * Tạo đơn hàng từ yêu cầu đặt hàng
+     * Tạo đơn hàng từ yêu cầu đặt hàng online
+     * 
+     * Chức năng:
+     * 1. Xử lý danh sách sản phẩm và tính tổng tiền
+     * 2. Áp dụng voucher nếu có (tính giảm giá)
+     * 3. Tính phí ship và tổng tiền cuối cùng
+     * 4. Tạo đơn hàng với đầy đủ thông tin
+     * 5. Lưu payment, timeline và xóa sản phẩm khỏi giỏ hàng
+     * 
+     * @param request DTO chứa thông tin đơn hàng từ frontend
+     * @return Order đã được tạo và lưu vào database
      */
     @Transactional
     public Order createOrderFromOnlineRequest(OrderOnlineRequestDTO request) {
         List<OrderItem> orderItems = new ArrayList<>();
         BigDecimal subTotal = BigDecimal.ZERO;
         BigDecimal discountAfterAmount = BigDecimal.ZERO;
-        BigDecimal subTotal_use_voucher = subTotal;
 
         // Xử lý sản phẩm
         for (ProductOnlineDTO p : request.getProducts()) {
@@ -86,20 +95,27 @@ public class OrderOnlineService {
             orderItems.add(item);
             subTotal = subTotal.add(totalPrice);
         }
-        System.out.println("Tổng tiền tất cả sản phẩm " + subTotal);
-
-        if (request.getCodeVoucher() != null) {
-             discountAfterAmount = voucherService1.calculateDiscountedAmount(
-                    request.getCodeVoucher(), subTotal, request.getShippingFee()
+        
+        BigDecimal shippingFee = request.getShippingFee() != null ? request.getShippingFee() : BigDecimal.ZERO;
+        
+        // Logic tính toán tổng tiền rõ ràng
+        BigDecimal finalAmount;
+        BigDecimal subTotal_use_voucher;
+        boolean hasVoucher = request.getCodeVoucher() != null && !request.getCodeVoucher().trim().isEmpty();
+        
+        if (hasVoucher) {
+            // CÓ VOUCHER: Tính theo logic voucher
+            discountAfterAmount = voucherService1.calculateDiscountedAmount(
+                    request.getCodeVoucher(), subTotal, shippingFee
             );
             subTotal_use_voucher = subTotal.subtract(discountAfterAmount);
-            System.out.println("Số tiền được giảm: "+ discountAfterAmount);
-            System.out.println("Tổng tiền sau khi được áp mã giảm giá: " + subTotal_use_voucher);
+            finalAmount = subTotal_use_voucher.add(shippingFee);
+        } else {
+            // KHÔNG CÓ VOUCHER: Tổng tiền sản phẩm + phí ship
+            discountAfterAmount = BigDecimal.ZERO;
+            subTotal_use_voucher = subTotal;
+            finalAmount = subTotal.add(shippingFee);
         }
-
-        BigDecimal shippingFee = request.getShippingFee() != null ? request.getShippingFee() : BigDecimal.ZERO;
-        BigDecimal finalAmount = subTotal_use_voucher.add(shippingFee);
-        System.out.println("Só cuối cùng cua hoa don: "+ finalAmount);
 
         // Tìm AppUser
         AppUser user = null;
@@ -118,12 +134,11 @@ public class OrderOnlineService {
                     .orElseThrow(() -> new RuntimeException("Địa chỉ không tồn tại"));
         }
 
-        System.out.println("shipping methot được chuyền vào: "+ request.getShippingMethodId());
         ShippingMethod shippingOption = shippingMethodIdRepository.findById(request.getShippingMethodId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phương thức giao hàng với ID: " + request.getShippingMethodId()));
 
-
         // Tạo đơn hàng
+        
         Order order = Order.builder()
                 .orderCode(generateOrderCode())
                 .user(user)
@@ -167,11 +182,12 @@ public class OrderOnlineService {
 
         //Lưu phương thức thanh toán
         Payment payment = new Payment();
-        payment.setAmount(subTotal);
+        payment.setAmount(finalAmount);  // Sửa: Lưu finalAmount thay vì subTotal
         payment.setOrder(order);
         payment.setPaymentMethod(request.getPaymentMethod());
         payment.setPaymentStatus("Pending");
-        paymentRepository.save(payment);
+        
+        Payment savedPayment = paymentRepository.save(payment);
 
         // Xóa sản phẩm khỏi giỏ hàng nếu user đăng nhập
         if (user != null) {
@@ -192,7 +208,13 @@ public class OrderOnlineService {
 
 
     /**
-     * Sinh mã đơn hàng dạng HDxxxxx
+     * Sinh mã đơn hàng tự động
+     * 
+     * Chức năng:
+     * - Tạo mã đơn hàng duy nhất theo format HDxxxxx
+     * - HD = Hóa Đơn, xxxxx = số ngẫu nhiên từ 10000-99999
+     * 
+     * @return String mã đơn hàng (ví dụ: HD12345)
      */
     private String generateOrderCode() {
         int randomNum = 10000 + new Random().nextInt(90000);
@@ -200,7 +222,17 @@ public class OrderOnlineService {
     }
 
     /**
-     * Hủy đơn hàng và hoàn kho nếu đang ở trạng thái 'Pending'
+     * Hủy đơn hàng và hoàn kho
+     * 
+     * Chức năng:
+     * 1. Kiểm tra đơn hàng có tồn tại không
+     * 2. Kiểm tra đơn hàng có ở trạng thái 'Pending' không
+     * 3. Hoàn kho: cộng lại số lượng sản phẩm vào kho
+     * 4. Cập nhật trạng thái đơn hàng thành 'Cancelled'
+     * 
+     * @param orderId ID của đơn hàng cần hủy
+     * @return Order đã được cập nhật trạng thái
+     * @throws RuntimeException nếu đơn hàng không tồn tại hoặc không thể hủy
      */
     @Transactional
     public Order cancelOrder(Integer orderId) {
@@ -222,11 +254,30 @@ public class OrderOnlineService {
         return orderRepository.save(order);
     }
 
+    /**
+     * Tìm đơn hàng theo mã đơn hàng
+     * 
+     * Chức năng:
+     * - Tìm kiếm đơn hàng trong database theo mã đơn hàng (orderCode)
+     * 
+     * @param orderCode Mã đơn hàng cần tìm (ví dụ: HD12345)
+     * @return Order nếu tìm thấy, null nếu không tìm thấy
+     */
     public Order getOrderByOrderCode(String orderCode) {
         Order order = orderRepository.findByOrderCode(orderCode);
         return order;
     }
 
+    /**
+     * Lấy danh sách tất cả đơn hàng online có địa chỉ giao hàng
+     * 
+     * Chức năng:
+     * - Lấy tất cả đơn hàng có shipping address (đơn hàng online)
+     * - Sắp xếp theo thời gian cập nhật mới nhất
+     * - Chuyển đổi thành DTO để trả về frontend
+     * 
+     * @return List<OrderSummaryDTO> danh sách đơn hàng online
+     */
     @Transactional
     public List<OrderSummaryDTO> getAllOnlineOrdersWithShipping() {
         List<Order> orders = orderRepository.findByShippingAddressIsNotNullOrderByUpdatedAtDesc();
@@ -243,6 +294,17 @@ public class OrderOnlineService {
         ).toList();
     }
 
+    /**
+     * Lấy danh sách đơn hàng online theo trạng thái
+     * 
+     * Chức năng:
+     * - Lọc đơn hàng online theo trạng thái cụ thể
+     * - Chỉ lấy đơn hàng có shipping address (đơn hàng online)
+     * - Sắp xếp theo thời gian cập nhật mới nhất
+     * 
+     * @param orderStatus Trạng thái đơn hàng cần lọc (ví dụ: "Pending", "Completed")
+     * @return List<OrderSummaryDTO> danh sách đơn hàng theo trạng thái
+     */
     @Transactional
     public List<OrderSummaryDTO> getOnlineOrdersByStatus(String orderStatus) {
         List<Order> orders = orderRepository.findByShippingAddressIsNotNullAndOrderStatusOrderByUpdatedAtDesc(orderStatus);
@@ -259,6 +321,20 @@ public class OrderOnlineService {
         ).toList();
     }
 
+    /**
+     * Lấy danh sách đơn hàng theo nhóm trạng thái
+     * 
+     * Chức năng:
+     * - Phân loại đơn hàng theo nhóm trạng thái logic
+     * - userRequestStatuses: Đơn hàng cần xử lý từ phía khách hàng
+     * - adminProcessingStatuses: Đơn hàng đang được admin xử lý
+     * - userTrackingStatuses: Đơn hàng khách hàng có thể theo dõi
+     * - completedStatuses: Đơn hàng đã hoàn thành
+     * 
+     * @param groupKey Tên nhóm trạng thái cần lấy
+     * @return List<OrderSummaryDTO> danh sách đơn hàng theo nhóm
+     * @throws IllegalArgumentException nếu groupKey không hợp lệ
+     */
     @Transactional
     public List<OrderSummaryDTO> getOrdersByStatusGroup(String groupKey) {
         List<String> statuses;
@@ -285,6 +361,17 @@ public class OrderOnlineService {
     }
 
 
+    /**
+     * Chuyển đổi Order entity thành OrderSummaryDTO
+     * 
+     * Chức năng:
+     * - Chuyển đổi dữ liệu từ Order entity sang DTO
+     * - Chỉ lấy các thông tin cần thiết cho danh sách đơn hàng
+     * - Giảm thiểu dữ liệu truyền tải
+     * 
+     * @param order Order entity cần chuyển đổi
+     * @return OrderSummaryDTO chứa thông tin tóm tắt đơn hàng
+     */
     private OrderSummaryDTO convertToSummary(Order order) {
         return OrderSummaryDTO.builder()
                 .orderId(order.getOrderId())
@@ -297,6 +384,20 @@ public class OrderOnlineService {
                 .build();
     }
 
+    /**
+     * Lấy chi tiết đơn hàng online
+     * 
+     * Chức năng:
+     * 1. Tìm đơn hàng theo ID
+     * 2. Chuyển đổi OrderItems thành DTO
+     * 3. Lấy thông tin địa chỉ giao hàng
+     * 4. Lấy thông tin payment
+     * 5. Tạo OrderOnlineDetailDTO với đầy đủ thông tin
+     * 
+     * @param orderId ID của đơn hàng cần lấy chi tiết
+     * @return OrderOnlineDetailDTO chứa thông tin chi tiết đơn hàng
+     * @throws RuntimeException nếu không tìm thấy đơn hàng
+     */
     @Transactional
     public OrderOnlineDetailDTO getOrderDetail(Integer orderId) {
         Order order = orderRepository.findById(orderId)
@@ -335,6 +436,19 @@ public class OrderOnlineService {
                 .build();
     }
 
+    /**
+     * Lấy danh sách đơn hàng online của một người dùng
+     * 
+     * Chức năng:
+     * 1. Tìm người dùng theo keycloakId
+     * 2. Lấy tất cả đơn hàng của người dùng đó
+     * 3. Lọc chỉ lấy đơn hàng online (có shipping address)
+     * 4. Sắp xếp theo thời gian đặt hàng mới nhất
+     * 
+     * @param keycloakId UUID của người dùng từ Keycloak
+     * @return List<OrderSummaryDTO> danh sách đơn hàng online của người dùng
+     * @throws RuntimeException nếu không tìm thấy người dùng
+     */
     @Transactional
     public List<OrderSummaryDTO> getOrdersByUser(UUID keycloakId) {
         AppUser user = appUserRepository.findByKeycloakId(keycloakId)
@@ -351,6 +465,19 @@ public class OrderOnlineService {
         return ordersOnline.stream().map(this::convertToSummary).toList();
     }
 
+    /**
+     * Lấy danh sách đơn hàng online của người dùng theo trạng thái
+     * 
+     * Chức năng:
+     * 1. Tìm người dùng theo keycloakId
+     * 2. Lấy đơn hàng của người dùng theo trạng thái cụ thể
+     * 3. Lọc chỉ lấy đơn hàng online (có shipping address)
+     * 4. Trả về danh sách rỗng nếu không tìm thấy người dùng
+     * 
+     * @param keycloakId UUID của người dùng từ Keycloak
+     * @param orderStatus Trạng thái đơn hàng cần lọc
+     * @return List<OrderSummaryDTO> danh sách đơn hàng theo trạng thái, rỗng nếu không tìm thấy người dùng
+     */
     @Transactional
     public List<OrderSummaryDTO> getOrderStatus(UUID keycloakId, String orderStatus) {
         Optional<AppUser> userOpt = appUserRepository.findByKeycloakId(keycloakId);

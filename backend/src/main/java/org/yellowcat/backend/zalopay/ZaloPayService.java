@@ -21,6 +21,7 @@ import org.yellowcat.backend.product.order.OrderRepository;
 import org.yellowcat.backend.product.orderItem.OrderItem;
 import org.yellowcat.backend.product.payment.Payment;
 import org.yellowcat.backend.product.payment.PaymentRepository;
+import org.yellowcat.backend.online_selling.oder_online.OderOnlineRepository;
 import org.yellowcat.backend.zalopay.dto.ZaloPayItem;
 import org.yellowcat.backend.zalopay.dto.ZaloPayRequestDTO;
 import vn.zalopay.crypto.HMACUtil;
@@ -52,6 +53,9 @@ public class ZaloPayService {
     private OrderRepository orderRepository;
 
     @Autowired
+    private OderOnlineRepository oderOnlineRepository;
+
+    @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
     private final Mac hmacSHA256;
@@ -76,8 +80,8 @@ public class ZaloPayService {
 
     @Transactional
     public Map<String, Object> createZaloPayOrder(String orderCode) throws Exception {
-        // Lấy order từ DB
-        Order order = orderRepository.getOrderByOrderCode(orderCode);
+        // Lấy order từ DB - sử dụng oderOnlineRepository để tìm cả đơn hàng online và tại quầy
+        Order order = oderOnlineRepository.findByOrderCode(orderCode);
         if (order == null) {
             throw new IllegalArgumentException("Không tìm thấy đơn hàng với mã: " + orderCode);
         }
@@ -118,7 +122,7 @@ public class ZaloPayService {
         zaloRequest.put("description", "Thanh toán đơn hàng " + orderCode);
         zaloRequest.put("bank_code", "");
         zaloRequest.put("embed_data", embedData.toString());
-        zaloRequest.put("callback_url", "https://0d784def298c.ngrok-free.app/api/payment/callback");
+        zaloRequest.put("callback_url", "https://de3e9403c40a.ngrok-free.app/api/payment/callback");
 
         // Tính MAC
         String data = APP_ID + "|" + appTransId + "|" + userId + "|" + amount + "|" + timestamp + "|" +
