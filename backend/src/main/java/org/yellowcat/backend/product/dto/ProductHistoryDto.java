@@ -18,4 +18,5 @@ public class ProductHistoryDto {
     private String thumbnail;
     private LocalDateTime changedAt;
     private String changedBy;
+    private String operation;
 }

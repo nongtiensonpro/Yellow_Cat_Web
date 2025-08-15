@@ -68,6 +68,7 @@ public interface ProductMapper {
     );
 
     @Mapping(target = "changedBy", source = "changedBy.email")
+    @Mapping(target = "operation", source = "operation")
     @Mapping(target = "category", ignore = true)
     @Mapping(target = "brand",    ignore = true)
     @Mapping(target = "material", ignore = true)
