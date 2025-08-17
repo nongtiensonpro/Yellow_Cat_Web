@@ -52,6 +52,7 @@ interface ProductVariant {
     imageUrl: string;
     weight: number;
     enabled: boolean; // Cho phép kích hoạt/vô hiệu hóa biến thể
+    costPrice: number; // Giá nhập
 }
 
 interface ProductFormData {
@@ -102,7 +103,8 @@ export default function AddProductPage() {
     const [bulkSettings, setBulkSettings] = useState({
         price: 0,
         weight: 0,
-        stockLevel: 0
+        stockLevel: 0,
+        costPrice: 0
     });
 
     // Validation state
@@ -484,7 +486,8 @@ export default function AddProductPage() {
                     sold: 0, // Sản phẩm mới luôn bắt đầu với 0 đã bán
                     imageUrl: "",
                     weight: bulkSettings.weight,
-                    enabled: true
+                    enabled: true,
+                    costPrice: bulkSettings.costPrice // Giá nhập
                 };
 
                 newVariants.push(variant);
@@ -594,7 +597,8 @@ export default function AddProductPage() {
                     price: bulkSettings.price || v.price,
                     salePrice: bulkSettings.price || v.price,
                     weight: bulkSettings.weight || v.weight,
-                    stockLevel: bulkSettings.stockLevel !== undefined ? bulkSettings.stockLevel : v.stockLevel
+                    stockLevel: bulkSettings.stockLevel !== undefined ? bulkSettings.stockLevel : v.stockLevel,
+                    costPrice: bulkSettings.costPrice !== undefined ? bulkSettings.costPrice : v.costPrice
                 } : v
             )
         }));
@@ -653,7 +657,8 @@ export default function AddProductPage() {
                     stockLevel: v.stockLevel,
                     sold: v.sold,
                     imageUrl: v.imageUrl,
-                    weight: v.weight
+                    weight: v.weight,
+                    costPrice: v.costPrice
                 }))
             };
 
@@ -727,7 +732,7 @@ export default function AddProductPage() {
     }
 
     return (
-        <div className="container mx-auto p-6 max">
+        <div className="mx-auto p-6 max">
             {/* Phần đầu trang */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
@@ -939,21 +944,8 @@ export default function AddProductPage() {
                                     Áp Dụng Cho Tất Cả
                                 </Button>
                             </div>
-                            <div className="grid grid-cols-3 gap-4 mb-4">
-                                <Input
-                                    label="Giá gốc (VNĐ)"
-                                    type="number"
-                                    size="sm"
-                                    min={0}
-                                    max={999999999}
-                                    value={bulkSettings.price.toString()}
-                                    onChange={(e) => {
-                                        const value = handleNumberInput(e.target.value, 0, 999999999);
-                                        setBulkSettings(prev => ({ ...prev, price: value }));
-                                    }}
-                                    onKeyDown={handleKeyDown}
-                                    onPaste={handlePaste}
-                                />
+                            <div className="grid grid-cols-4 gap-4 mb-4">
+
                                 <Input
                                     label="Trọng lượng (g)"
                                     type="number"
@@ -982,6 +974,34 @@ export default function AddProductPage() {
                                     onKeyDown={handleKeyDown}
                                     onPaste={handlePaste}
                                 />
+                                <Input
+                                    label="Giá gốc (VNĐ)"
+                                    type="number"
+                                    size="sm"
+                                    min={0}
+                                    max={999999999}
+                                    value={bulkSettings.price.toString()}
+                                    onChange={(e) => {
+                                        const value = handleNumberInput(e.target.value, 0, 999999999);
+                                        setBulkSettings(prev => ({ ...prev, price: value }));
+                                    }}
+                                    onKeyDown={handleKeyDown}
+                                    onPaste={handlePaste}
+                                />
+                                <Input
+                                    label="Giá bán (VNĐ)"
+                                    type="number"
+                                    size="sm"
+                                    min={0}
+                                    max={999999999}
+                                    value={bulkSettings.costPrice.toString()}
+                                    onChange={(e) => {
+                                        const value = handleNumberInput(e.target.value, 0, 999999999);
+                                        setBulkSettings(prev => ({ ...prev, costPrice: value }));
+                                    }}
+                                    onKeyDown={handleKeyDown}
+                                    onPaste={handlePaste}
+                                />
                             </div>
                         </div>
 
@@ -1005,9 +1025,10 @@ export default function AddProductPage() {
                                         <TableHeader>
                                             <TableColumn>KÍCH HOẠT</TableColumn>
                                             <TableColumn>BIẾN THỂ</TableColumn>
-                                            <TableColumn>GIÁ GỐC</TableColumn>
                                             <TableColumn>TRỌNG LƯỢNG</TableColumn>
                                             <TableColumn>TỒN KHO</TableColumn>
+                                            <TableColumn>GIÁ NHẬP</TableColumn>
+                                            <TableColumn>GIÁ GỐC</TableColumn>
                                             <TableColumn>ẢNH BIẾN THỂ</TableColumn>
                                         </TableHeader>
                                         <TableBody>
@@ -1028,23 +1049,6 @@ export default function AddProductPage() {
                                                                 {getSizeName(variant.sizeId)}
                                                             </Chip>
                                                         </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Input
-                                                            type="number"
-                                                            size="sm"
-                                                            min={0}
-                                                            max={999999999}
-                                                            value={variant.price.toString()}
-                                                            onChange={(e) => updateVariant(variant.id, 'price', handleNumberInput(e.target.value, 0, 999999999))}
-                                                            className="w-24"
-                                                            isInvalid={!!errors[`variant_${variant.id}_price`]}
-                                                            onKeyDown={handleKeyDown}
-                                                            onPaste={handlePaste}
-                                                        />
-                                                        {errors[`variant_${variant.id}_price`] && (
-                                                            <p className="text-red-500 text-xs mt-1">{errors[`variant_${variant.id}_price`]}</p>
-                                                        )}
                                                     </TableCell>
                                                     <TableCell>
                                                         <Input
@@ -1078,6 +1082,40 @@ export default function AddProductPage() {
                                                         />
                                                         {errors[`variant_${variant.id}_stockLevel`] && (
                                                             <p className="text-red-500 text-xs mt-1">{errors[`variant_${variant.id}_stockLevel`]}</p>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Input
+                                                            type="number"
+                                                            size="sm"
+                                                            min={0}
+                                                            max={999999999}
+                                                            value={variant.costPrice.toString()}
+                                                            onChange={(e) => updateVariant(variant.id, 'costPrice', handleNumberInput(e.target.value, 0, 999999999))}
+                                                            className="w-24"
+                                                            isInvalid={!!errors[`variant_${variant.id}_costPrice`]}
+                                                            onKeyDown={handleKeyDown}
+                                                            onPaste={handlePaste}
+                                                        />
+                                                        {errors[`variant_${variant.id}_costPrice`] && (
+                                                            <p className="text-red-500 text-xs mt-1">{errors[`variant_${variant.id}_costPrice`]}</p>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Input
+                                                            type="number"
+                                                            size="sm"
+                                                            min={0}
+                                                            max={999999999}
+                                                            value={variant.price.toString()}
+                                                            onChange={(e) => updateVariant(variant.id, 'price', handleNumberInput(e.target.value, 0, 999999999))}
+                                                            className="w-24"
+                                                            isInvalid={!!errors[`variant_${variant.id}_price`]}
+                                                            onKeyDown={handleKeyDown}
+                                                            onPaste={handlePaste}
+                                                        />
+                                                        {errors[`variant_${variant.id}_price`] && (
+                                                            <p className="text-red-500 text-xs mt-1">{errors[`variant_${variant.id}_price`]}</p>
                                                         )}
                                                     </TableCell>
                                                     <TableCell>

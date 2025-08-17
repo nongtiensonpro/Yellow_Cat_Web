@@ -367,7 +367,8 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                 pv.quantity_in_stock AS stockLevel,
                 pv.sold AS sold,
                 pv.image_url AS variantImageUrl,
-                pv.weight as weight
+                pv.weight as weight,
+                pv.cost_price as costPrice
             FROM
                 Products p
             LEFT JOIN
@@ -435,6 +436,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                     "    b.brand_info, " +
                     "    b.logo_public_id, " +
                     "    (SELECT MIN(pv.price) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS min_price, " +
+                    "    (SELECT MIN(pv.cost_price) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS min_cost_price, " +
                     "    (SELECT SUM(pv.quantity_in_stock) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS total_stock, " +
                     "    (SELECT pv.image_url " +
                     "     FROM Product_Variants pv " +

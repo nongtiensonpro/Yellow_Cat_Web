@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Card, Chip, Divider } from "@heroui/react";
 import { useSession } from "next-auth/react";
 import { jwtDecode } from "jwt-decode";
-import { Tag, CheckCircle, XCircle, Info, Calendar, Users, Package, Percent } from 'lucide-react';
+import { Tag, CheckCircle, XCircle, Info, Calendar, Users, Percent } from 'lucide-react';
 
 interface VoucherSummaryDTO {
     id: number;

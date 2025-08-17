@@ -62,6 +62,9 @@ public class ProductVariant {
 
     private Double weight; // In kg, as GHTK might need it
 
+    @Column(name = "cost_price", precision = 12, scale = 2, nullable = false)
+    private BigDecimal costPrice = BigDecimal.ZERO;
+
     @Column(name = "created_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP", updatable = false)
     private LocalDateTime createdAt;
 

@@ -29,6 +29,7 @@ public class ProductWithVariantsUpdateRequestDTO {
         private Integer sold;
         private String imageUrl;
         private Double weight;
+        private BigDecimal costPrice;
     }
 }
 
