@@ -27,6 +27,7 @@ public class ProductListItemManagementDTO {
     private String brandInfo;
     private String logoPublicId;
     private BigDecimal minPrice;
+    private BigDecimal minCostPrice;
     private Long totalStock;
     private String thumbnail;
 }

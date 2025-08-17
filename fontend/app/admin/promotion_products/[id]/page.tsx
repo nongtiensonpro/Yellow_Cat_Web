@@ -589,8 +589,8 @@ export default function EditPromotionProductPage() {
     const [submitting, setSubmitting] = useState(false);
 
     // State cho hộp thoại xác nhận
-    const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
-    const [conflictMessage, setConflictMessage] = useState('');
+    const [setIsConflictDialogOpen] = useState(false);
+    const [setConflictMessage] = useState('');
 
     const [form, setForm] = useState({
         promotionName: '',

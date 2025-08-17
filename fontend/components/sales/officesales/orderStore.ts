@@ -185,6 +185,8 @@ interface OrderState {
     openEditOrder: (order: Order) => void;
     closeEditOrder: () => void;
     syncEditableOrderWithCurrent: () => void;
+    hasRetriedProductLoad: boolean;
+    setHasRetriedProductLoad: (value: boolean) => void;
 }
 
 // Helper: trích xuất message an toàn từ lỗi unknown
@@ -229,6 +231,7 @@ export const useOrderStore = create<OrderState>()(
                 phoneNumber: '',
             },
             isUpdatingOrder: false,
+            hasRetriedProductLoad: false,
             
             // Basic Setters
             setOrders: (orders) => set({ orders }),
@@ -266,6 +269,7 @@ export const useOrderStore = create<OrderState>()(
             setEditableOrder: (order) => set({ editableOrder: order }),
             setValidationErrors: (errors) => set({ validationErrors: errors }),
             setIsUpdatingOrder: (updating) => set({ isUpdatingOrder: updating }),
+            setHasRetriedProductLoad: (value) => set({ hasRetriedProductLoad: value }),
             
             // API Actions
             fetchOrders: async (session) => {
@@ -565,6 +569,16 @@ export const useOrderStore = create<OrderState>()(
                         };
                     });
                     
+                    // Thêm logic để tự động làm mới dữ liệu sản phẩm nếu phát hiện 'Không tìm thấy sản phẩm' trong fetchOrderItems, chỉ thử lại một lần để tránh vòng lặp.
+                    const { hasRetriedProductLoad, initializeProductData, fetchOrderItems } = get();
+
+                    if (enrichedItems.some(item => item.productName === 'Không tìm thấy sản phẩm') && !hasRetriedProductLoad) {
+                        set({ hasRetriedProductLoad: true });
+                        await initializeProductData();
+                        await fetchOrderItems(session);
+                        return;
+                    }
+
                     set({ orderItems: enrichedItems });
                 } catch (err: unknown) {
                     set({ itemsError: getErrorMessage(err) });
@@ -899,7 +913,8 @@ export const useOrderStore = create<OrderState>()(
                     validationErrors: {
                         customerName: '',
                         phoneNumber: '',
-                    }
+                    },
+                    hasRetriedProductLoad: false,
                 });
             },
             

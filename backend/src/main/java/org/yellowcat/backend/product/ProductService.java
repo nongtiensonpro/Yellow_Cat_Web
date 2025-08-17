@@ -120,6 +120,7 @@ public class ProductService {
                 variantDTO.setSold((Integer) row[21]);
                 variantDTO.setImageUrl((String) row[22]);
                 variantDTO.setWeight((Double) row[23]);
+                variantDTO.setCostPrice((BigDecimal) row[24]);
                 variants.add(variantDTO);
             }
         }
@@ -170,6 +171,7 @@ public class ProductService {
             variant.setColor(color);
             variant.setSize(size);
             variant.setPrice(variantDto.getPrice());
+            variant.setCostPrice(variantDto.getCostPrice());
             // Không set salePrice từ DTO nữa, sẽ để auto-promotion service xử lý
             variant.setQuantityInStock(variantDto.getStockLevel());
             variant.setSold(variantDto.getSold() != null ? variantDto.getSold() : 0);
@@ -283,6 +285,7 @@ public class ProductService {
             v.setColor(colors.get(vDto.getColorId()));
             v.setSize(sizes.get(vDto.getSizeId()));
             v.setPrice(vDto.getPrice());
+            v.setCostPrice(vDto.getCostPrice());
             // Không set salePrice từ DTO nữa, sẽ để auto-promotion service xử lý
             v.setQuantityInStock(vDto.getStockLevel());
             v.setSold(vDto.getSold() != null ? vDto.getSold() : 0);

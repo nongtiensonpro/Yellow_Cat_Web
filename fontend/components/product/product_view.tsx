@@ -45,6 +45,7 @@ interface Product {
     minPrice: number | null;
     totalStock: number | null;
     thumbnail: string | null;
+    minCostPrice: number | null;
 }
 
 interface ApiResponse {
@@ -250,7 +251,8 @@ export default function Page() {
                             <TableColumn>Sản phẩm</TableColumn>
                             <TableColumn>Danh mục</TableColumn>
                             <TableColumn>Thương hiệu</TableColumn>
-                            <TableColumn>Giá</TableColumn>
+                            <TableColumn>Giá nhập</TableColumn>
+                            <TableColumn>Giá bán</TableColumn>
                             <TableColumn>Tồn kho</TableColumn>
                             <TableColumn>Đã bán</TableColumn>
                             <TableColumn>Trạng thái</TableColumn>
@@ -274,6 +276,7 @@ export default function Page() {
                                         </TableCell>
                                         <TableCell>{product.categoryName}</TableCell>
                                         <TableCell>{product.brandName}</TableCell>
+                                        <TableCell>{formatPrice(product.minCostPrice)}</TableCell>
                                         <TableCell>{formatPrice(product.minPrice)}</TableCell>
                                         <TableCell>
                                             {product.totalStock !== null ? (
