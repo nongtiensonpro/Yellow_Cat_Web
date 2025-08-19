@@ -28,6 +28,4 @@ public interface AppUserRepository extends JpaRepository<AppUser, Integer> {
     boolean existsByKeycloakId(UUID keycloakId);
 
     List<AppUser> findAllByPhoneNumber(String phoneNumber);
-
-
 }

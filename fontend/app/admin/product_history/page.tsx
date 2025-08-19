@@ -296,13 +296,13 @@ export default function ProductHistoryPage() {
                     <TableRow key={history.historyId}>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          {history.thumbnail && (
-                            <img
-                              src={history.thumbnail}
-                              alt={history.productName}
-                              className="w-12 h-12 object-cover rounded-lg"
-                            />
-                          )}
+                          {/*{history.thumbnail && (*/}
+                          {/*  <img*/}
+                          {/*    src={history.thumbnail}*/}
+                          {/*    alt={history.productName}*/}
+                          {/*    className="w-12 h-12 object-cover rounded-lg"*/}
+                          {/*  />*/}
+                          {/*)}*/}
                           <div>
                             <p className="font-semibold text-gray-900">{history.productName}</p>
                           </div>
@@ -421,13 +421,13 @@ export default function ProductHistoryPage() {
                   <TableColumn>GIÁ GIẢM</TableColumn>
                   <TableColumn>SỐ LƯỢNG</TableColumn>
                   <TableColumn>TRỌNG LƯỢNG</TableColumn>
-                  <TableColumn>THAO TÁC</TableColumn>
-                  <TableColumn>NGƯỜI THỰC HIỆN</TableColumn>
-                  <TableColumn>THỜI GIAN</TableColumn>
+                  {/*<TableColumn>THAO TÁC</TableColumn>*/}
+                  {/*<TableColumn>NGƯỜI THỰC HIỆN</TableColumn>*/}
+                  {/*<TableColumn>THỜI GIAN</TableColumn>*/}
                 </TableHeader>
                 <TableBody>
                   {variantHistory.map((variant) => {
-                    const operationInfo = formatOperation(variant.operation);
+                    // const operationInfo = formatOperation(variant.operation);
                     return (
                       <TableRow key={variant.historyId}>
                         <TableCell>{variant.sku}</TableCell>
@@ -437,23 +437,23 @@ export default function ProductHistoryPage() {
                         <TableCell>{variant.salePrice || '0'}</TableCell>
                         <TableCell>{variant.quantityInStock}</TableCell>
                         <TableCell>{variant.weight}g</TableCell>
-                        <TableCell>
-                          <Chip color={operationInfo.color} variant="flat" size="sm">
-                            {operationInfo.text}
-                          </Chip>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <User className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm">{variant.changedBy}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm">{formatDate(variant.changedAt)}</span>
-                          </div>
-                        </TableCell>
+                        {/*<TableCell>*/}
+                        {/*  <Chip color={operationInfo.color} variant="flat" size="sm">*/}
+                        {/*    {operationInfo.text}*/}
+                        {/*  </Chip>*/}
+                        {/*</TableCell>*/}
+                        {/*<TableCell>*/}
+                        {/*  <div className="flex items-center gap-2">*/}
+                        {/*    <User className="w-4 h-4 text-gray-500" />*/}
+                        {/*    <span className="text-sm">{variant.changedBy}</span>*/}
+                        {/*  </div>*/}
+                        {/*</TableCell>*/}
+                        {/*<TableCell>*/}
+                        {/*  <div className="flex items-center gap-2">*/}
+                        {/*    <Calendar className="w-4 h-4 text-gray-500" />*/}
+                        {/*    <span className="text-sm">{formatDate(variant.changedAt)}</span>*/}
+                        {/*  </div>*/}
+                        {/*</TableCell>*/}
                       </TableRow>
                     );
                   })}
