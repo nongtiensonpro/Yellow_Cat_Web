@@ -73,7 +73,6 @@ public class SecurityConfig {
                                 "/api/products/variant/**")
                         .permitAll()
 
-
                         // Thêm các đường dẫn Swagger UI và API docs
                         .requestMatchers(
                                 "/swagger-ui.html",
@@ -81,6 +80,12 @@ public class SecurityConfig {
                                 "/api-docs/**",
                                 "/v3/api-docs/**")
                         .permitAll().
+
+
+                        //API statistic
+                                requestMatchers(
+                                "/api/statistic/overviews/**"
+                        ).hasAnyAuthority("Admin_Web").
 
                         // return request public API GET
                                 requestMatchers(HttpMethod.GET,
