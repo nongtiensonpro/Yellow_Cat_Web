@@ -41,7 +41,7 @@ const menuItems: MenuItem[] = [
             { href: "/admin/product_management/brands", icon: <Tag size={18} />, label: "Thương hiệu" },
             { href: "/admin/product_management/colors", icon: <Palette size={18} />, label: "Màu sắc" },
             { href: "/admin/product_management/sizes", icon: <Ruler size={18} />, label: "Kích cỡ" },
-            { href: "/admin/product_history", icon: <History size={18} />, label: "Lịch sử sản phẩm" },
+            { href: "/admin/product_history", icon: <History size={18} />, label: "Lịch sử thay đổi" },
         ],
     },
     {
