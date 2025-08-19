@@ -341,7 +341,20 @@ public interface PromotionProductRepository extends JpaRepository<PromotionProdu
             @Param("now") java.time.LocalDateTime now
     );
 
-
+    // ====== NEW: Tính min sale price cho product ======
+    @Query(value = """
+            SELECT DISTINCT v.price, p.discount_type, p.discount_value
+            FROM Product_Variants v
+            JOIN Promotion_Products pp ON v.variant_id = pp.variant_id
+            JOIN Promotions p ON pp.promotion_id = p.id
+            WHERE v.product_id = :productId
+              AND p.is_active = true
+              AND :now BETWEEN p.start_date AND p.end_date
+        """, nativeQuery = true)
+    List<Object[]> findMinSalePriceByProductId(
+            @Param("productId") Integer productId,
+            @Param("now") java.time.LocalDateTime now
+    );
 }
 
 

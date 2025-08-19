@@ -35,7 +35,7 @@ public class ProductVariantAutoPromotionService {
             
             if (bestPromotion == null) {
                 // Không có promotion → reset salePrice về null
-                if (variant.getSalePrice() != null && !variant.getSalePrice().equals(BigDecimal.ZERO)) {
+                if (variant.getSalePrice() != null) {
                     log.debug("Reset salePrice cho variant {} - không có promotion active", variant.getSku());
                     variant.setSalePrice(null);
                     return true; // Có thay đổi
@@ -64,6 +64,37 @@ public class ProductVariantAutoPromotionService {
             log.error("Lỗi khi auto-apply promotion cho variant {}: {}", 
                     variant.getSku(), e.getMessage(), e);
             return false;
+        }
+    }
+
+    /**
+     * Chỉ kiểm tra và cập nhật salePrice cho variant mà không lưu vào database
+     * Dùng cho việc hiển thị thông tin real-time cho khách hàng
+     * 
+     * @param variant ProductVariant cần kiểm tra promotion
+     */
+    public void refreshPromotionForDisplay(ProductVariant variant) {
+        try {
+            // Tìm promotion đang active cho variant này
+            Promotion bestPromotion = findBestActivePromotion(variant.getVariantId());
+            
+            if (bestPromotion == null) {
+                // Không có promotion → set salePrice = null
+                variant.setSalePrice(null);
+                log.debug("Variant {} không có promotion active - salePrice = null", variant.getSku());
+            } else {
+                // Có promotion → tính toán salePrice mới
+                BigDecimal newSalePrice = calculateDiscountedPrice(variant.getPrice(), bestPromotion);
+                variant.setSalePrice(newSalePrice);
+                log.debug("Variant {} có promotion '{}' - salePrice = {}", 
+                        variant.getSku(), bestPromotion.getPromotionName(), newSalePrice);
+            }
+            
+        } catch (Exception e) {
+            log.error("Lỗi khi refresh promotion cho variant {}: {}", 
+                    variant.getSku(), e.getMessage(), e);
+            // Trong trường hợp lỗi, set salePrice = null để đảm bảo an toàn
+            variant.setSalePrice(null);
         }
     }
 
@@ -134,4 +165,19 @@ public class ProductVariantAutoPromotionService {
         log.info("Batch apply promotion: {}/{} variants được cập nhật", updatedCount, variants.size());
         return updatedCount;
     }
+
+    /**
+     * Tính toán min sale price cho một product từ tất cả variants của nó
+     * Dùng để hiển thị giá thấp nhất trong danh sách sản phẩm
+     * 
+     * @param productId ID của sản phẩm
+     * @return Min sale price sau khi áp dụng promotion, null nếu không có promotion nào
+     */
+    public BigDecimal calculateMinSalePriceForProduct(Integer productId) {
+        // TODO: Implement sau khi có method trong repository
+        // Hiện tại tạm thời return null để không ảnh hưởng đến hiệu suất
+        return null;
+    }
+
+
 } 
