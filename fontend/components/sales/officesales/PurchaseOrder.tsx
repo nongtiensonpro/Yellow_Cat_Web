@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
     Table,
     TableHeader,
@@ -63,6 +63,7 @@ interface ApiResponse {
 export default function PurchaseOrder() {
     const { data: session } = useSession();
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     // State để lưu thông tin user từ backend
     const [userProfile, setUserProfile] = useState<AppUser | null>(null);
@@ -170,12 +171,33 @@ export default function PurchaseOrder() {
         router.push('/user_info');
     };
 
+    // Handler để xem chi tiết đơn hàng
+    const handleViewDetails = useCallback((order: Order) => {
+        if (!userProfileLoading && !userProfileError && hasPhoneNumber) {
+            openEditOrder(order as Parameters<typeof openEditOrder>[0]);
+        }
+    }, [userProfileLoading, userProfileError, hasPhoneNumber, openEditOrder]);
+
     // Auto-fetch orders when dependencies change - chỉ khi có số điện thoại và đã load xong profile
     useEffect(() => {
         if (!userProfileLoading && hasPhoneNumber && sessionAccessToken) {
             fetchOrders(session);
         }
     }, [session, page, activeTab, fetchOrders, hasPhoneNumber, userProfileLoading, sessionAccessToken]);
+
+    // Tự động mở order khi có query parameter viewOrder
+    useEffect(() => {
+        const viewOrderCode = searchParams.get('viewOrder');
+        if (viewOrderCode && orders.length > 0 && !isEditMode && hasPhoneNumber && !userProfileLoading) {
+            const orderToOpen = orders.find(order => order.orderCode === viewOrderCode);
+            if (orderToOpen) {
+                console.log('🎯 Auto-opening order from URL:', viewOrderCode);
+                handleViewDetails(orderToOpen);
+                // Xóa query parameter sau khi đã mở order
+                router.replace('/staff/officesales');
+            }
+        }
+    }, [searchParams, orders, isEditMode, router, hasPhoneNumber, userProfileLoading, handleViewDetails]);
 
     // Function to show a toast message (only warning/error now)
     const showToast = useCallback((message: string, type: 'error' | 'warning' = 'warning') => {
@@ -212,13 +234,6 @@ export default function PurchaseOrder() {
         // If limits are not met, proceed to create the order
         // No success toast for creation as requested.
         await createOrder(session);
-    };
-
-
-    const handleViewDetails = (order: Order) => {
-        if (!userProfileLoading && !userProfileError && hasPhoneNumber) {
-            openEditOrder(order as Parameters<typeof openEditOrder>[0]);
-        }
     };
 
     const handleDeleteOrder = async (orderId: number) => {

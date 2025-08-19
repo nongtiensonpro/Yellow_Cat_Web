@@ -179,9 +179,15 @@ const InvoiceContent: React.FC<InvoiceProps> = ({ order, orderItems, totals, sta
           <div key={payment.paymentId || index} className="mb-2">
             <p>• {payment.paymentMethod}: {payment.amount.toLocaleString('vi-VN')} VND</p>
             <p className="text-xs text-gray-600">
-              Trạng thái: {payment.paymentStatus}
+              Trạng thái: {payment.paymentStatus === 'COMPLETED' ? 'Hoàn thành' : 
+                          payment.paymentStatus === 'PENDING' ? 'Chờ xử lý' : payment.paymentStatus}
               {payment.transactionId && ` - Mã GD: ${payment.transactionId}`}
             </p>
+            {payment.paymentMethod === 'VNPay' && payment.transactionId && (
+              <p className="text-xs text-blue-600">
+                Thanh toán qua VNPay - Mã giao dịch: {payment.transactionId}
+              </p>
+            )}
           </div>
         ))}
       </div>
@@ -266,27 +272,30 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order, orderItems, totals, 
     if (isOpen && !staffInfo) {
       fetchStaffInfo();
     }
-    // Fetch promotions
+    // Fetch promotions - chỉ khi chưa có bestPromo trong orderItems
     if (isOpen && promos.length === 0 && orderItems.length > 0) {
-      (async () => {
-        try {
-          const uniqueVariantIds = Array.from(new Set(orderItems.map(i => i.productVariantId)));
-          const promoResults = await Promise.all(uniqueVariantIds.map(async (vid) => {
-            try {
-              const res = await fetch(`http://localhost:8080/api/products/variant/${vid}/promotions`);
-              if (!res.ok) return null;
-              const json = await res.json();
-              return json?.data?.bestPromo as PromoItem | null;
-            } catch {
-              return null;
-            }
-          }));
-          const filtered = promoResults.filter((p): p is PromoItem => p !== null);
-          setPromos(filtered);
-        } catch (error) {
-          console.error('Error fetching promotions:', error);
-        }
-      })();
+      const itemsNeedingPromo = orderItems.filter(i => !i.bestPromo && i.productVariantId);
+      if (itemsNeedingPromo.length > 0) {
+        (async () => {
+          try {
+            const uniqueVariantIds = Array.from(new Set(itemsNeedingPromo.map(i => i.productVariantId)));
+            const promoResults = await Promise.all(uniqueVariantIds.map(async (vid) => {
+              try {
+                const res = await fetch(`http://localhost:8080/api/products/variant/${vid}/promotions`);
+                if (!res.ok) return null;
+                const json = await res.json();
+                return json?.data?.bestPromo as PromoItem | null;
+              } catch {
+                return null;
+              }
+            }));
+            const filtered = promoResults.filter((p): p is PromoItem => p !== null);
+            setPromos(filtered);
+          } catch (error) {
+            console.error('Error fetching promotions:', error);
+          }
+        })();
+      }
     }
   }, [isOpen, staffInfo, fetchStaffInfo, orderItems, promos.length]);
 

@@ -23,6 +23,22 @@ interface OrderDetailResponse {
     payments: PaymentResponse[];
 }
 
+interface OrderItem {
+    orderItemId: number | string;
+    productVariantId?: number;
+    productName?: string;
+    variantInfo?: string;
+    quantity: number;
+    priceAtPurchase: number;
+    totalPrice: number;
+    bestPromo?: {
+        promotionCode: string;
+        promotionName: string;
+        discountAmount: number;
+    };
+    originalPrice?: number;
+}
+
 // Interface cho VNPay payment result
 interface VNPayResult {
     success: boolean;
@@ -115,6 +131,8 @@ export default function PaymentResultPage() {
         }
     };
 
+
+
     // Logic xác nhận và polling trạng thái**
     const handlePaymentConfirmation = useCallback(async (orderCode: string, transactionId: string, token: string) => {
         setIsConfirming(true);
@@ -140,8 +158,16 @@ export default function PaymentResultPage() {
                 // Điều kiện thành công: trạng thái là 'Paid'
                 if (order && order.orderStatus === 'Paid') {
                     console.log('✅ Xác nhận thành công! Trạng thái:', order.orderStatus);
+                    
                     setIsConfirming(false);
                     setConfirmationComplete(true);
+                    
+                    // Chuyển hướng đến InvoiceView sau 3 giây để người dùng có thể đọc thông tin
+                    setTimeout(() => {
+                        console.log('🚀 Chuyển hướng đến InvoiceView với order:', order.orderCode);
+                        router.push(`/staff/officesales?viewOrder=${order.orderCode}`);
+                    }, 3000);
+                    
                     return; // Thoát khỏi hàm
                 } else {
                     console.log(`❌ Attempt ${attempt} failed - Status: "${order?.orderStatus}", Order exists: ${!!order}`);
@@ -217,7 +243,7 @@ export default function PaymentResultPage() {
 
     // useEffect cho countdown và chuyển trang
     useEffect(() => {
-        if (confirmationComplete) {
+        if (confirmationComplete && !(result?.success && !error && orderData)) {
             const timer = setInterval(() => {
                 setCountdown(prev => (prev <= 1 ? 0 : prev - 1));
             }, 1000);
@@ -230,7 +256,7 @@ export default function PaymentResultPage() {
 
             return () => clearInterval(timer);
         }
-    }, [confirmationComplete, countdown, router]);
+    }, [confirmationComplete, countdown, router, result, error, orderData]);
 
     // Cảnh báo người dùng không đóng tab khi đang xác nhận
     useEffect(() => {
@@ -277,6 +303,27 @@ export default function PaymentResultPage() {
                         {/* Trạng thái xử lý & countdown */}
                         {isConfirming ? (
                             <p className="text-lg text-yellow-800 mb-6">Đang xác nhận với hệ thống, vui lòng chờ...</p>
+                        ) : result.success && !error && orderData ? (
+                            <div className="text-center">
+                                <p className="text-lg text-green-600 mb-2">🎉 Thanh toán hoàn tất!</p>
+                                <p className="text-sm text-gray-500 mb-4">Sẽ tự động chuyển đến trang chi tiết đơn hàng trong vài giây...</p>
+                                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                                    <div className="flex items-center justify-center mb-2">
+                                        <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <span className="text-green-800 font-medium">Đơn hàng #{orderData.orderCode}</span>
+                                    </div>
+                                    <p className="text-sm text-green-700">Bạn có thể xem chi tiết và in hóa đơn ở trang tiếp theo</p>
+                                </div>
+                                <div className="flex justify-center items-center">
+                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span className="text-sm text-gray-600">Đang chuyển hướng...</span>
+                                </div>
+                            </div>
                         ) : (
                             <p className="text-lg text-gray-600 mb-6">Tự động chuyển hướng sau {countdown} giây</p>
                         )}
@@ -379,13 +426,26 @@ export default function PaymentResultPage() {
                     )}
 
                     {/* Nút bấm */}
-                    <div className="flex items-center justify-center">
+                    <div className="flex items-center justify-center gap-4 flex-wrap">
+                        {/* Nút chuyển ngay đến InvoiceView khi thanh toán thành công */}
+                        {result.success && !error && orderData && (
+                            <button
+                                onClick={() => router.push(`/staff/officesales?viewOrder=${orderData.orderCode}`)}
+                                className="px-8 py-3 rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors duration-200 flex items-center gap-2"
+                            >
+                                📋 Xem chi tiết đơn hàng
+                            </button>
+                        )}
+
                         <button
                             onClick={() => router.push('/staff/officesales')}
-                            className="px-8 py-3 rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400"
+                            className="px-8 py-3 rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 transition-colors duration-200"
                             disabled={isConfirming} // Vô hiệu hóa khi đang xác nhận
                         >
-                            {isConfirming ? 'Đang xử lý...' : `Quay về ngay (${countdown}s)`}
+                            {isConfirming ? 'Đang xử lý...' : 
+                             result.success && !error && orderData ? 
+                             'Quay về trang bán hàng' : 
+                             `Quay về ngay (${countdown}s)`}
                         </button>
                     </div>
 
