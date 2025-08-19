@@ -21,9 +21,11 @@ import {
     ModalHeader,
     ModalBody,
     ModalFooter,
+    Select,
+    SelectItem,
 } from "@heroui/react";
 import {useEffect, useState} from "react";
-import {Eye, Edit, Trash2, Plus, ToggleLeft, ToggleRight} from "lucide-react";
+import {Eye, Edit, Trash2, Plus, ToggleLeft, ToggleRight, X} from "lucide-react";
 import Link from "next/link";
 import { useDisclosure } from "@heroui/react";
 import { useSession, signIn } from "next-auth/react";
@@ -46,6 +48,23 @@ interface Product {
     totalStock: number | null;
     thumbnail: string | null;
     minCostPrice: number | null;
+}
+
+interface Category {
+    id: number;
+    name: string;
+    description?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+interface Brand {
+    id: number;
+    brandName: string;
+    brandInfo: string;
+    logoPublicId: string;
+    createdAt: string | null;
+    updatedAt: string | null;
 }
 
 interface ApiResponse {
@@ -80,12 +99,104 @@ export default function Page() {
     const [toggleError, setToggleError] = useState<string | null>(null);
     const [isToggling, setIsToggling] = useState<boolean>(false);
     const { data: session, status } = useSession();
+    
+    // New filter states
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [brands, setBrands] = useState<Brand[]>([]);
+    const [selectedCategory, setSelectedCategory] = useState<string>("");
+    const [selectedBrand, setSelectedBrand] = useState<string>("");
+    const [categoriesLoading, setCategoriesLoading] = useState<boolean>(false);
+    const [brandsLoading, setBrandsLoading] = useState<boolean>(false);
+
+    const fetchCategoriesData = async () => {
+        try {
+            setCategoriesLoading(true);
+            // Kiểm tra đăng nhập
+            if (status !== "authenticated" || !session) {
+                console.log("Chưa đăng nhập, không thể tải danh mục");
+                return;
+            }
+            
+            const token = session?.accessToken;
+            if (!token) {
+                console.log("Không tìm thấy token xác thực");
+                return;
+            }
+
+            const response = await fetch(`http://localhost:8080/api/products/categories`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                console.error(`HTTP error! Status: ${response.status}`);
+                return;
+            }
+            const apiResponse = await response.json();
+
+            if (apiResponse.status === 200 && apiResponse.data) {
+                setCategories(apiResponse.data);
+            } else {
+                console.error('Categories API error:', apiResponse.message);
+            }
+        } catch (err) {
+            console.error('Không thể tải danh sách danh mục:', err);
+        } finally {
+            setCategoriesLoading(false);
+        }
+    };
+
+    const fetchBrandsData = async () => {
+        try {
+            setBrandsLoading(true);
+            // Kiểm tra đăng nhập
+            if (status !== "authenticated" || !session) {
+                console.log("Chưa đăng nhập, không thể tải thương hiệu");
+                return;
+            }
+            
+            const token = session?.accessToken;
+            if (!token) {
+                console.log("Không tìm thấy token xác thực");
+                return;
+            }
+
+            const response = await fetch(`http://localhost:8080/api/products/brands`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                console.error(`HTTP error! Status: ${response.status}`);
+                return;
+            }
+            const apiResponse = await response.json();
+
+            if (apiResponse.status === 200 && apiResponse.data) {
+                setBrands(apiResponse.data);
+            } else {
+                console.error('Brands API error:', apiResponse.message);
+            }
+        } catch (err) {
+            console.error('Không thể tải danh sách thương hiệu:', err);
+        } finally {
+            setBrandsLoading(false);
+        }
+    };
 
     const fetchProductsData = async () => {
         try {
             setLoading(true);
             const searchQuery = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : "";
-            const response = await fetch(`http://localhost:8080/api/products/management?page=${currentPage}&size=${itemsPerPage}${searchQuery}`);
+            const categoryQuery = selectedCategory ? `&categoryId=${selectedCategory}` : "";
+            const brandQuery = selectedBrand ? `&brandId=${selectedBrand}` : "";
+            const response = await fetch(`http://localhost:8080/api/products/management?page=${currentPage}&size=${itemsPerPage}${searchQuery}${categoryQuery}${brandQuery}`);
             if (!response.ok) console.log(`HTTP error! Status: ${response.status}`);
             const apiResponse: ApiResponse = await response.json();
 
@@ -105,9 +216,16 @@ export default function Page() {
     };
 
     useEffect(() => {
+        if (status === "authenticated" && session) {
+            fetchCategoriesData();
+            fetchBrandsData();
+        }
+    }, [status, session]);
+
+    useEffect(() => {
         fetchProductsData();
         // eslint-disable-next-line
-    }, [currentPage, itemsPerPage, searchTerm]);
+    }, [currentPage, itemsPerPage, searchTerm, selectedCategory, selectedBrand]);
 
     // Format giá tiền
     const formatPrice = (price: number | null) => {
@@ -218,6 +336,13 @@ export default function Page() {
         }
     };
 
+    const handleClearFilters = () => {
+        setSearchTerm("");
+        setSelectedCategory("");
+        setSelectedBrand("");
+        setCurrentPage(0);
+    };
+
     return (
         <Card className={`max p-1`}>
             <CardHeader className="flex gap-3">
@@ -229,16 +354,109 @@ export default function Page() {
             </CardHeader>
             <Divider/>
             <CardBody>
-                <div className="mb-4 flex justify-between items-center gap-2">
-                    <Input
-                        type="text"
-                        placeholder="Tìm kiếm sản phẩm..."
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                        className="max-w-md"
-                    />
-                    <Button color="default" as={Link} href={`/admin/product_management/add_product`}
-                            startContent={<Plus size={16}/>}>Thêm sản phẩm</Button>
+                <div className="mb-4 space-y-4">
+                    <div className="flex justify-between items-center">
+                        <div className="flex gap-4 items-center flex-wrap">
+                            <Input
+                                type="text"
+                                placeholder="Tìm kiếm sản phẩm..."
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                className="w-80"
+                            />
+                            <Select
+                                placeholder={categoriesLoading ? "Đang tải..." : "Chọn danh mục"}
+                                className="w-60"
+                                isDisabled={categoriesLoading || categories.length === 0}
+                                selectedKeys={selectedCategory ? [selectedCategory] : []}
+                                onSelectionChange={(keys) => {
+                                    const selected = Array.from(keys)[0];
+                                    setSelectedCategory(selected ? String(selected) : "");
+                                    setCurrentPage(0);
+                                }}
+                            >
+                                {categories.length > 0 ? (
+                                    categories.map((category) => (
+                                        <SelectItem key={category.id}>
+                                            {category.name}
+                                        </SelectItem>
+                                    ))
+                                ) : (
+                                    <SelectItem key="no-data" isDisabled>
+                                        {categoriesLoading ? "Đang tải..." : "Không có danh mục"}
+                                    </SelectItem>
+                                )}
+                            </Select>
+                            <Select
+                                placeholder={brandsLoading ? "Đang tải..." : "Chọn thương hiệu"}
+                                className="w-60"
+                                isDisabled={brandsLoading || brands.length === 0}
+                                selectedKeys={selectedBrand ? [selectedBrand] : []}
+                                onSelectionChange={(keys) => {
+                                    const selected = Array.from(keys)[0];
+                                    setSelectedBrand(selected ? String(selected) : "");
+                                    setCurrentPage(0);
+                                }}
+                            >
+                                {brands.length > 0 ? (
+                                    brands.map((brand) => (
+                                        <SelectItem key={brand.id}>
+                                            {brand.brandName}
+                                        </SelectItem>
+                                    ))
+                                ) : (
+                                    <SelectItem key="no-data" isDisabled>
+                                        {brandsLoading ? "Đang tải..." : "Không có thương hiệu"}
+                                    </SelectItem>
+                                )}
+                            </Select>
+                            <Button 
+                                color="default" 
+                                variant="flat" 
+                                onPress={handleClearFilters}
+                                className="min-w-fit"
+                            >
+                                Xóa bộ lọc
+                            </Button>
+                        </div>
+                        <Button color="default" as={Link} href={`/admin/product_management/add_product`}
+                                startContent={<Plus size={16}/>}>Thêm sản phẩm</Button>
+                    </div>
+                    {(searchTerm || selectedCategory || selectedBrand) && (
+                        <div className="flex gap-2 items-center text-sm text-gray-600">
+                            <span>Bộ lọc đang áp dụng:</span>
+                            {searchTerm && (
+                                <Chip 
+                                    size="sm" 
+                                    color="primary" 
+                                    variant="flat"
+                                    onClose={() => setSearchTerm("")}
+                                >
+                                    Tìm kiếm: "{searchTerm}"
+                                </Chip>
+                            )}
+                            {selectedCategory && (
+                                <Chip 
+                                    size="sm" 
+                                    color="secondary" 
+                                    variant="flat"
+                                    onClose={() => setSelectedCategory("")}
+                                >
+                                    Danh mục: {categories.find(c => c.id.toString() === selectedCategory)?.name}
+                                </Chip>
+                            )}
+                            {selectedBrand && (
+                                <Chip 
+                                    size="sm" 
+                                    color="success" 
+                                    variant="flat"
+                                    onClose={() => setSelectedBrand("")}
+                                >
+                                    Thương hiệu: {brands.find(b => b.id.toString() === selectedBrand)?.brandName}
+                                </Chip>
+                            )}
+                        </div>
+                    )}
                 </div>
                 {loading ? (
                     <div className="my-6 text-lg text-center text-blue-500">Đang tải dữ liệu...</div>

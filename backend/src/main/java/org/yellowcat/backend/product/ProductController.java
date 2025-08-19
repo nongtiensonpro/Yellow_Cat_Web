@@ -10,12 +10,15 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Pageable;
-import org.yellowcat.backend.common.config_api.response.ApiResponse;
 import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
 import org.yellowcat.backend.product.dto.*;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserService;
 import org.yellowcat.backend.product.dto.VariantPromosDTO;
+import org.yellowcat.backend.product.category.Category;
+import org.yellowcat.backend.product.category.CategoryRepository;
+import org.yellowcat.backend.product.brand.Brand;
+import org.yellowcat.backend.product.brand.BrandRepository;
 
 import java.util.List;
 import java.util.Optional;
@@ -27,10 +30,15 @@ public class ProductController {
 
     private final ProductService productService;
     private final AppUserService appUserService;
+    private final CategoryRepository categoryRepository;
+    private final BrandRepository brandRepository;
 
-    public ProductController(ProductService productService, AppUserService appUserService) {
+    public ProductController(ProductService productService, AppUserService appUserService, 
+                           CategoryRepository categoryRepository, BrandRepository brandRepository) {
         this.productService = productService;
         this.appUserService = appUserService;
+        this.categoryRepository = categoryRepository;
+        this.brandRepository = brandRepository;
     }
     @GetMapping("/low-stock")
     @Operation(summary = "Get products with low stock", description = "Returns a list of products with total stock below a specified threshold.")
@@ -79,10 +87,13 @@ public class ProductController {
     @Operation(summary = "Get all products", description = "Returns a paginated list of products with detailed information")
     public ResponseEntity<?> getAllProductsManagement(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Integer categoryId,
+            @RequestParam(required = false) Integer brandId
     ) {
         try {
-            Page<ProductListItemManagementDTO> productPage = productService.getProductManagement(page, size);
+            Page<ProductListItemManagementDTO> productPage = productService.getProductManagement(page, size, search, categoryId, brandId);
             return ResponseEntityBuilder.success(productPage);
         } catch (Exception e) {
             e.printStackTrace();
@@ -194,5 +205,31 @@ public class ProductController {
     public ResponseEntity<?> getVariantPromotions(@PathVariable("variantId") Integer variantId) {
         VariantPromosDTO dto = productService.getVariantPromotions(variantId);
         return ResponseEntityBuilder.success(dto);
+    }
+
+    @GetMapping("/categories")
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    @Operation(summary = "Get all categories for combobox", description = "Returns a list of all categories for dropdown selection")
+    public ResponseEntity<?> getAllCategoriesForCombobox() {
+        try {
+            List<Category> categories = categoryRepository.findAll();
+            return ResponseEntityBuilder.success(categories);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Error retrieving categories", e.getMessage());
+        }
+    }
+
+    @GetMapping("/brands")
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    @Operation(summary = "Get all brands for combobox", description = "Returns a list of all brands for dropdown selection")
+    public ResponseEntity<?> getAllBrandsForCombobox() {
+        try {
+            List<Brand> brands = brandRepository.findAll();
+            return ResponseEntityBuilder.success(brands);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Error retrieving brands", e.getMessage());
+        }
     }
 }

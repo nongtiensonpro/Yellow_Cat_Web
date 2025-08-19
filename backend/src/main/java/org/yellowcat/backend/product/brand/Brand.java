@@ -1,5 +1,6 @@
 package org.yellowcat.backend.product.brand;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -42,6 +43,7 @@ public class Brand {
     private Instant updatedAt;
 
     @OneToMany(mappedBy = "brand", fetch = FetchType.EAGER)
+    @JsonIgnore
     private Set<Product> products = new LinkedHashSet<>();
 
     public Integer getId() {

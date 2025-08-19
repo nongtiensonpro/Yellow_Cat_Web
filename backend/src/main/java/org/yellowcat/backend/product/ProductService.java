@@ -79,14 +79,25 @@ public class ProductService {
     }
 
     public Page<ProductListItemManagementDTO> getProductManagement(int page, int size) {
+        return getProductManagement(page, size, null, null, null);
+    }
+
+    public Page<ProductListItemManagementDTO> getProductManagement(int page, int size, String search, Integer categoryId, Integer brandId) {
         Sort sort = Sort.by("updatedAt").descending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
         int pageSize = pageable.getPageSize();
         int offset = (int) pageable.getOffset();
 
-        List<ProductListItemManagementDTO> productDTOs = productRepository.findAllProductManagement(pageSize, offset);
-        long totalProducts = productRepository.countTotalProducts();
+        List<ProductListItemManagementDTO> productDTOs = productRepository.findAllProductManagement(pageSize, offset, search, categoryId, brandId);
+        
+        // Sử dụng filtered count nếu có filter, ngược lại dùng total count
+        long totalProducts;
+        if (search != null || categoryId != null || brandId != null) {
+            totalProducts = productRepository.countFilteredProducts(search, categoryId, brandId);
+        } else {
+            totalProducts = productRepository.countTotalProducts();
+        }
 
         return new PageImpl<>(productDTOs, pageable, totalProducts);
     }
