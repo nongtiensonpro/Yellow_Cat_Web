@@ -16,6 +16,7 @@ public class OrderSummaryDTO {
     private String customerName;
     private String orderStatus;
     private BigDecimal finalAmount;
+    private BigDecimal discountAmount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
