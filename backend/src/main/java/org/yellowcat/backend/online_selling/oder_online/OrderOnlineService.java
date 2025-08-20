@@ -31,6 +31,8 @@ import org.yellowcat.backend.product.shippingMethod.ShippingMethod;
 import org.yellowcat.backend.product.shippingMethod.ShippingMethodRepository;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserRepository;
+import org.yellowcat.backend.online_selling.voucher.entity.VoucherRedemption;
+import org.yellowcat.backend.online_selling.voucher.repository.VoucherRedemptionRepository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -51,6 +53,7 @@ public class OrderOnlineService {
     private final OrderTimelineRepository orderTimelineRepository;
     private final ShippingMethodRepository shippingMethodRepository;
     private final VoucherService1 voucherService1;
+    private final VoucherRedemptionRepository voucherRedemptionRepository;
 
     @Autowired
     OrderTimelineService orderTimelineService;
@@ -288,6 +291,7 @@ public class OrderOnlineService {
                 .orderStatus(order.getOrderStatus())
                 .customerName(order.getCustomerName())
                 .finalAmount(order.getFinalAmount())
+                .discountAmount(order.getDiscountAmount())
                 .createdAt(order.getOrderDate())
                 .updatedAt(order.getUpdatedAt())
                 .build()
@@ -315,6 +319,7 @@ public class OrderOnlineService {
                 .customerName(order.getCustomerName())
                 .orderStatus(order.getOrderStatus())
                 .finalAmount(order.getFinalAmount())
+                .discountAmount(order.getDiscountAmount())
                 .createdAt(order.getOrderDate())
                 .updatedAt(order.getUpdatedAt())
                 .build()
@@ -379,6 +384,7 @@ public class OrderOnlineService {
                 .customerName(order.getCustomerName())
                 .orderStatus(order.getOrderStatus())
                 .finalAmount(order.getFinalAmount())
+                .discountAmount(order.getDiscountAmount())
                 .createdAt(order.getOrderDate())
                 .updatedAt(order.getUpdatedAt())
                 .build();
@@ -414,6 +420,23 @@ public class OrderOnlineService {
         Addresses address = addressRepository.findByAddressId(order.getShippingAddress().getAddressId());
         Payment payment= paymentRepository.findByOrder(order);
 
+        // Lấy thông tin voucher nếu có
+        String voucherCode = null;
+        if (order.getDiscountAmount() != null && order.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+                    // Tìm voucher đã áp dụng cho đơn hàng này
+        try {
+            VoucherRedemption redemption = voucherRedemptionRepository.findByOrderId(order.getOrderId());
+            if (redemption != null && redemption.getVoucher() != null) {
+                voucherCode = redemption.getVoucher().getCode();
+                System.out.println("✅ Tìm thấy mã voucher: " + voucherCode);
+            } else {
+                System.out.println("❌ Không tìm thấy voucher cho đơn hàng: " + order.getOrderId());
+            }
+        } catch (Exception e) {
+            System.out.println("❌ Lỗi khi lấy mã voucher cho đơn hàng: " + order.getOrderId() + " - " + e.getMessage());
+        }
+        }
+
         return OrderOnlineDetailDTO.builder()
                 .orderId(order.getOrderId())
                 .orderCode(order.getOrderCode())
@@ -428,6 +451,8 @@ public class OrderOnlineService {
                 .orderDate(order.getOrderDate())
                 .subTotal(order.getSubTotalAmount())
                 .shippingFee(order.getShippingFee())
+                .voucherDiscount(order.getDiscountAmount())
+                .voucherCode(voucherCode)
                 .finalAmount(order.getFinalAmount())
                 .paymentStatus(payment.getPaymentStatus())
                 .paymentMethod(payment.getPaymentMethod())

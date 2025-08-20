@@ -16,4 +16,6 @@ public class VoucherUserDetailDTO {
     private BigDecimal orderValue;
     private String orderCode;
     private Integer orderId;
+    private BigDecimal profitAmount; // Lợi nhuận từ voucher cho người dùng này
+    private String orderStatus;      // Trạng thái đơn hàng
 }

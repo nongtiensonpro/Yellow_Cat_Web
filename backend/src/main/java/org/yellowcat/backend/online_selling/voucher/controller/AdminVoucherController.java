@@ -209,8 +209,12 @@ public class AdminVoucherController {
 
     // thống kê hiệu suất
     @GetMapping("/{id}/performance-stats")
-    public ResponseEntity<VoucherPerformanceDTO> getVoucherPerformanceStats(@PathVariable Integer id) {
-        VoucherPerformanceDTO stats = voucherService.getVoucherPerformanceStats(id);
+    public ResponseEntity<VoucherPerformanceDTO> getVoucherPerformanceStats(
+            @PathVariable Integer id,
+            @RequestParam(name = "page", required = false, defaultValue = "1") Integer page,
+            @RequestParam(name = "pageSize", required = false, defaultValue = "7") Integer pageSize
+    ) {
+        VoucherPerformanceDTO stats = voucherService.getVoucherPerformanceStats(id, page, pageSize);
         return ResponseEntity.ok(stats);
     }
 

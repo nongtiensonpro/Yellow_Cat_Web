@@ -1511,7 +1511,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[95vh] overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[95vh] overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-green-50 to-emerald-50">
                     <div>
@@ -1616,7 +1616,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                         <input
                                             name="maximumDiscountValue"
                                             type="number"
-                                            value={form.maximumDiscountValue}
+                                            value={form.maximumDiscountValue || ''}
                                             onChange={handleChange}
                                             onKeyPress={handleKeyPress}
                                             className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -1657,7 +1657,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                             onChange={handleChange}
                                             onKeyPress={handleKeyPress}
                                             className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                                            placeholder="VD: 100 (0 = không giới hạn)"
+                                            placeholder="VD: 100"
                                         />
                                     </div>
                                 </div>
@@ -1953,6 +1953,7 @@ function PerformanceTrackingModal({ isOpen, onClose, voucher }: {
     const [performanceData, setPerformanceData] = useState<any>(null);
     const [usageData, setUsageData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
+    const [currentChartPage, setCurrentChartPage] = useState<number>(1);
 
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -1967,7 +1968,7 @@ function PerformanceTrackingModal({ isOpen, onClose, voucher }: {
             console.log('Fetching performance data for voucher ID:', voucher.id);
             
             // Fetch performance stats
-            const performanceRes = await fetch(`${API_URL}/api/admin/vouchers/${voucher.id}/performance-stats`, {
+            const performanceRes = await fetch(`${API_URL}/api/admin/vouchers/${voucher.id}/performance-stats?page=${currentChartPage || 1}&pageSize=7`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
@@ -2012,7 +2013,7 @@ function PerformanceTrackingModal({ isOpen, onClose, voucher }: {
         if (isOpen && voucher) {
             fetchPerformanceData();
         }
-    }, [isOpen, voucher]);
+    }, [isOpen, voucher, currentChartPage]);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('vi-VN', {
@@ -2029,24 +2030,29 @@ function PerformanceTrackingModal({ isOpen, onClose, voucher }: {
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden border border-gray-100">
+            <div className="bg-white rounded-xl shadow-lg max-w-7xl w-[90vw] max-h-[95vh] overflow-hidden border border-gray-200 resize-x">
                 {/* Header with gradient background */}
-                <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white p-6">
+                <div className="bg-gray-800 text-white p-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
-                            <div className="bg-white bg-opacity-20 rounded-full p-2">
+                            <div className="bg-white bg-opacity-10 rounded p-1.5">
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                 </svg>
                             </div>
                             <div>
-                                <h2 className="text-2xl font-bold">Theo dõi hiệu suất</h2>
-                                <p className="text-blue-100 text-sm">Mã voucher: {voucher?.code}</p>
+                                <h2 className="text-xl font-semibold">Theo dõi hiệu suất</h2>
+                                <p className="text-gray-300 text-sm">Mã voucher: {voucher?.code}</p>
+                                {performanceData?.dailyUsageChart && (
+                                    <p className="text-gray-300 text-xs mt-1">
+                                        Khoảng hiển thị: {performanceData.dailyUsageChart.rangeStart} → {performanceData.dailyUsageChart.rangeEnd} (Trang {performanceData.dailyUsageChart.page}/{performanceData.dailyUsageChart.totalPages})
+                                    </p>
+                                )}
                             </div>
                         </div>
                         <button
                             onClick={onClose}
-                            className="text-white hover:text-blue-100 transition-colors p-2 rounded-full hover:bg-white hover:bg-opacity-20"
+                            className="text-white hover:text-gray-200 transition-colors p-2 rounded hover:bg-white/10"
                         >
                             <X className="w-6 h-6" />
                         </button>
@@ -2063,111 +2069,124 @@ function PerformanceTrackingModal({ isOpen, onClose, voucher }: {
                         <div className="space-y-8">
                             {/* Performance Stats */}
                             {performanceData && (
-                                <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-8 border border-gray-100 shadow-lg">
+                                <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
                                     <div className="flex items-center space-x-3 mb-6">
-                                        <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-full p-2">
-                                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <div className="bg-gray-200 rounded p-1.5">
+                                            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                                             </svg>
                                         </div>
-                                        <h3 className="text-xl font-bold text-gray-800">Thống kê hiệu suất</h3>
+                                        <h3 className="text-lg font-semibold text-gray-800">Thống kê hiệu suất</h3>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="grid grid-cols-1 gap-4">
+                                        {/* Row 1: 3 important cards (Sales, Profit, Discount) */}
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            {/* Tổng doanh thu */}
+                                            <div className="bg-white p-4 rounded-lg border border-gray-200">
                                             <div className="flex items-center justify-between">
                                                 <div>
-                                                    <div className="text-sm font-medium text-blue-600 mb-1">Số lần sử dụng</div>
-                                                    <div className="text-3xl font-bold text-blue-800">{performanceData.redemptionCount}</div>
+                                                        <div className="text-xs font-medium text-gray-500 mb-1">Tổng doanh thu</div>
+                                                        <div className="text-2xl font-bold text-gray-900">{formatCurrency(performanceData.totalSales)}</div>
                                                 </div>
-                                                <div className="bg-blue-500 rounded-full p-3">
-                                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <div className="bg-gray-100 rounded p-2">
+                                                        <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                                                     </svg>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-200 shadow-sm hover:shadow-md transition-shadow">
+                                            {/* Tổng lợi nhuận */}
+                                            <div className="bg-white p-4 rounded-lg border border-gray-200">
                                             <div className="flex items-center justify-between">
                                                 <div>
-                                                    <div className="text-sm font-medium text-green-600 mb-1">Tổng doanh thu</div>
-                                                    <div className="text-3xl font-bold text-green-800">{formatCurrency(performanceData.totalSales)}</div>
+                                                        <div className="text-xs font-medium text-gray-500 mb-1">Tổng lợi nhuận</div>
+                                                        <div className="text-2xl font-bold text-gray-900">{formatCurrency(performanceData.totalProfit || 0)}</div>
                                                 </div>
-                                                <div className="bg-green-500 rounded-full p-3">
-                                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                                                    <div className="bg-gray-100 rounded p-2">
+                                                        <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                                                     </svg>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border border-purple-200 shadow-sm hover:shadow-md transition-shadow">
+                                            {/* Tổng giảm giá */}
+                                            <div className="bg-white p-4 rounded-lg border border-gray-200">
                                             <div className="flex items-center justify-between">
                                                 <div>
-                                                    <div className="text-sm font-medium text-purple-600 mb-1">Tỷ lệ sử dụng</div>
-                                                    <div className="text-3xl font-bold text-purple-800">{formatPercentage(performanceData.redemptionRate)}</div>
+                                                        <div className="text-xs font-medium text-gray-500 mb-1">Tổng giảm giá</div>
+                                                        <div className="text-2xl font-bold text-gray-900">{formatCurrency(performanceData.totalDiscount)}</div>
                                                 </div>
-                                                <div className="bg-purple-500 rounded-full p-3">
-                                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                                    <div className="bg-gray-100 rounded p-2">
+                    								<svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                                                     </svg>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl border border-orange-200 shadow-sm hover:shadow-md transition-shadow">
+                                        </div>
+
+                                        {/* Row 2: 4 supporting cards (Count, Rate, Remaining, Effectiveness) */}
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                            {/* Số lần sử dụng */}
+                                            <div className="bg-white p-4 rounded-lg border border-gray-200">
                                             <div className="flex items-center justify-between">
                                                 <div>
-                                                    <div className="text-sm font-medium text-orange-600 mb-1">Tổng giảm giá</div>
-                                                    <div className="text-3xl font-bold text-orange-800">{formatCurrency(performanceData.totalDiscount)}</div>
+                                                        <div className="text-xs font-medium text-gray-500 mb-1">Số lần sử dụng</div>
+                                                        <div className="text-2xl font-bold text-gray-900">{performanceData.redemptionCount}</div>
                                                 </div>
-                                                <div className="bg-orange-500 rounded-full p-3">
-                                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                                    <div className="bg-gray-100 rounded p-2">
+                                                        <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                                                     </svg>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                                            {/* Tỷ lệ sử dụng */}
+                                            <div className="bg-white p-4 rounded-lg border border-gray-200">
                                             <div className="flex items-center justify-between">
                                                 <div>
-                                                    <div className="text-sm font-medium text-gray-600 mb-1">Còn lại</div>
-                                                    <div className="text-3xl font-bold text-gray-800">{performanceData.remainingUsage}</div>
+                                                        <div className="text-xs font-medium text-gray-500 mb-1">Tỷ lệ sử dụng</div>
+                                                        <div className="text-2xl font-bold text-gray-900">{formatPercentage(performanceData.redemptionRate)}</div>
                                                 </div>
-                                                <div className="bg-gray-500 rounded-full p-3">
-                                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    <div className="bg-gray-100 rounded p-2">
+                                                        <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                                     </svg>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className={`p-6 rounded-xl border shadow-sm hover:shadow-md transition-shadow ${
-                                            performanceData.effectivenessStatus === 'HIỆU QUẢ CAO' ? 'bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200' :
-                                            performanceData.effectivenessStatus === 'HIỆU QUẢ' ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-200' :
-                                            performanceData.effectivenessStatus === 'TRUNG BÌNH' ? 'bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200' :
-                                            performanceData.effectivenessStatus === 'THẤP' ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200' :
-                                            'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200'
-                                        }`}>
+                                            {/* Còn lại */}
+                                            <div className="bg-white p-4 rounded-lg border border-gray-200">
                                             <div className="flex items-center justify-between">
                                                 <div>
-                                                    <div className="text-sm font-medium mb-1">Hiệu quả</div>
-                                                    <div className={`text-3xl font-bold ${
-                                                        performanceData.effectivenessStatus === 'HIỆU QUẢ CAO' ? 'text-emerald-800' :
-                                                        performanceData.effectivenessStatus === 'HIỆU QUẢ' ? 'text-green-800' :
-                                                        performanceData.effectivenessStatus === 'TRUNG BÌNH' ? 'text-yellow-800' :
-                                                        performanceData.effectivenessStatus === 'THẤP' ? 'text-red-800' :
-                                                        'text-gray-800'
-                                                    }`}>
-                                                        {performanceData.effectivenessStatus || 'Không xác định'}
+                                                        <div className="text-xs font-medium text-gray-500 mb-1">Còn lại</div>
+                                                        <div className="text-2xl font-bold text-gray-900">{performanceData.remainingUsage}</div>
                                                     </div>
+                                                    <div className="bg-gray-100 rounded p-2">
+                                                        <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
                                                 </div>
-                                                <div className={`rounded-full p-3 ${
-                                                    performanceData.effectivenessStatus === 'HIỆU QUẢ CAO' ? 'bg-emerald-500' :
-                                                    performanceData.effectivenessStatus === 'HIỆU QUẢ' ? 'bg-green-500' :
-                                                    performanceData.effectivenessStatus === 'TRUNG BÌNH' ? 'bg-yellow-500' :
-                                                    performanceData.effectivenessStatus === 'THẤP' ? 'bg-red-500' :
-                                                    'bg-gray-500'
-                                                }`}>
-                                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                </div>
+                                            </div>
+                                            {/* Hiệu quả */}
+                                            <div className={`p-4 rounded-lg border transition-shadow ${
+                                                performanceData.effectivenessStatus === 'HIỆU QUẢ CAO' ? 'bg-emerald-50 border-emerald-200' :
+                                                performanceData.effectivenessStatus === 'HIỆU QUẢ' ? 'bg-green-50 border-green-200' :
+                                                performanceData.effectivenessStatus === 'TRUNG BÌNH' ? 'bg-yellow-50 border-yellow-200' :
+                                                performanceData.effectivenessStatus === 'THẤP' ? 'bg-red-50 border-red-200' :
+                                                'bg-gray-50 border-gray-200'
+                                            }`}>
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <div className="text-xs font-medium text-gray-500 mb-1">Hiệu quả</div>
+                                                        <div className="text-2xl font-bold text-gray-900">{performanceData.effectivenessStatus || 'Không xác định'}</div>
+                                                    </div>
+                                                    <div className="rounded p-2 bg-white/60">
+                                                        <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                     </svg>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -2176,116 +2195,162 @@ function PerformanceTrackingModal({ isOpen, onClose, voucher }: {
                                     {/* Daily Usage Chart */}
                                     {performanceData.dailyUsageChart && performanceData.dailyUsageChart.labels && performanceData.dailyUsageChart.labels.length > 0 && (
                                         <div className="mt-8">
-                                            <div className="flex items-center space-x-3 mb-6">
+                                            <div className="flex items-center justify-between mb-6">
+                                                <div className="flex items-center space-x-3">
                                                 <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full p-2">
                                                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
                                                     </svg>
                                                 </div>
                                                 <h4 className="text-xl font-bold text-gray-800">Biểu đồ sử dụng theo ngày</h4>
+                                                </div>
+                                                {performanceData?.dailyUsageChart && (
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            className="px-2 py-1 text-xs border rounded disabled:opacity-50"
+                                                            onClick={() => setCurrentChartPage((p) => Math.max(1, p - 1))}
+                                                            disabled={(performanceData.dailyUsageChart.page || 1) <= 1}
+                                                            title="Trước (gần ngày bắt đầu)"
+                                                        >
+                                                            ◀
+                                                        </button>
+                                                        <span className="text-xs text-gray-500">
+                                                            Trang {performanceData.dailyUsageChart.page}/{performanceData.dailyUsageChart.totalPages}
+                                                        </span>
+                                                        <button
+                                                            className="px-2 py-1 text-xs border rounded disabled:opacity-50"
+                                                            onClick={() => setCurrentChartPage((p) => Math.min((performanceData.dailyUsageChart.totalPages || 1), p + 1))}
+                                                            disabled={(performanceData.dailyUsageChart.page || 1) >= (performanceData.dailyUsageChart.totalPages || 1)}
+                                                            title="Sau (gần ngày kết thúc)"
+                                                        >
+                                                            ▶
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="bg-gradient-to-br from-white to-gray-50 p-8 rounded-2xl border border-gray-200 shadow-lg">
                                                 <div className="space-y-6">
                                                     {/* Chart Container */}
                                                     <div className="relative h-80 border-l-2 border-b-2 border-gray-300 bg-white rounded-lg p-4">
                                                         {/* Y-axis labels */}
+                                                        {(() => {
+                                                            const usageArr: number[] = (performanceData.dailyUsageChart.usageCounts || []).map((v: any) => Number(v) || 0);
+                                                            const salesArr: number[] = (performanceData.dailyUsageChart.salesData || []).map((v: any) => Number(v) || 0);
+                                                            const profitArr: number[] = (performanceData.dailyUsageChart.profitData || []).map((v: any) => Number(v) || 0);
+                                                            const rawUsageMax = Math.max(...usageArr, 0);
+                                                            const rawMoneyMax = Math.max(...salesArr, ...profitArr, 0);
+                                                            const niceEvenMax = (raw: number) => {
+                                                                if (raw <= 0) return 2;
+                                                                let unit = Math.pow(10, Math.floor(Math.log10(raw)));
+                                                                const candidates = [2, 4, 6, 8, 10];
+                                                                while (true) {
+                                                                    for (const c of candidates) {
+                                                                        const val = c * unit;
+                                                                        if (raw < val) return val; // strictly greater than raw
+                                                                    }
+                                                                    unit *= 10;
+                                                                }
+                                                            };
+                                                            const nextEvenMillions = (raw: number) => {
+                                                                const ceilM = Math.ceil(raw / 1_000_000);
+                                                                let evenM = Math.ceil(ceilM / 2) * 2; // 2,4,6,8...
+                                                                if (evenM * 1_000_000 <= raw) evenM += 2; // strictly greater
+                                                                return Math.max(2_000_000, evenM * 1_000_000);
+                                                            };
+                                                            const usageMax = niceEvenMax(rawUsageMax);
+                                                            const moneyMax = nextEvenMillions(rawMoneyMax);
+                                                            const formatShort = (val: number) => {
+                                                                if (val >= 1_000_000_000) return `${Math.round(val/1_000_000_000)}t`;
+                                                                if (val >= 1_000_000) return `${Math.round(val/1_000_000)}tr`;
+                                                                if (val >= 1_000) return `${Math.round(val/1_000)}k`;
+                                                                return `${val}`;
+                                                            };
+                                                            return (
+                                                                <>
                                                         <div className="absolute left-2 top-4 bottom-4 flex flex-col justify-between text-xs text-gray-500 font-medium">
-                                                            <span className="bg-white px-1">Lượt sử dụng</span>
+                                                                        <span className="bg-white px-1">{usageMax}</span>
                                                             <span className="bg-white px-1">0</span>
                                                         </div>
+                                                                    <div className="absolute right-2 top-4 bottom-4 flex flex-col justify-between text-xs text-gray-500 font-medium items-end">
+                                                                        <span className="bg-white px-1">{formatShort(moneyMax)}</span>
+                                                                        <span className="bg-white px-1">0</span>
+                                                                    </div>
+                                                                </>
+                                                            );
+                                                        })()}
                                                         
                                                         {/* Chart bars */}
-                                                        <div className="ml-12 h-full flex items-end justify-between gap-3">
+                                                        {(() => {
+                                                            const usageArr: number[] = (performanceData.dailyUsageChart.usageCounts || []).map((v: any) => Number(v) || 0);
+                                                            const salesArr: number[] = (performanceData.dailyUsageChart.salesData || []).map((v: any) => Number(v) || 0);
+                                                            const profitArr: number[] = (performanceData.dailyUsageChart.profitData || []).map((v: any) => Number(v) || 0);
+                                                            const rawUsageMax = Math.max(...usageArr, 0);
+                                                            const rawMoneyMax = Math.max(...salesArr, ...profitArr, 0);
+                                                            const niceEvenMax = (raw: number) => {
+                                                                if (raw <= 0) return 2;
+                                                                let unit = Math.pow(10, Math.floor(Math.log10(raw)));
+                                                                const candidates = [2, 4, 6, 8, 10];
+                                                                while (true) {
+                                                                    for (const c of candidates) {
+                                                                        const val = c * unit;
+                                                                        if (raw < val) return val; // strictly greater than raw
+                                                                    }
+                                                                    unit *= 10;
+                                                                }
+                                                            };
+                                                            const nextEvenMillions = (raw: number) => {
+                                                                const ceilM = Math.ceil(raw / 1_000_000);
+                                                                let evenM = Math.ceil(ceilM / 2) * 2;
+                                                                if (evenM * 1_000_000 <= raw) evenM += 2;
+                                                                return Math.max(2_000_000, evenM * 1_000_000);
+                                                            };
+                                                            const usageMax = niceEvenMax(rawUsageMax);
+                                                            const moneyMax = nextEvenMillions(rawMoneyMax);
+                                                            const basePx = 220;
+                                                            const minPx = 6;
+
+                                                            return (
+                                                                <div className="ml-12 h-full flex items-end justify-between gap-4">
                                                             {performanceData.dailyUsageChart.labels.map((label: string, index: number) => {
-                                                                const usageCount = performanceData.dailyUsageChart.usageCounts[index] || 0;
-                                                                const salesData = performanceData.dailyUsageChart.salesData[index] || 0;
+                                                                        const usage = usageArr[index] || 0;
+                                                                        const sales = salesArr[index] || 0;
+                                                                        const profit = profitArr[index] || 0;
                                                                 const displayLabel = performanceData.dailyUsageChart.displayLabels[index] || label;
-                                                                const maxUsage = Math.max(...performanceData.dailyUsageChart.usageCounts);
-                                                                // Ensure minimum height for visibility, especially for single data points
-                                                                const minHeight = 20; // Minimum 20% height
-                                                                const calculatedHeight = maxUsage > 0 ? (usageCount / maxUsage) * 100 : 0;
-                                                                const height = Math.max(calculatedHeight, minHeight);
+
+                                                                        const uPx = usage > 0 ? Math.max((usage / usageMax) * basePx, minPx) : 0;
+                                                                        const sPx = sales > 0 ? Math.max((sales / moneyMax) * basePx, minPx) : 0;
+                                                                        const pPx = profit > 0 ? Math.max((profit / moneyMax) * basePx, minPx) : 0;
                                                                 
                                                                 return (
                                                                     <div key={index} className="flex-1 flex flex-col items-center">
-                                                                        {/* Bar */}
-                                                                        <div className="w-full bg-gradient-to-t from-blue-100 to-blue-50 rounded-t-lg relative group">
-                                                                            <div 
-                                                                                className="bg-gradient-to-t from-blue-600 to-blue-500 rounded-t-lg transition-all duration-300 hover:from-blue-700 hover:to-blue-600 shadow-sm"
-                                                                                style={{ height: `${height}%` }}
-                                                                            ></div>
+                                                                                {/* Grouped bars */}
+                                                                                <div className="w-full h-full flex items-end justify-center gap-2 relative group">
+                                                                                    <div className="w-3 rounded-t-sm bg-blue-600 shadow-sm" style={{ height: `${uPx}px` }}></div>
+                                                                                    <div className="w-3 rounded-t-sm bg-green-600 shadow-sm" style={{ height: `${sPx}px` }}></div>
+                                                                                    <div className="w-3 rounded-t-sm bg-emerald-600 shadow-sm" style={{ height: `${pPx}px` }}></div>
                                                                             
                                                                             {/* Tooltip */}
                                                                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-lg border border-gray-700">
                                                                                 <div className="font-medium mb-1">Chi tiết</div>
                                                                                 <div className="space-y-1">
-                                                                                    <div className="flex items-center gap-2">
-                                                                                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                                                                        <span>Lượt sử dụng: {usageCount}</span>
+                                                                                            <div className="flex items-center gap-2"><div className="w-2 h-2 bg-blue-500 rounded-full"></div><span>Lượt sử dụng: {usage}</span></div>
+                                                                                            <div className="flex items-center gap-2"><div className="w-2 h-2 bg-green-500 rounded-full"></div><span>Doanh thu: {formatCurrency(sales)}</span></div>
+                                                                                            <div className="flex items-center gap-2"><div className="w-2 h-2 bg-emerald-500 rounded-full"></div><span>Lợi nhuận: {formatCurrency(profit)}</span></div>
                                                                                     </div>
-                                                                                    <div className="flex items-center gap-2">
-                                                                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                                                                        <span>Doanh thu: {formatCurrency(salesData)}</span>
                                                                                     </div>
                                                                                 </div>
-                                                                            </div>
-                                                                        </div>
-                                                                        
                                                                         {/* X-axis label */}
-                                                                        <div className="text-xs text-gray-600 mt-3 text-center font-medium">
-                                                                            {displayLabel}
-                                                                        </div>
+                                                                                <div className="text-xs text-gray-600 mt-3 text-center font-medium">{displayLabel}</div>
                                                                     </div>
                                                                 );
                                                             })}
                                                         </div>
+                                                            );
+                                                        })()}
                                                     </div>
                                                     
                                                     {/* Chart Legend */}
-                                                    <div className="flex items-center justify-center gap-6 text-sm">
-                                                        <div className="flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-full">
-                                                            <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-                                                            <span className="font-medium text-blue-800">Lượt sử dụng</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2 bg-green-50 px-3 py-2 rounded-full">
-                                                            <div className="w-3 h-3 bg-green-600 rounded-full"></div>
-                                                            <span className="font-medium text-green-800">Doanh thu</span>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    {/* Summary Stats */}
-                                                    <div className="grid grid-cols-2 gap-6 mt-6">
-                                                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
-                                                            <div className="flex items-center justify-between">
-                                                                <div>
-                                                                    <div className="text-sm text-blue-600 font-medium mb-1">Tổng lượt sử dụng</div>
-                                                                    <div className="text-2xl font-bold text-blue-800">
-                                                                        {performanceData.dailyUsageChart.usageCounts.reduce((sum: number, count: number) => sum + count, 0)}
-                                                                    </div>
-                                                                </div>
-                                                                <div className="bg-blue-500 rounded-full p-2">
-                                                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                                                    </svg>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
-                                                            <div className="flex items-center justify-between">
-                                                                <div>
-                                                                    <div className="text-sm text-green-600 font-medium mb-1">Tổng doanh thu</div>
-                                                                    <div className="text-2xl font-bold text-green-800">
-                                                                        {formatCurrency(performanceData.dailyUsageChart.salesData.reduce((sum: number, sales: number) => sum + sales, 0))}
-                                                                    </div>
-                                                                </div>
-                                                                <div className="bg-green-500 rounded-full p-2">
-                                                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                                                                    </svg>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                    {/* Legend removed as requested */}
                                                 </div>
                                             </div>
                                         </div>
@@ -2355,6 +2420,7 @@ function PerformanceTrackingModal({ isOpen, onClose, voucher }: {
                                                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Mã đơn hàng</th>
                                                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Giá trị đơn hàng</th>
                                                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Số tiền giảm giá</th>
+                                                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Lợi nhuận</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody className="divide-y divide-gray-200">
@@ -2366,6 +2432,7 @@ function PerformanceTrackingModal({ isOpen, onClose, voucher }: {
                                                                     <td className="px-6 py-4 text-sm font-semibold text-blue-600">{user.orderCode}</td>
                                                                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{formatCurrency(user.orderValue)}</td>
                                                                     <td className="px-6 py-4 text-sm font-bold text-green-600">{formatCurrency(user.discountAmount)}</td>
+                                                                    <td className="px-6 py-4 text-sm font-bold text-emerald-600">{formatCurrency(user.profitAmount || 0)}</td>
                                                                 </tr>
                                                             ))}
                                                         </tbody>

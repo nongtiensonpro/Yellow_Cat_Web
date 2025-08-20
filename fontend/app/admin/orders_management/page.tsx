@@ -140,6 +140,8 @@ interface OrderOnlineDetail {
     orderDate: string;
     subTotal: number;
     shippingFee: number;
+    voucherDiscount?: number;
+    voucherCode?: string;
     finalAmount: number;
     paymentStatus: string;
     paymentMethod: string;
@@ -1301,6 +1303,17 @@ export default function OrdersManagementPage() {
                                                                             <span className="text-gray-600">Phí vận chuyển:</span>
                                                                             <span className="text-gray-900">{detailOrder.shippingFee.toLocaleString('vi-VN')} ₫</span>
                                                                         </div>
+                                                                        {(detailOrder.voucherDiscount || 0) > 0 && (
+                                                                            <div className="flex justify-between text-sm">
+                                                                                <div className="flex flex-col">
+                                                                                    <span className="text-green-600">Giảm giá từ voucher:</span>
+                                                                                    {detailOrder.voucherCode && (
+                                                                                        <span className="text-sm font-medium text-green-500">Mã: {detailOrder.voucherCode}</span>
+                                                                                    )}
+                                                                                </div>
+                                                                                <span className="text-green-600 font-semibold">-{(detailOrder.voucherDiscount || 0).toLocaleString('vi-VN')} ₫</span>
+                                                                            </div>
+                                                                        )}
                                                                         <hr className="border-gray-200" />
                                                                         <div className="flex justify-between text-lg font-semibold">
                                                                             <span className="text-gray-900">Tổng thanh toán:</span>

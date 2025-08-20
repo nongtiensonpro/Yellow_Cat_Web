@@ -20,6 +20,10 @@ import {
     Phone,
     CreditCard, 
     Package,
+    TrendingUp,
+    Clock,
+    Gift,
+    Percent,
 } from "lucide-react";
 import {CldImage} from "next-cloudinary";
 import React, { useState } from "react";
@@ -78,6 +82,8 @@ interface OrderDetail {
     orderDate: string;
     subTotal: number;
     shippingFee: number;
+    voucherDiscount?: number;
+    voucherCode?: string;
     finalAmount: number;
     paymentStatus: string;
     paymentMethod: string;
@@ -115,6 +121,7 @@ export default function OrderOnlinePage() {
     const { data: session, status } = useSession();
     const [user, setUser] = useState<User | null>(null);
     const [orders, setOrders] = useState<Order[]>([]);
+    const [allOrders, setAllOrders] = useState<Order[]>([]); // Thêm state cho tất cả đơn hàng
     const [activeTab, setActiveTab] = useState("Pending");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -150,6 +157,27 @@ export default function OrderOnlinePage() {
         return apiRes.data;
     }, []);
 
+    // Lấy tất cả orders của khách hàng
+    const fetchAllOrders = useCallback(async (keycloakId: string, accessToken: string) => {
+        try {
+            const res = await fetch(`http://localhost:8080/api/orders/user-orders?keycloakId=${keycloakId}`, {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            const data = await res.json();
+            const allOrdersData = Array.isArray(data) ? data : data.data || [];
+            
+            // Sắp xếp đơn hàng theo thời gian tạo giảm dần (mới nhất lên đầu)
+            const sortedAllOrders = allOrdersData.sort((a: Order, b: Order) => {
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            });
+            
+            setAllOrders(sortedAllOrders);
+        } catch {
+            console.error('Không lấy được tất cả đơn hàng');
+            setAllOrders([]);
+        }
+    }, []);
+
     // Lấy orders theo trạng thái
     const fetchOrdersByStatus = useCallback(async (keycloakId: string, status: string, accessToken: string) => {
         setLoading(true);
@@ -173,7 +201,14 @@ export default function OrderOnlinePage() {
                 headers: { 'Authorization': `Bearer ${accessToken}` }
             });
             const data = await res.json();
-            setOrders(Array.isArray(data) ? data : data.data || []);
+            const ordersData = Array.isArray(data) ? data : data.data || [];
+            
+            // Sắp xếp đơn hàng theo thời gian tạo giảm dần (mới nhất lên đầu)
+            const sortedOrders = ordersData.sort((a: Order, b: Order) => {
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            });
+            
+            setOrders(sortedOrders);
         } catch {
             setError('Không lấy được danh sách đơn hàng');
             setOrders([]);
@@ -199,6 +234,8 @@ export default function OrderOnlinePage() {
                 // Lấy user
                 const userData = await fetchUserByKeycloakId(keycloakId, accessToken);
                 setUser(userData);
+                // Lấy tất cả orders trước
+                await fetchAllOrders(keycloakId, accessToken);
                 // Lấy orders theo tab
                 await fetchOrdersByStatus(keycloakId, activeTab, accessToken);
             } catch (error: unknown) {
@@ -207,7 +244,7 @@ export default function OrderOnlinePage() {
             }
         };
         getUserAndOrders();
-    }, [session, status, activeTab, fetchUserByKeycloakId, fetchOrdersByStatus]);
+    }, [session, status, activeTab, fetchUserByKeycloakId, fetchAllOrders, fetchOrdersByStatus]);
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -258,6 +295,7 @@ const getStatusColor = (status: string) => {
         try {
             const res = await fetch(`http://localhost:8080/api/orders/detail-online/${orderId}`);
             const data = await res.json();
+            console.log('Order detail response:', data);
             setOrderDetailCache(prev => ({ ...prev, [orderId]: data }));
         } catch {
             setDetailError('Không lấy được chi tiết đơn hàng');
@@ -469,46 +507,130 @@ const getStatusColor = (status: string) => {
             </Card>
 
             {/* Thống kê tổng quan */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Card 1: Tổng đơn hàng */}
                 <Card>
                     <CardBody className="text-center">
                         <div className="flex items-center justify-center mb-2">
                             <ShoppingCart className="text-primary" size={24} />
                         </div>
-                        <p className="text-2xl font-bold">{orders.length}</p>
+                        <p className="text-3xl font-bold text-primary">{allOrders.length}</p>
                         <p className="text-small text-default-500">Tổng đơn hàng</p>
+                        <p className="text-xs text-default-400">Tất cả đơn hàng đã đặt</p>
                     </CardBody>
                 </Card>
                 
+                {/* Card 2: Đơn hàng thành công */}
                 <Card>
                     <CardBody className="text-center">
                         <div className="flex items-center justify-center mb-2">
                             <Package className="text-success" size={24} />
                         </div>
-                        <p className="text-2xl font-bold">{orders.filter(o => o.orderStatus.toLowerCase() === 'paid').length}</p>
-                        <p className="text-small text-default-500">Đã thanh toán</p>
+                        <p className="text-3xl font-bold text-success">
+                            {allOrders.filter(o => o.orderStatus.toLowerCase() === 'completed').length}
+                        </p>
+                        <p className="text-small text-default-500">Đơn hàng thành công</p>
+                        <p className="text-xs text-default-400">Đã giao và hoàn thành</p>
                     </CardBody>
                 </Card>
 
+                {/* Card 3: Đơn hàng đang xử lý */}
                 <Card>
                     <CardBody className="text-center">
                         <div className="flex items-center justify-center mb-2">
-                            <Calendar className="text-warning" size={24} />
+                            <Clock className="text-warning" size={24} />
                         </div>
-                        <p className="text-2xl font-bold">{orders.filter(o => o.orderStatus.toLowerCase() === 'pending').length}</p>
-                        <p className="text-small text-default-500">Chờ thanh toán</p>
+                        <p className="text-3xl font-bold text-warning">
+                            {allOrders.filter(o => ['pending', 'confirmed', 'shipping'].includes(o.orderStatus.toLowerCase())).length}
+                        </p>
+                        <p className="text-small text-default-500">Đang xử lý</p>
+                        <p className="text-xs text-default-400">Chờ xác nhận, giao hàng</p>
                     </CardBody>
                 </Card>
 
+                {/* Card 4: Tổng tiền đã chi */}
                 <Card>
                     <CardBody className="text-center">
                         <div className="flex items-center justify-center mb-2">
                             <CreditCard className="text-secondary" size={24} />
                         </div>
-                        <p className="text-2xl font-bold">
-                            {formatCurrency(orders.reduce((sum, order) => sum + order.finalAmount, 0))}
+                        <p className="text-2xl font-bold text-secondary">
+                            {formatCurrency(allOrders.filter(o => o.orderStatus.toLowerCase() === 'completed').reduce((sum, order) => sum + order.finalAmount, 0))}
                         </p>
-                        <p className="text-small text-default-500">Tổng giá trị</p>
+                        <p className="text-small text-default-500">Tổng tiền đã chi</p>
+                        <p className="text-xs text-default-400">Chỉ đơn hàng hoàn thành</p>
+                    </CardBody>
+                </Card>
+
+                {/* Card 5: Tiết kiệm từ voucher */}
+                <Card>
+                    <CardBody className="text-center">
+                        <div className="flex items-center justify-center mb-2">
+                            <Gift className="text-success" size={24} />
+                        </div>
+                        <p className="text-2xl font-bold text-success">
+                            {formatCurrency(allOrders.filter(o => o.orderStatus.toLowerCase() === 'completed').reduce((sum, order) => {
+                                // Tính tiết kiệm từ voucher: sử dụng discountAmount từ OrderSummaryDTO
+                                return sum + (order.discountAmount || 0);
+                            }, 0))}
+                        </p>
+                        <p className="text-small text-default-500">Tiết kiệm từ voucher</p>
+                        <p className="text-xs text-default-400">Chỉ đơn hàng hoàn thành</p>
+                    </CardBody>
+                </Card>
+
+                {/* Card 6: Đơn hàng trung bình */}
+                <Card>
+                    <CardBody className="text-center">
+                        <div className="flex items-center justify-center mb-2">
+                            <TrendingUp className="text-warning" size={24} />
+                        </div>
+                        <p className="text-2xl font-bold text-warning">
+                            {(() => {
+                                const completedOrders = allOrders.filter(o => o.orderStatus.toLowerCase() === 'completed');
+                                if (completedOrders.length > 0) {
+                                    const totalAmount = completedOrders.reduce((sum, order) => sum + order.finalAmount, 0);
+                                    return formatCurrency(totalAmount / completedOrders.length);
+                                }
+                                return '0 ₫';
+                            })()}
+                        </p>
+                        <p className="text-small text-default-500">Đơn hàng trung bình</p>
+                        <p className="text-xs text-default-400">Giá trị đơn hàng hoàn thành</p>
+                    </CardBody>
+                </Card>
+
+                {/* Card 7: Đơn hàng gần nhất */}
+                <Card>
+                    <CardBody className="text-center">
+                        <div className="flex items-center justify-center mb-2">
+                            <Calendar className="text-info" size={24} />
+                        </div>
+                        <p className="text-lg font-bold text-info">
+                            {allOrders.length > 0 
+                                ? formatDate(allOrders[0].createdAt)
+                                : 'Chưa có đơn hàng'
+                            }
+                        </p>
+                        <p className="text-small text-default-500">Đơn hàng gần nhất</p>
+                        <p className="text-xs text-default-400">Ngày đặt cuối cùng</p>
+                    </CardBody>
+                </Card>
+
+                {/* Card 8: Tỷ lệ thành công */}
+                <Card>
+                    <CardBody className="text-center">
+                        <div className="flex items-center justify-center mb-2">
+                            <Percent className="text-primary" size={24} />
+                        </div>
+                        <p className="text-3xl font-bold text-primary">
+                            {allOrders.length > 0 
+                                ? Math.round((allOrders.filter(o => o.orderStatus.toLowerCase() === 'completed').length / allOrders.length) * 100)
+                                : 0
+                            }%
+                        </p>
+                        <p className="text-small text-default-500">Tỷ lệ thành công</p>
+                        <p className="text-xs text-default-400">% đơn hàng hoàn thành</p>
                     </CardBody>
                 </Card>
             </div>
@@ -692,9 +814,32 @@ const getStatusColor = (status: string) => {
                                                                 </div>
                                                             </div>
                                                             {/* Tổng kết */}
-                                                            <div className="bg-blue-50 rounded-lg p-4 flex flex-col md:flex-row md:justify-between md:items-center">
-                                                                <div className="font-semibold text-gray-700">Tổng thanh toán:</div>
-                                                                <div className="text-2xl font-bold text-blue-700">{formatCurrency(orderDetailCache[order.orderId].finalAmount)}</div>
+                                                            <div className="bg-blue-50 rounded-lg p-4">
+                                                                <div className="space-y-2">
+                                                                    <div className="flex justify-between items-center">
+                                                                        <span className="font-semibold text-gray-700">Tổng tiền hàng:</span>
+                                                                        <span className="text-gray-700">{formatCurrency(orderDetailCache[order.orderId]?.subTotal || 0)}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between items-center">
+                                                                        <span className="font-semibold text-gray-700">Phí vận chuyển:</span>
+                                                                        <span className="text-gray-700">{formatCurrency(orderDetailCache[order.orderId]?.shippingFee || 0)}</span>
+                                                                    </div>
+                                                                    {(orderDetailCache[order.orderId]?.voucherDiscount || 0) > 0 && (
+                                                                        <div className="flex justify-between items-center">
+                                                                            <div className="flex flex-col">
+                                                                                <span className="font-semibold text-green-700">Giảm giá từ voucher:</span>
+                                                                                {orderDetailCache[order.orderId]?.voucherCode && (
+                                                                                    <span className="text-sm font-medium text-green-600">Mã: {orderDetailCache[order.orderId]?.voucherCode}</span>
+                                                                                )}
+                                                                            </div>
+                                                                            <span className="text-green-700 font-semibold">-{formatCurrency(orderDetailCache[order.orderId]?.voucherDiscount || 0)}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="border-t pt-2 flex justify-between items-center">
+                                                                        <span className="font-semibold text-gray-700 text-lg">Tổng thanh toán:</span>
+                                                                        <span className="text-2xl font-bold text-blue-700">{formatCurrency(orderDetailCache[order.orderId]?.finalAmount || 0)}</span>
+                                                                    </div>
+                                                                </div>
                                                             </div>
 
                                                             {/* Order Timeline */}

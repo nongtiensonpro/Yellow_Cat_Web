@@ -17,6 +17,8 @@ import org.yellowcat.backend.product.ProductRepository;
 import org.yellowcat.backend.product.category.Category;
 import org.yellowcat.backend.product.category.CategoryRepository;
 import org.yellowcat.backend.product.order.Order;
+import org.yellowcat.backend.product.order.OrderRepository;
+import org.yellowcat.backend.product.orderItem.OrderItem;
 import org.yellowcat.backend.product.productvariant.ProductVariantRepository;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserRepository;
@@ -53,8 +55,9 @@ public class VoucherService1 {
     @Autowired private ProductRepository productRepository;
     @Autowired private AppUserRepository userRepository;
     @Autowired private CategoryRepository categoryRepository;
-    @Autowired private OderOnlineRepository orderRepository;
+    @Autowired private OderOnlineRepository orderOnlineRepository;
     @Autowired private ProductVariantRepository productVariantRepository;
+    @Autowired private OrderRepository orderRepository;
 
     // ===== CRUD OPERATIONS =====
 
@@ -174,38 +177,152 @@ public class VoucherService1 {
     }
 
     @Transactional
-    public VoucherPerformanceDTO getVoucherPerformanceStats(Integer id) {
+    public VoucherPerformanceDTO getVoucherPerformanceStats(Integer id, int page, int pageSize) {
         Voucher voucher = voucherRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Voucher not found"));
 
-        // Tạo đối tượng DTO
         VoucherPerformanceDTO stats = new VoucherPerformanceDTO();
-
-        // 1. Tính toán các thông số cơ bản
         stats.setRedemptionCount(voucher.getUsageCount());
         stats.setTotalDiscount(calculateTotalDiscount(voucher));
         stats.setTotalSales(calculateTotalSales(voucher));
+        stats.setTotalProfit(calculateTotalProfit(voucher));
 
         if (voucher.getMaxUsage() != null) {
             stats.setRemainingUsage(voucher.getMaxUsage() - voucher.getUsageCount());
-        } else {
-            stats.setRemainingUsage(null);
         }
-
         if (voucher.getMaxUsage() != null && voucher.getMaxUsage() > 0) {
             double rate = (double) voucher.getUsageCount() / voucher.getMaxUsage() * 100;
             stats.setRedemptionRate(Math.round(rate * 100.0) / 100.0);
-        } else {
-            stats.setRedemptionRate(null);
         }
 
-        // 2. Đánh giá hiệu quả
-        stats.setEffectivenessStatus(determineEffectiveness(stats.getRedemptionRate()));
+        // Build paged chart window
+        ChartData chart = buildPagedChartData(voucher, page, pageSize);
+        stats.setDailyUsageChart(chart);
 
-        // 3. Chuẩn bị dữ liệu biểu đồ (thay thế cho dailyUsage cũ)
-        stats.setDailyUsageChart(prepareChartData(voucher));
+        // NEW: Evaluate effectiveness based on real outcomes (Completed/Cancelled) and ROI
+        /*
+         * EFFECTIVENESS (đánh giá hiệu quả thực tế của voucher)
+         * - completed: số lượt dùng dẫn tới đơn hàng trạng thái Completed
+         * - cancelled: số lượt dùng nhưng đơn ở trạng thái Cancelled/Refunded
+         * - completionRate = completed / (completed + cancelled)
+         * - netROI = (totalProfit − totalDiscount) / totalDiscount
+         *   (nếu totalDiscount = 0 và totalProfit > 0 thì xem là +∞; nếu = 0 thì 0)
+         * - Phân loại trạng thái:
+         *   HIỆU QUẢ CAO: completionRate ≥ 0.60 && netROI ≥ 1.0 && cancelRatio ≤ 0.10
+         *   HIỆU QUẢ:      completionRate ≥ 0.40 && netROI ≥ 0.50 && cancelRatio ≤ 0.20
+         *   TRUNG BÌNH:    completionRate ≥ 0.20 || netROI ≥ 0.20
+         *   THẤP:          các trường hợp còn lại (hoặc không có đơn Completed)
+         */
+        int completed = 0;
+        int cancelled = 0;
+        List<VoucherRedemption> reds = voucherRedemptionRepository.findAllByVoucher_Id(voucher.getId());
+        for (VoucherRedemption r : reds) {
+            Order o = orderOnlineRepository.findById(r.getOrderId()).orElse(null);
+            if (o == null || o.getOrderStatus() == null) continue;
+            String st = o.getOrderStatus();
+            if ("Completed".equalsIgnoreCase(st)) completed++;
+            else if ("Cancelled".equalsIgnoreCase(st) || "Refunded".equalsIgnoreCase(st)) cancelled++;
+        }
+        int totalConsidered = completed + cancelled;
+        double completionRate = totalConsidered > 0 ? (double) completed / totalConsidered : 0.0;
+        double cancelRatio = totalConsidered > 0 ? (double) cancelled / totalConsidered : 0.0;
+        java.math.BigDecimal disc = stats.getTotalDiscount() == null ? java.math.BigDecimal.ZERO : stats.getTotalDiscount();
+        java.math.BigDecimal profit = stats.getTotalProfit() == null ? java.math.BigDecimal.ZERO : stats.getTotalProfit();
+        double netROI;
+        if (disc.compareTo(java.math.BigDecimal.ZERO) > 0) {
+            netROI = profit.subtract(disc).divide(disc, java.math.RoundingMode.HALF_UP).doubleValue();
+        } else {
+            netROI = profit.compareTo(java.math.BigDecimal.ZERO) > 0 ? Double.POSITIVE_INFINITY : 0.0;
+        }
+        // Debug logs for metrics
+        System.out.println("=== Voucher Performance Metrics ===");
+        System.out.printf("VoucherID: %d | Completed: %d | Cancelled/Refunded: %d | Considered: %d%n", voucher.getId(), completed, cancelled, totalConsidered);
+        System.out.printf("CompletionRate: %.2f | CancelRatio: %.2f | TotalDiscount: %s | TotalProfit: %s | netROI: %s%n",
+                completionRate, cancelRatio, disc.toPlainString(), profit.toPlainString(),
+                (Double.isInfinite(netROI) ? "INF" : String.format("%.2f", netROI)));
 
+        String eff = determineEffectivenessByOutcomes(completionRate, netROI, cancelRatio, completed);
+        stats.setEffectivenessStatus(eff);
+        System.out.println("EffectivenessStatus => " + eff);
         return stats;
+    }
+
+    private String determineEffectivenessByOutcomes(double completionRate, double netROI, double cancelRatio, int completed) {
+        if (completed <= 0) {
+            return "THẤP";
+        }
+        if (completionRate >= 0.60 && netROI >= 1.0 && cancelRatio <= 0.10) {
+            return "HIỆU QUẢ CAO";
+        }
+        if (completionRate >= 0.40 && netROI >= 0.50 && cancelRatio <= 0.20) {
+            return "HIỆU QUẢ";
+        }
+        if (completionRate >= 0.20 || netROI >= 0.20) {
+            return "TRUNG BÌNH";
+        }
+        return "THẤP";
+    }
+
+    private ChartData buildPagedChartData(Voucher voucher, int page, int pageSize) {
+        LocalDate start = voucher.getStartDate().toLocalDate();
+        LocalDate end = voucher.getEndDate().toLocalDate();
+        if (end.isBefore(start)) {
+            end = start;
+        }
+        int totalDays = (int) (end.toEpochDay() - start.toEpochDay()) + 1; // inclusive
+        int totalPages = (int) Math.ceil(totalDays / (double) pageSize);
+        if (page < 1) page = 1;
+        if (page > totalPages) page = totalPages == 0 ? 1 : totalPages;
+
+        // Page 1 = earliest window (starting at start), last page = newest window (ending at end)
+        int windowStartIndex = Math.max(0, (page - 1) * pageSize);
+        int windowEndIndex = Math.min(totalDays - 1, windowStartIndex + pageSize - 1);
+
+        LocalDate windowStart = start.plusDays(windowStartIndex);
+        LocalDate windowEnd = start.plusDays(windowEndIndex);
+
+        // Preload raw usage+sales from repo
+        List<Object[]> rawData = voucherRedemptionRepository.findDailyUsageWithSalesByVoucherId(voucher.getId());
+        Map<LocalDate, Object[]> dataByDate = new HashMap<>();
+        for (Object[] row : rawData) {
+            if (row[0] != null) {
+                LocalDate d = ((java.sql.Date) row[0]).toLocalDate();
+                dataByDate.put(d, row);
+            }
+        }
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM");
+        ChartData chart = new ChartData();
+        chart.setLabels(new ArrayList<>());
+        chart.setUsageCounts(new ArrayList<>());
+        chart.setSalesData(new ArrayList<>());
+        chart.setProfitData(new ArrayList<>());
+        chart.setDisplayLabels(new ArrayList<>());
+
+        for (LocalDate d = windowStart; !d.isAfter(windowEnd); d = d.plusDays(1)) {
+            Object[] row = dataByDate.get(d);
+            int usage = 0;
+            BigDecimal sales = BigDecimal.ZERO;
+            if (row != null) {
+                usage = row[1] != null ? ((Number) row[1]).intValue() : 0;
+                sales = row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO;
+            }
+            BigDecimal profit = calculateDailyProfit(voucher, d);
+
+            chart.getLabels().add(d.toString());
+            chart.getUsageCounts().add(usage);
+            chart.getSalesData().add(sales);
+            chart.getProfitData().add(profit);
+            chart.getDisplayLabels().add(String.format("%s: %d lượt", d.format(formatter), usage));
+        }
+
+        chart.setRangeStart(windowStart.toString());
+        chart.setRangeEnd(windowEnd.toString());
+        chart.setPage(page);
+        chart.setPageSize(pageSize);
+        chart.setTotalPages(totalPages);
+        chart.setTotalDays(totalDays);
+        return chart;
     }
 
     private Map<String, DailyUsageStats> calculateDailyUsage(Voucher voucher) {
@@ -255,8 +372,6 @@ public class VoucherService1 {
 
         if (voucher.getMaxUsage() != null) {
             stats.setRemainingUsage(voucher.getMaxUsage() - voucher.getUsageCount());
-        } else {
-            stats.setRemainingUsage(null);
         }
 
         if (voucher.getMaxUsage() != null && voucher.getMaxUsage() > 0) {
@@ -271,13 +386,61 @@ public class VoucherService1 {
 
 
     private BigDecimal calculateTotalDiscount(Voucher voucher) {
-        return voucherRedemptionRepository.sumDiscountAmountByVoucherId(voucher.getId())
-                .orElse(BigDecimal.ZERO);
+        // Chỉ tính các đơn ở trạng thái Completed
+        List<VoucherRedemption> reds = voucherRedemptionRepository.findAllByVoucher_Id(voucher.getId());
+        BigDecimal sum = BigDecimal.ZERO;
+        for (VoucherRedemption r : reds) {
+            Order o = orderOnlineRepository.findById(r.getOrderId()).orElse(null);
+            if (o != null && "Completed".equalsIgnoreCase(o.getOrderStatus())) {
+                sum = sum.add(r.getDiscountAmount() == null ? BigDecimal.ZERO : r.getDiscountAmount());
+            }
+        }
+        return sum;
     }
 
     private BigDecimal calculateTotalSales(Voucher voucher) {
-        return voucherRedemptionRepository.sumOrderValuesByVoucherId(voucher.getId())
-                .orElse(BigDecimal.ZERO);
+        // Chỉ tính các đơn ở trạng thái Completed
+        List<VoucherRedemption> reds = voucherRedemptionRepository.findAllByVoucher_Id(voucher.getId());
+        BigDecimal sum = BigDecimal.ZERO;
+        for (VoucherRedemption r : reds) {
+            Order o = orderOnlineRepository.findById(r.getOrderId()).orElse(null);
+            if (o != null && "Completed".equalsIgnoreCase(o.getOrderStatus())) {
+                // Doanh thu trước giảm = final + discount
+                BigDecimal finalAmt = o.getFinalAmount() == null ? BigDecimal.ZERO : o.getFinalAmount();
+                BigDecimal disc = r.getDiscountAmount() == null ? BigDecimal.ZERO : r.getDiscountAmount();
+                sum = sum.add(finalAmt.add(disc));
+            }
+        }
+        return sum;
+    }
+
+    private BigDecimal calculateTotalProfit(Voucher voucher) {
+        // Lấy danh sách đơn hàng đã sử dụng voucher này
+        List<VoucherRedemption> redemptions = voucherRedemptionRepository.findAllByVoucher_Id(voucher.getId());
+        
+        BigDecimal totalProfit = BigDecimal.ZERO;
+        
+        for (VoucherRedemption redemption : redemptions) {
+            // Lấy đơn hàng
+            Order order = orderOnlineRepository.findById(redemption.getOrderId()).orElse(null);
+            if (order != null && "Completed".equalsIgnoreCase(order.getOrderStatus())) {
+                // Tính lợi nhuận cho từng order item
+                for (OrderItem item : order.getOrderItems()) {
+                    // Giá bán = giá tại thời điểm mua
+                    BigDecimal sellingPrice = item.getPriceAtPurchase();
+                    // Giá nhập = giá nhập của product variant
+                    BigDecimal costPrice = item.getVariant().getCostPrice();
+                    
+                    if (sellingPrice != null && costPrice != null) {
+                        // Lợi nhuận = (giá bán - giá nhập) * số lượng
+                        BigDecimal itemProfit = sellingPrice.subtract(costPrice).multiply(BigDecimal.valueOf(item.getQuantity()));
+                        totalProfit = totalProfit.add(itemProfit);
+                    }
+                }
+            }
+        }
+        
+        return totalProfit;
     }
 
     private ChartData prepareChartData(Voucher voucher) {
@@ -289,6 +452,7 @@ public class VoucherService1 {
         chartData.setLabels(new ArrayList<>());
         chartData.setUsageCounts(new ArrayList<>());
         chartData.setSalesData(new ArrayList<>());
+        chartData.setProfitData(new ArrayList<>());
         chartData.setDisplayLabels(new ArrayList<>());
 
         // Sắp xếp dữ liệu theo ngày tăng dần
@@ -306,6 +470,11 @@ public class VoucherService1 {
             int usageCount = data[1] != null ? ((Number) data[1]).intValue() : 0;
             BigDecimal sales = data[2] != null ? (BigDecimal) data[2] : BigDecimal.ZERO;
 
+            // Lọc doanh thu theo đơn Completed
+            sales = filterSalesByCompletedOnDate(voucher, date, sales);
+            // Lợi nhuận chỉ tính đơn Completed trong ngày này
+            BigDecimal dailyProfit = calculateDailyProfit(voucher, date);
+
             // Định dạng hiển thị
             String formattedDate = date.format(formatter);
             String displayLabel = String.format("%s: %d lượt", formattedDate, usageCount);
@@ -314,10 +483,63 @@ public class VoucherService1 {
             chartData.getLabels().add(date.toString());
             chartData.getUsageCounts().add(usageCount);
             chartData.getSalesData().add(sales);
+            chartData.getProfitData().add(dailyProfit);
             chartData.getDisplayLabels().add(displayLabel);
         }
 
         return chartData;
+    }
+
+    private BigDecimal calculateDailyProfit(Voucher voucher, LocalDate date) {
+        // Lấy danh sách đơn hàng đã sử dụng voucher này trong ngày cụ thể
+        List<VoucherRedemption> redemptions = voucherRedemptionRepository.findAllByVoucher_Id(voucher.getId());
+        
+        BigDecimal dailyProfit = BigDecimal.ZERO;
+        
+        for (VoucherRedemption redemption : redemptions) {
+            // Lấy đơn hàng tương ứng
+            Order order = orderOnlineRepository.findById(redemption.getOrderId()).orElse(null);
+            if (order == null) {
+                continue;
+            }
+            // Xác định ngày áp dụng: ưu tiên appliedAt, fallback orderDate
+            LocalDate appliedDate = redemption.getAppliedAt() != null
+                    ? redemption.getAppliedAt().toLocalDate()
+                    : (order.getOrderDate() != null ? order.getOrderDate().toLocalDate() : null);
+            if (appliedDate == null || !appliedDate.equals(date) || !"Completed".equalsIgnoreCase(order.getOrderStatus())) {
+                continue;
+            }
+            // Tính lợi nhuận cho từng order item
+            for (OrderItem item : order.getOrderItems()) {
+                BigDecimal sellingPrice = item.getPriceAtPurchase();
+                BigDecimal costPrice = item.getVariant().getCostPrice();
+                
+                if (sellingPrice != null && costPrice != null) {
+                    BigDecimal itemProfit = sellingPrice.subtract(costPrice).multiply(BigDecimal.valueOf(item.getQuantity()));
+                    dailyProfit = dailyProfit.add(itemProfit);
+                }
+            }
+        }
+        
+        return dailyProfit;
+    }
+
+    private BigDecimal filterSalesByCompletedOnDate(Voucher voucher, LocalDate date, BigDecimal rawSales) {
+        // Tính lại sales cho ngày này: chỉ cộng đơn Completed
+        List<VoucherRedemption> redemptions = voucherRedemptionRepository.findAllByVoucher_Id(voucher.getId());
+        BigDecimal sales = BigDecimal.ZERO;
+        for (VoucherRedemption r : redemptions) {
+            Order o = orderOnlineRepository.findById(r.getOrderId()).orElse(null);
+            if (o == null) continue;
+            LocalDate applied = r.getAppliedAt() != null ? r.getAppliedAt().toLocalDate() : (o.getOrderDate() != null ? o.getOrderDate().toLocalDate() : null);
+            if (applied == null) continue;
+            if (applied.equals(date) && "Completed".equalsIgnoreCase(o.getOrderStatus())) {
+                BigDecimal finalAmt = o.getFinalAmount() == null ? BigDecimal.ZERO : o.getFinalAmount();
+                BigDecimal disc = r.getDiscountAmount() == null ? BigDecimal.ZERO : r.getDiscountAmount();
+                sales = sales.add(finalAmt.add(disc));
+            }
+        }
+        return sales;
     }
 
     public String getProductName(Integer id) {
@@ -445,12 +667,28 @@ public class VoucherService1 {
         }
 
         // Lấy thông tin đơn hàng
-        Order order = orderRepository.findById(redemption.getOrderId()).orElse(null);
+        Order order = orderOnlineRepository.findById(redemption.getOrderId()).orElse(null);
         if (order != null) {
             dto.setOrderCode(order.getOrderCode());
+            dto.setOrderStatus(order.getOrderStatus());
             // Tính giá trị đơn hàng trước giảm giá
             BigDecimal orderValue = order.getFinalAmount().add(redemption.getDiscountAmount());
             dto.setOrderValue(orderValue);
+
+            // Tính lợi nhuận cho đơn hàng này (chỉ khi Completed)
+            BigDecimal orderProfit = BigDecimal.ZERO;
+            if ("Completed".equalsIgnoreCase(order.getOrderStatus())) {
+                for (OrderItem item : order.getOrderItems()) {
+                    BigDecimal sellingPrice = item.getPriceAtPurchase();
+                    BigDecimal costPrice = item.getVariant().getCostPrice();
+                    
+                    if (sellingPrice != null && costPrice != null) {
+                        BigDecimal itemProfit = sellingPrice.subtract(costPrice).multiply(BigDecimal.valueOf(item.getQuantity()));
+                        orderProfit = orderProfit.add(itemProfit);
+                    }
+                }
+            }
+            dto.setProfitAmount(orderProfit);
 
             // Nếu không có thông tin user từ userRepository, lấy từ đơn hàng
             if (dto.getFullName() == null) {
@@ -463,6 +701,8 @@ public class VoucherService1 {
             // Xử lý trường hợp đơn hàng không tồn tại
             dto.setOrderValue(BigDecimal.ZERO);
             dto.setOrderCode("Đơn hàng đã bị xóa");
+            dto.setProfitAmount(BigDecimal.ZERO);
+            dto.setOrderStatus("UNKNOWN");
         }
 
         return dto;
@@ -1201,6 +1441,8 @@ public class VoucherService1 {
         redemption.setUserId(userId);
         redemption.setOrderId(order.getOrderId());
         redemption.setDiscountAmount(discountAmount);
+        // Ghi nhận thời điểm áp dụng để đồng bộ biểu đồ và tính profit theo ngày
+        redemption.setAppliedAt(LocalDateTime.now());
         voucherRedemptionRepository.save(redemption);
     }
 

@@ -25,6 +25,8 @@ public class OrderOnlineDetailDTO {
     private LocalDateTime orderDate;
     private BigDecimal subTotal;
     private BigDecimal shippingFee;
+    private BigDecimal voucherDiscount;
+    private String voucherCode;
     private BigDecimal finalAmount;
     private String paymentStatus;
     private String paymentMethod;

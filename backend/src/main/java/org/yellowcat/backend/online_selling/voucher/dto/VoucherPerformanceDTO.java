@@ -9,6 +9,7 @@ import java.util.Map;
 public class VoucherPerformanceDTO {
     private Integer redemptionCount;      // Số lần voucher đã được sử dụng
     private BigDecimal totalSales;        // Tổng doanh số từ voucher
+    private BigDecimal totalProfit;       // Tổng lợi nhuận từ voucher (doanh thu - chi phí)
     private Double redemptionRate;        // Tỉ lệ sử dụng (%)
     private BigDecimal totalDiscount;     // Tổng tiền giảm giá
     private Integer remainingUsage;       // Số lượt sử dụng còn lại

@@ -49,4 +49,7 @@ public interface VoucherRedemptionRepository extends JpaRepository<VoucherRedemp
             "GROUP BY FUNCTION('DATE', COALESCE(v.appliedAt, CURRENT_DATE)) " + // Nhóm theo ngày đã xử lý
             "ORDER BY FUNCTION('DATE', COALESCE(v.appliedAt, CURRENT_DATE))")
     List<Object[]> findDailyUsageWithSalesByVoucherId(@Param("voucherId") Integer voucherId);
+
+    // Tìm voucher redemption theo orderId
+    VoucherRedemption findByOrderId(Integer orderId);
 }
