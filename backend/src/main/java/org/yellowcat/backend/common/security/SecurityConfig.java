@@ -88,6 +88,7 @@ public class SecurityConfig {
                                 requestMatchers(
                                 "/api/statistic/overviews/**",
                                 "/api/statistic/profit/**",
+                                "/api/statistic/product/**",
                                 "/api/statistic/revenue/**"
                         ).hasAnyAuthority("Admin_Web").
 
