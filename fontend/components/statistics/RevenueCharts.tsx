@@ -1,15 +1,21 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Card, CardBody, CardHeader, Select, SelectItem } from "@heroui/react";
-import { Line, Bar, Doughnut } from "react-chartjs-2";
-import { revenueService, type RevenueTrendDTO, type RevenueByCategoryDTO, type RevenueByBrandDTO, type RevenueSummaryDTO } from "@/services/statisticRevenueService";
+import React, {useEffect, useState} from "react";
+import {Card, CardBody, CardHeader, Select, SelectItem} from "@heroui/react";
+import {Line, Bar, Doughnut} from "react-chartjs-2";
+import {
+    revenueService,
+    type RevenueTrendDTO,
+    type RevenueByCategoryDTO,
+    type RevenueByBrandDTO,
+    type RevenueSummaryDTO
+} from "@/services/statisticRevenueService";
 
 interface RevenueChartsProps {
     timeRange: string;
 }
 
-const RevenueCharts: React.FC<RevenueChartsProps> = ({ timeRange }) => {
+const RevenueCharts: React.FC<RevenueChartsProps> = ({timeRange}) => {
     const [chartType, setChartType] = useState<"daily" | "weekly" | "monthly">("daily");
     const [trendData, setTrendData] = useState<RevenueTrendDTO | null>(null);
     const [categoryData, setCategoryData] = useState<RevenueByCategoryDTO | null>(null);
@@ -102,6 +108,21 @@ const RevenueCharts: React.FC<RevenueChartsProps> = ({ timeRange }) => {
         ]
     };
 
+    const conversionFunction = () => {
+        switch (timeRange) {
+            case "day":
+                return "ngày";
+            case "week":
+                return "tuần";
+            case "month":
+                return "tháng";
+            case "year":
+                return "năm";
+            default:
+                return "tháng";
+        }
+    };
+
     return (
         <div className="space-y-6">
             {/* Biểu đồ xu hướng */}
@@ -116,7 +137,7 @@ const RevenueCharts: React.FC<RevenueChartsProps> = ({ timeRange }) => {
                 </CardHeader>
                 <CardBody>
                     <div className="h-80">
-                        <Line data={lineChartData} />
+                        <Line data={lineChartData}/>
                     </div>
                 </CardBody>
             </Card>
@@ -125,12 +146,12 @@ const RevenueCharts: React.FC<RevenueChartsProps> = ({ timeRange }) => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card>
                     <CardHeader><h3 className="text-lg font-semibold">Doanh thu theo danh mục</h3></CardHeader>
-                    <CardBody><Doughnut data={categoryChartData} /></CardBody>
+                    <CardBody><Doughnut data={categoryChartData}/></CardBody>
                 </Card>
 
                 <Card>
                     <CardHeader><h3 className="text-lg font-semibold">Doanh thu theo thương hiệu</h3></CardHeader>
-                    <CardBody><Bar data={brandChartData} /></CardBody>
+                    <CardBody><Bar data={brandChartData}/></CardBody>
                 </Card>
             </div>
 
@@ -138,19 +159,19 @@ const RevenueCharts: React.FC<RevenueChartsProps> = ({ timeRange }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card>
                     <CardBody className="text-center">
-                        <h4>Tổng doanh thu</h4>
+                        <h4>Tổng doanh thu theo {conversionFunction()}</h4>
                         <p className="text-2xl font-bold text-green-600">{formatCurrency(summary.totalRevenue)}</p>
                     </CardBody>
                 </Card>
                 <Card>
                     <CardBody className="text-center">
-                        <h4>Tăng trưởng</h4>
+                        <h4>Tăng trưởng so với {conversionFunction()} trước</h4>
                         <p className="text-2xl font-bold text-blue-600">{summary.growthRate}%</p>
                     </CardBody>
                 </Card>
                 <Card>
                     <CardBody className="text-center">
-                        <h4>Doanh thu trung bình</h4>
+                        <h4>Doanh thu trung bình theo {conversionFunction()}</h4>
                         <p className="text-2xl font-bold text-purple-600">{formatCurrency(summary.averageOrderValue)}</p>
                     </CardBody>
                 </Card>

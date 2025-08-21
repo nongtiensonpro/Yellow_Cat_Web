@@ -40,7 +40,7 @@ const mapRangeToBackend = (range: string): string => {
         case "year":
             return "year";
         default:
-            return "month";
+            return "year";
     }
 };
 

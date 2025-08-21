@@ -14,10 +14,10 @@ import RevenueCharts from '@/components/statistics/RevenueCharts';
 import OrderAnalytics from '@/components/statistics/OrderAnalytics';
 import CustomerInsights from '@/components/statistics/CustomerInsights';
 import ProductPerformance from '@/components/statistics/ProductPerformance';
-import ProfitAnalysis from '@/components/statistics/ProfitAnalysis';
+import {ProfitAnalysis} from '@/components/statistics/ProfitAnalysis';
 
 export default function StatisticsPage() {
-    const [timeRange, setTimeRange] = useState('month');
+    const [timeRange, setTimeRange] = useState('year');
     const [activeTab, setActiveTab] = useState('overview');
 
     const tabs = [
@@ -52,7 +52,6 @@ export default function StatisticsPage() {
                         <SelectItem key="today">Hôm nay</SelectItem>
                         <SelectItem key="week">Tuần này</SelectItem>
                         <SelectItem key="month">Tháng này</SelectItem>
-                        <SelectItem key="quarter">Quý này</SelectItem>
                         <SelectItem key="year">Năm nay</SelectItem>
                     </Select>
 
