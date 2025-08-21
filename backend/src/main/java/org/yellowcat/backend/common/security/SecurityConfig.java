@@ -81,12 +81,13 @@ public class SecurityConfig {
                                 "/v3/api-docs/**")
                         .permitAll().
 
-//                        requestMatchers(
-//                                "/api/statistic/**"
-//                        ).permitAll().
+                        requestMatchers(
+                                "/api/statistic/**"
+                        ).permitAll().
                         //API statistic
                                 requestMatchers(
                                 "/api/statistic/overviews/**",
+                                "/api/statistic/profit/**",
                                 "/api/statistic/revenue/**"
                         ).hasAnyAuthority("Admin_Web").
 
