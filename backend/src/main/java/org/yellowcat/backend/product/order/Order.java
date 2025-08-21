@@ -80,6 +80,9 @@ public class Order {
     @Column(name = "is_synced_to_ghtk", columnDefinition = "BOOLEAN DEFAULT FALSE")
     private Boolean isSyncedToGhtk;
 
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
     @Column(name = "updated_at", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime updatedAt;
 
@@ -96,6 +99,7 @@ public class Order {
     protected void onCreate() {
         orderDate = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now();
         if (shippingFee == null) shippingFee = BigDecimal.ZERO;
         if (discountAmount == null) discountAmount = BigDecimal.ZERO;
         if (orderStatus == null) orderStatus = "Pending";
@@ -112,7 +116,4 @@ public class Order {
     public boolean isPaid() {
         return PaymentStatus.PAID.equals(this.paymentStatus);
     }
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
 }

@@ -1,30 +1,29 @@
-import { getSession } from "next-auth/react";
+import {getSession} from "next-auth/react";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
-// types/revenue.ts
-export type RevenueTrendDTO = {
+// ================== TYPES ==================
+export type ProfitSummaryResponse = {
+    revenue: number;
+    costOfGoods: number;
+    netProfit?: number;
+    profitMargin?: number;
+    growthRate?: number;
+    revenueGrowth?: number;
+    profitGrowth?: number;
+};
+
+export type ProfitTrendResponse = {
     labels: string[];
-    revenue: number[];
-    orders?: number[]; // chỉ có khi daily
+    datasets: Record<string, number[]>; // revenue, netProfit
 };
 
-export type RevenueByCategoryDTO = {
-    categoryName: string[];
-    totalRevenue: number[];
+export type ProfitMarginsResponse = {
+    labels: string[];
+    datasets: Record<string, number[]>; //netMargin
 };
 
-export type RevenueByBrandDTO = {
-    brandName: string[];
-    totalRevenue: number[];
-};
-
-export type RevenueSummaryDTO = {
-    totalRevenue: number;
-    growthRate: number;
-    averageOrderValue: number;
-};
-
+// ================== HELPERS ==================
 const mapRangeToBackend = (range: string): string => {
     switch (range) {
         case "today":
@@ -65,39 +64,37 @@ const fetchWithAuth = async (url: string): Promise<Response> => {
     return response;
 };
 
-export const revenueService = {
-    getTrend: async (type: "daily" | "weekly" | "monthly", range: string): Promise<RevenueTrendDTO> => {
-        const url = new URL(`${API_BASE_URL}/api/statistic/revenue/trend`);
-        url.searchParams.append("type", type);
+// ================== SERVICE ==================
+export const profitService = {
+    getSummary: async (range: string): Promise<ProfitSummaryResponse> => {
+        const url = new URL(`${API_BASE_URL}/api/statistic/profit/summary`);
         url.searchParams.append("range", mapRangeToBackend(range));
 
         const response = await fetchWithAuth(url.toString());
         return response.json();
     },
 
-    getByCategory: async (range: string): Promise<RevenueByCategoryDTO> => {
-        const url = new URL(`${API_BASE_URL}/api/statistic/revenue/by-category`);
+    getTrends: async (
+        range: string,
+        period: string = "monthly"
+    ): Promise<ProfitTrendResponse> => {
+        const url = new URL(`${API_BASE_URL}/api/statistic/profit/trends`);
         url.searchParams.append("range", mapRangeToBackend(range));
+        url.searchParams.append("period", period);
 
         const response = await fetchWithAuth(url.toString());
         return response.json();
     },
 
-    getByBrand: async (range: string): Promise<RevenueByBrandDTO> => {
-        const url = new URL(`${API_BASE_URL}/api/statistic/revenue/by-brand`);
+    getMargins: async (
+        range: string,
+        period: string = "monthly"
+    ): Promise<ProfitMarginsResponse> => {
+        const url = new URL(`${API_BASE_URL}/api/statistic/profit/margins`);
         url.searchParams.append("range", mapRangeToBackend(range));
-
-        const response = await fetchWithAuth(url.toString());
-        return response.json();
-    },
-
-    getSummary: async (range: string): Promise<RevenueSummaryDTO> => {
-        const url = new URL(`${API_BASE_URL}/api/statistic/revenue/summary`);
-        url.searchParams.append("range", mapRangeToBackend(range));
+        url.searchParams.append("period", period);
 
         const response = await fetchWithAuth(url.toString());
         return response.json();
     },
 };
-
-

@@ -21,7 +21,7 @@ public class RevenueController {
     @PreAuthorize("hasAnyAuthority('Admin_Web')")
     public ResponseEntity<RevenueTrendResponse> getRevenueTrend(
             @RequestParam(defaultValue = "daily") String type,
-            @RequestParam(defaultValue = "month") String range
+            @RequestParam(defaultValue = "year") String range
     ) {
 
         return ResponseEntity.ok(revenueService.getRevenueTrend(type, range));
@@ -36,7 +36,7 @@ public class RevenueController {
     @GetMapping("/by-category")
     @PreAuthorize("hasAnyAuthority('Admin_Web')")
     public ResponseEntity<List<RevenueByCategoryResponse>> getByCategory(
-            @RequestParam(defaultValue = "month") String range) {
+            @RequestParam(defaultValue = "year") String range) {
 
         List<RevenueByCategoryResponse> response = revenueService.getRevenueByCategory(range);
         return ResponseEntity.ok(response);
@@ -51,7 +51,7 @@ public class RevenueController {
     @GetMapping("/by-brand")
     @PreAuthorize("hasAnyAuthority('Admin_Web')")
     public ResponseEntity<List<RevenueByBrandResponse>> getByBrand(
-            @RequestParam(defaultValue = "month") String range) {
+            @RequestParam(defaultValue = "year") String range) {
 
         List<RevenueByBrandResponse> response = revenueService.getRevenueByBrand(range);
         return ResponseEntity.ok(response);
@@ -66,7 +66,7 @@ public class RevenueController {
     @GetMapping("/summary")
     @PreAuthorize("hasAnyAuthority('Admin_Web')")
     public ResponseEntity<RevenueSummaryResponse> getSummary(
-            @RequestParam(defaultValue = "month") String range) {
+            @RequestParam(defaultValue = "year") String range) {
 
         RevenueSummaryResponse response = revenueService.getSummary(range);
         return ResponseEntity.ok(response);

@@ -23,13 +23,13 @@ public class OverViewController {
     @GetMapping
     @PreAuthorize("hasAnyAuthority('Admin_Web')")
     public ResponseEntity<OverviewWithChangeDTO> getOverview(
-            @RequestParam(defaultValue = "month") String range) {
+            @RequestParam(defaultValue = "year") String range) {
         return ResponseEntity.ok(overViewService.getOverview(range));
     }
 
     @GetMapping("/demo")
     @PreAuthorize("hasAnyAuthority('Admin_Web')")
-    public ResponseEntity<Long> getTotalRevenue(@RequestParam(defaultValue = "month") String range) {
+    public ResponseEntity<Long> getTotalRevenue(@RequestParam(defaultValue = "year") String range) {
 
         return ResponseEntity.ok(overViewService.getTotalRevenue(range));
     }
