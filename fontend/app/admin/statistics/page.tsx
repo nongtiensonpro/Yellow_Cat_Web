@@ -5,14 +5,12 @@ import {Button, Select, SelectItem} from "@heroui/react";
 import {
     CurrencyDollarIcon,
     ShoppingBagIcon,
-    UsersIcon,
     ChartBarIcon,
     ArrowTrendingUpIcon
 } from "@heroicons/react/24/outline";
 import OverviewCards from '@/components/statistics/OverviewCards';
 import RevenueCharts from '@/components/statistics/RevenueCharts';
 import OrderAnalytics from '@/components/statistics/OrderAnalytics';
-import CustomerInsights from '@/components/statistics/CustomerInsights';
 import ProductPerformance from '@/components/statistics/ProductPerformance';
 import {ProfitAnalysis} from '@/components/statistics/ProfitAnalysis';
 
@@ -22,7 +20,6 @@ export default function StatisticsPage() {
 
     const tabs = [
         {key: 'overview', label: 'Tổng quan', icon: ChartBarIcon},
-        {key: 'customers', label: 'Khách hàng', icon: UsersIcon},
         {key: 'products', label: 'Sản phẩm', icon: ShoppingBagIcon},
         {key: 'orders', label: 'Đơn hàng', icon: ShoppingBagIcon},
         {key: 'revenue', label: 'Doanh thu', icon: ArrowTrendingUpIcon},
@@ -87,7 +84,6 @@ export default function StatisticsPage() {
             {/* Content based on active tab */}
             <div className="min-h-[600px]">
                 {activeTab === 'overview' && <OverviewCards timeRange={timeRange}/>}
-                {activeTab === 'customers' && <CustomerInsights timeRange={timeRange}/>}
                 {activeTab === 'products' && <ProductPerformance timeRange={timeRange}/>}
                 {activeTab === 'orders' && <OrderAnalytics timeRange={timeRange}/>}
                 {activeTab === 'revenue' && <RevenueCharts timeRange={timeRange}/>}
