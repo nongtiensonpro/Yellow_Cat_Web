@@ -8,6 +8,7 @@ import org.yellowcat.backend.product.promotionproduct.dto.ProductVariantSelectio
 import org.yellowcat.backend.product.promotionproduct.dto.PromotionProductResponse;
 import org.yellowcat.backend.product.promotionproduct.dto.PromotionSummaryResponse;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -200,6 +201,45 @@ public interface PromotionProductRepository extends JpaRepository<PromotionProdu
 //            @Param("discountValue") Double discountValue
 //    );
 
+//    @Query("""
+//            SELECT new org.yellowcat.backend.product.promotionproduct.dto.PromotionProductResponse(
+//                pp.promotionProductId,
+//                p.promotionCode,
+//                p.promotionName,
+//                p.description,
+//                p.discountType,
+//                p.discountValue,
+//                p.startDate,
+//                p.endDate,
+//                p.isActive,
+//                v.variantId,
+//                v.sku,
+//                v.price,
+//                v.salePrice,
+//                v.imageUrl,
+//                pr.productName
+//            )
+//            FROM PromotionProduct pp
+//            JOIN pp.promotion p
+//            JOIN pp.productVariant v
+//            JOIN v.product pr
+//            WHERE (:keyword IS NULL OR LOWER(p.promotionName) LIKE LOWER(CONCAT('%', :keyword, '%')))
+//              AND (
+//                :status IS NULL OR
+//                (:status = 'active' AND CURRENT_TIMESTAMP BETWEEN p.startDate AND p.endDate) OR
+//                (:status = 'inactive' AND CURRENT_TIMESTAMP NOT BETWEEN p.startDate AND p.endDate)
+//              )
+//              AND (:discountType IS NULL OR p.discountType = :discountType)
+//              AND (:discountValue IS NULL OR p.discountValue = :discountValue)
+//            ORDER BY p.id DESC
+//            """)
+//    List<PromotionProductResponse> findAllWithFilters(
+//            @Param("keyword") String keyword,
+//            @Param("status") String status,
+//            @Param("discountType") String discountType,
+//            @Param("discountValue") Double discountValue
+//    );
+
     @Query("""
             SELECT new org.yellowcat.backend.product.promotionproduct.dto.PromotionProductResponse(
                 pp.promotionProductId,
@@ -224,19 +264,23 @@ public interface PromotionProductRepository extends JpaRepository<PromotionProdu
             JOIN v.product pr
             WHERE (:keyword IS NULL OR LOWER(p.promotionName) LIKE LOWER(CONCAT('%', :keyword, '%')))
               AND (
-                :status IS NULL OR 
-                (:status = 'active' AND CURRENT_TIMESTAMP BETWEEN p.startDate AND p.endDate) OR 
+                :status IS NULL OR
+                (:status = 'active' AND CURRENT_TIMESTAMP BETWEEN p.startDate AND p.endDate) OR
                 (:status = 'inactive' AND CURRENT_TIMESTAMP NOT BETWEEN p.startDate AND p.endDate)
               )
               AND (:discountType IS NULL OR p.discountType = :discountType)
               AND (:discountValue IS NULL OR p.discountValue = :discountValue)
+              AND (:startDateFilter IS NULL OR DATE(p.startDate) >= :startDateFilter)
+              AND (:endDateFilter IS NULL OR DATE(p.endDate) <= :endDateFilter)
             ORDER BY p.id DESC
             """)
     List<PromotionProductResponse> findAllWithFilters(
             @Param("keyword") String keyword,
             @Param("status") String status,
             @Param("discountType") String discountType,
-            @Param("discountValue") Double discountValue
+            @Param("discountValue") Double discountValue,
+            @Param("startDateFilter") LocalDate startDateFilter,
+            @Param("endDateFilter") LocalDate endDateFilter
     );
 
 

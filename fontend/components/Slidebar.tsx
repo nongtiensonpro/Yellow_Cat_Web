@@ -6,7 +6,7 @@ import {
     Percent,
     User,
     LayoutDashboard,
-    RotateCcw,
+    // RotateCcw,
     FileText,
     Box,
     Tag,
@@ -56,7 +56,7 @@ const menuItems: MenuItem[] = [
             // { href: "/admin/promotion_order", icon: <Percent size={18} />, label: "Giảm giá theo hóa đơn" },
         ],
     },
-    { href: "/admin/return_management", icon: <RotateCcw size={18} />, label: "Trả hàng" },
+    // { href: "/admin/return_management", icon: <RotateCcw size={18} />, label: "Trả hàng" },
     { href: "/admin/account_management", icon: <User size={18} />, label: "Tài khoản" },
     // { href: "/admin/chat", icon: <MessageCircle size={18} />, label: "Chat" },
 ];

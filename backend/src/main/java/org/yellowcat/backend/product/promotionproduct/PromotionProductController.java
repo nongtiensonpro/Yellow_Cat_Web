@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,6 +16,7 @@ import org.yellowcat.backend.product.promotionproduct.dto.PromotionEditResponse;
 import org.yellowcat.backend.product.promotionproduct.dto.PromotionProductResponse;
 import org.yellowcat.backend.product.promotionproduct.dto.PromotionSummaryResponse;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,15 +29,31 @@ public class PromotionProductController {
     PromotionProductService promotionProductService;
     PromotionProductRepository promotionProductRepository;
 
+//    @GetMapping
+//    public ResponseEntity<List<PromotionProductResponse>> getAllOrFiltered(
+//            @RequestParam(required = false) String keyword,
+//            @RequestParam(required = false) String status,
+//            @RequestParam(required = false) String discountType,
+//            @RequestParam(required = false) Double discountValue
+//    ) {
+//        if (keyword != null || status != null || discountType != null || discountValue != null) {
+//            return ResponseEntity.ok(promotionProductService.getFiltered(keyword, status, discountType, discountValue));
+//        } else {
+//            return ResponseEntity.ok(promotionProductService.getAllWithJoin());
+//        }
+//    }
+
     @GetMapping
     public ResponseEntity<List<PromotionProductResponse>> getAllOrFiltered(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String discountType,
-            @RequestParam(required = false) Double discountValue
+            @RequestParam(required = false) Double discountValue,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDateFilter,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDateFilter
     ) {
-        if (keyword != null || status != null || discountType != null || discountValue != null) {
-            return ResponseEntity.ok(promotionProductService.getFiltered(keyword, status, discountType, discountValue));
+        if (keyword != null || status != null || discountType != null || discountValue != null || startDateFilter != null || endDateFilter != null) {
+            return ResponseEntity.ok(promotionProductService.getFiltered(keyword, status, discountType, discountValue, startDateFilter, endDateFilter));
         } else {
             return ResponseEntity.ok(promotionProductService.getAllWithJoin());
         }
