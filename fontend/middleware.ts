@@ -43,6 +43,7 @@ async function checkUserProfile(keycloakId: string, accessToken: string): Promis
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${accessToken}`,
             },
+            cache: 'no-store', // Thêm để tránh cache, đảm bảo dữ liệu tươi mới
         });
 
         if (!response.ok) {
@@ -54,7 +55,15 @@ async function checkUserProfile(keycloakId: string, accessToken: string): Promis
 
         if (apiResponse.status >= 200 && apiResponse.status < 300 && apiResponse.data) {
             const user = apiResponse.data;
-            const hasValidPhone = !!(user.phoneNumber && PHONE_REGEX.test(user.phoneNumber));
+            
+            // Normalize phone number: loại bỏ khoảng trắng và chuyển +84 về 0
+            let cleanedPhone = user.phoneNumber?.replace(/\s+/g, '').replace(/^\+84/, '0') || '';
+            
+            const hasValidPhone = !!(cleanedPhone && PHONE_REGEX.test(cleanedPhone));
+            
+            // Logging để debug
+            console.log(`[checkUserProfile] KeycloakId: ${keycloakId}, Cleaned Phone: ${cleanedPhone}, Valid: ${hasValidPhone}`);
+            
             return { hasValidPhone, user };
         }
 
