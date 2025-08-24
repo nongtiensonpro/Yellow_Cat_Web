@@ -32,7 +32,7 @@ const CheckoutSuccess = () => {
     <div className="flex flex-col items-center justify-center min-h-[60vh] bg-gradient-to-br from-yellow-50 via-white to-blue-50 animate-fade-in px-4">
       <SuccessIcon />
       <h2 className="text-3xl md:text-4xl font-extrabold mb-3 text-green-600 drop-shadow-sm animate-fade-in-up">Đặt hàng thành công!</h2>
-      <p className="mb-8 text-lg text-gray-700 animate-fade-in-up delay-100">Cảm ơn bạn đã mua hàng tại <span className="font-semibold text-yellow-500">Yellow Cat</span>.</p>
+      <p className="mb-8 text-lg text-gray-700 animate-fade-in-up delay-100">Cảm ơn bạn đã mua hàng tại <span className="font-semibold text-yellow-500">SneakPeak</span>.</p>
       <div className="flex gap-4 animate-fade-in-up delay-200">
         <button
           className="px-7 py-2.5 bg-yellow-500 text-white rounded-lg shadow-md hover:bg-yellow-600 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-yellow-400"

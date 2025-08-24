@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { jwtDecode } from "jwt-decode";
 import { CldImage } from "next-cloudinary";
-import { Package, Wallet, Tag } from 'lucide-react';
+import { Package, Wallet, Tag, Truck } from 'lucide-react';
 import VoucherSelector from '../../components/VoucherSelector';
 
 // --- Interfaces ---
@@ -1060,6 +1060,10 @@ export default function ConfirmOrderPage() {
                                             placeholder="Ghi chú cho đơn hàng (không bắt buộc)"
                                         ></textarea>
                                     </div>
+                                    <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                        <Truck className="w-5 h-5 text-blue-600" />
+                                        <span className="text-sm font-medium text-blue-800">Đơn vị vận chuyển: Giao Hàng Tiết Kiệm</span>
+                                    </div>
                                 </>
                             ) : (
                                 // Đã đăng nhập: chỉ hiển thị 1 input địa chỉ đã chọn (readonly), 1 input ghi chú, 1 nút chọn địa chỉ đã lưu
@@ -1093,6 +1097,10 @@ export default function ConfirmOrderPage() {
                                             className="p-3 border border-gray-300 rounded-md w-full" 
                                             placeholder="Ghi chú cho đơn hàng (không bắt buộc)"
                                         ></textarea>
+                                    </div>
+                                    <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                        <Truck className="w-5 h-5 text-blue-600" />
+                                        <span className="text-sm font-medium text-blue-800">Đơn vị vận chuyển: Giao Hàng Tiết Kiệm</span>
                                     </div>
                                 </>
                             )}
