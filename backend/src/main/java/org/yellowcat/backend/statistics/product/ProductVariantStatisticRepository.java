@@ -1,12 +1,10 @@
 package org.yellowcat.backend.statistics.product;
 
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
-import org.yellowcat.backend.statistics.product.dto.BestSellerDTO;
 
 import java.util.List;
 
@@ -55,7 +53,7 @@ public interface ProductVariantStatisticRepository extends JpaRepository<Product
                      JOIN product_variants v ON v.product_id = p.product_id
                      LEFT JOIN order_items oi ON oi.variant_id = v.variant_id
                      LEFT JOIN orders o ON o.order_id = oi.order_id
-                                        AND o.order_status IN ('Delivered', 'Paid')
+                                        AND o.order_status IN ('Delivered', 'Paid', 'Completed')
             GROUP BY p.product_id, p.product_name, c.category_name, b.brand_name
             ORDER BY sales DESC
             """, nativeQuery = true)

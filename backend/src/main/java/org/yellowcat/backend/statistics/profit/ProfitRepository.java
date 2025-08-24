@@ -12,9 +12,9 @@ import java.util.List;
 @Repository
 public interface ProfitRepository extends JpaRepository<Order, Integer> {
     @Query("""
-                SELECT SUM(o.finalAmount)
+                SELECT SUM(o.finalAmount - o.shippingFee)
                 FROM Order o
-                WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid')
+                WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid' OR o.orderStatus = 'Completed')
                   AND o.createdAt BETWEEN :start AND :end
             """)
     Double findRevenue(
@@ -27,7 +27,7 @@ public interface ProfitRepository extends JpaRepository<Order, Integer> {
                 FROM Order o
                 JOIN o.orderItems oi
                 JOIN oi.variant v
-                WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid')
+                WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid' OR o.orderStatus = 'Completed')
                   AND o.createdAt BETWEEN :start AND :end
             """)
     Double findCostOfGoods(
@@ -38,12 +38,12 @@ public interface ProfitRepository extends JpaRepository<Order, Integer> {
     // Daily
     @Query("""
                 SELECT DATE(o.createdAt),
-                       SUM(DISTINCT o.finalAmount),
+                       SUM(DISTINCT o.finalAmount - o.shippingFee),
                        SUM(v.costPrice * i.quantity)
                 FROM Order o
                      JOIN o.orderItems i
                      JOIN i.variant v
-                WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid')
+                WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid' OR o.orderStatus = 'Completed')
                   AND o.createdAt BETWEEN :start AND :end
                 GROUP BY DATE(o.createdAt)
                 ORDER BY DATE(o.createdAt)
@@ -53,12 +53,12 @@ public interface ProfitRepository extends JpaRepository<Order, Integer> {
 //weekly
     @Query("""
                 SELECT FUNCTION('to_char', o.createdAt, 'IYYY-IW'),
-                       SUM(DISTINCT o.finalAmount),
+                       SUM(DISTINCT o.finalAmount - o.shippingFee),
                        SUM(v.costPrice * i.quantity)
                 FROM Order o
                      JOIN o.orderItems i
                      JOIN i.variant v
-                WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid')
+                WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid' OR o.orderStatus = 'Completed')
                   AND o.createdAt BETWEEN :start AND :end
                 GROUP BY FUNCTION('to_char', o.createdAt, 'IYYY-IW')
                 ORDER BY FUNCTION('to_char', o.createdAt, 'IYYY-IW')
@@ -71,12 +71,12 @@ public interface ProfitRepository extends JpaRepository<Order, Integer> {
     @Query("""
                 SELECT YEAR(o.createdAt),
                        MONTH(o.createdAt),
-                       SUM(DISTINCT o.finalAmount),
+                       SUM(DISTINCT o.finalAmount - o.shippingFee),
                        SUM(v.costPrice * i.quantity)
                 FROM Order o
                      JOIN o.orderItems i
                      JOIN i.variant v
-                WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid')
+                WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid' OR o.orderStatus = 'Completed')
                   AND o.createdAt BETWEEN :start AND :end
                 GROUP BY YEAR(o.createdAt), MONTH(o.createdAt)
                 ORDER BY YEAR(o.createdAt), MONTH(o.createdAt)
@@ -89,12 +89,12 @@ public interface ProfitRepository extends JpaRepository<Order, Integer> {
     // Yearly
     @Query("""
                 SELECT YEAR(o.createdAt),
-                       SUM(DISTINCT o.finalAmount),
+                       SUM(DISTINCT o.finalAmount- o.shippingFee),
                        SUM(v.costPrice * i.quantity)
                 FROM Order o
                      JOIN o.orderItems i
                      JOIN i.variant v
-                WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid')
+                WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid' OR o.orderStatus = 'Completed')
                   AND o.createdAt BETWEEN :start AND :end
                 GROUP BY YEAR(o.createdAt)
                 ORDER BY YEAR(o.createdAt)

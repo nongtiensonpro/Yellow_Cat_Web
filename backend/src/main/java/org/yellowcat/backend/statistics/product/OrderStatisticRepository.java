@@ -14,7 +14,7 @@ public interface OrderStatisticRepository extends JpaRepository<Order, Integer> 
                 SELECT SUM(i.quantity)
                 FROM Order o
                      JOIN o.orderItems i
-                WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid')
+                WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid' OR o.orderStatus = 'Completed')
                   AND o.createdAt BETWEEN :start AND :end
             """)
     Long findTotalProductsSold(@Param("start") LocalDateTime start,
@@ -24,7 +24,7 @@ public interface OrderStatisticRepository extends JpaRepository<Order, Integer> 
                 SELECT SUM(oi.quantity) AS top_sold_quantity
                      FROM orders o
                             JOIN order_items oi ON o.order_id = oi.order_id
-                     WHERE (o.order_status = 'Delivered' OR o.order_status = 'Paid')
+                     WHERE (o.order_status = 'Delivered' OR o.order_status = 'Paid' OR o.order_status = 'Completed')
                             AND o.created_at BETWEEN :start AND :end
                      GROUP BY oi.variant_id
                      ORDER BY SUM(oi.quantity) DESC
