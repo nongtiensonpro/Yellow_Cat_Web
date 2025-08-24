@@ -14,9 +14,9 @@ public interface OverViewRepository extends JpaRepository<Order, Integer> {
     // Tổng doanh thu trong khoảng thời gian
     @Query(value = """
         SELECT 
-            COALESCE(SUM(o.final_amount), 0) AS total_revenue
+            COALESCE(SUM(o.final_amount - o.shipping_fee), 0) AS total_revenue
         FROM orders o
-        WHERE (o.order_status = 'Delivered' OR o.order_status = 'Paid')
+        WHERE (o.order_status = 'Delivered' OR o.order_status = 'Paid' OR o.order_status = 'Completed')
           AND o.created_at BETWEEN :start AND :end
         """, nativeQuery = true)
     BigDecimal getTotalRevenue(@Param("start") LocalDateTime start,
@@ -30,23 +30,23 @@ public interface OverViewRepository extends JpaRepository<Order, Integer> {
     @Query("SELECT COUNT(u) FROM AppUser u WHERE u.createdAt BETWEEN :start AND :end")
     Long getNewCustomers(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
-    // Lợi nhuận ròng (ví dụ: doanh thu - chi phí)
+    // Giá vốn
     @Query("""
-            SELECT COALESCE(SUM(oi.totalPrice), 0) -
-                   COALESCE(SUM(oi.quantity * pv.costPrice), 0)
-            FROM OrderItem oi
-            JOIN oi.order o
-            JOIN oi.variant pv
-            WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid')
-              AND o.createdAt BETWEEN :start AND :end
+                SELECT SUM(v.costPrice * oi.quantity)
+                FROM Order o
+                JOIN o.orderItems oi
+                JOIN oi.variant v
+                WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid' OR o.orderStatus = 'Completed')
+                  AND o.createdAt BETWEEN :start AND :end
             """)
-    BigDecimal getNetProfitBetween(
+    BigDecimal findCostOfGoods(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end
     );
 
     // Số đơn hàng đã giao
-    @Query("SELECT COUNT(o) FROM Order o WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid') AND o.createdAt BETWEEN :start AND :end")
+    @Query("SELECT COUNT(o) FROM Order o WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid' OR o.orderStatus = 'Completed') " +
+            "AND o.createdAt BETWEEN :start AND :end")
     Long getDeliveredOrders(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     // Số đơn hàng bị hủy
