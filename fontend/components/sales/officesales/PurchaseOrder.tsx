@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -73,15 +73,15 @@ export default function PurchaseOrder() {
     // State cho toast message - giờ chỉ có error hoặc warning
     const [toastMessage, setToastMessage] = useState<{ message: string; type: 'error' | 'warning' } | null>(null);
 
-    // State cho tìm kiếm
-    const [searchForm, setSearchForm] = useState({
-        orderCode: '',
-        customerName: '',
-        phoneNumber: ''
-    });
+    // State cho tìm kiếm - chỉ cần 1 ô tìm kiếm thống nhất
+    const [searchTerm, setSearchTerm] = useState('');
     const [isSearching, setIsSearching] = useState(false);
     const [searchResults, setSearchResults] = useState<Order[]>([]);
     const [isSearchMode, setIsSearchMode] = useState(false);
+    const [isPendingSearch, setIsPendingSearch] = useState(false); // Trạng thái chờ tìm kiếm
+    
+    // Ref cho debounce timer
+    const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Zustand store - Tất cả state và logic từ store
     const {
@@ -156,15 +156,15 @@ export default function PurchaseOrder() {
         return () => clearTimeout(timer);
     }, []);
 
-    // Handler cho tìm kiếm
+    // Handler cho tìm kiếm thông minh - tự động phát hiện loại dữ liệu
     const handleSearch = useCallback(async () => {
         if (!session?.accessToken) return;
 
-        const { orderCode, customerName, phoneNumber } = searchForm;
+        const term = searchTerm.trim();
         
-        // Kiểm tra ít nhất một trường có dữ liệu
-        if (!orderCode.trim() && !customerName.trim() && !phoneNumber.trim()) {
-            showToast('Vui lòng nhập ít nhất một thông tin để tìm kiếm', 'warning');
+        // Kiểm tra có dữ liệu không
+        if (!term) {
+            showToast('Vui lòng nhập thông tin để tìm kiếm', 'warning');
             return;
         }
 
@@ -174,9 +174,11 @@ export default function PurchaseOrder() {
             url.searchParams.append('page', '0');
             url.searchParams.append('size', '50'); // Tăng size để hiển thị nhiều kết quả hơn
             
-            if (orderCode.trim()) url.searchParams.append('orderCode', orderCode.trim());
-            if (customerName.trim()) url.searchParams.append('customerName', customerName.trim());
-            if (phoneNumber.trim()) url.searchParams.append('phoneNumber', phoneNumber.trim());
+            // Tìm kiếm thông minh - gửi cùng một giá trị cho cả 3 trường
+            // Backend sẽ tự động tìm trong tất cả các trường
+            url.searchParams.append('orderCode', term);
+            url.searchParams.append('customerName', term);
+            url.searchParams.append('phoneNumber', term);
 
             const res = await fetch(url.toString(), {
                 headers: {
@@ -203,17 +205,21 @@ export default function PurchaseOrder() {
         } finally {
             setIsSearching(false);
         }
-    }, [searchForm, session, showToast]);
+    }, [searchTerm, session, showToast]);
 
     // Handler để xóa kết quả tìm kiếm và quay lại danh sách ban đầu
     const handleClearSearch = useCallback(() => {
-        setSearchForm({
-            orderCode: '',
-            customerName: '',
-            phoneNumber: ''
-        });
+        // Clear debounce timer
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+            debounceTimerRef.current = null;
+        }
+        
+        setSearchTerm('');
         setSearchResults([]);
         setIsSearchMode(false);
+        setIsPendingSearch(false);
+        
         // Tải lại danh sách đơn hàng ban đầu
         if (session?.accessToken) {
             fetchOrders(session);
@@ -222,15 +228,18 @@ export default function PurchaseOrder() {
 
     // Handler để làm mới toàn bộ trang (reset state)
     const handleRefresh = useCallback(() => {
+        // Clear debounce timer
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+            debounceTimerRef.current = null;
+        }
+        
         // Reset search state
-        setSearchForm({
-            orderCode: '',
-            customerName: '',
-            phoneNumber: ''
-        });
+        setSearchTerm('');
         setSearchResults([]);
         setIsSearchMode(false);
         setIsSearching(false);
+        setIsPendingSearch(false);
         
         // Reset toast message
         setToastMessage(null);
@@ -241,20 +250,57 @@ export default function PurchaseOrder() {
         }
     }, [session, fetchOrders]);
 
-    // Handler cho thay đổi input tìm kiếm
-    const handleSearchInputChange = useCallback((field: keyof typeof searchForm, value: string) => {
-        setSearchForm(prev => ({
-            ...prev,
-            [field]: value
-        }));
-    }, []);
-
     // Handler cho phím Enter
     const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !isSearching) {
+            // Clear debounce timer và tìm kiếm ngay lập tức
+            if (debounceTimerRef.current) {
+                clearTimeout(debounceTimerRef.current);
+                debounceTimerRef.current = null;
+            }
             handleSearch();
         }
     }, [handleSearch, isSearching]);
+
+    // Auto search với debounce
+    useEffect(() => {
+        // Clear timer cũ
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+        }
+
+        const term = searchTerm.trim();
+        
+        // Nếu không có gì để tìm, reset về danh sách ban đầu
+        if (!term) {
+            setIsPendingSearch(false);
+            if (isSearchMode) {
+                setSearchResults([]);
+                setIsSearchMode(false);
+                // Tải lại danh sách ban đầu
+                if (session?.accessToken) {
+                    fetchOrders(session);
+                }
+            }
+            return;
+        }
+
+        // Hiển thị trạng thái chờ tìm kiếm
+        setIsPendingSearch(true);
+
+        // Nếu có từ khóa tìm kiếm, set timer để tự động tìm
+        debounceTimerRef.current = setTimeout(() => {
+            setIsPendingSearch(false);
+            handleSearch();
+        }, 800); // Độ trễ 800ms - phù hợp cho UX
+
+        // Cleanup function
+        return () => {
+            if (debounceTimerRef.current) {
+                clearTimeout(debounceTimerRef.current);
+            }
+        };
+    }, [searchTerm, isSearchMode, session, fetchOrders, handleSearch]);
 
     // Handlers using store functions
     const handleTabSelectionChange = (key: string | number) => {
@@ -485,63 +531,72 @@ export default function PurchaseOrder() {
                     </div>
                 </CardHeader>
                 <CardBody className="pt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex flex-col gap-4">
                         <Input
-                            label="Mã đơn hàng"
-                            placeholder="Nhập mã đơn hàng..."
-                            value={searchForm.orderCode}
-                            onValueChange={(value) => handleSearchInputChange('orderCode', value)}
+                            label="Tìm kiếm đơn hàng"
+                            placeholder="Nhập mã đơn hàng, tên khách hàng hoặc số điện thoại..."
+                            value={searchTerm}
+                            onValueChange={setSearchTerm}
                             onKeyDown={handleKeyPress}
                             variant="bordered"
-                            size="sm"
-                        />
-                        <Input
-                            label="Tên khách hàng"
-                            placeholder="Nhập tên khách hàng..."
-                            value={searchForm.customerName}
-                            onValueChange={(value) => handleSearchInputChange('customerName', value)}
-                            onKeyDown={handleKeyPress}
-                            variant="bordered"
-                            size="sm"
-                        />
-                        <Input
-                            label="Số điện thoại"
-                            placeholder="Nhập số điện thoại..."
-                            value={searchForm.phoneNumber}
-                            onValueChange={(value) => handleSearchInputChange('phoneNumber', value)}
-                            onKeyDown={handleKeyPress}
-                            variant="bordered"
-                            size="sm"
+                            size="lg"
+                            startContent={
+                                isPendingSearch ? (
+                                    <Spinner size="sm" color="primary" />
+                                ) : (
+                                    <svg 
+                                        className="w-5 h-5 text-gray-400" 
+                                        fill="none" 
+                                        stroke="currentColor" 
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path 
+                                            strokeLinecap="round" 
+                                            strokeLinejoin="round" 
+                                            strokeWidth={2} 
+                                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+                                        />
+                                    </svg>
+                                )
+                            }
+                            description={
+                                isPendingSearch 
+                                    ? "⏳ Đang chuẩn bị tìm kiếm..." 
+                                    : "🚀 Tìm kiếm tự động: Hệ thống sẽ tự động tìm kiếm khi bạn ngừng nhập"
+                            }
                         />
                     </div>
-                    <div className="flex justify-end mt-4 gap-2">
-                        <Button
-                            color="primary"
-                            onPress={handleSearch}
-                            disabled={isSearching}
-                            startContent={isSearching ? <Spinner color="white" size="sm" /> : null}
-                        >
-                            {isSearching ? 'Đang tìm...' : 'Tìm kiếm'}
-                        </Button>
-                        <Button
-                            variant="flat"
-                            onPress={() => {
-                                setSearchForm({
-                                    orderCode: '',
-                                    customerName: '',
-                                    phoneNumber: ''
-                                });
-                            }}
-                            disabled={isSearching}
-                        >
-                            Xóa form
-                        </Button>
-                    </div>
+                    {/* Hiển thị trạng thái tìm kiếm */}
+                    {isSearching && (
+                        <div className="flex items-center justify-center mt-3 p-2 bg-blue-50 rounded-lg">
+                            <Spinner size="sm" color="primary" />
+                            <span className="ml-2 text-sm text-blue-700">Đang tìm kiếm...</span>
+                        </div>
+                    )}
+                    
+                    {/* Nút xóa nội dung chỉ hiển thị khi có text */}
+                    {searchTerm && (
+                        <div className="flex justify-end mt-3">
+                            <Button
+                                variant="flat"
+                                size="sm"
+                                onPress={() => setSearchTerm('')}
+                                disabled={isSearching}
+                                startContent={
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                }
+                            >
+                                Xóa nội dung
+                            </Button>
+                        </div>
+                    )}
                     {isSearchMode && (
                         <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
                                 <p className="text-sm text-blue-700">
-                                    📋 Đang hiển thị kết quả tìm kiếm ({searchResults.length} đơn hàng)
+                                    📋 Đang hiển thị kết quả tìm kiếm cho: "<span className="font-semibold">{searchTerm}</span>" ({searchResults.length} đơn hàng)
                                 </p>
                                 <p className="text-xs text-blue-600">
                                     💡 Dùng nút "Làm mới" hoặc "Xóa tìm kiếm" để quay lại danh sách đầy đủ
@@ -553,16 +608,18 @@ export default function PurchaseOrder() {
                     {/* Thông báo khi không có kết quả tìm kiếm */}
                     {isSearchMode && searchResults.length === 0 && !isSearching && (
                         <div className="mt-3 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                            <div className="flex items-center gap-2">
-                                <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="flex items-start gap-3">
+                                <svg className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
                                 </svg>
-                                <div>
+                                <div className="flex-1">
                                     <p className="text-sm font-medium text-yellow-800">
-                                        Không tìm thấy đơn hàng phù hợp
+                                        Không tìm thấy đơn hàng phù hợp với "{searchTerm}"
                                     </p>
                                     <p className="text-xs text-yellow-700 mt-1">
-                                        Thử tìm kiếm với từ khóa khác hoặc nhấn "Làm mới" để xem tất cả đơn hàng
+                                        • Thử tìm kiếm với từ khóa khác<br/>
+                                        • Kiểm tra lại chính tả<br/>
+                                        • Nhấn "Làm mới" để xem tất cả đơn hàng
                                     </p>
                                 </div>
                             </div>
