@@ -9,23 +9,28 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-import org.yellowcat.backend.common.config_api.response.ApiResponse;
 import org.yellowcat.backend.online_selling.voucher.DiscountType;
 import org.yellowcat.backend.online_selling.voucher.ScopeType;
 import org.yellowcat.backend.online_selling.voucher.VoucherService1;
 import org.yellowcat.backend.online_selling.voucher.dto.*;
+import org.yellowcat.backend.online_selling.voucher.dto.ApplyVoucherRequest;
 import org.yellowcat.backend.online_selling.voucher.entity.Voucher;
-import org.yellowcat.backend.online_selling.voucher.entity.VoucherScope;
+import org.yellowcat.backend.product.order.Order;
+import org.yellowcat.backend.product.order.OrderRepository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/vouchers")
 public class AdminVoucherController {
     @Autowired
     private VoucherService1 voucherService;
+    
+    @Autowired
+    private OrderRepository orderRepository;
 
     // Lấy tất cả voucher
     @GetMapping
@@ -199,6 +204,12 @@ public class AdminVoucherController {
         return ResponseEntity.ok(voucher);
     }
 
+    // Test endpoint để kiểm tra routing
+    @GetMapping("/test")
+    public ResponseEntity<String> testEndpoint() {
+        return ResponseEntity.ok("Admin Vouchers API is working!");
+    }
+
     // lấy danh sách người dũng đã sử dụng voucher
     @GetMapping("/{voucherId}/usage")
     public ResponseEntity<VoucherUsageDTO> getVoucherUsageDetails(
@@ -300,15 +311,8 @@ public class AdminVoucherController {
             @RequestParam BigDecimal subtotal,
             @RequestParam BigDecimal shippingFee
     ) {
-        System.out.println("=== /totle-discount API ===");
-        System.out.println("Code: " + code);
-        System.out.println("Subtotal: " + subtotal);
-        System.out.println("ShippingFee: " + shippingFee);
-        
         try {
             BigDecimal finalAmount = voucherService.calculateAmountAfterDiscout(code, subtotal, shippingFee);
-            System.out.println("API Response: " + finalAmount);
-            System.out.println("=== End /totle-discount API ===");
             return ResponseEntity.ok(finalAmount);
         } catch (EntityNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -329,6 +333,50 @@ public class AdminVoucherController {
                 request.getOrderTotal()
         );
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * API áp dụng voucher cho office sales (bán hàng tại quầy)
+     * POST /api/admin/vouchers/apply-voucher
+     */
+    @PostMapping("/apply-voucher")
+    public ResponseEntity<?> applyVoucherForOfficeSales(@RequestBody ApplyVoucherRequest request) {
+        try {
+            System.out.println("=== Apply Voucher for Office Sales ===");
+            System.out.println("Voucher Code: " + request.getVoucherCode());
+            System.out.println("Order Code: " + request.getOrderCode());
+            System.out.println("User ID: " + request.getUserId());
+            System.out.println("Discount Amount: " + request.getDiscountAmount());
+            
+            // Tìm order theo orderCode
+            Order order = orderRepository.getOrderByOrderCode(request.getOrderCode());
+            if (order == null) {
+                throw new RuntimeException("Không tìm thấy đơn hàng với mã: " + request.getOrderCode());
+            }
+            
+            System.out.println("Found order: " + order.getOrderId());
+            
+            // Áp dụng voucher
+            Map<String, Object> result = voucherService.applyVoucher(
+                    request.getVoucherCode(), 
+                    order, 
+                    request.getUserId()
+            );
+            
+            System.out.println("Voucher applied successfully: " + result);
+            System.out.println("=== End Apply Voucher for Office Sales ===");
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (RuntimeException e) {
+            System.err.println("Error applying voucher: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Lỗi áp dụng voucher: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Unexpected error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Lỗi hệ thống khi áp dụng voucher: " + e.getMessage());
+        }
     }
 
     @PostMapping("/user_get_list_vouchers")

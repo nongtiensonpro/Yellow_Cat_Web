@@ -105,7 +105,7 @@ public class OrderOnlineService {
         BigDecimal finalAmount;
         BigDecimal subTotal_use_voucher;
         boolean hasVoucher = request.getCodeVoucher() != null && !request.getCodeVoucher().trim().isEmpty();
-        
+
         if (hasVoucher) {
             // CÓ VOUCHER: Tính theo logic voucher
             discountAfterAmount = voucherService1.calculateDiscountedAmount(

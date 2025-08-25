@@ -1,5 +1,7 @@
-import { StarIcon, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { StarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
+
+const API_BASE_URL = 'http://localhost:8080';
 
 interface Review {
     id: string;
@@ -10,6 +12,33 @@ interface Review {
     isPurchased: boolean;
     imageUrl?: string;
     createdAt?: string;
+}
+
+// API Response interfaces
+interface ApiReview {
+    id: number;
+    rating: number;
+    comment: string | null;
+    customerName: string | null;
+    customerAvatar?: string;
+    isPurchased: boolean | null;
+    imageUrl?: string;
+    createdAt: string;
+}
+
+interface ApiReviewsResponse {
+    reviews: ApiReview[];
+}
+
+interface StarDistributionItem {
+    star: number;
+    count: number;
+}
+
+interface ApiStatsResponse {
+    averageRating: number;
+    totalReviews: number;
+    starDistribution: StarDistributionItem[];
 }
 
 interface ReviewSectionProps {
@@ -37,84 +66,89 @@ export default function ReviewSection({ productId, onReviewStatsChange }: Review
     const [overallRating, setOverallRating] = useState<number | null>(null);
     const [totalReviewsCount, setTotalReviewsCount] = useState(0); // Internal state for this component's title/display
     const [ratingDistribution, setRatingDistribution] = useState<number[]>([0, 0, 0, 0, 0]);
-    const [showReviewForm, setShowReviewForm] = useState(false);
 
-    const [newReviewRating, setNewReviewRating] = useState(0);
-    const [newReviewComment, setNewReviewComment] = useState("");
-    const [newReviewName, setNewReviewName] = useState("");
-    const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
-
-    const [nameError, setNameError] = useState<string | null>(null);
-    const [commentError, setCommentError] = useState<string | null>(null);
-    const [ratingError, setRatingError] = useState<string | null>(null);
 
     // Pagination states
     const [currentPage, setCurrentPage] = useState(1);
     const totalPages = Math.ceil(reviews.length / REVIEWS_PER_PAGE);
 
-    const updateOverallStats = useCallback((currentReviews: Review[]) => {
-        const count = currentReviews.length;
-        setTotalReviewsCount(count); // Update internal count
 
-        let totalRating = 0;
-        let average = 0.0;
-        const distribution = [0, 0, 0, 0, 0];
 
-        if (count > 0) {
-            totalRating = currentReviews.reduce((sum, r) => sum + r.rating, 0);
-            average = totalRating / count;
-            setOverallRating(average);
-
-            currentReviews.forEach(r => {
-                if (r.rating >= 1 && r.rating <= 5) distribution[r.rating - 1]++;
-            });
-            setRatingDistribution(distribution);
-        } else {
-            setOverallRating(0);
-            setRatingDistribution([0, 0, 0, 0, 0]);
-        }
-
-        // Call the prop to send stats to the parent
-        onReviewStatsChange?.({ totalReviews: count, averageRating: average });
-    }, [onReviewStatsChange]);
-
-    const fetchReviews = useCallback(() => {
+    const fetchReviews = useCallback(async () => {
         setLoading(true);
         try {
-            // Using localStorage for mock data
-            const stored = localStorage.getItem(`productReviews_${productId}`);
-            const fetchedReviews: Review[] = stored ? JSON.parse(stored) : [];
-            fetchedReviews.sort((a, b) => new Date(b.createdAt ?? '').getTime() - new Date(a.createdAt ?? '').getTime());
-            setReviews(fetchedReviews);
-            updateOverallStats(fetchedReviews);
-            setCurrentPage(1); // Reset to first page when reviews are fetched
+            // Fetch reviews from API
+            const [reviewsResponse, statsResponse] = await Promise.all([
+                fetch(`${API_BASE_URL}/api/reviews?productId=${productId}&page=0&limit=100`),
+                fetch(`${API_BASE_URL}/api/reviews/stats?productId=${productId}`)
+            ]);
+
+            if (reviewsResponse.ok && statsResponse.ok) {
+                const reviewsData: ApiReviewsResponse = await reviewsResponse.json();
+                const statsData: ApiStatsResponse = await statsResponse.json();
+
+
+
+                // Transform API data to match frontend interface
+                const transformedReviews: Review[] = reviewsData.reviews.map((review: ApiReview) => ({
+                    id: review.id.toString(),
+                    rating: review.rating,
+                    comment: review.comment || '',
+                    customerName: review.customerName || 'Khách hàng',
+                    customerAvatar: review.customerAvatar,
+                    isPurchased: review.isPurchased || true,
+                    imageUrl: review.imageUrl,
+                    createdAt: review.createdAt
+                }));
+
+                setReviews(transformedReviews);
+                setOverallRating(statsData.averageRating);
+                setTotalReviewsCount(statsData.totalReviews);
+
+                // Transform star distribution
+                const distribution = [0, 0, 0, 0, 0];
+                statsData.starDistribution.forEach((item: StarDistributionItem) => {
+                    if (item.star >= 1 && item.star <= 5) {
+                        distribution[item.star - 1] = item.count;
+                    }
+                });
+                setRatingDistribution(distribution);
+
+                // Call the prop to send stats to the parent
+                onReviewStatsChange?.({ totalReviews: statsData.totalReviews, averageRating: statsData.averageRating });
+            } else {
+                console.error('API Response Error:');
+                console.error('Reviews Response Status:', reviewsResponse.status, reviewsResponse.statusText);
+                console.error('Stats Response Status:', statsResponse.status, statsResponse.statusText);
+                
+                throw new Error(`API Error - Reviews: ${reviewsResponse.status}, Stats: ${statsResponse.status}`);
+            }
+            setCurrentPage(1);
         } catch (error) {
-            console.error("Failed to fetch reviews from localStorage:", error);
+            console.error("Failed to fetch reviews from API:", error);
             setReviews([]);
             setOverallRating(0);
             setTotalReviewsCount(0);
             setRatingDistribution([0, 0, 0, 0, 0]);
-            setCurrentPage(1); // Reset to first page on error
+            setCurrentPage(1);
+            onReviewStatsChange?.({ totalReviews: 0, averageRating: 0 });
         } finally {
             setLoading(false);
         }
-    }, [productId, updateOverallStats]);
+    }, [productId, onReviewStatsChange]);
 
     useEffect(() => {
         fetchReviews();
     }, [productId, fetchReviews]); // Add fetchReviews to dependency array
 
     useEffect(() => {
-        if (!loading) {
-            localStorage.setItem(`productReviews_${productId}`, JSON.stringify(reviews));
-        }
-        // If current page becomes out of bounds after an update (e.g., deleting last review on a page)
+        // If current page becomes out of bounds after an update
         if (currentPage > totalPages && totalPages > 0) {
             setCurrentPage(totalPages);
-        } else if (totalPages === 0 && currentPage !== 1) { // Ensure page is 1 if no reviews
+        } else if (totalPages === 0 && currentPage !== 1) {
             setCurrentPage(1);
         }
-    }, [reviews, productId, loading, currentPage, totalPages]);
+    }, [reviews, currentPage, totalPages]);
 
     // RENDER STARS - Adjusted for solid fill as per image, with gray for unfilled
     const renderStars = (rating: number, size: number = 16) => (
@@ -130,90 +164,7 @@ export default function ReviewSection({ productId, onReviewStatsChange }: Review
         </div>
     );
 
-    const handleSubmitReview = (e: React.FormEvent) => {
-        e.preventDefault();
-        let hasError = false;
-        setNameError(null);
-        setCommentError(null);
-        setRatingError(null);
 
-        if (newReviewRating === 0) {
-            setRatingError("Vui lòng chọn số sao đánh giá.");
-            hasError = true;
-        }
-        if (!newReviewComment.trim()) {
-            setCommentError("Vui lòng nhập nhận xét.");
-            hasError = true;
-        }
-        if (!newReviewName.trim()) {
-            setNameError("Vui lòng nhập tên.");
-            hasError = true;
-        }
-
-        if (hasError) return;
-
-        if (editingReviewId) {
-            const updated = reviews.map(r =>
-                r.id === editingReviewId
-                    ? { ...r, rating: newReviewRating, comment: newReviewComment, customerName: newReviewName }
-                    : r
-            );
-            setReviews(updated);
-            updateOverallStats(updated);
-        } else {
-            const newReview: Review = {
-                id: `user-review-${Date.now()}`,
-                rating: newReviewRating,
-                comment: newReviewComment,
-                customerName: newReviewName,
-                isPurchased: false,
-                createdAt: new Date().toISOString(),
-            };
-            const updated = [newReview, ...reviews];
-            updated.sort((a, b) => new Date(b.createdAt ?? '').getTime() - new Date(a.createdAt ?? '').getTime());
-            setReviews(updated);
-            updateOverallStats(updated);
-            setCurrentPage(1); // Go to the first page when a new review is added
-        }
-
-        setNewReviewRating(0);
-        setNewReviewComment("");
-        setNewReviewName("");
-        setEditingReviewId(null);
-        setShowReviewForm(false);
-    };
-
-    const handleEditReview = (r: Review) => {
-        setNewReviewRating(r.rating);
-        setNewReviewComment(r.comment);
-        setNewReviewName(r.customerName);
-        setEditingReviewId(r.id);
-        setShowReviewForm(true);
-        setNameError(null);
-        setCommentError(null);
-        setRatingError(null);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-    };
-
-    const handleDeleteReview = (id: string) => {
-        if (confirm("Bạn có chắc muốn xóa đánh giá này?")) {
-            const updated = reviews.filter(r => r.id !== id);
-            setReviews(updated);
-            updateOverallStats(updated);
-            // currentPage state will be adjusted by the useEffect after reviews update
-        }
-    };
-
-    const handleCancelReviewForm = () => {
-        setShowReviewForm(false);
-        setNewReviewRating(0);
-        setNewReviewComment("");
-        setNewReviewName("");
-        setEditingReviewId(null);
-        setNameError(null);
-        setCommentError(null);
-        setRatingError(null);
-    };
 
     // Calculate reviews to display on the current page
     const indexOfLastReview = currentPage * REVIEWS_PER_PAGE;
@@ -309,71 +260,10 @@ export default function ReviewSection({ productId, onReviewStatsChange }: Review
                     })}
                 </div>
 
-                <button
-                    className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 ml-auto"
-                    onClick={() => {
-                        setShowReviewForm(true);
-                        setEditingReviewId(null);
-                        setNewReviewName("");
-                        setNewReviewComment("");
-                        setNewReviewRating(0);
-                        setNameError(null);
-                        setCommentError(null);
-                        setRatingError(null);
-                    }}
-                >
-                    VIẾT NHẬN XÉT
-                </button>
+
             </div>
 
-            {showReviewForm && (
-                <form onSubmit={handleSubmitReview} className="bg-gray-50 p-4 rounded-md border mb-6">
-                    <div className="mb-4">
-                        <label className="block mb-1 font-medium">Số sao đánh giá:</label>
-                        <div className="flex gap-1">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                                <StarIcon
-                                    key={i}
-                                    size={28}
-                                    onClick={() => { setNewReviewRating(i + 1); setRatingError(null); }}
-                                    // Form review stars - solid amber for selected, light gray for unselected
-                                    className={`cursor-pointer ${i < newReviewRating ? "fill-amber-500 text-amber-500" : "fill-gray-300 text-gray-300"}`}
-                                />
-                            ))}
-                        </div>
-                        {ratingError && <p className="text-red-500 text-sm mt-1">{ratingError}</p>}
-                    </div>
 
-                    <div className="mb-4">
-                        <label className="block mb-1 font-medium">Nhận xét:</label>
-                        <textarea
-                            className={`w-full rounded p-2 border ${commentError ? "border-red-500" : "border-gray-300"}`}
-                            rows={4}
-                            value={newReviewComment}
-                            onChange={(e) => { setNewReviewComment(e.target.value); setCommentError(null); }}
-                        />
-                        {commentError && <p className="text-red-500 text-sm mt-1">{commentError}</p>}
-                    </div>
-
-                    <div className="mb-4">
-                        <label className="block mb-1 font-medium">Tên của bạn:</label>
-                        <input
-                            type="text"
-                            className={`w-full rounded p-2 border ${nameError ? "border-red-500" : "border-gray-300"}`}
-                            value={newReviewName}
-                            onChange={(e) => { setNewReviewName(e.target.value); setNameError(null); }}
-                        />
-                        {nameError && <p className="text-red-500 text-sm mt-1">{nameError}</p>}
-                    </div>
-
-                    <div className="flex justify-end gap-2">
-                        <button type="button" onClick={handleCancelReviewForm} className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Hủy</button>
-                        <button type="submit" className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800">
-                            {editingReviewId ? "Cập nhật" : "Gửi đánh giá"}
-                        </button>
-                    </div>
-                </form>
-            )}
 
             {!loading && reviews.length > 0 && (
                 <div className="space-y-4">
@@ -386,10 +276,6 @@ export default function ReviewSection({ productId, onReviewStatsChange }: Review
                                 <div className="flex items-center gap-2 mb-1">
                                     {renderStars(r.rating)}
                                     <span className="text-xs text-gray-500">{formatDate(r.createdAt!)}</span>
-                                    <div className="ml-auto flex gap-2">
-                                        <button onClick={() => handleEditReview(r)} className="text-gray-500 hover:text-blue-600"><Edit size={16} /></button>
-                                        <button onClick={() => handleDeleteReview(r.id)} className="text-gray-500 hover:text-red-600"><Trash2 size={16} /></button>
-                                    </div>
                                 </div>
                                 <p className="font-semibold text-sm">{r.customerName}</p>
                                 <p className="text-sm text-gray-700">{r.comment}</p>
@@ -444,7 +330,7 @@ export default function ReviewSection({ productId, onReviewStatsChange }: Review
             )}
 
             {loading && <p className="text-center text-gray-500 py-6">Đang tải đánh giá...</p>}
-            {!loading && reviews.length === 0 && !showReviewForm && (
+            {!loading && reviews.length === 0 && (
                 <p className="text-center italic text-gray-500 py-6">Chưa có đánh giá nào cho sản phẩm này.</p>
             )}
         </div>

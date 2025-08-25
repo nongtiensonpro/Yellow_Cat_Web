@@ -1,18 +1,18 @@
-
-// ReviewRepository.java
 package org.yellowcat.backend.product.review;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.yellowcat.backend.product.review.dto.ReviewDTO;
 
 import java.util.List;
+import java.util.Optional;
 
-public interface ReviewRepository extends JpaRepository<Review, Integer> {
-    @Query("SELECT r.id AS id, r.rating AS rating, r.comment AS comment, r.createdAt AS createdAt, " +
-            "COALESCE(r.customerName, u.fullName) AS customerName, u.avatarUrl AS customerAvatar, r.imageUrl AS imageUrl, r.isPurchased AS isPurchased " +
-            "FROM Review r LEFT JOIN r.appUser u WHERE r.productId = :productId ORDER BY r.createdAt DESC")
+public interface ReviewRepository extends JpaRepository<Review, Long> {
+    @Query("SELECT r.id AS id, r.rating AS rating, r.comment AS comment, r.reviewDate AS createdAt, " +
+            "u.fullName AS customerName, u.avatarUrl AS customerAvatar, null AS imageUrl, true AS isPurchased " +
+            "FROM Review r LEFT JOIN r.appUser u WHERE r.productId = :productId ORDER BY r.reviewDate DESC")
     List<ReviewDTO> findAllReviewByProductId(Integer productId, Pageable pageable);
 
     @Query("SELECT COUNT(r) FROM Review r WHERE r.productId = :productId")
@@ -26,5 +26,14 @@ public interface ReviewRepository extends JpaRepository<Review, Integer> {
             "COALESCE(SUM(CASE WHEN r.rating = 1 THEN 1 ELSE 0 END), 0) " +
             "FROM Review r WHERE r.productId = :productId")
     List<Object[]> getReviewStatsCountsByProductId(Integer productId);
+
+    @Query("SELECT COUNT(r) > 0 FROM Review r WHERE r.productId = :productId AND r.appUserId = :appUserId")
+    boolean existsByProductIdAndAppUserId(@Param("productId") Integer productId, @Param("appUserId") Integer appUserId);
+
+    @Query("SELECT r FROM Review r WHERE r.productId = :productId AND r.appUserId = :appUserId")
+    Optional<Review> findByProductIdAndAppUserId(@Param("productId") Integer productId, @Param("appUserId") Integer appUserId);
+
+    @Query("SELECT r FROM Review r JOIN FETCH r.appUser WHERE r.productId = :productId AND r.appUserId = :appUserId")
+    Optional<Review> findByProductIdAndAppUserIdWithUser(@Param("productId") Integer productId, @Param("appUserId") Integer appUserId);
 }
 

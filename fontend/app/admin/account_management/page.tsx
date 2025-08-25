@@ -218,6 +218,19 @@ export default function Page() {
         }
     }, [session]);
 
+    // Hàm làm mới toàn bộ - reset tất cả filter và search
+    const handleRefreshAll = useCallback(async () => {
+        // Reset tất cả filter và search
+        setSearchTerm('');
+        setStatusFilter('all');
+        setRoleFilter('all');
+        setCurrentPage(1);
+        setItemsPerPage(10);
+        
+        // Làm mới dữ liệu
+        await fetchDemoData();
+    }, [fetchDemoData]);
+
     useEffect(() => {
         if (status === 'authenticated' && session) {
             fetchDemoData();
@@ -694,7 +707,7 @@ export default function Page() {
                 <Button
                     color="default"
                     startContent={<RefreshCw size={16} />}
-                    onPress={fetchDemoData}
+                    onPress={handleRefreshAll}
                     isLoading={loading}
                 >
                     Làm mới

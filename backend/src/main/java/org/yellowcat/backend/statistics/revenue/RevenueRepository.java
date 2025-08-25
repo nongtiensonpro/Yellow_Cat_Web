@@ -14,10 +14,10 @@ public interface RevenueRepository extends JpaRepository<Order, Integer> {
     // Daily
     @Query("""
              SELECT CAST(o.createdAt AS DATE) as day,
-                    SUM(o.finalAmount) as totalRevenue,
+                    SUM(o.finalAmount - o.shippingFee) as totalRevenue,
                     COUNT(o.orderId) as totalOrders
              FROM Order o
-             WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid')
+             WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid' OR o.orderStatus = 'Completed')
                AND o.createdAt BETWEEN :start AND :end
              GROUP BY CAST(o.createdAt AS DATE)
              ORDER BY day
@@ -29,9 +29,9 @@ public interface RevenueRepository extends JpaRepository<Order, Integer> {
     // Weekly
     @Query("""
              SELECT TO_CHAR(o.createdAt, 'IYYY-IW') as week,
-                    SUM(o.finalAmount) as totalRevenue
+                    SUM(o.finalAmount- o.shippingFee) as totalRevenue
              FROM Order o
-             WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid')
+             WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid' OR o.orderStatus = 'Completed')
                AND o.createdAt BETWEEN :start AND :end
              GROUP BY TO_CHAR(o.createdAt, 'IYYY-IW')
              ORDER BY week
@@ -43,9 +43,9 @@ public interface RevenueRepository extends JpaRepository<Order, Integer> {
     @Query("""
              SELECT EXTRACT(YEAR FROM o.createdAt) as year,
                     EXTRACT(MONTH FROM o.createdAt) as month,
-                    SUM(o.finalAmount) as totalRevenue
+                    SUM(o.finalAmount - o.shippingFee) as totalRevenue
              FROM Order o
-             WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid')
+             WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid' OR o.orderStatus = 'Completed')
                AND o.createdAt BETWEEN :start AND :end
              GROUP BY EXTRACT(YEAR FROM o.createdAt), EXTRACT(MONTH FROM o.createdAt)
              ORDER BY year, month
@@ -61,7 +61,7 @@ public interface RevenueRepository extends JpaRepository<Order, Integer> {
                    JOIN i.variant v
                    JOIN v.product p
                    JOIN p.category c
-                   WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid')
+                   WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid' OR o.orderStatus = 'Completed')
                      AND o.createdAt BETWEEN :start AND :end
                    GROUP BY c.name
             """)
@@ -77,41 +77,19 @@ public interface RevenueRepository extends JpaRepository<Order, Integer> {
                    JOIN i.variant v
                    JOIN v.product p
                    JOIN p.brand b
-                   WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid')
+                   WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid' OR o.orderStatus = 'Completed')
                      AND o.createdAt BETWEEN :start AND :end
                    GROUP BY b.brandName
             """)
     List<Object[]> findRevenueByBrand(@Param("start") LocalDateTime start,
                                       @Param("end") LocalDateTime end);
 
-    // By Channel
-//    @Query("""
-//                SELECT o.channel, SUM(o.finalAmount)
-//                FROM Order o
-//                WHERE o.orderStatus = 'Completed'
-//                  AND o.createdAt BETWEEN :start AND :end
-//                GROUP BY o.channel
-//            """)
-//    List<Object[]> findRevenueByChannel(@Param("start") LocalDateTime start,
-//                                        @Param("end") LocalDateTime end);
-
-    //Compare Year
-    @Query("""
-                SELECT FUNCTION('YEAR', o.createdAt), SUM(o.finalAmount)
-                FROM Order o
-                WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid')
-                  AND FUNCTION('YEAR', o.createdAt) IN (:year1, :year2)
-                GROUP BY FUNCTION('YEAR', o.createdAt)
-            """)
-    List<Object[]> compareRevenueByYear(@Param("year1") int year1,
-                                        @Param("year2") int year2);
-
     //Summary
     @Query("""
-                SELECT COALESCE(SUM(o.finalAmount), 0),
-                       COALESCE(AVG(o.finalAmount), 0)
+                SELECT COALESCE(SUM(o.finalAmount - o.shippingFee), 0),
+                       COALESCE(AVG(o.finalAmount - o.shippingFee), 0)
                 FROM Order o
-                WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid')
+                WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid' OR o.orderStatus = 'Completed')
                   AND o.createdAt BETWEEN :start AND :end
             """)
     Object getRevenueSummary(@Param("start") LocalDateTime start,

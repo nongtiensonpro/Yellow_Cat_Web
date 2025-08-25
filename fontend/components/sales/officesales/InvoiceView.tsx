@@ -1,6 +1,6 @@
 "use client"
 
-import {useEffect} from "react";
+import {useEffect,  useState} from "react";
 import {useSession} from "next-auth/react";
 import {
     Card, CardHeader, CardBody, Button, Spinner,
@@ -59,6 +59,45 @@ export default function InvoiceView() {
             fetchOrderItems(session);
         }
     }, [currentOrder, session, fetchOrderItems]);
+
+    // Always declare hooks before any early return
+    const [voucherInfo, setVoucherInfo] = useState<{ voucherCode: string; discountAmount?: number } | null>(null);
+
+    // Fetch voucher usage theo orderCode từ API (guard inside, not conditional hook)
+    useEffect(() => {
+        const fetchVoucherUsage = async () => {
+            if (!currentOrder?.orderCode || !session?.accessToken) return;
+            try {
+                // Ưu tiên endpoint by-order
+                let res = await fetch(`http://localhost:8080/api/admin/vouchers/usage/by-order/${currentOrder.orderCode}`, {
+                    headers: { 'Authorization': `Bearer ${session.accessToken}` }
+                });
+                if (!res.ok) {
+                    // Fallback query param
+                    res = await fetch(`http://localhost:8080/api/admin/vouchers/usage?orderCode=${encodeURIComponent(currentOrder.orderCode)}`, {
+                        headers: { 'Authorization': `Bearer ${session.accessToken}` }
+                    });
+                }
+                if (res.ok) {
+                    const data = await res.json();
+                    // Chuẩn hóa dữ liệu
+                    const usage = (data?.data ?? data);
+                    if (usage && usage.voucherCode) {
+                        setVoucherInfo({ voucherCode: usage.voucherCode, discountAmount: usage.discountAmount });
+                    } else if (Array.isArray(usage) && usage.length > 0 && usage[0].voucherCode) {
+                        setVoucherInfo({ voucherCode: usage[0].voucherCode, discountAmount: usage[0].discountAmount });
+                    } else {
+                        setVoucherInfo(null);
+                    }
+                } else {
+                    setVoucherInfo(null);
+                }
+            } catch {
+                setVoucherInfo(null);
+            }
+        };
+        fetchVoucherUsage();
+    }, [currentOrder?.orderCode, session?.accessToken]);
 
     if (!currentOrder) {
         return (
@@ -289,12 +328,28 @@ export default function InvoiceView() {
                     </Card>
 
                     {/* Detailed Discount Analysis */}
-                    {(itemsWithPromotions.length > 0 || orderDiscountAmount > 0) && (
+                    {(itemsWithPromotions.length > 0 || orderDiscountAmount > 0 || !!voucherInfo?.voucherCode) && (
                         <Card className="border-orange-200">
                             <CardHeader>
                                 <h3 className="text-lg font-bold text-orange-800">🎁 Phân tích khuyến mãi chi tiết</h3>
                             </CardHeader>
                             <CardBody>
+                                {/* Voucher applied (nếu có) */}
+                                {voucherInfo?.voucherCode && (
+                                    <div className="mb-4 p-3 bg-green-50 rounded border border-green-200">
+                                        <div className="flex justify-between items-center">
+                                            <div className="text-sm text-green-800">
+                                                <span className="font-semibold">Voucher áp dụng:</span>
+                                                <span className="ml-2">{voucherInfo.voucherCode}</span>
+                                            </div>
+                                            {typeof voucherInfo.discountAmount === 'number' && voucherInfo.discountAmount > 0 && (
+                                                <div className="text-sm font-bold text-green-700">
+                                                    -{voucherInfo.discountAmount.toLocaleString('vi-VN')} VND
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                                 {/* Product-level promotions */}
                                 {itemsWithPromotions.length > 0 && (
                                     <div className="mb-6">

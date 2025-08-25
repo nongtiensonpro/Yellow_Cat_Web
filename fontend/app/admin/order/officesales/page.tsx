@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -46,7 +45,7 @@ export default function OrderListPage() {
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [isLoadingOrders, setIsLoadingOrders] = useState(false);
-    const [isLoadingCounts, setIsLoadingCounts] = useState(false);
+    const [, setIsLoadingCounts] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const debounceRef = useRef<number | null>(null);
@@ -105,8 +104,8 @@ export default function OrderListPage() {
                 setOrders(content);
                 setTotalPages(total);
                 setPage(targetPage);
-            } catch (err: any) {
-                if (err.name === 'AbortError') return;
+            } catch (err: unknown) {
+                if (err instanceof DOMException && err.name === 'AbortError') return;
                 console.error('❌ Error loading order list:', err);
                 setOrders([]);
                 setTotalPages(0);
@@ -138,13 +137,13 @@ export default function OrderListPage() {
         } finally {
             setIsLoadingCounts(false);
         }
-    }, [session]);
+    }, [session, setIsLoadingCounts]);
 
     // Khi session thay đổi hoặc lần đầu load
     useEffect(() => {
         fetchStatusCounts();
         loadOrders(0, keyword, status);
-    }, [fetchStatusCounts, loadOrders]);
+    }, [fetchStatusCounts, keyword, loadOrders, status]);
 
     // xử lý newOrderCode từ URL
     useEffect(() => {

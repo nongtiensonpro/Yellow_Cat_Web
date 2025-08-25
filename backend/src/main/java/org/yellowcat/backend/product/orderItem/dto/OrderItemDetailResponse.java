@@ -21,6 +21,7 @@ public class OrderItemDetailResponse {
     
     // Thông tin product variant
     private Integer variantId;
+    private Integer productId; // Thêm productId để sử dụng cho review
     private String sku;
     private String productName;
     private String colorName;

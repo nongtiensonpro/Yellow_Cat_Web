@@ -295,6 +295,7 @@ export const useOrderStore = create<OrderState>()(
                         headers: {
                             'Authorization': `Bearer ${session.accessToken}`,
                         },
+                        cache: 'no-store', // Thêm để tránh cache
                     });
                     
                     if (!res.ok) {
@@ -327,6 +328,7 @@ export const useOrderStore = create<OrderState>()(
                             'Authorization': `Bearer ${session.accessToken}`,
                             'Content-Type': 'application/json',
                         },
+                        cache: 'no-store', // Thêm để tránh cache
                     });
                     
                     if (!response.ok) {
@@ -517,6 +519,7 @@ export const useOrderStore = create<OrderState>()(
 
                     const res = await fetch(url.toString(), {
                         headers: { 'Authorization': `Bearer ${session.accessToken}` },
+                        cache: 'no-store', // Thêm để tránh cache
                     });
                     
                     if (!res.ok) throw new Error(`Lỗi ${res.status}: Không thể tải chi tiết đơn hàng.`);

@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalUnit;
+import java.util.Optional;
 
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -49,11 +50,14 @@ public class OverViewService {
     }
 
     private OverviewResponseDTO buildOverview(LocalDateTime startDate, LocalDateTime endDate) {
-        BigDecimal revenue = overViewRepository.getTotalRevenue(startDate, endDate);
+        BigDecimal revenue = Optional.ofNullable(overViewRepository.getTotalRevenue(startDate, endDate))
+                .orElse(BigDecimal.ZERO);
         Long orders = overViewRepository.getTotalOrders(startDate, endDate);
         Long newCustomers = overViewRepository.getNewCustomers(startDate, endDate);
         Long orderSuccessful = overViewRepository.getDeliveredOrders(startDate, endDate);
-        BigDecimal netProfit = overViewRepository.getNetProfitBetween(startDate, endDate);
+        BigDecimal costOfGoods = Optional.ofNullable(overViewRepository.findCostOfGoods(startDate, endDate))
+                .orElse(BigDecimal.ZERO);
+        BigDecimal netProfit = revenue.subtract(costOfGoods);
         Long cancelledOrders = overViewRepository.getCancelledOrders(startDate, endDate);
 
         double completionRate = 0.0;
@@ -65,11 +69,11 @@ public class OverViewService {
         }
 
         return OverviewResponseDTO.builder()
-                .revenue(revenue != null ? revenue : BigDecimal.ZERO)
+                .revenue(revenue)
                 .orders(orders != null ? orders : 0L)
                 .newCustomers(newCustomers != null ? newCustomers : 0L)
                 .completionRate(completionRate)
-                .netProfit(netProfit != null ? netProfit : BigDecimal.ZERO)
+                .netProfit(netProfit)
                 .cancelRate(cancelRate)
                 .orderStats(
                         OverviewResponseDTO.OrderStats.builder()

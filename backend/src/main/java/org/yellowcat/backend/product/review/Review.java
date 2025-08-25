@@ -1,94 +1,45 @@
-//// Review.java
-//package org.yellowcat.backend.product.review;
-//
-//import jakarta.persistence.*;
-//import jakarta.validation.constraints.Size;
-//import lombok.Getter;
-//import lombok.NoArgsConstructor;
-//import lombok.Setter;
-//import org.yellowcat.backend.user.AppUser;
-//import org.yellowcat.backend.product.productvariant.ProductVariant;
-//
-//import java.time.Instant;
-//
-//@Entity
-//@Getter
-//@Setter
-//@NoArgsConstructor
-//public class Review {
-//    @Id
-//    @GeneratedValue(strategy = GenerationType.IDENTITY)
-//    private Long id;
-//
-//    private int rating;
-//
-//    //    @Column(length = 100)
-//    @Size(max = 100)
-//    private String comment;
-//
-//    private Integer productId;
-//    private Integer variantId;
-//
-//    private Instant createdAt;
-//
-//    private String customerName;
-//
-//    private String imageUrl;
-//
-//    private boolean isPurchased;
-//
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "user_id")
-//    private AppUser appUser;
-//
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "variant_id")
-//    private ProductVariant productVariant;
-//}
-
-
 package org.yellowcat.backend.product.review;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.yellowcat.backend.user.AppUser;
-import org.yellowcat.backend.product.productvariant.ProductVariant;
 
 import java.time.Instant;
 
 @Entity
+@Table(name = "reviews")
 @Getter
 @Setter
 @NoArgsConstructor
 public class Review {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "review_id")
     private Long id;
 
-    private int rating;
-
-    @Size(max = 100)
-    private String comment;
-
+    @Column(name = "product_id", nullable = false)
     private Integer productId;
 
-    private Instant createdAt;
+    @Column(name = "app_user_id", nullable = false)
+    private Integer appUserId;
 
-    private String customerName;
+    @Min(1)
+    @Max(5)
+    @Column(nullable = false)
+    private int rating;
 
-    private String imageUrl;
+    @Column(columnDefinition = "TEXT")
+    private String comment;
 
-    private boolean isPurchased;
+    @Column(name = "review_date")
+    private Instant reviewDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "app_user_id", insertable = false, updatable = false)
     private AppUser appUser;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "variant_id")
-    private ProductVariant productVariant;
 }
 

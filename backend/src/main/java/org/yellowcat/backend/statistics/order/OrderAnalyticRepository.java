@@ -34,18 +34,15 @@ public interface OrderAnalyticRepository extends JpaRepository<Order, Integer> {
     );
 
     @Query("""
-            SELECT COALESCE(SUM(o.finalAmount),0)
+            SELECT COALESCE(SUM(o.finalAmount - o.shippingFee),0)
             FROM Order o
-            WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid')
+            WHERE (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid' OR o.orderStatus = 'Completed')
                AND o.createdAt BETWEEN :start AND :end
             """)
     double totalRevenueBetween(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end
     );
-
-    @Query("SELECT o.orderStatus, COUNT(o) FROM Order o WHERE o.createdAt BETWEEN :start AND :end GROUP BY o.orderStatus")
-    List<Object[]> countByStatus(LocalDateTime start, LocalDateTime end);
 
     @Query("""
             SELECT EXTRACT(MONTH FROM o.createdAt),
@@ -59,10 +56,10 @@ public interface OrderAnalyticRepository extends JpaRepository<Order, Integer> {
 
     @Query("""
             SELECT EXTRACT(MONTH FROM o.createdAt),
-                   AVG(o.finalAmount)
+                   AVG(o.finalAmount - o.shippingFee)
             FROM Order o
             WHERE EXTRACT(YEAR FROM o.createdAt) = :year
-                  AND (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid')
+                  AND (o.orderStatus = 'Delivered' OR o.orderStatus = 'Paid' OR o.orderStatus = 'Completed')
             GROUP BY EXTRACT(MONTH FROM o.createdAt)
             ORDER BY EXTRACT(MONTH FROM o.createdAt)
             """)

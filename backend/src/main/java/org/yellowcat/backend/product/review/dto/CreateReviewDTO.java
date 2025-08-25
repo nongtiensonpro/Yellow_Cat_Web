@@ -14,11 +14,14 @@ import lombok.Setter;
 @Setter
 public class CreateReviewDTO {
     @NotNull
+    private Integer productId;
+
+    @NotNull
     private Integer rating;
 
-    @Size(max = 500, min = 1)
+    @Size(max = 1000)
     private String comment;
 
-    private String customerName;
+    // Không cần customerName vì sẽ lấy từ AppUser thông qua JWT token
 }
 

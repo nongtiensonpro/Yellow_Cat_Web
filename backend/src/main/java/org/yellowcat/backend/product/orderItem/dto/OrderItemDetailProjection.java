@@ -12,6 +12,7 @@ public interface OrderItemDetailProjection {
     
     // Thông tin product variant
     Integer getVariantId();
+    Integer getProductId(); // Thêm productId
     String getSku();
     String getProductName();
     String getColorName();

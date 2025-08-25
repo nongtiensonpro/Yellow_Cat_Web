@@ -920,14 +920,14 @@ public class VoucherService1 {
         System.out.println("Code: " + code);
         System.out.println("Subtotal: " + subtotal);
         System.out.println("ShippingFee: " + shippingFee);
-        
+
         Voucher voucher = getVoucherByCode(code);
         BigDecimal discountAmount = calculateDiscountAmount(subtotal, voucher, shippingFee);
         discountAmount = applyDiscountCap(discountAmount, voucher, subtotal, shippingFee);
-        
+
         System.out.println("Final discount amount: " + discountAmount);
         System.out.println("=== End calculateAmountAfterDiscout ===");
-        
+
         return discountAmount; // Trả về số tiền được giảm, không phải số tiền còn lại
     }
 
@@ -1014,7 +1014,7 @@ public class VoucherService1 {
                                                   List<Integer> productIds, BigDecimal orderTotal) {
 
         System.out.println("Building voucher summary for voucher ID: " + voucher.getId());
-        
+
         try {
             VoucherSummaryDTO dto = new VoucherSummaryDTO();
             dto.setId(voucher.getId());
@@ -1032,6 +1032,7 @@ public class VoucherService1 {
             if (isUsed) {
                 dto.setEligible(false);
                 dto.setStatus("Đã sử dụng");
+
             } else {
                 System.out.println("Checking voucher eligibility...");
                 VoucherEligibilityResult result = checkVoucherEligibility(voucher, userId, productIds, orderTotal);
