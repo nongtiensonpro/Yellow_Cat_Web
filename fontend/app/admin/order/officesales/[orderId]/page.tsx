@@ -1055,7 +1055,7 @@ export default function OrderDetailPage() {
                                 value={order.customerName || order.fullName || 'N/A'}
                                 bold
                             />
-                            <InfoItem label="Email" value={order.email || 'N/A'}/>
+                            {/*<InfoItem label="Email" value={order.email || 'N/A'}/>*/}
                             <InfoItem
                                 label="Số điện thoại"
                                 value={order.phoneNumber || 'N/A'}
