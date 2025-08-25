@@ -11,7 +11,7 @@ const MENU_ITEMS = [
     { label: 'Quản lý đơn hàng', href: '/user_info/order', icon: <ShoppingCart size={18} /> },
     // { label: 'Mã giảm giá', href: '/user_info/vouchers', icon: <Percent size={18} /> },
     { label: 'Sản phẩm yêu thích', href: '/wishlist', icon: <Heart size={18} /> },
-    { label: 'Địa chỉ', href: '/user_info/address_management', icon: <MapPin size={18} /> },
+    // { label: 'Địa chỉ', href: '/user_info/address_management', icon: <MapPin size={18} /> },
     { label: 'Quay về trang chủ', href: '/', icon: <Home size={18} /> },
 ];
 
