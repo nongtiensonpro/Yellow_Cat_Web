@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { X } from 'lucide-react';
@@ -71,6 +71,10 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
         isActive: true,
     });
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
+    const nameRef = useRef<HTMLInputElement>(null);
+    const codeRef = useRef<HTMLInputElement>(null);
+    const startDateRef = useRef<HTMLInputElement>(null);
+    const endDateRef = useRef<HTMLInputElement>(null);
 
     // Reset form function
     const resetForm = () => {
@@ -188,7 +192,13 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
 
         let newValue: string | number | boolean = value;
         if (type === 'checkbox') newValue = checked;
-        if (type === 'number') newValue = parseFloat(value) || '';
+        if (type === 'number') {
+            if (value === '') newValue = '';
+            else {
+                const parsed = parseFloat(value);
+                newValue = Number.isNaN(parsed) ? '' : parsed;
+            }
+        }
 
         setForm((prev) => ({
             ...prev,
@@ -204,34 +214,16 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
             newErrors.promotionName = 'Tên khuyến mãi là bắt buộc.';
         }
 
-        // Validation cho ngày bắt đầu
+        // Validation cho thời gian hiệu lực (đầy đủ datetime)
+        const now = new Date();
         if (!form.startDate) {
             newErrors.startDate = 'Ngày bắt đầu là bắt buộc.';
         } else {
             const startDate = new Date(form.startDate);
-            // Lấy thời gian hiện tại (đã là giờ local)
-            const now = new Date();
-
-            // So sánh theo ngày, không theo thời gian chính xác
-            const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-            const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-            console.log('=== AddVoucherModal Date Validation Debug ===');
-            console.log('form.startDate:', form.startDate);
-            console.log('startDate:', startDate);
-            console.log('startDateOnly:', startDateOnly);
-            console.log('now:', now);
-            console.log('todayOnly:', todayOnly);
-            console.log('startDateOnly < todayOnly:', startDateOnly < todayOnly);
-            console.log('startDateOnly.getTime():', startDateOnly.getTime());
-            console.log('todayOnly.getTime():', todayOnly.getTime());
-
-            if (startDateOnly < todayOnly) {
-                newErrors.startDate = 'Ngày bắt đầu phải là ngày hôm nay hoặc trong tương lai.';
+            if (startDate < now) {
+                newErrors.startDate = 'Ngày bắt đầu phải ở hiện tại hoặc tương lai.';
             }
         }
-
-        // Validation cho ngày kết thúc
         if (!form.endDate) {
             newErrors.endDate = 'Ngày kết thúc là bắt buộc.';
         } else if (form.startDate) {
@@ -259,11 +251,22 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
             newErrors.maximumDiscountValue = 'Giảm tối đa là bắt buộc và phải lớn hơn 0 khi chọn giảm theo % hoặc miễn phí vận chuyển.';
         }
 
-        if (form.minimumOrderValue < 0) {
+        // Điều kiện áp dụng
+        if (form.minimumOrderValue === ('' as any) || form.minimumOrderValue === null || form.minimumOrderValue === undefined) {
+            newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu là bắt buộc (cho phép 0).';
+        } else if (Number(form.minimumOrderValue) < 0) {
             newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu không được âm.';
+        }
+        if (form.usageLimitTotal === undefined || form.usageLimitTotal === null || Number(form.usageLimitTotal) <= 0) {
+            newErrors.usageLimitTotal = 'Số lượng voucher phải lớn hơn 0.';
         }
 
         setErrors(newErrors);
+        const firstKey = Object.keys(newErrors)[0];
+        if (firstKey === 'promotionName') nameRef.current?.focus();
+        else if (firstKey === 'voucherCode') codeRef.current?.focus();
+        else if (firstKey === 'startDate') startDateRef.current?.focus();
+        else if (firstKey === 'endDate') endDateRef.current?.focus();
         return Object.keys(newErrors).length === 0;
     };
 
@@ -346,46 +349,100 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                 onSuccess();
                 onClose();
             } else {
-                const errorData = await res.json();
-                console.error('Backend error:', errorData);
-                
-                // Parse error message từ backend
-                let errorMessage = errorData.message || 'Không thể tạo voucher';
-                console.log('Error message from backend:', errorMessage);
-                console.log('Error message length:', errorMessage.length);
-                console.log('Error message bytes:', Array.from(errorMessage).map((c: any) => c.charCodeAt(0)));
-                
-                // Map backend errors to form fields
-                if (errorMessage.includes('Tên đợt giảm giá đã tồn tại')) {
-                    console.log('Mapping to promotionName error');
-                    setErrors(prev => ({ ...prev, promotionName: 'Tên khuyến mãi đã tồn tại' }));
-                } else if (errorMessage.includes('Mã giảm giá đã tồn tại')) {
-                    console.log('Mapping to voucherCode error');
-                    setErrors(prev => ({ ...prev, voucherCode: 'Mã voucher đã tồn tại' }));
-                } else if (errorMessage.includes('Tên đợt giảm giá không được để trống')) {
-                    console.log('Mapping to promotionName error');
-                    setErrors(prev => ({ ...prev, promotionName: 'Tên khuyến mãi không được để trống' }));
-                } else if (errorMessage.includes('Tên đợt giảm giá không được vượt quá 50 ký tự')) {
-                    console.log('Mapping to promotionName error');
-                    setErrors(prev => ({ ...prev, promotionName: 'Tên khuyến mãi không được vượt quá 50 ký tự' }));
-                } else if (errorMessage.includes('Mã giảm giá không được vượt quá 50 ký tự')) {
-                    console.log('Mapping to voucherCode error');
+                let errorText = '';
+                let errorData: any = null;
+                try {
+                    errorData = await res.json();
+                } catch {
+                    errorText = await res.text();
+                }
+                const messageRaw = (errorData && (errorData.message || errorData.error || errorData.title)) || errorText || '';
+                const message = String(messageRaw || '').trim();
+                console.error('Backend error:', { status: res.status, message, errorData });
+
+                // Try field-level errors array (common pattern)
+                let mapped = false;
+                const fieldErrors = (errorData && (errorData.fieldErrors || errorData.errors)) || [];
+                if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
+                    const newErrors: { [key: string]: string } = {};
+                    fieldErrors.forEach((fe: any) => {
+                        const field = (fe.field || fe.name || '').toString();
+                        const msg = (fe.message || fe.defaultMessage || '').toString();
+                        if (!field) return;
+                        if (field.toLowerCase().includes('name') || field === 'promotionName') {
+                            newErrors.promotionName = msg || 'Tên khuyến mãi không hợp lệ';
+                        } else if (field.toLowerCase().includes('code') || field === 'voucherCode') {
+                            newErrors.voucherCode = msg || 'Mã voucher không hợp lệ';
+                        } else if (field.toLowerCase().includes('start')) {
+                            newErrors.startDate = msg || 'Ngày bắt đầu không hợp lệ';
+                        } else if (field.toLowerCase().includes('end')) {
+                            newErrors.endDate = msg || 'Ngày kết thúc không hợp lệ';
+                        }
+                    });
+                    if (Object.keys(newErrors).length > 0) {
+                        setErrors(prev => ({ ...prev, ...newErrors }));
+                        // Prioritize focusing voucherCode if it's present
+                        if (newErrors.voucherCode) setTimeout(() => codeRef.current?.focus(), 0);
+                        else if (newErrors.promotionName) setTimeout(() => nameRef.current?.focus(), 0);
+                        else if (newErrors.startDate) setTimeout(() => startDateRef.current?.focus(), 0);
+                        else if (newErrors.endDate) setTimeout(() => endDateRef.current?.focus(), 0);
+                        mapped = true;
+                    }
+                }
+
+                // Message-based mapping (VN/EN, case-insensitive)
+                const lower = message.toLowerCase();
+                // Prioritize code-related errors first to focus the correct field
+                if (!mapped && (lower.includes('mã giảm') || lower.includes('voucher') || lower.includes('code'))) {
+                    if (lower.includes('đã tồn tại') || lower.includes('exists') || lower.includes('duplicate')) {
+                        setErrors(prev => ({ ...prev, voucherCode: 'Mã voucher bị trùng' }));
+                        setTimeout(() => codeRef.current?.focus(), 0);
+                        mapped = true;
+                    } else if (lower.includes('không được vượt quá') || lower.includes('too long') || lower.includes('length')) {
                     setErrors(prev => ({ ...prev, voucherCode: 'Mã voucher không được vượt quá 50 ký tự' }));
-                } else if (errorMessage.includes('Giá trị giảm giá phải lớn hơn 0')) {
-                    console.log('Mapping to discountValue error');
-                    setErrors(prev => ({ ...prev, discountValue: 'Giá trị giảm phải lớn hơn 0' }));
-                } else if (errorMessage.includes('Ngày kết thúc không được trước ngày bắt đầu')) {
-                    console.log('Mapping to endDate error');
+                        setTimeout(() => codeRef.current?.focus(), 0);
+                        mapped = true;
+                    }
+                }
+                if (!mapped && (lower.includes('đợt giảm') || lower.includes('khuyến mãi') || lower.includes('promotion'))) {
+                    if (lower.includes('đã tồn tại') || lower.includes('exists') || lower.includes('duplicate')) {
+                        setErrors(prev => ({ ...prev, promotionName: 'Tên đợt giảm giá bị trùng' }));
+                        setTimeout(() => nameRef.current?.focus(), 0);
+                        mapped = true;
+                    } else if (lower.includes('không được để trống') || lower.includes('required')) {
+                        setErrors(prev => ({ ...prev, promotionName: 'Tên đợt giảm giá không được để trống' }));
+                        setTimeout(() => nameRef.current?.focus(), 0);
+                        mapped = true;
+                    }
+                }
+                if (!mapped && lower.includes('ngày kết thúc') && (lower.includes('trước') || lower.includes('before'))) {
                     setErrors(prev => ({ ...prev, endDate: 'Ngày kết thúc không được trước ngày bắt đầu' }));
+                    setTimeout(() => endDateRef.current?.focus(), 0);
+                    mapped = true;
+                }
+                if (!mapped && lower.includes('ngày bắt đầu') && (lower.includes('quá khứ') || lower.includes('past'))) {
+                    setErrors(prev => ({ ...prev, startDate: 'Ngày bắt đầu không được trong quá khứ.' }));
+                    setTimeout(() => startDateRef.current?.focus(), 0);
+                    mapped = true;
+                }
+
+                // If nothing mapped, surface inline on form (no alert)
+                if (!mapped) {
+                    const inlineMsg = message || 'Không thể tạo voucher';
+                    if (lower.includes('mã') || lower.includes('voucher') || lower.includes('code')) {
+                        setErrors(prev => ({ ...prev, voucherCode: inlineMsg }));
+                        setTimeout(() => codeRef.current?.focus(), 0);
                 } else {
-                    // Hiển thị lỗi chung nếu không map được
-                    console.log('No mapping found, showing alert');
-                    alert(`Lỗi: ${errorMessage}`);
+                        setErrors(prev => ({ ...prev, promotionName: inlineMsg }));
+                        setTimeout(() => nameRef.current?.focus(), 0);
+                    }
                 }
             }
         } catch (error) {
             console.error('Error creating voucher:', error);
-            alert('Có lỗi xảy ra khi tạo voucher');
+            // Surface inline error instead of alert
+            setErrors(prev => ({ ...prev, promotionName: 'Không thể tạo voucher. Vui lòng thử lại.' }));
+            setTimeout(() => nameRef.current?.focus(), 0);
         } finally {
             setLoading(false);
         }
@@ -451,10 +508,11 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                                 <div>
                                     <Label text="Tên khuyến mãi" required />
                                     <input
+                                        ref={nameRef}
                                         name="promotionName"
                                         value={form.promotionName}
                                         onChange={handleChange}
-                                        className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                        className={`w-full border px-4 py-3 rounded-lg focus:ring-2 transition-colors ${errors.promotionName ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'}`}
                                         placeholder="Nhập tên chương trình khuyến mãi"
                                     />
                                     {errors.promotionName && <p className="text-red-600 text-sm mt-1">{errors.promotionName}</p>}
@@ -462,10 +520,11 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                                 <div>
                                     <Label text="Mã voucher" />
                                     <input
+                                        ref={codeRef}
                                         name="voucherCode"
                                         value={form.voucherCode}
                                         onChange={handleChange}
-                                        className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors font-mono"
+                                        className={`w-full border px-4 py-3 rounded-lg focus:ring-2 transition-colors font-mono ${errors.voucherCode ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'}`}
                                         placeholder="Để trống để tự động tạo mã"
                                     />
                                     {errors.voucherCode && <p className="text-red-600 text-sm mt-1">{errors.voucherCode}</p>}
@@ -580,10 +639,17 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                                 <span className="w-2 h-2 bg-purple-500 rounded-full mr-3"></span>
                                 Thời gian hiệu lực
                             </h3>
+                            <p className="text-xs text-blue-600 mb-4 bg-blue-50 p-2 rounded">
+                                ⏰ <strong>Lưu ý:</strong> Vui lòng sử dụng định dạng 24 giờ (VD: 14:30 thay vì 2:30 PM).
+                            </p>
+                            <p className="text-xs text-orange-700 mb-4 bg-orange-50 p-2 rounded">
+                                📅 <strong>Lưu ý:</strong> Ngày bắt đầu phải là hôm nay hoặc trong tương lai; ngày kết thúc phải sau ngày bắt đầu.
+                            </p>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <Label text="Ngày bắt đầu" required />
                                     <input
+                                        ref={startDateRef}
                                         name="startDate"
                                         type="datetime-local"
                                         value={form.startDate}
@@ -601,6 +667,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                                 <div>
                                     <Label text="Ngày kết thúc" required />
                                     <input
+                                        ref={endDateRef}
                                         name="endDate"
                                         type="datetime-local"
                                         value={form.endDate}
@@ -869,6 +936,10 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
 
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
+    const nameRef = useRef<HTMLInputElement>(null);
+    const codeRef = useRef<HTMLInputElement>(null);
+    const startDateRef = useRef<HTMLInputElement>(null);
+    const endDateRef = useRef<HTMLInputElement>(null);
 
     // Target selection states
     const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'users'>('products');
@@ -1323,34 +1394,16 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
         if (!form.promotionName.trim()) newErrors.promotionName = 'Tên khuyến mãi là bắt buộc';
         // Mã voucher không bắt buộc, nếu không nhập sẽ tự động generate
 
-        // Validation cho ngày bắt đầu
+        // Validation datetime chặt chẽ cho Edit
+        const now = new Date();
         if (!form.startDate) {
             newErrors.startDate = 'Ngày bắt đầu là bắt buộc.';
         } else {
             const startDate = new Date(form.startDate);
-            // Lấy thời gian hiện tại (đã là giờ local)
-            const now = new Date();
-
-            // So sánh theo ngày, không theo thời gian chính xác
-            const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-            const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-            console.log('=== EditVoucherModal Date Validation Debug ===');
-            console.log('form.startDate:', form.startDate);
-            console.log('startDate:', startDate);
-            console.log('startDateOnly:', startDateOnly);
-            console.log('now:', now);
-            console.log('todayOnly:', todayOnly);
-            console.log('startDateOnly < todayOnly:', startDateOnly < todayOnly);
-            console.log('startDateOnly.getTime():', startDateOnly.getTime());
-            console.log('todayOnly.getTime():', todayOnly.getTime());
-
-            if (startDateOnly < todayOnly) {
-                newErrors.startDate = 'Ngày bắt đầu phải là ngày hôm nay hoặc trong tương lai.';
+            if (startDate < now) {
+                newErrors.startDate = 'Ngày bắt đầu phải ở hiện tại hoặc tương lai.';
             }
         }
-
-        // Validation cho ngày kết thúc
         if (!form.endDate) {
             newErrors.endDate = 'Ngày kết thúc là bắt buộc.';
         } else if (form.startDate) {
@@ -1373,13 +1426,26 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
             newErrors.discountValue = 'Giá trị giảm là bắt buộc';
         }
 
-        if (!form.minimumOrderValue) newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu là bắt buộc';
+        // Điều kiện áp dụng
+        if (form.minimumOrderValue === '' || form.minimumOrderValue === null || form.minimumOrderValue === undefined) {
+            newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu là bắt buộc (cho phép 0).';
+        } else if (Number(form.minimumOrderValue) < 0) {
+            newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu không được âm.';
+        }
+        if (!form.usageLimitTotal || Number(form.usageLimitTotal) <= 0) {
+            newErrors.usageLimitTotal = 'Số lượng voucher phải lớn hơn 0.';
+        }
 
         if ((form.discountType === 'percentage' || form.discountType === 'free_shipping') && (!form.maximumDiscountValue || (typeof form.maximumDiscountValue === 'string' ? parseFloat(form.maximumDiscountValue) : form.maximumDiscountValue) <= 0)) {
             newErrors.maximumDiscountValue = 'Giảm tối đa là bắt buộc và phải lớn hơn 0 khi chọn giảm theo % hoặc miễn phí vận chuyển.';
         }
 
         setErrors(newErrors);
+        const firstKey = Object.keys(newErrors)[0];
+        if (firstKey === 'promotionName') nameRef.current?.focus();
+        else if (firstKey === 'voucherCode') codeRef.current?.focus();
+        else if (firstKey === 'startDate') startDateRef.current?.focus();
+        else if (firstKey === 'endDate') endDateRef.current?.focus();
         return Object.keys(newErrors).length === 0;
     };
 
@@ -1472,24 +1538,33 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                 if (errorMessage.includes('Tên đợt giảm giá đã tồn tại')) {
                     console.log('EditVoucherModal - Mapping to promotionName error');
                     setErrors(prev => ({ ...prev, promotionName: 'Tên khuyến mãi đã tồn tại' }));
+                    setTimeout(() => nameRef.current?.focus(), 0);
                 } else if (errorMessage.includes('Mã giảm giá đã tồn tại')) {
                     console.log('EditVoucherModal - Mapping to voucherCode error');
                     setErrors(prev => ({ ...prev, voucherCode: 'Mã voucher đã tồn tại' }));
+                    setTimeout(() => codeRef.current?.focus(), 0);
                 } else if (errorMessage.includes('Tên đợt giảm giá không được để trống')) {
                     console.log('EditVoucherModal - Mapping to promotionName error');
                     setErrors(prev => ({ ...prev, promotionName: 'Tên khuyến mãi không được để trống' }));
+                    setTimeout(() => nameRef.current?.focus(), 0);
                 } else if (errorMessage.includes('Tên đợt giảm giá không được vượt quá 50 ký tự')) {
                     console.log('EditVoucherModal - Mapping to promotionName error');
                     setErrors(prev => ({ ...prev, promotionName: 'Tên khuyến mãi không được vượt quá 50 ký tự' }));
+                    setTimeout(() => nameRef.current?.focus(), 0);
                 } else if (errorMessage.includes('Mã giảm giá không được vượt quá 50 ký tự')) {
                     console.log('EditVoucherModal - Mapping to voucherCode error');
                     setErrors(prev => ({ ...prev, voucherCode: 'Mã voucher không được vượt quá 50 ký tự' }));
+                    setTimeout(() => codeRef.current?.focus(), 0);
                 } else if (errorMessage.includes('Giá trị giảm giá phải lớn hơn 0')) {
                     console.log('EditVoucherModal - Mapping to discountValue error');
                     setErrors(prev => ({ ...prev, discountValue: 'Giá trị giảm phải lớn hơn 0' }));
                 } else if (errorMessage.includes('Ngày kết thúc không được trước ngày bắt đầu')) {
                     console.log('EditVoucherModal - Mapping to endDate error');
                     setErrors(prev => ({ ...prev, endDate: 'Ngày kết thúc không được trước ngày bắt đầu' }));
+                    setTimeout(() => endDateRef.current?.focus(), 0);
+                } else if (errorMessage.toLowerCase().includes('ngày bắt đầu') && errorMessage.toLowerCase().includes('quá khứ')) {
+                    setErrors(prev => ({ ...prev, startDate: 'Ngày bắt đầu không được trong quá khứ.' }));
+                    setTimeout(() => startDateRef.current?.focus(), 0);
                 } else if (errorMessage.includes('Không thể cập nhật vì voucher đang hoạt động')) {
                     console.log('EditVoucherModal - Showing alert for active voucher');
                     alert('Không thể cập nhật voucher đang hoạt động');
@@ -1540,10 +1615,11 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                     <div>
                                         <Label text="Tên khuyến mãi" required />
                                         <input
+                                            ref={nameRef}
                                             name="promotionName"
                                             value={form.promotionName}
                                             onChange={handleChange}
-                                            className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                            className={`w-full border px-4 py-3 rounded-lg focus:ring-2 transition-colors ${errors.promotionName ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'}`}
                                             placeholder="Nhập tên chương trình khuyến mãi"
                                         />
                                         {errors.promotionName && <p className="text-red-600 text-sm mt-1">{errors.promotionName}</p>}
@@ -1551,10 +1627,11 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                     <div>
                                         <Label text="Mã voucher" />
                                         <input
+                                            ref={codeRef}
                                             name="voucherCode"
                                             value={form.voucherCode}
                                             onChange={handleChange}
-                                            className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors font-mono"
+                                            className={`w-full border px-4 py-3 rounded-lg focus:ring-2 transition-colors font-mono ${errors.voucherCode ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'}`}
                                             placeholder="Để trống để tự động tạo mã"
                                         />
                                         {errors.voucherCode && <p className="text-red-600 text-sm mt-1">{errors.voucherCode}</p>}
@@ -1676,6 +1753,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                     <div>
                                         <Label text="Ngày bắt đầu" required />
                                         <input
+                                            ref={startDateRef}
                                             name="startDate"
                                             type="datetime-local"
                                             value={form.startDate}
@@ -1689,6 +1767,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                     <div>
                                         <Label text="Ngày kết thúc" required />
                                         <input
+                                            ref={endDateRef}
                                             name="endDate"
                                             type="datetime-local"
                                             value={form.endDate}
