@@ -25,7 +25,7 @@ import {
     SelectItem,
 } from "@heroui/react";
 import {useEffect, useState, useCallback} from "react";
-import {Eye, Edit, Trash2, Plus, ToggleLeft, ToggleRight} from "lucide-react";
+import { Edit, Trash2, Plus, ToggleLeft, ToggleRight} from "lucide-react";
 import Link from "next/link";
 import { useDisclosure } from "@heroui/react";
 import { useSession, signIn } from "next-auth/react";
