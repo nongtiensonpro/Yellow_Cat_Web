@@ -59,7 +59,6 @@ public class SecurityConfig {
                                 "/api/ghtk/**",
                                 "/api/chat/**",
                                 "/api/bot/**",
-                                "/api/admin/vouchers/**",
                                 "/api/orders/**",
                                 "/api/waitlist/**",
                                 "/api/cart/**",
@@ -172,6 +171,11 @@ public class SecurityConfig {
                                 "/api/promotion-orders/**"
                         )
                         .hasAnyAuthority("Admin_Web")
+
+                        // Admin Vouchers API - cho phép cả Admin và Staff (phải đặt trước /api/admin/**)
+                        .requestMatchers(
+                                "/api/admin/vouchers/**")
+                        .hasAnyAuthority("Admin_Web", "Staff_Web")
 
                         // Vouchers private API (tương tự promotions)
                         .requestMatchers(

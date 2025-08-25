@@ -24,8 +24,8 @@ import {
     Select,
     SelectItem,
 } from "@heroui/react";
-import {useEffect, useState} from "react";
-import {Eye, Edit, Trash2, Plus, ToggleLeft, ToggleRight, X} from "lucide-react";
+import {useEffect, useState, useCallback} from "react";
+import {Eye, Edit, Trash2, Plus, ToggleLeft, ToggleRight} from "lucide-react";
 import Link from "next/link";
 import { useDisclosure } from "@heroui/react";
 import { useSession, signIn } from "next-auth/react";
@@ -108,7 +108,7 @@ export default function Page() {
     const [categoriesLoading, setCategoriesLoading] = useState<boolean>(false);
     const [brandsLoading, setBrandsLoading] = useState<boolean>(false);
 
-    const fetchCategoriesData = async () => {
+    const fetchCategoriesData = useCallback(async () => {
         try {
             setCategoriesLoading(true);
             // Kiểm tra đăng nhập
@@ -147,9 +147,9 @@ export default function Page() {
         } finally {
             setCategoriesLoading(false);
         }
-    };
+    }, [status, session]);
 
-    const fetchBrandsData = async () => {
+    const fetchBrandsData = useCallback(async () => {
         try {
             setBrandsLoading(true);
             // Kiểm tra đăng nhập
@@ -188,7 +188,7 @@ export default function Page() {
         } finally {
             setBrandsLoading(false);
         }
-    };
+    }, [status, session]);
 
     const fetchProductsData = async () => {
         try {
@@ -220,7 +220,7 @@ export default function Page() {
             fetchCategoriesData();
             fetchBrandsData();
         }
-    }, [status, session]);
+    }, [fetchCategoriesData, fetchBrandsData, status, session]);
 
     useEffect(() => {
         fetchProductsData();
@@ -432,7 +432,7 @@ export default function Page() {
                                     variant="flat"
                                     onClose={() => setSearchTerm("")}
                                 >
-                                    Tìm kiếm: "{searchTerm}"
+                                    Tìm kiếm: {searchTerm}
                                 </Chip>
                             )}
                             {selectedCategory && (

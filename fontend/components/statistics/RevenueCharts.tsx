@@ -82,10 +82,10 @@ const RevenueCharts: React.FC<RevenueChartsProps> = ({timeRange}) => {
     };
 
     const categoryChartData = {
-        labels: categoryData.map(item => item.categoryName),
+        labels: categoryData.categoryName,
         datasets: [
             {
-                data: categoryData.map(item => item.totalRevenue),
+                data: categoryData.totalRevenue,
                 backgroundColor: [
                     "rgba(59, 130, 246, 0.8)",
                     "rgba(16, 185, 129, 0.8)",
@@ -98,11 +98,11 @@ const RevenueCharts: React.FC<RevenueChartsProps> = ({timeRange}) => {
     };
 
     const brandChartData = {
-        labels: brandData.map(item => item.brandName),
+        labels: brandData.brandName,
         datasets: [
             {
                 label: "Doanh thu",
-                data: brandData.map(item => item.totalRevenue),
+                data: brandData.totalRevenue,
                 backgroundColor: "rgba(59, 130, 246, 0.8)"
             }
         ]
@@ -123,16 +123,27 @@ const RevenueCharts: React.FC<RevenueChartsProps> = ({timeRange}) => {
         }
     };
 
+    const handleChartTypeChange = (value: string) => {
+        setChartType(value as "daily" | "weekly" | "monthly");
+    };
+
     return (
         <div className="space-y-6">
             {/* Biểu đồ xu hướng */}
             <Card>
                 <CardHeader className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold">Xu hướng doanh thu</h3>
-                    <Select value={chartType} onChange={(e) => setChartType(e.target.value as any)} className="w-40">
-                        <SelectItem key="daily" value="daily">Theo ngày</SelectItem>
-                        <SelectItem key="weekly" value="weekly">Theo tuần</SelectItem>
-                        <SelectItem key="monthly" value="monthly">Theo tháng</SelectItem>
+                    <Select 
+                        selectedKeys={[chartType]} 
+                        onSelectionChange={(keys) => {
+                            const selectedKey = Array.from(keys)[0] as string;
+                            handleChartTypeChange(selectedKey);
+                        }} 
+                        className="w-40"
+                    >
+                        <SelectItem key="daily">Theo ngày</SelectItem>
+                        <SelectItem key="weekly">Theo tuần</SelectItem>
+                        <SelectItem key="monthly">Theo tháng</SelectItem>
                     </Select>
                 </CardHeader>
                 <CardBody>

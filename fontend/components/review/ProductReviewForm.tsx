@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { CldImage } from "next-cloudinary";
 import {
     Modal,
     ModalContent,
@@ -154,8 +155,10 @@ const ProductReviewForm: React.FC<ProductReviewFormProps> = ({
                             <div className="flex gap-4">
                                 {productImage && (
                                     <div className="flex-shrink-0">
-                                        <img
-                                            src={`https://res.cloudinary.com/djjvqwnww/image/upload/${productImage}`}
+                                        <CldImage
+                                            width={64}
+                                            height={64}
+                                            src={productImage}
                                             alt={productName}
                                             className="w-16 h-16 object-cover rounded-lg"
                                         />

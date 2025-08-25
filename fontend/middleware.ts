@@ -57,7 +57,7 @@ async function checkUserProfile(keycloakId: string, accessToken: string): Promis
             const user = apiResponse.data;
             
             // Normalize phone number: loại bỏ khoảng trắng và chuyển +84 về 0
-            let cleanedPhone = user.phoneNumber?.replace(/\s+/g, '').replace(/^\+84/, '0') || '';
+            const cleanedPhone = user.phoneNumber?.replace(/\s+/g, '').replace(/^\+84/, '0') || '';
             
             const hasValidPhone = !!(cleanedPhone && PHONE_REGEX.test(cleanedPhone));
             

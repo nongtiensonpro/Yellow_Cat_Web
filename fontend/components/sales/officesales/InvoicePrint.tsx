@@ -229,6 +229,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order, orderItems, totals, 
 
   // Promotion info
   const [promos, setPromos] = useState<PromoItem[]>([]);
+  const [voucherInfo, setVoucherInfo] = useState<{ voucherCode: string; discountAmount?: number } | null>(null);
 
   // Fetch thông tin nhân viên đơn giản theo order code
   const fetchStaffInfo = useCallback(async () => {
@@ -297,7 +298,38 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order, orderItems, totals, 
         })();
       }
     }
-  }, [isOpen, staffInfo, fetchStaffInfo, orderItems, promos.length]);
+    // Gọi API voucher usage theo orderCode khi mở modal
+    (async () => {
+      if (!isOpen || !order?.orderCode) return;
+      const sessionWithToken = session as SessionWithToken;
+      if (!sessionWithToken?.accessToken) return;
+      try {
+        let res = await fetch(`http://localhost:8080/api/admin/vouchers/usage/by-order/${order.orderCode}`, {
+          headers: { 'Authorization': `Bearer ${sessionWithToken.accessToken}` }
+        });
+        if (!res.ok) {
+          res = await fetch(`http://localhost:8080/api/admin/vouchers/usage?orderCode=${encodeURIComponent(order.orderCode)}`, {
+            headers: { 'Authorization': `Bearer ${sessionWithToken.accessToken}` }
+          });
+        }
+        if (res.ok) {
+          const data = await res.json();
+          const usage = (data?.data ?? data);
+          if (usage && usage.voucherCode) {
+            setVoucherInfo({ voucherCode: usage.voucherCode, discountAmount: usage.discountAmount });
+          } else if (Array.isArray(usage) && usage.length > 0 && usage[0].voucherCode) {
+            setVoucherInfo({ voucherCode: usage[0].voucherCode, discountAmount: usage[0].discountAmount });
+          } else {
+            setVoucherInfo(null);
+          }
+        } else {
+          setVoucherInfo(null);
+        }
+      } catch {
+        setVoucherInfo(null);
+      }
+    })();
+  }, [isOpen, staffInfo, fetchStaffInfo, orderItems, promos.length, order.orderCode, session]);
 
   const handlePrint = () => {
     if (printRef.current) {
@@ -366,8 +398,19 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ order, orderItems, totals, 
                   </div>
                 ) : (
                   <div ref={printRef}>
+                    {/* Voucher banner nếu có */}
+                    {voucherInfo?.voucherCode && (
+                      <div className="bg-green-50 border border-green-200 text-green-800 p-3 mx-8 mt-4 rounded">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="font-semibold">Voucher áp dụng: {voucherInfo.voucherCode}</span>
+                          {typeof voucherInfo.discountAmount === 'number' && voucherInfo.discountAmount > 0 && (
+                            <span className="font-bold">- {voucherInfo.discountAmount.toLocaleString('vi-VN')} VND</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     <InvoiceContent order={order} orderItems={orderItems} totals={totals} staffInfo={staffInfo} />
-                
                   </div>
                 )}
               </ModalBody>

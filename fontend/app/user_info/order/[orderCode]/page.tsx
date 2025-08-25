@@ -313,7 +313,7 @@ export default function OrderDetailPage() {
         setReviewableProducts(reviewableProductIds);
         setReviewedProducts(reviewedProductIds);
         setUserReviews(new Map(userReviews));
-    }, [orderDetail, session]);
+    }, [orderDetail, session, userReviews]);
 
     // Lấy chi tiết đơn hàng khi component mount
     useEffect(() => {
@@ -925,7 +925,7 @@ export default function OrderDetailPage() {
                                                                                      
                                                                                      {userReviews.get(item.productId)!.comment && (
                                                                                          <div className="text-sm text-success-600">
-                                                                                             <p className="italic">"{userReviews.get(item.productId)!.comment}"</p>
+                                                                                             <p className="italic"> {userReviews.get(item.productId)!.comment} </p>
                                                                                          </div>
                                                                                      )}
                                                                                      

@@ -9,7 +9,7 @@ interface ProductReviewSectionProps {
     productName: string;
 }
 
-const ProductReviewSection = ({ productId, productName }: ProductReviewSectionProps) => {
+const ProductReviewSection = ({ productId }: ProductReviewSectionProps) => {
     const [reviewCount, setReviewCount] = useState(0);
 
     const handleReviewStatsChange = (stats: { totalReviews: number; averageRating: number }) => {

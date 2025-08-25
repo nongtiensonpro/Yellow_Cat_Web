@@ -56,10 +56,10 @@ export default function ProductHistoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize] = useState(10);
   
   // State cho modal chi tiết
-  const [selectedHistoryGroupId, setSelectedHistoryGroupId] = useState<string>("");
+  const [, setSelectedHistoryGroupId] = useState<string>("");
   const [selectedProductName, setSelectedProductName] = useState<string>("");
   const [variantLoading, setVariantLoading] = useState(false);
   
@@ -131,7 +131,7 @@ export default function ProductHistoryPage() {
     setSelectedProductName(productName);
     fetchVariantHistory(historyGroupId);
     onOpen();
-  }, [fetchVariantHistory, onOpen]);
+  }, [fetchVariantHistory, onOpen, setSelectedHistoryGroupId]);
 
   // Thực hiện rollback
   const handleRollback = useCallback(async (historyId: number) => {

@@ -104,7 +104,7 @@ export default function ProfileRequiredPage() {
     const PHONE_REGEX = /^(0|\+84)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$/;
 
     // Get return URL from search params
-    const returnUrl = searchParams.get('returnUrl') || '/staff/officesales';
+    const returnUrl = (searchParams?.get('returnUrl') as string | null) || '/staff/officesales';
 
     const fetchUserByKeycloakId = useCallback(async (keycloakId: string, accessToken: string): Promise<AppUser> => {
         const response = await fetch(`http://localhost:8080/api/users/keycloak-user/${keycloakId}`, {

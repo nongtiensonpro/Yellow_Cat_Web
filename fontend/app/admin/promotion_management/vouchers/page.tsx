@@ -5,6 +5,66 @@ import { useSearchParams } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { X } from 'lucide-react';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
+interface Product {
+    productId: number;
+    name?: string;
+    displayName?: string;
+    productName?: string;
+    title?: string;
+    productTitle?: string;
+    description?: string;
+}
+
+interface Category {
+    id: number;
+    name: string;
+    description?: string;
+}
+
+interface User {
+    appUserId: number;
+    fullName: string;
+    email: string;
+    phone?: string;
+}
+
+interface PerformanceData {
+    totalSales: number;
+    totalProfit: number;
+    totalDiscount: number;
+    redemptionCount: number;
+    redemptionRate: number;
+    remainingUsage: number;
+    effectivenessStatus: string;
+    dailyUsageChart: {
+        labels: string[];
+        displayLabels: string[];
+        usageCounts: number[];
+        salesData: number[];
+        profitData: number[];
+        rangeStart: string;
+        rangeEnd: string;
+        page: number;
+        totalPages: number;
+    };
+}
+
+interface UsageData {
+    totalUsers: number;
+    totalRedemptions: number;
+    userDetails: {
+        fullName: string;
+        email: string;
+        phone: string;
+        orderCode: string;
+        orderValue: number;
+        discountAmount: number;
+        profitAmount: number;
+    }[];
+}
+
 interface Voucher {
     id: number;
     code: string;
@@ -50,9 +110,9 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
     const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
     const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
     const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-    const [products, setProducts] = useState<any[]>([]);
-    const [categories, setCategories] = useState<any[]>([]);
-    const [users, setUsers] = useState<any[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [loadingTargets, setLoadingTargets] = useState(false);
 
     const [form, setForm] = useState({
@@ -97,10 +157,9 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
     };
 
     // Fetch target data
-    const fetchTargetData = async () => {
+    const fetchTargetData = React.useCallback(async () => {
         if (!session?.accessToken) return;
         setLoadingTargets(true);
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
         try {
             // Fetch products
@@ -137,7 +196,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
         } finally {
             setLoadingTargets(false);
         }
-    };
+    }, [session?.accessToken]);
 
     useEffect(() => {
         if (isOpen) {
@@ -146,7 +205,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
             // Reset form when modal is closed
             resetForm();
         }
-    }, [isOpen, session?.accessToken]);
+    }, [isOpen, fetchTargetData]);
 
     const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
         // Chặn việc nhập ký tự không phải số và dấu chấm
@@ -273,7 +332,6 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
         if (!validateForm()) return;
 
         setLoading(true);
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
         try {
             // Tạo scopes array từ các đối tượng được chọn
@@ -350,10 +408,10 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                 console.error('Backend error:', errorData);
                 
                 // Parse error message từ backend
-                let errorMessage = errorData.message || 'Không thể tạo voucher';
+                const errorMessage = errorData.message || 'Không thể tạo voucher';
                 console.log('Error message from backend:', errorMessage);
                 console.log('Error message length:', errorMessage.length);
-                console.log('Error message bytes:', Array.from(errorMessage).map((c: any) => c.charCodeAt(0)));
+                console.log('Error message bytes:', errorMessage.split('').map((c: string) => c.charCodeAt(0)));
                 
                 // Map backend errors to form fields
                 if (errorMessage.includes('Tên đợt giảm giá đã tồn tại')) {
@@ -844,7 +902,6 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
     voucher: VoucherDetail | null;
 }) {
     const { data: session } = useSession();
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
     // Component Label
     const Label = ({ text, required }: { text: string; required?: boolean }) => (
@@ -875,10 +932,107 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
     const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
     const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
     const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-    const [products, setProducts] = useState<any[]>([]);
-    const [categories, setCategories] = useState<any[]>([]);
-    const [users, setUsers] = useState<any[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [loadingTargets, setLoadingTargets] = useState(false);
+
+    // Fetch target data for edit modal
+    const fetchEditTargetData = React.useCallback(async () => {
+        if (!session?.accessToken) return;
+        console.log('Fetching target data for edit modal...');
+        setLoadingTargets(true);
+
+        try {
+            // Fetch products
+            console.log('Fetching products...');
+            const productsRes = await fetch(`${API_URL}/api/products?page=0&size=100`, {
+                headers: { Authorization: `Bearer ${session.accessToken}` },
+            });
+            if (productsRes.ok) {
+                const productsData = await productsRes.json();
+                console.log('Products API response:', productsData);
+
+                // Check different possible data structures
+                const productsArray = productsData.data?.content || productsData.content || productsData.data || productsData;
+                console.log('Raw products array:', productsArray);
+
+                // Log detailed product structure
+                console.log('Raw product objects:', productsArray.slice(0, 3).map((p: Product) => ({
+                    keys: Object.keys(p),
+                    values: Object.values(p),
+                    name: p.name,
+                    productName: p.productName,
+                    productId: p.productId
+                })));
+
+                // Filter out products with undefined names and validate structure
+                const validProducts = productsArray.filter((product: Product) => {
+                    if (!product || typeof product !== 'object') {
+                        console.log('Invalid product object:', product);
+                        return false;
+                    }
+
+                    // Check for different possible name fields
+                    const hasName = product.name || product.productName || product.title || product.productTitle;
+                    if (!hasName) {
+                        console.log('Product missing name:', product);
+                        return false;
+                    }
+
+                    // Normalize the name field
+                    if (product.name) {
+                        product.displayName = product.name;
+                    } else if (product.productName) {
+                        product.displayName = product.productName;
+                    } else if (product.title) {
+                        product.displayName = product.title;
+                    } else if (product.productTitle) {
+                        product.displayName = product.productTitle;
+                    }
+
+                    return true;
+                });
+
+                console.log('Valid products:', validProducts.length, 'items');
+                console.log('Valid products structure:', validProducts.slice(0, 2));
+                setProducts(validProducts);
+            } else {
+                console.error('Failed to fetch products:', productsRes.status, productsRes.statusText);
+            }
+
+            // Fetch categories
+            console.log('Fetching categories...');
+            const categoriesRes = await fetch(`${API_URL}/api/categories?page=0&size=100`, {
+                headers: { Authorization: `Bearer ${session.accessToken}` },
+            });
+            if (categoriesRes.ok) {
+                const categoriesData = await categoriesRes.json();
+                console.log('Categories loaded:', categoriesData.data?.content?.length || 0, 'items');
+                setCategories(categoriesData.data?.content || []);
+            } else {
+                console.error('Failed to fetch categories:', categoriesRes.status, categoriesRes.statusText);
+            }
+
+            // Fetch users
+            console.log('Fetching users...');
+            const usersRes = await fetch(`${API_URL}/api/users/app-users`, {
+                headers: { Authorization: `Bearer ${session.accessToken}` },
+            });
+            if (usersRes.ok) {
+                const usersData = await usersRes.json();
+                console.log('Users loaded:', usersData.data?.length || 0, 'items');
+                setUsers(usersData.data || []);
+            } else {
+                console.error('Failed to fetch users:', usersRes.status, usersRes.statusText);
+            }
+        } catch (error) {
+            console.error('Error fetching target data:', error);
+        } finally {
+            setLoadingTargets(false);
+            console.log('Target data fetching completed');
+        }
+    }, [session?.accessToken]);
 
     // Load voucher data when modal opens
     useEffect(() => {
@@ -928,13 +1082,10 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
             // Tạo bản sao của scope để mapping sau khi fetch dữ liệu
             const voucherScopes = voucher.scopes ? [...voucher.scopes] : [];
 
-            // Fetch target data và mapping scope sau khi có dữ liệu
-            const fetchAndMapScopes = async () => {
-                try {
-                    await fetchTargetData();
-
-                    // Chờ cho state products/categories/users được cập nhật
-                    setTimeout(() => {
+            // Load data first, then map scopes
+            fetchEditTargetData().then(() => {
+                // Chờ cho state products/categories/users được cập nhật
+                setTimeout(() => {
                         // Map scopes sử dụng dữ liệu mới nhất
                         const tempProducts: number[] = [];
                         const tempCategories: number[] = [];
@@ -982,14 +1133,11 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                             users: tempUsers
                         });
                     }, 100);
-                } catch (error) {
+                }).catch(error => {
                     console.error('Error fetching or mapping scopes:', error);
-                }
-            };
-
-            fetchAndMapScopes();
+                });
         }
-    }, [voucher, isOpen]);
+    }, [voucher, isOpen, products, categories, users, fetchEditTargetData]);
 
     // Separate useEffect to map scopes after data is loaded
     useEffect(() => {
@@ -1150,109 +1298,11 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
         });
     }, [loadingTargets, products.length, activeTab, selectedProducts.length, selectedCategories.length, selectedUsers.length]);
 
-    // Fetch target data
-    const fetchTargetData = async () => {
-        if (!session?.accessToken) return;
-        console.log('Fetching target data for edit modal...');
-        setLoadingTargets(true);
-
-        try {
-            // Fetch products
-            console.log('Fetching products...');
-            const productsRes = await fetch(`${API_URL}/api/products?page=0&size=100`, {
-                headers: { Authorization: `Bearer ${session.accessToken}` },
-            });
-            if (productsRes.ok) {
-                const productsData = await productsRes.json();
-                console.log('Products API response:', productsData);
-
-                // Check different possible data structures
-                const productsArray = productsData.data?.content || productsData.content || productsData.data || productsData;
-                console.log('Raw products array:', productsArray);
-
-                // Log detailed product structure
-                console.log('Raw product objects:', productsArray.slice(0, 3).map((p: any) => ({
-                    keys: Object.keys(p),
-                    values: Object.values(p),
-                    name: p.name,
-                    productName: p.productName,
-                    productId: p.productId,
-                    id: p.id
-                })));
-
-                // Filter out products with undefined names and validate structure
-                const validProducts = productsArray.filter((product: any) => {
-                    if (!product || typeof product !== 'object') {
-                        console.log('Invalid product object:', product);
-                        return false;
-                    }
-
-                    // Check for different possible name fields
-                    const hasName = product.name || product.productName || product.title || product.productTitle;
-                    if (!hasName) {
-                        console.log('Product missing name:', product);
-                        return false;
-                    }
-
-                    // Normalize the name field
-                    if (product.name) {
-                        product.displayName = product.name;
-                    } else if (product.productName) {
-                        product.displayName = product.productName;
-                    } else if (product.title) {
-                        product.displayName = product.title;
-                    } else if (product.productTitle) {
-                        product.displayName = product.productTitle;
-                    }
-
-                    return true;
-                });
-
-                console.log('Valid products:', validProducts.length, 'items');
-                console.log('Valid products structure:', validProducts.slice(0, 2));
-                setProducts(validProducts);
-            } else {
-                console.error('Failed to fetch products:', productsRes.status, productsRes.statusText);
-            }
-
-            // Fetch categories
-            console.log('Fetching categories...');
-            const categoriesRes = await fetch(`${API_URL}/api/categories?page=0&size=100`, {
-                headers: { Authorization: `Bearer ${session.accessToken}` },
-            });
-            if (categoriesRes.ok) {
-                const categoriesData = await categoriesRes.json();
-                console.log('Categories loaded:', categoriesData.data?.content?.length || 0, 'items');
-                setCategories(categoriesData.data?.content || []);
-            } else {
-                console.error('Failed to fetch categories:', categoriesRes.status, categoriesRes.statusText);
-            }
-
-            // Fetch users
-            console.log('Fetching users...');
-            const usersRes = await fetch(`${API_URL}/api/users/app-users`, {
-                headers: { Authorization: `Bearer ${session.accessToken}` },
-            });
-            if (usersRes.ok) {
-                const usersData = await usersRes.json();
-                console.log('Users loaded:', usersData.data?.length || 0, 'items');
-                setUsers(usersData.data || []);
-            } else {
-                console.error('Failed to fetch users:', usersRes.status, usersRes.statusText);
-            }
-        } catch (error) {
-            console.error('Error fetching target data:', error);
-        } finally {
-            setLoadingTargets(false);
-            console.log('Target data fetching completed');
-        }
-    };
-
     useEffect(() => {
         if (isOpen) {
-            fetchTargetData();
+            fetchEditTargetData();
         }
-    }, [isOpen, session?.accessToken]);
+    }, [isOpen, fetchEditTargetData]);
 
     const handleTargetToggle = (type: 'products' | 'categories' | 'users', id: number | string) => {
         if (type === 'products') {
@@ -1463,10 +1513,10 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                 console.error('Update error:', res.status, errorData);
                 
                 // Parse error message từ backend
-                let errorMessage = errorData || 'Không thể cập nhật voucher';
+                const errorMessage = errorData || 'Không thể cập nhật voucher';
                 console.log('EditVoucherModal - Error message from backend:', errorMessage);
                 console.log('EditVoucherModal - Error message length:', errorMessage.length);
-                console.log('EditVoucherModal - Error message bytes:', Array.from(errorMessage).map((c: any) => c.charCodeAt(0)));
+                console.log('EditVoucherModal - Error message bytes:', errorMessage.split('').map((c: string) => c.charCodeAt(0)));
                 
                 // Map backend errors to form fields
                 if (errorMessage.includes('Tên đợt giảm giá đã tồn tại')) {
@@ -1950,14 +2000,12 @@ function PerformanceTrackingModal({ isOpen, onClose, voucher }: {
     voucher: Voucher | null;
 }) {
     const { data: session } = useSession();
-    const [performanceData, setPerformanceData] = useState<any>(null);
-    const [usageData, setUsageData] = useState<any>(null);
+    const [performanceData, setPerformanceData] = useState<PerformanceData | null>(null);
+    const [usageData, setUsageData] = useState<UsageData | null>(null);
     const [loading, setLoading] = useState(false);
     const [currentChartPage, setCurrentChartPage] = useState<number>(1);
 
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-
-    const fetchPerformanceData = async () => {
+    const fetchPerformanceData = React.useCallback(async () => {
         if (!voucher || !session) return;
         setLoading(true);
         const token = (session as { accessToken: string }).accessToken;
@@ -2006,14 +2054,14 @@ function PerformanceTrackingModal({ isOpen, onClose, voucher }: {
         } finally {
             setLoading(false);
         }
-    };
+    }, [voucher, session, currentChartPage]);
 
     useEffect(() => {
         console.log('PerformanceTrackingModal useEffect triggered:', { isOpen, voucher: voucher?.id });
         if (isOpen && voucher) {
             fetchPerformanceData();
         }
-    }, [isOpen, voucher, currentChartPage]);
+    }, [isOpen, voucher, fetchPerformanceData]);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('vi-VN', {
@@ -2234,9 +2282,9 @@ function PerformanceTrackingModal({ isOpen, onClose, voucher }: {
                                                     <div className="relative h-80 border-l-2 border-b-2 border-gray-300 bg-white rounded-lg p-4">
                                                         {/* Y-axis labels */}
                                                         {(() => {
-                                                            const usageArr: number[] = (performanceData.dailyUsageChart.usageCounts || []).map((v: any) => Number(v) || 0);
-                                                            const salesArr: number[] = (performanceData.dailyUsageChart.salesData || []).map((v: any) => Number(v) || 0);
-                                                            const profitArr: number[] = (performanceData.dailyUsageChart.profitData || []).map((v: any) => Number(v) || 0);
+                                                            const usageArr: number[] = (performanceData.dailyUsageChart.usageCounts || []).map((v: number) => Number(v) || 0);
+                                                            const salesArr: number[] = (performanceData.dailyUsageChart.salesData || []).map((v: number) => Number(v) || 0);
+                                                            const profitArr: number[] = (performanceData.dailyUsageChart.profitData || []).map((v: number) => Number(v) || 0);
                                                             const rawUsageMax = Math.max(...usageArr, 0);
                                                             const rawMoneyMax = Math.max(...salesArr, ...profitArr, 0);
                                                             const niceEvenMax = (raw: number) => {
@@ -2281,9 +2329,9 @@ function PerformanceTrackingModal({ isOpen, onClose, voucher }: {
                                                         
                                                         {/* Chart bars */}
                                                         {(() => {
-                                                            const usageArr: number[] = (performanceData.dailyUsageChart.usageCounts || []).map((v: any) => Number(v) || 0);
-                                                            const salesArr: number[] = (performanceData.dailyUsageChart.salesData || []).map((v: any) => Number(v) || 0);
-                                                            const profitArr: number[] = (performanceData.dailyUsageChart.profitData || []).map((v: any) => Number(v) || 0);
+                                                            const usageArr: number[] = (performanceData.dailyUsageChart.usageCounts || []).map((v: number) => Number(v) || 0);
+                                                            const salesArr: number[] = (performanceData.dailyUsageChart.salesData || []).map((v: number) => Number(v) || 0);
+                                                            const profitArr: number[] = (performanceData.dailyUsageChart.profitData || []).map((v: number) => Number(v) || 0);
                                                             const rawUsageMax = Math.max(...usageArr, 0);
                                                             const rawMoneyMax = Math.max(...salesArr, ...profitArr, 0);
                                                             const niceEvenMax = (raw: number) => {
@@ -2424,7 +2472,7 @@ function PerformanceTrackingModal({ isOpen, onClose, voucher }: {
                                                             </tr>
                                                         </thead>
                                                         <tbody className="divide-y divide-gray-200">
-                                                            {usageData.userDetails.map((user: any, index: number) => (
+                                                            {usageData.userDetails.map((user, index: number) => (
                                                                 <tr key={index} className="hover:bg-gray-50 transition-colors">
                                                                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{user.fullName}</td>
                                                                     <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
@@ -2454,7 +2502,6 @@ function PerformanceTrackingModal({ isOpen, onClose, voucher }: {
 export default function VouchersPage() {
     const searchParams = useSearchParams();
     const initialPage = Number(searchParams?.get('page')) || 1;
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
     // Bộ lọc
     const [filters, setFilters] = useState({
@@ -2479,14 +2526,11 @@ export default function VouchersPage() {
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingVoucher, setEditingVoucher] = useState<VoucherDetail | null>(null);
     const [showPerformanceModal, setShowPerformanceModal] = useState(false);
-    const [performanceData, setPerformanceData] = useState<any>(null);
-    const [usageData, setUsageData] = useState<any>(null);
-    const [loadingPerformance, setLoadingPerformance] = useState(false);
     const [selectedVoucherForPerformance, setSelectedVoucherForPerformance] = useState<Voucher | null>(null);
 
     const { data: session, status } = useSession();
 
-    const fetchVouchers = async () => {
+    const fetchVouchers = React.useCallback(async () => {
         if (status !== 'authenticated') return;
             setLoading(true);
             const token = (session as { accessToken: string }).accessToken;
@@ -2587,7 +2631,7 @@ export default function VouchersPage() {
             } finally {
                 setLoading(false);
             }
-    };
+    }, [session, status, filters]);
 
     const fetchVoucherDetail = async (voucherId: number) => {
         if (status !== 'authenticated') return;
@@ -2635,7 +2679,7 @@ export default function VouchersPage() {
         if (status === 'authenticated') {
             fetchVouchers();
         }
-    }, [status]);
+    }, [status, fetchVouchers]);
 
     // Tự động áp dụng bộ lọc khi thay đổi filters
     useEffect(() => {
@@ -2647,7 +2691,7 @@ export default function VouchersPage() {
 
             return () => clearTimeout(timeoutId);
         }
-    }, [filters.keyword, filters.status, filters.discountType, filters.scopeType]);
+    }, [filters.keyword, filters.status, filters.discountType, filters.scopeType, fetchVouchers, status]);
 
     // Hàm tính toán trạng thái voucher
     const getVoucherStatus = (voucher: Voucher) => {
@@ -2720,7 +2764,7 @@ export default function VouchersPage() {
         if (currentPage > Math.ceil(filteredVouchers.length / itemsPerPage)) {
             setCurrentPage(1);
         }
-    }, [filteredVouchers, itemsPerPage]);
+    }, [filteredVouchers, itemsPerPage, currentPage]);
 
     const formatDateTime = (s: string) =>
         new Intl.DateTimeFormat('vi-VN', {
@@ -3317,7 +3361,7 @@ export default function VouchersPage() {
                                     const pages = [];
                                     const maxVisiblePages = 5;
                                     let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-                                    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+                                    const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
                                     if (endPage - startPage + 1 < maxVisiblePages) {
                                         startPage = Math.max(1, endPage - maxVisiblePages + 1);

@@ -105,7 +105,7 @@ public class OrderOnlineService {
         BigDecimal finalAmount;
         BigDecimal subTotal_use_voucher;
         boolean hasVoucher = request.getCodeVoucher() != null && !request.getCodeVoucher().trim().isEmpty();
-        
+
         if (hasVoucher) {
             // CÓ VOUCHER: Tính theo logic voucher
             discountAfterAmount = voucherService1.calculateDiscountedAmount(
@@ -170,7 +170,7 @@ public class OrderOnlineService {
         Order savedOrder = orderRepository.save(order);
 
         // gắn voucher cho đơn hàng
-        if(request.getCodeVoucher() != null) {
+        if (request.getCodeVoucher() != null && !request.getCodeVoucher().trim().isEmpty()) {
             voucherService1.applyVoucher(request.getCodeVoucher(), savedOrder, user != null ? user.getAppUserId() : null);
         }
 

@@ -653,8 +653,6 @@ export default function PaymentCalculation() {
                                     })()}
                                 </div>
 
-                                <hr className="my-2" />
-
                                 <div className="flex justify-between text-lg font-bold bg-blue-50 px-3 py-2 rounded-lg">
                                     <span>💰 Khách cần trả tại quầy:</span>
                                     <span className="text-blue-600">{totals.finalAmount.toLocaleString('vi-VN')} VND</span>
@@ -817,7 +815,7 @@ export default function PaymentCalculation() {
                                     <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 text-center">
                                         <p className="text-sm text-blue-600 mb-1">Tổng cần thanh toán</p>
                                         <p className="text-3xl font-bold text-blue-800">
-                                            {formatCurrency(calculateOrderTotals().finalAmount)} VND
+                                            {formatCurrency(totals.finalAmount)} VND
                                         </p>
                                     </div>
 
@@ -840,7 +838,7 @@ export default function PaymentCalculation() {
                                             <Button
                                                 variant="flat"
                                                 color="primary"
-                                                onPress={() => setCashReceived(calculateOrderTotals().finalAmount.toString())}
+                                                onPress={() => setCashReceived(totals.finalAmount.toString())}
                                                 size="sm"
                                             >
                                                 Vừa đủ
@@ -875,7 +873,7 @@ export default function PaymentCalculation() {
                                                     <div className="text-center">
                                                         <p className="text-sm text-red-600">Không đủ tiền</p>
                                                         <p className="text-lg font-bold text-red-700">
-                                                            Thiếu: {formatCurrency(calculateOrderTotals().finalAmount - (parseFloat(cashReceived) || 0))} VND
+                                                            Thiếu: {formatCurrency(totals.finalAmount - (parseFloat(cashReceived) || 0))} VND
                                                         </p>
                                                     </div>
                                                 )}
@@ -910,7 +908,7 @@ export default function PaymentCalculation() {
                                                 <div className="p-3 bg-blue-50 rounded-lg">
                                                     <p className="text-blue-600">Tổng tiền</p>
                                                     <p className="font-bold text-blue-800">
-                                                        {formatCurrency(calculateOrderTotals().finalAmount)} VND
+                                                        {formatCurrency(totals.finalAmount)} VND
                                                     </p>
                                                 </div>
                                                 <div className="p-3 bg-green-50 rounded-lg">
@@ -987,7 +985,7 @@ export default function PaymentCalculation() {
                 <PaymentModal
                     isOpen={isPaymentOpen}
                     onOpenChange={onPaymentOpenChange}
-                    orderAmount={calculateOrderTotals().finalAmount}
+                    orderAmount={totals.finalAmount}
                     orderCode={currentOrder.orderCode}
                 />
             )}

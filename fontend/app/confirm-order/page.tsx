@@ -74,6 +74,12 @@ interface JWTTokenData {
     [key: string]: unknown;
 }
 
+// Kiểu dữ liệu phản hồi khi tạo thanh toán ZaloPay
+interface ZaloPayCreateResponse {
+    order_url?: string;
+    [key: string]: unknown;
+}
+
 export default function ConfirmOrderPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -190,6 +196,44 @@ export default function ConfirmOrderPage() {
     );
     const [discount, setDiscount] = useState(0);
 
+    const calculateDiscount = useCallback(async (voucherCode: string, subtotal: number, shippingFee: number) => {
+        if (!session?.accessToken) return;
+        
+        setLoadingDiscount(true);
+        try {
+            // Không còn cần lấy appUserId vì không sử dụng
+
+            console.log('Frontend API call:', {
+                code: voucherCode,
+                subtotal: subtotal,
+                shippingFee: shippingFee
+            });
+            
+            const response = await fetch(
+                `http://localhost:8080/api/admin/vouchers/totle-discount?code=${encodeURIComponent(voucherCode)}&subtotal=${subtotal}&shippingFee=${shippingFee}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${session.accessToken}`
+                    }
+                }
+            );
+            
+            if (response.ok) {
+                const discountAmount = await response.json();
+                console.log('Backend discount response:', discountAmount);
+                setDiscount(discountAmount);
+            } else {
+                console.log('Backend error response:', response.status, response.statusText);
+                setDiscount(0);
+            }
+        } catch (error) {
+            console.error('Error calculating discount:', error);
+            setDiscount(0);
+        } finally {
+            setLoadingDiscount(false);
+        }
+    }, [session?.accessToken]);
+
     const fetchShippingFee = useCallback(async (provinceName: string, districtName: string, total: number) => {
         setLoadingShippingFee(true);
         try {
@@ -262,7 +306,7 @@ export default function ConfirmOrderPage() {
         if (selectedVoucher && session?.accessToken) {
             calculateDiscount(selectedVoucher.code, totalBeforeDiscount, shippingFee);
         }
-    }, [shippingFee, selectedVoucher, totalBeforeDiscount, session]);
+    }, [shippingFee, selectedVoucher, totalBeforeDiscount, session, calculateDiscount]);
 
     // Thay đổi hàm chọn tỉnh để reset huyện, xã và phí giao hàng
     const handleProvinceChange = (code: number | null) => {
@@ -355,65 +399,6 @@ export default function ConfirmOrderPage() {
             setAddAddressError('Lỗi khi thêm địa chỉ');
         } finally {
             setAddingAddress(false);
-        }
-    };
-
-    const calculateDiscount = async (voucherCode: string, subtotal: number, shippingFee: number) => {
-        if (!session?.accessToken) return;
-        
-        setLoadingDiscount(true);
-        try {
-            // Lấy appUserId từ keycloakId
-            let appUserId: number | null = null;
-            try {
-                const tokenData: JWTTokenData = jwtDecode(session.accessToken);
-                const keycloakId = tokenData.sub;
-                
-                const userResponse = await fetch(`http://localhost:8080/api/users/keycloak-user/${keycloakId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${session.accessToken}`
-                    }
-                });
-                
-                if (userResponse.ok) {
-                    const response = await userResponse.json();
-                    const appUserData = response.data || response;
-                    if (appUserData && appUserData.appUserId) {
-                        appUserId = appUserData.appUserId;
-                    }
-                }
-            } catch (error) {
-                console.error('Error getting appUserId:', error);
-            }
-
-            console.log('Frontend API call:', {
-                code: voucherCode,
-                subtotal: subtotal,
-                shippingFee: shippingFee
-            });
-            
-            const response = await fetch(
-                `http://localhost:8080/api/admin/vouchers/totle-discount?code=${encodeURIComponent(voucherCode)}&subtotal=${subtotal}&shippingFee=${shippingFee}`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${session.accessToken}`
-                    }
-                }
-            );
-            
-            if (response.ok) {
-                const discountAmount = await response.json();
-                console.log('Backend discount response:', discountAmount);
-                setDiscount(discountAmount);
-            } else {
-                console.log('Backend error response:', response.status, response.statusText);
-                setDiscount(0);
-            }
-        } catch (error) {
-            console.error('Error calculating discount:', error);
-            setDiscount(0);
-        } finally {
-            setLoadingDiscount(false);
         }
     };
 
@@ -702,7 +687,7 @@ export default function ConfirmOrderPage() {
         if (selectedVoucher && session?.accessToken) {
             calculateDiscount(selectedVoucher.code, totalBeforeDiscount, shippingFee);
         }
-    }, [shippingFee, selectedVoucher, totalBeforeDiscount, session?.accessToken]);
+    }, [shippingFee, selectedVoucher, totalBeforeDiscount, session?.accessToken, calculateDiscount]);
 
     useEffect(() => {
         if (!selectedProvinceCode) {
@@ -851,7 +836,7 @@ export default function ConfirmOrderPage() {
     };
 
     // Hàm tạo ZaloPay payment với retry mechanism
-    const createZaloPayPayment = async (orderCode: string, maxRetries = 5): Promise<any> => {
+    const createZaloPayPayment = async (orderCode: string, maxRetries = 5): Promise<ZaloPayCreateResponse> => {
         console.log(`Attempting to create ZaloPay payment for order: ${orderCode}`);
         
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -876,7 +861,7 @@ export default function ConfirmOrderPage() {
                 console.log(`ZaloPay API response status: ${payRes.status}`);
                 
                 if (payRes.ok) {
-                    const payData = await payRes.json();
+                    const payData: ZaloPayCreateResponse = await payRes.json();
                     console.log('ZaloPay payment created successfully:', payData);
                     return payData;
                 }

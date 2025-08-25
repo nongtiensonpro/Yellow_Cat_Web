@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { jwtDecode } from 'jwt-decode';
 
 interface PaymentResponse {
     paymentId: number;
@@ -22,23 +23,6 @@ interface OrderDetailResponse {
     orderStatus: string;
     payments: PaymentResponse[];
 }
-
-interface OrderItem {
-    orderItemId: number | string;
-    productVariantId?: number;
-    productName?: string;
-    variantInfo?: string;
-    quantity: number;
-    priceAtPurchase: number;
-    totalPrice: number;
-    bestPromo?: {
-        promotionCode: string;
-        promotionName: string;
-        discountAmount: number;
-    };
-    originalPrice?: number;
-}
-
 // Interface cho VNPay payment result
 interface VNPayResult {
     success: boolean;
@@ -75,6 +59,98 @@ export default function PaymentResultPage() {
     const [confirmationComplete, setConfirmationComplete] = useState(false);
     const [hasInitiated, setHasInitiated] = useState(false);
     const [countdown, setCountdown] = useState(10);
+
+    // Hàm xử lý voucher usage từ localStorage (wrapped in useCallback to stabilize reference)
+    const handleVoucherUsageFromStorage = useCallback(async (orderCode: string, token: string) => {
+        try {
+            const voucherInfoStr = localStorage.getItem('pendingVoucherUsage');
+            if (!voucherInfoStr) {
+                console.log('💾 No pending voucher usage found');
+                return;
+            }
+
+            const voucherInfo = JSON.parse(voucherInfoStr);
+            console.log('💾 Found pending voucher usage:', voucherInfo);
+
+            // Kiểm tra xem voucher info có match với order hiện tại không
+            if (voucherInfo.orderCode !== orderCode) {
+                console.warn('⚠️ Voucher info order code mismatch:', {
+                    expected: orderCode,
+                    found: voucherInfo.orderCode
+                });
+                return;
+            }
+
+            // Kiểm tra timeout (24 giờ)
+            const now = Date.now();
+            const timeDiff = now - voucherInfo.timestamp;
+            if (timeDiff > 24 * 60 * 60 * 1000) {
+                console.warn('⚠️ Voucher info expired, removing from localStorage');
+                localStorage.removeItem('pendingVoucherUsage');
+                return;
+            }
+
+            // Lấy appUserId từ session
+            let appUserId: number | null = null;
+            if (session?.accessToken) {
+                try {
+                    const tokenData = jwtDecode(session.accessToken) as { sub: string };
+                    const keycloakId = tokenData.sub;
+                    
+                    const userResponse = await fetch(`http://localhost:8080/api/users/keycloak-user/${keycloakId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${session.accessToken}`
+                        }
+                    });
+                    
+                    if (userResponse.ok) {
+                        const response = await userResponse.json();
+                        const appUserData = response.data || response;
+                        if (appUserData && appUserData.appUserId) {
+                            appUserId = appUserData.appUserId;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error getting appUserId:', error);
+                }
+            }
+
+            // Gọi API để lưu voucher usage
+            const applyVoucherPayload = {
+                voucherCode: voucherInfo.voucherCode,
+                orderCode: voucherInfo.orderCode,
+                userId: appUserId,
+                discountAmount: voucherInfo.discountAmount
+            };
+
+            console.log('💾 Applying voucher usage:', applyVoucherPayload);
+
+            const response = await fetch(`http://localhost:8080/api/admin/vouchers/apply-voucher`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(applyVoucherPayload)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log('✅ Voucher usage saved successfully after VNPay payment:', result);
+                // Xóa thông tin voucher khỏi localStorage sau khi lưu thành công
+                localStorage.removeItem('pendingVoucherUsage');
+            } else {
+                const errorText = await response.text().catch(() => 'Unknown error');
+                console.error('❌ Failed to save voucher usage after VNPay payment:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    error: errorText
+                });
+            }
+        } catch (error) {
+            console.error('❌ Error handling voucher usage from storage:', error);
+        }
+    }, [session?.accessToken]);
 
     // Hàm confirm payment với backend (chỉ gọi một lần)**
     const confirmPaymentWithBackend = async (orderCode: string, transactionId: string, token: string): Promise<boolean> => {
@@ -159,6 +235,9 @@ export default function PaymentResultPage() {
                 if (order && order.orderStatus === 'Paid') {
                     console.log('✅ Xác nhận thành công! Trạng thái:', order.orderStatus);
                     
+                    // Xử lý voucher usage nếu có
+                    await handleVoucherUsageFromStorage(orderCode, token);
+                    
                     setIsConfirming(false);
                     setConfirmationComplete(true);
                     
@@ -196,7 +275,7 @@ export default function PaymentResultPage() {
             setIsConfirming(false);
             setConfirmationComplete(true);
         }
-    }, []);
+    }, [handleVoucherUsageFromStorage, router]);
 
     // **FIXED: useEffect chính để khởi chạy logic**
     useEffect(() => {

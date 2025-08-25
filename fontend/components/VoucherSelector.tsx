@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Card, Chip, Divider } from "@heroui/react";
 import { useSession } from "next-auth/react";
 import { jwtDecode } from "jwt-decode";
@@ -174,7 +174,7 @@ export default function VoucherSelector({
         fetchVoucherDetail(voucher.id);
     };
 
-    const fetchAvailableVouchers = async () => {
+    const fetchAvailableVouchers = useCallback(async () => {
         if (!session?.accessToken) {
             setError('Vui lòng đăng nhập để sử dụng voucher');
             return;
@@ -250,6 +250,7 @@ export default function VoucherSelector({
             // Chuẩn bị productIds từ cartItems
             const productIds = cartItems.map(item => item.productId);
 
+            // Tạo request body
             const requestBody = {
                 userId: appUserId,
                 productIds: productIds,
@@ -289,7 +290,7 @@ export default function VoucherSelector({
         } finally {
             setLoading(false);
         }
-    };
+    }, [session, cartItems, totalAmount]);
 
     useEffect(() => {
         if (isOpen) {
@@ -297,7 +298,7 @@ export default function VoucherSelector({
             fetchAvailableVouchers();
             console.log('=== End VoucherSelector useEffect - modal opened ===');
         }
-    }, [isOpen, cartItems, session]); // Bỏ totalAmount khỏi dependencies
+    }, [isOpen, fetchAvailableVouchers]);
 
     const handleSelectVoucher = (voucher: VoucherSummaryDTO) => {
         console.log('=== VoucherSelector handleSelectVoucher ===');

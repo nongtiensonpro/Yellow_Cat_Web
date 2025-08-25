@@ -14,6 +14,33 @@ interface Review {
     createdAt?: string;
 }
 
+// API Response interfaces
+interface ApiReview {
+    id: number;
+    rating: number;
+    comment: string | null;
+    customerName: string | null;
+    customerAvatar?: string;
+    isPurchased: boolean | null;
+    imageUrl?: string;
+    createdAt: string;
+}
+
+interface ApiReviewsResponse {
+    reviews: ApiReview[];
+}
+
+interface StarDistributionItem {
+    star: number;
+    count: number;
+}
+
+interface ApiStatsResponse {
+    averageRating: number;
+    totalReviews: number;
+    starDistribution: StarDistributionItem[];
+}
+
 interface ReviewSectionProps {
     productId: number;
     // Updated: Now sends an object with totalReviews and averageRating
@@ -57,13 +84,13 @@ export default function ReviewSection({ productId, onReviewStatsChange }: Review
             ]);
 
             if (reviewsResponse.ok && statsResponse.ok) {
-                const reviewsData = await reviewsResponse.json();
-                const statsData = await statsResponse.json();
+                const reviewsData: ApiReviewsResponse = await reviewsResponse.json();
+                const statsData: ApiStatsResponse = await statsResponse.json();
 
 
 
                 // Transform API data to match frontend interface
-                const transformedReviews: Review[] = reviewsData.reviews.map((review: any) => ({
+                const transformedReviews: Review[] = reviewsData.reviews.map((review: ApiReview) => ({
                     id: review.id.toString(),
                     rating: review.rating,
                     comment: review.comment || '',
@@ -80,7 +107,7 @@ export default function ReviewSection({ productId, onReviewStatsChange }: Review
 
                 // Transform star distribution
                 const distribution = [0, 0, 0, 0, 0];
-                statsData.starDistribution.forEach((item: any) => {
+                statsData.starDistribution.forEach((item: StarDistributionItem) => {
                     if (item.star >= 1 && item.star <= 5) {
                         distribution[item.star - 1] = item.count;
                     }
