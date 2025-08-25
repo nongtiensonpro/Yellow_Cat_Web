@@ -27,6 +27,7 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Integer> {
                     "oi.price_at_purchase AS priceAtPurchase, " +
                     "oi.total_price AS totalPrice, " +
                     "pv.variant_id AS variantId, " +
+                    "p.product_id AS productId, " +
                     "pv.sku AS sku, " +
                     "p.product_name AS productName, " +
                     "c.color_name AS colorName, " +
@@ -61,6 +62,7 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Integer> {
                     "oi.price_at_purchase AS priceAtPurchase, " +
                     "oi.total_price AS totalPrice, " +
                     "pv.variant_id AS variantId, " +
+                    "p.product_id AS productId, " +
                     "pv.sku AS sku, " +
                     "p.product_name AS productName, " +
                     "c.color_name AS colorName, " +

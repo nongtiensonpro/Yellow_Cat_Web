@@ -36,5 +36,9 @@ public interface OderOnlineRepository extends JpaRepository<Order, Integer> {
             @Param("cutoffTime") LocalDateTime cutoffTime);
 
     List<Order> findByUserAndOrderStatus(AppUser user, String orderStatus);
+    
+    @Query("SELECT DISTINCT o FROM Order o JOIN FETCH o.orderItems oi JOIN FETCH oi.variant v JOIN FETCH v.product WHERE o.user = :user AND o.orderStatus = :orderStatus")
+    List<Order> findByUserAndOrderStatusWithItems(@Param("user") AppUser user, @Param("orderStatus") String orderStatus);
+    
     List<Order> findByPhoneNumber(String phoneNumber);
 }

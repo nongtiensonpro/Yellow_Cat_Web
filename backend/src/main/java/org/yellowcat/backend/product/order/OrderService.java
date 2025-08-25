@@ -4,7 +4,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.flywaydb.core.internal.util.StringUtils;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -834,6 +834,7 @@ public class OrderService {
         dto.setPriceAtPurchase(projection.getPriceAtPurchase());
         dto.setTotalPrice(projection.getTotalPrice());
         dto.setVariantId(projection.getVariantId());
+        dto.setProductId(projection.getProductId()); // Set productId
         dto.setSku(projection.getSku());
         dto.setProductName(projection.getProductName());
         dto.setColorName(projection.getColorName());

@@ -70,7 +70,8 @@ public class SecurityConfig {
                                 "/api/vnpay/**",
                                 "/api/ghn/**",
                                 "/api/examples/**",
-                                "/api/products/variant/**")
+                                "/api/products/variant/**",
+                                "/api/reviews/**")
                         .permitAll()
 
                         // Thêm các đường dẫn Swagger UI và API docs
