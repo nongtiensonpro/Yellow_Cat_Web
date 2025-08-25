@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import {useEffect, useState, useCallback, useRef} from 'react';
+import {useSession} from 'next-auth/react';
+import {useRouter, useSearchParams} from 'next/navigation';
 import {
     Table,
     TableHeader,
@@ -21,27 +21,13 @@ import {
     Input
 } from "@heroui/react";
 import EditFromOrder from './EditFromOrder';
-import { useOrderStore } from './orderStore';
+import {useOrderStore} from './orderStore';
 
 const statusMap: { [key: string]: string } = {
     all: 'Tất cả đơn hàng',
     Pending: 'Chờ thanh toán',
     Paid: 'Đã thanh toán',
 };
-
-interface AppUser {
-    appUserId: number;
-    keycloakId: string;
-    username: string;
-    email: string;
-    roles: string[];
-    enabled: boolean;
-    fullName: string;
-    phoneNumber: string;
-    avatarUrl: string;
-    createdAt: string;
-    updatedAt: string;
-}
 
 interface Order {
     orderId: number;
@@ -54,18 +40,10 @@ interface Order {
     discountAmount: number;
 }
 
-interface ApiResponse {
-    status: number;
-    message: string;
-    data: AppUser;
-    error?: string;
-}
-
 export default function PurchaseOrder() {
-    const { data: session } = useSession();
+    const {data: session} = useSession();
     const router = useRouter();
     const searchParams = useSearchParams();
-
 
     // Định nghĩa giới hạn tạo hóa đơn mới
     const MAX_ORDER_CREATION_LIMIT = 5;
@@ -79,7 +57,7 @@ export default function PurchaseOrder() {
     const [searchResults, setSearchResults] = useState<Order[]>([]);
     const [isSearchMode, setIsSearchMode] = useState(false);
     const [isPendingSearch, setIsPendingSearch] = useState(false); // Trạng thái chờ tìm kiếm
-    
+
     // Ref cho debounce timer
     const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -107,17 +85,8 @@ export default function PurchaseOrder() {
         openEditOrder,
     } = useOrderStore();
 
-
-
     // Extract complex expressions for dependency arrays
     const sessionAccessToken = session?.accessToken;
-    const sessionUserId = session?.user?.id;
-
-
-
-
-
-
 
     // Handler để xem chi tiết đơn hàng
     const handleViewDetails = useCallback((order: Order) => {
@@ -134,7 +103,7 @@ export default function PurchaseOrder() {
     // Tự động mở order khi có query parameter viewOrder
     useEffect(() => {
         if (!searchParams) return;
-        
+
         const viewOrderCode = searchParams.get('viewOrder');
         if (viewOrderCode && orders.length > 0 && !isEditMode) {
             const orderToOpen = orders.find(order => order.orderCode === viewOrderCode);
@@ -149,7 +118,7 @@ export default function PurchaseOrder() {
 
     // Function to show a toast message (only warning/error now)
     const showToast = useCallback((message: string, type: 'error' | 'warning' = 'warning') => {
-        setToastMessage({ message, type });
+        setToastMessage({message, type});
         const timer = setTimeout(() => {
             setToastMessage(null);
         }, 5000); // Hide after 5 seconds
@@ -161,7 +130,7 @@ export default function PurchaseOrder() {
         if (!session?.accessToken) return;
 
         const term = searchTerm.trim();
-        
+
         // Kiểm tra có dữ liệu không
         if (!term) {
             showToast('Vui lòng nhập thông tin để tìm kiếm', 'warning');
@@ -173,7 +142,7 @@ export default function PurchaseOrder() {
             const url = new URL('http://localhost:8080/api/orders/search/simple');
             url.searchParams.append('page', '0');
             url.searchParams.append('size', '50'); // Tăng size để hiển thị nhiều kết quả hơn
-            
+
             // Tìm kiếm thông minh - gửi cùng một giá trị cho cả 3 trường
             // Backend sẽ tự động tìm trong tất cả các trường
             url.searchParams.append('orderCode', term);
@@ -192,10 +161,10 @@ export default function PurchaseOrder() {
 
             const responseData = await res.json();
             const results = responseData?.data?.content || [];
-            
+
             setSearchResults(results);
             setIsSearchMode(true);
-            
+
             if (results.length === 0) {
                 showToast('Không tìm thấy đơn hàng nào phù hợp với thông tin tìm kiếm', 'warning');
             }
@@ -214,12 +183,12 @@ export default function PurchaseOrder() {
             clearTimeout(debounceTimerRef.current);
             debounceTimerRef.current = null;
         }
-        
+
         setSearchTerm('');
         setSearchResults([]);
         setIsSearchMode(false);
         setIsPendingSearch(false);
-        
+
         // Tải lại danh sách đơn hàng ban đầu
         if (session?.accessToken) {
             fetchOrders(session);
@@ -233,17 +202,17 @@ export default function PurchaseOrder() {
             clearTimeout(debounceTimerRef.current);
             debounceTimerRef.current = null;
         }
-        
+
         // Reset search state
         setSearchTerm('');
         setSearchResults([]);
         setIsSearchMode(false);
         setIsSearching(false);
         setIsPendingSearch(false);
-        
+
         // Reset toast message
         setToastMessage(null);
-        
+
         // Fetch lại dữ liệu từ đầu
         if (session?.accessToken) {
             fetchOrders(session);
@@ -270,7 +239,7 @@ export default function PurchaseOrder() {
         }
 
         const term = searchTerm.trim();
-        
+
         // Nếu không có gì để tìm, reset về danh sách ban đầu
         if (!term) {
             setIsPendingSearch(false);
@@ -333,11 +302,11 @@ export default function PurchaseOrder() {
     const renderTableContent = () => {
         // Hiển thị loading cho tìm kiếm
         if (isSearching) {
-            return <div className="flex justify-center items-center h-64"><Spinner label="Đang tìm kiếm..." /></div>;
+            return <div className="flex justify-center items-center h-64"><Spinner label="Đang tìm kiếm..."/></div>;
         }
 
         if (loading && !isSearchMode) {
-            return <div className="flex justify-center items-center h-64"><Spinner label="Đang tải..." /></div>;
+            return <div className="flex justify-center items-center h-64"><Spinner label="Đang tải..."/></div>;
         }
 
         if (error && !isSearchMode) {
@@ -396,16 +365,18 @@ export default function PurchaseOrder() {
                             <TableCell>{order.phoneNumber || 'Không có thông tin'}</TableCell>
                             <TableCell>
                                 <div className="flex flex-col gap-1">
-                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${order.orderStatus === 'Paid' ? 'bg-green-100 text-green-800' :
-                                        'bg-gray-100 text-gray-800'
-                                    }`}>
+                                    <span
+                                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${order.orderStatus === 'Paid' ? 'bg-green-100 text-green-800' :
+                                            'bg-gray-100 text-gray-800'
+                                        }`}>
                                         {order.orderStatus === 'Paid' ? '' : ''}
                                         {' '}
                                         {statusMap[order.orderStatus as keyof typeof statusMap] || order.orderStatus}
                                     </span>
                                 </div>
                             </TableCell>
-                            <TableCell className="text-right">{order.finalAmount.toLocaleString('vi-VN')} VND</TableCell>
+                            <TableCell
+                                className="text-right">{order.finalAmount.toLocaleString('vi-VN')} VND</TableCell>
                             <TableCell className="flex gap-2">
                                 <Button
                                     size="sm"
@@ -415,7 +386,7 @@ export default function PurchaseOrder() {
                                 >
                                     {order.orderStatus === 'Paid' ? ' Xem chi tiết' : ' Xử lý đơn hàng'}
                                 </Button>
-                                {order.orderStatus!='Paid' &&<Button
+                                {order.orderStatus != 'Paid' && <Button
                                     size="sm"
                                     color="danger"
                                     variant="flat"
@@ -431,11 +402,9 @@ export default function PurchaseOrder() {
         )
     };
 
-
-
     // Conditional rendering based on store state
     if (isEditMode) {
-        return <EditFromOrder />;
+        return <EditFromOrder/>;
     }
 
     return (
@@ -471,17 +440,17 @@ export default function PurchaseOrder() {
                         onClick={handleRefresh}
                         disabled={isCreating || isSearching}
                         startContent={
-                            <svg 
-                                className="w-4 h-4" 
-                                fill="none" 
-                                stroke="currentColor" 
+                            <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
                                 viewBox="0 0 24 24"
                             >
-                                <path 
-                                    strokeLinecap="round" 
-                                    strokeLinejoin="round" 
-                                    strokeWidth={2} 
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                                 />
                             </svg>
                         }
@@ -493,7 +462,7 @@ export default function PurchaseOrder() {
                         onClick={handleCreateOrder}
                         disabled={isCreating}
                     >
-                        {isCreating ? <Spinner color="white" size="sm" /> : "Tạo Đơn Hàng Mới"}
+                        {isCreating ? <Spinner color="white" size="sm"/> : "Tạo Đơn Hàng Mới"}
                     </Button>
                 </div>
             </div>
@@ -510,17 +479,17 @@ export default function PurchaseOrder() {
                                 size="sm"
                                 onPress={handleClearSearch}
                                 startContent={
-                                    <svg 
-                                        className="w-4 h-4" 
-                                        fill="none" 
-                                        stroke="currentColor" 
+                                    <svg
+                                        className="w-4 h-4"
+                                        fill="none"
+                                        stroke="currentColor"
                                         viewBox="0 0 24 24"
                                     >
-                                        <path 
-                                            strokeLinecap="round" 
-                                            strokeLinejoin="round" 
-                                            strokeWidth={2} 
-                                            d="M6 18L18 6M6 6l12 12" 
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M6 18L18 6M6 6l12 12"
                                         />
                                     </svg>
                                 }
@@ -542,38 +511,38 @@ export default function PurchaseOrder() {
                             size="lg"
                             startContent={
                                 isPendingSearch ? (
-                                    <Spinner size="sm" color="primary" />
+                                    <Spinner size="sm" color="primary"/>
                                 ) : (
-                                    <svg 
-                                        className="w-5 h-5 text-gray-400" 
-                                        fill="none" 
-                                        stroke="currentColor" 
+                                    <svg
+                                        className="w-5 h-5 text-gray-400"
+                                        fill="none"
+                                        stroke="currentColor"
                                         viewBox="0 0 24 24"
                                     >
-                                        <path 
-                                            strokeLinecap="round" 
-                                            strokeLinejoin="round" 
-                                            strokeWidth={2} 
-                                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                                         />
                                     </svg>
                                 )
                             }
-                            description={
-                                isPendingSearch 
-                                    ? "⏳ Đang chuẩn bị tìm kiếm..." 
-                                    : "🚀 Tìm kiếm tự động: Hệ thống sẽ tự động tìm kiếm khi bạn ngừng nhập"
-                            }
+                            // description={
+                            //     isPendingSearch
+                            //         ? "⏳ Đang chuẩn bị tìm kiếm..."
+                            //         : "🚀 Tìm kiếm tự động: Hệ thống sẽ tự động tìm kiếm khi bạn ngừng nhập"
+                            // }
                         />
                     </div>
                     {/* Hiển thị trạng thái tìm kiếm */}
                     {isSearching && (
                         <div className="flex items-center justify-center mt-3 p-2 bg-blue-50 rounded-lg">
-                            <Spinner size="sm" color="primary" />
+                            <Spinner size="sm" color="primary"/>
                             <span className="ml-2 text-sm text-blue-700">Đang tìm kiếm...</span>
                         </div>
                     )}
-                    
+
                     {/* Nút xóa nội dung chỉ hiển thị khi có text */}
                     {searchTerm && (
                         <div className="flex justify-end mt-3">
@@ -584,7 +553,8 @@ export default function PurchaseOrder() {
                                 disabled={isSearching}
                                 startContent={
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                              d="M6 18L18 6M6 6l12 12"/>
                                     </svg>
                                 }
                             >
@@ -596,10 +566,11 @@ export default function PurchaseOrder() {
                         <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
                             <div className="flex items-center justify-between flex-wrap gap-2">
                                 <p className="text-sm text-blue-700">
-                                    📋 Đang hiển thị kết quả tìm kiếm cho: "<span className="font-semibold">{searchTerm}</span>" ({searchResults.length} đơn hàng)
+                                    📋 Đang hiển thị kết quả tìm kiếm cho: <span
+                                    className="font-semibold">{searchTerm}</span> ({searchResults.length} đơn hàng)
                                 </p>
                                 <p className="text-xs text-blue-600">
-                                    💡 Dùng nút "Làm mới" hoặc "Xóa tìm kiếm" để quay lại danh sách đầy đủ
+                                    💡 Dùng nút Làm mới hoặc Xóa tìm kiếm để quay lại danh sách đầy đủ
                                 </p>
                             </div>
                         </div>
@@ -609,17 +580,19 @@ export default function PurchaseOrder() {
                     {isSearchMode && searchResults.length === 0 && !isSearching && (
                         <div className="mt-3 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                             <div className="flex items-start gap-3">
-                                <svg className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                                <svg className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" fill="none"
+                                     stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"/>
                                 </svg>
                                 <div className="flex-1">
                                     <p className="text-sm font-medium text-yellow-800">
-                                        Không tìm thấy đơn hàng phù hợp với "{searchTerm}"
+                                        Không tìm thấy đơn hàng phù hợp với {searchTerm}
                                     </p>
                                     <p className="text-xs text-yellow-700 mt-1">
                                         • Thử tìm kiếm với từ khóa khác<br/>
                                         • Kiểm tra lại chính tả<br/>
-                                        • Nhấn "Làm mới" để xem tất cả đơn hàng
+                                        • Nhấn Làm mới để xem tất cả đơn hàng
                                     </p>
                                 </div>
                             </div>
@@ -629,10 +602,10 @@ export default function PurchaseOrder() {
             </Card>
 
 
-
             {/* Error handling from store */}
             {error && !isCreating && (
-                <div className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
+                <div className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
+                     role="alert">
                     <span className="font-medium">Lỗi!</span> {error}
                     <Button
                         size="sm"
@@ -673,8 +646,6 @@ export default function PurchaseOrder() {
                     </div>
                 )}
             </div>
-
-
         </div>
     );
 }
