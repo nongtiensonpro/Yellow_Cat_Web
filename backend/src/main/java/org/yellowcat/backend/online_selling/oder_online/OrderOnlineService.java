@@ -170,7 +170,7 @@ public class OrderOnlineService {
         Order savedOrder = orderRepository.save(order);
 
         // gắn voucher cho đơn hàng
-        if (request.getCodeVoucher() != null && !request.getCodeVoucher().trim().isEmpty()) {
+        if(request.getCodeVoucher() != null) {
             voucherService1.applyVoucher(request.getCodeVoucher(), savedOrder, user != null ? user.getAppUserId() : null);
         }
 

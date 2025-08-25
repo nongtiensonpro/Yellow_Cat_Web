@@ -28,7 +28,7 @@ public class OrderOnlineController {
         try {
             Order order = orderOnlineService.createOrderFromOnlineRequest(requestDTO);
             String message = "Đơn hàng " + order.getOrderCode() + " đang chờ xét duyệt.";
-            return ResponseEntity.ok(message);
+            return ResponseEntityBuilder.success(message, null);
         } catch (RuntimeException e) {
             return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "Tạo đơn hàng thất bại", e.getMessage());
         }
@@ -40,11 +40,9 @@ public class OrderOnlineController {
             Order order = orderOnlineService.cancelOrder(orderId);
             return ResponseEntity.ok("Huỷ đơn hàng thành công: " + order.getOrderCode());
         } catch (RuntimeException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", e.getMessage());
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
-                    .body(errorResponse);
+                    .body(Map.of("message", e.getMessage()));
         }
     }
 
@@ -54,11 +52,8 @@ public class OrderOnlineController {
             var orders = orderOnlineService.getAllOnlineOrdersWithShipping();
             return ResponseEntity.ok(orders);
         } catch (RuntimeException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Lỗi khi lấy danh sách đơn hàng");
-            errorResponse.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(errorResponse);
+                    .body(Map.of("message", "Lỗi khi lấy danh sách đơn hàng", "error", e.getMessage()));
         }
     }
 
@@ -68,11 +63,8 @@ public class OrderOnlineController {
             List<OrderSummaryDTO> orders = orderOnlineService.getOnlineOrdersByStatus(status);
             return ResponseEntity.ok(orders);
         } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Lỗi khi lấy danh sách đơn hàng");
-            errorResponse.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(errorResponse);
+                    .body(Map.of("message", "Lỗi khi lấy danh sách đơn hàng", "error", e.getMessage()));
         }
     }
 
@@ -82,9 +74,7 @@ public class OrderOnlineController {
             List<OrderSummaryDTO> orders = orderOnlineService.getOrdersByStatusGroup(group);
             return ResponseEntity.ok(orders);
         } catch (IllegalArgumentException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.badRequest().body(errorResponse);
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -94,9 +84,7 @@ public class OrderOnlineController {
             OrderOnlineDetailDTO detail = orderOnlineService.getOrderDetail(orderId);
             return ResponseEntity.ok(detail);
         } catch (RuntimeException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
         }
     }
 

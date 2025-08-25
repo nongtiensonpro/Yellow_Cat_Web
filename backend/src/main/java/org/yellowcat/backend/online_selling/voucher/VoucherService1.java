@@ -916,9 +916,18 @@ public class VoucherService1 {
 
     //  tinsh toongr soos tieenf sau khi ap dung ma
     public BigDecimal calculateAmountAfterDiscout(String code, BigDecimal subtotal, BigDecimal shippingFee) {
+        System.out.println("=== calculateAmountAfterDiscout ===");
+        System.out.println("Code: " + code);
+        System.out.println("Subtotal: " + subtotal);
+        System.out.println("ShippingFee: " + shippingFee);
+
         Voucher voucher = getVoucherByCode(code);
         BigDecimal discountAmount = calculateDiscountAmount(subtotal, voucher, shippingFee);
         discountAmount = applyDiscountCap(discountAmount, voucher, subtotal, shippingFee);
+
+        System.out.println("Final discount amount: " + discountAmount);
+        System.out.println("=== End calculateAmountAfterDiscout ===");
+
         return discountAmount; // Trả về số tiền được giảm, không phải số tiền còn lại
     }
 
@@ -938,12 +947,36 @@ public class VoucherService1 {
     public List<VoucherSummaryDTO> getAvailableVoucherSummariesForUser(
             Integer userId, List<Integer> productIds, BigDecimal orderTotal) {
 
-        List<Voucher> activeVouchers = voucherRepository.findAllByIsActive(true);
+        System.out.println("=== getAvailableVoucherSummariesForUser ===");
+        System.out.println("userId: " + userId);
+        System.out.println("productIds: " + productIds);
+        System.out.println("orderTotal: " + orderTotal);
 
-        return activeVouchers.stream()
-                .map(voucher -> buildVoucherSummary(voucher, userId, productIds, orderTotal))
-                .filter(dto -> dto != null)
-                .collect(Collectors.toList());
+        try {
+            List<Voucher> activeVouchers = voucherRepository.findAllByIsActive(true);
+            System.out.println("Found " + activeVouchers.size() + " active vouchers");
+
+            List<VoucherSummaryDTO> result = activeVouchers.stream()
+                    .map(voucher -> {
+                        try {
+                            return buildVoucherSummary(voucher, userId, productIds, orderTotal);
+                        } catch (Exception e) {
+                            System.out.println("Error building voucher summary for voucher " + voucher.getId() + ": " + e.getMessage());
+                            e.printStackTrace();
+                            return null;
+                        }
+                    })
+                    .filter(dto -> dto != null)
+                    .collect(Collectors.toList());
+
+            System.out.println("Returning " + result.size() + " voucher summaries");
+            System.out.println("=== End getAvailableVoucherSummariesForUser ===");
+            return result;
+        } catch (Exception e) {
+            System.out.println("Error in getAvailableVoucherSummariesForUser: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     /**
@@ -980,33 +1013,47 @@ public class VoucherService1 {
     private VoucherSummaryDTO buildVoucherSummary(Voucher voucher, Integer userId,
                                                   List<Integer> productIds, BigDecimal orderTotal) {
 
-        VoucherSummaryDTO dto = new VoucherSummaryDTO();
-        dto.setId(voucher.getId());
-        dto.setCode(voucher.getCode());
-        // Sử dụng name thực sự của voucher
-        dto.setName(voucher.getName() != null ? voucher.getName() : voucher.getDescription());
-        dto.setStartDate(voucher.getStartDate());
-        dto.setEndDate(voucher.getEndDate());
+        System.out.println("Building voucher summary for voucher ID: " + voucher.getId());
 
-        boolean isUsed = isVoucherUsedByUser(voucher, userId);
-        dto.setUsedStatus(isUsed ? "Đã sử dụng" : "Chưa sử dụng");
+        try {
+            VoucherSummaryDTO dto = new VoucherSummaryDTO();
+            dto.setId(voucher.getId());
+            dto.setCode(voucher.getCode());
+            // Sử dụng name thực sự của voucher
+            dto.setName(voucher.getName() != null ? voucher.getName() : voucher.getDescription());
+            dto.setStartDate(voucher.getStartDate());
+            dto.setEndDate(voucher.getEndDate());
 
-        if (isUsed) {
-            dto.setEligible(false);
-            dto.setStatus("Đã sử dụng");
-        } else {
-            VoucherEligibilityResult result = checkVoucherEligibility(voucher, userId, productIds, orderTotal);
-            dto.setEligible(result.isEligible());
+            System.out.println("Checking if voucher is used by user...");
+            boolean isUsed = isVoucherUsedByUser(voucher, userId);
+            dto.setUsedStatus(isUsed ? "Đã sử dụng" : "Chưa sử dụng");
+            System.out.println("Voucher used by user: " + isUsed);
 
-            if (result.isEligible()) {
-                dto.setStatus("Áp dụng được");
+            if (isUsed) {
+                dto.setEligible(false);
+                dto.setStatus("Đã sử dụng");
+
             } else {
-                String reason = String.join("; ", result.getFailureReasons());
-                dto.setStatus("Không áp dụng: " + reason);
-            }
-        }
+                System.out.println("Checking voucher eligibility...");
+                VoucherEligibilityResult result = checkVoucherEligibility(voucher, userId, productIds, orderTotal);
+                dto.setEligible(result.isEligible());
 
-        return dto;
+                if (result.isEligible()) {
+                    dto.setStatus("Áp dụng được");
+                } else {
+                    String reason = String.join("; ", result.getFailureReasons());
+                    dto.setStatus("Không áp dụng: " + reason);
+                }
+                System.out.println("Voucher eligible: " + result.isEligible());
+            }
+
+            System.out.println("Built voucher summary successfully");
+            return dto;
+        } catch (Exception e) {
+            System.out.println("Error building voucher summary: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     /**
