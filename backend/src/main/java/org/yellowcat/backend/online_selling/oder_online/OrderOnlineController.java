@@ -28,6 +28,7 @@ public class OrderOnlineController {
         try {
             Order order = orderOnlineService.createOrderFromOnlineRequest(requestDTO);
             String message = "Đơn hàng " + order.getOrderCode() + " đang chờ xét duyệt.";
+
             return ResponseEntityBuilder.success(message, null);
         } catch (RuntimeException e) {
             return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "Tạo đơn hàng thất bại", e.getMessage());

@@ -27,4 +27,5 @@ public class OrderOnlineRequestDTO {
     private Integer shippingMethodId;
     private String orderStatus;
     private String codeVoucher;
+    private String email;
 }

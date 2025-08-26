@@ -55,7 +55,7 @@ public class SecurityConfig {
                                 "/api/users/**",
                                 "/api/addresses/**",
                                 "/api/address/**",
-                                "/api/users/**",
+                                "/api/admin/vouchers/**",
                                 "/api/ghtk/**",
                                 "/api/chat/**",
                                 "/api/bot/**",
