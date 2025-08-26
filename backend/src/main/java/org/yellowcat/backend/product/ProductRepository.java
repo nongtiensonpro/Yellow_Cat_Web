@@ -290,4 +290,65 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
             """, nativeQuery = true)
     List<Object[]> findVariantPromotions(@Param("variantId") Integer variantId);
 
+    // Query tối ưu cho AI - lấy tổng quan sản phẩm
+    @Query(nativeQuery = true, value = """
+            SELECT 
+                p.product_id,
+                p.product_name,
+                p.description,
+                b.brand_name,
+                c.category_name,
+                ta.audience_name as target_audience,
+                m.material_name,
+                
+                -- Thông tin giá
+                COALESCE(MIN(pv.price), 0) as min_price,
+                COALESCE(MAX(pv.price), 0) as max_price,
+                COALESCE(MIN(CASE WHEN pv.sale_price > 0 THEN pv.sale_price END), 0) as min_sale_price,
+                
+                -- Thông tin tồn kho và bán hàng
+                COALESCE(SUM(pv.quantity_in_stock), 0) as total_stock,
+                COALESCE(SUM(pv.sold), 0) as total_sold,
+                COALESCE(p.purchases, 0) as purchases,
+                
+                -- Màu sắc và kích thước có sẵn
+                STRING_AGG(DISTINCT co.color_name, ', ' ORDER BY co.color_name) as available_colors,
+                STRING_AGG(DISTINCT s.size_name, ', ' ORDER BY s.size_name) as available_sizes,
+                
+                -- Đánh giá trung bình
+                COALESCE(ROUND(AVG(r.rating), 1), 0.0) as average_rating,
+                COALESCE(COUNT(r.review_id), 0) as total_reviews,
+                
+                -- Trạng thái
+                p.is_active,
+                p.is_featured,
+                
+                -- Kiểm tra có khuyến mãi không
+                CASE 
+                    WHEN EXISTS (
+                        SELECT 1 FROM promotion_products pp 
+                        JOIN promotions pr ON pr.promotion_id = pp.promotion_id 
+                        WHERE pp.variant_id IN (SELECT pv2.variant_id FROM product_variants pv2 WHERE pv2.product_id = p.product_id)
+                        AND pr.is_active = TRUE 
+                        AND NOW() BETWEEN pr.start_date AND pr.end_date
+                    ) THEN TRUE 
+                    ELSE FALSE 
+                END as has_promotion
+                
+            FROM products p
+            LEFT JOIN brands b ON p.brand_id = b.brand_id
+            LEFT JOIN categories c ON p.category_id = c.category_id
+            LEFT JOIN target_audiences ta ON p.target_audience_id = ta.target_audience_id
+            LEFT JOIN materials m ON p.material_id = m.material_id
+            LEFT JOIN product_variants pv ON p.product_id = pv.product_id
+            LEFT JOIN colors co ON pv.color_id = co.color_id
+            LEFT JOIN sizes s ON pv.size_id = s.size_id
+            LEFT JOIN reviews r ON p.product_id = r.product_id
+            WHERE p.is_active = TRUE
+            GROUP BY p.product_id, p.product_name, p.description, b.brand_name, c.category_name, 
+                     ta.audience_name, m.material_name, p.purchases, p.is_active, p.is_featured
+            ORDER BY p.is_featured DESC, p.purchases DESC, p.product_id
+            """)
+    List<Object[]> findProductsOverviewForAI();
+
 }

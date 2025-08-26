@@ -18,7 +18,7 @@ const AIReviewSummary = ({ reviews }: AIReviewSummaryProps) => {
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
 
-    const apiKey = 'AIzaSyCW1jh4rRrAIDeji8I1pwSt_6JraiyY_CY';
+    const apiKey = 'AIzaSyBIYJJNMbe-QBA2Z1uihw_iqywxtmei9jo';
 
     const generateSummary = async (reviewsData: Review[]) => {
         try {

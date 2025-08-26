@@ -9,6 +9,67 @@
   .animate-fade-in-up {
     animation: fadeInUp 0.8s cubic-bezier(0.39, 0.575, 0.565, 1) both;
   }
+  
+  /* Chat message animations */
+  .animate-message-in {
+    animation: messageIn 0.3s ease-out;
+  }
+  
+  /* Custom scrollbar for chat */
+  .chat-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .chat-scrollbar::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+  }
+  
+  .chat-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+  
+  .chat-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+  
+  /* Prose styling for AI messages */
+  .ai-message-content h1,
+  .ai-message-content h2,
+  .ai-message-content h3,
+  .ai-message-content h4 {
+    margin: 0.5rem 0;
+    font-weight: 600;
+  }
+  
+  .ai-message-content p {
+    margin: 0.3rem 0;
+    line-height: 1.4;
+  }
+  
+  .ai-message-content ul,
+  .ai-message-content ol {
+    margin: 0.5rem 0;
+    padding-left: 1.2rem;
+  }
+  
+  .ai-message-content li {
+    margin: 0.2rem 0;
+  }
+  
+  .ai-message-content strong {
+    font-weight: 600;
+    color: #1e293b;
+  }
+  
+  .ai-message-content code {
+    background: rgba(0, 0, 0, 0.05);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-family: ui-monospace, monospace;
+    font-size: 0.85em;
+  }
 }
 
 @keyframes fadeIn {
@@ -19,4 +80,15 @@
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(40px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes messageIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(10px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
 }

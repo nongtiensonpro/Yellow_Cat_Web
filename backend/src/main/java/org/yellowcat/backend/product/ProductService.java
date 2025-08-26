@@ -62,6 +62,49 @@ public class ProductService {
                 .map(this::refreshPromotionForProductListItem)
                 .collect(Collectors.toList());
     }
+
+    /**
+     * Lấy tổng quan sản phẩm tối ưu cho AI
+     * Trả về thông tin ngắn gọn nhưng đầy đủ để AI có thể đưa ra lời khuyên tốt nhất
+     */
+    public List<ProductOverviewForAIDTO> getProductsOverviewForAI() {
+        List<Object[]> results = productRepository.findProductsOverviewForAI();
+        
+        return results.stream().map(row -> {
+            return new ProductOverviewForAIDTO(
+                (Integer) row[0],  // productId
+                (String) row[1],   // productName
+                (String) row[2],   // description
+                (String) row[3],   // brandName
+                (String) row[4],   // categoryName
+                (String) row[5],   // targetAudience
+                (String) row[6],   // materialName
+                
+                // Thông tin giá cả
+                (BigDecimal) row[7],  // minPrice
+                (BigDecimal) row[8],  // maxPrice
+                (BigDecimal) row[9],  // minSalePrice
+                
+                // Thông tin tồn kho và bán hàng
+                ((Number) row[10]).intValue(),   // totalStock
+                ((Number) row[11]).intValue(),  // totalSold
+                (Integer) row[12], // purchases
+                
+                // Thông tin màu sắc và kích thước
+                (String) row[13],  // availableColors
+                (String) row[14],  // availableSizes
+                
+                // Thông tin đánh giá
+                ((Number) row[15]).doubleValue(), // averageRating
+                ((Number) row[16]).intValue(),    // totalReviews
+                
+                // Trạng thái
+                (Boolean) row[17], // isActive
+                (Boolean) row[18], // isFeatured
+                (Boolean) row[19]  // hasPromotion
+            );
+        }).collect(Collectors.toList());
+    }
     public Page<ProductListItemDTO> getProductsPaginated(Pageable pageable) {
         int pageSize = pageable.getPageSize();
         int offset = (int) pageable.getOffset();
