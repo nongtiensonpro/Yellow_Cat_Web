@@ -408,15 +408,24 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                 onClose();
             } else {
                 let errorText = '';
-                let errorData: { message?: string; error?: string; title?: string; fieldErrors?: Array<{ field?: string; name?: string; message?: string; defaultMessage?: string }>; errors?: Array<{ field?: string; name?: string; message?: string; defaultMessage?: string }> } | null = null;
+                let errorData: any = null;
+                const contentType = res.headers.get('content-type') || '';
                 try {
-                    errorData = await res.json();
+                    if (contentType.toLowerCase().includes('application/json')) {
+                        errorData = await res.json();
+                    } else {
+                        errorText = await res.text();
+                    }
                 } catch {
-                    errorText = await res.text();
+                    try {
+                        errorText = await res.text();
+                    } catch {
+                        errorText = '';
+                    }
                 }
                 const messageRaw = (errorData && (errorData.message || errorData.error || errorData.title)) || errorText || '';
                 const message = String(messageRaw || '').trim();
-                console.error('Backend error:', { status: res.status, message, errorData });
+                console.error('Backend error:', { status: res.status, message, errorData, errorText });
 
                 // Try field-level errors array (common pattern)
                 let mapped = false;
@@ -451,7 +460,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                 // Message-based mapping (VN/EN, case-insensitive)
                 const lower = message.toLowerCase();
                 // Prioritize code-related errors first to focus the correct field
-                if (!mapped && (lower.includes('mã giảm') || lower.includes('voucher') || lower.includes('code'))) {
+                if (!mapped && (lower.includes('mã giảm'))) {
                     if (lower.includes('đã tồn tại') || lower.includes('exists') || lower.includes('duplicate')) {
                         setErrors(prev => ({ ...prev, voucherCode: 'Mã voucher bị trùng' }));
                         setTimeout(() => codeRef.current?.focus(), 0);
@@ -462,7 +471,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                         mapped = true;
                     }
                 }
-                if (!mapped && (lower.includes('đợt giảm') || lower.includes('khuyến mãi') || lower.includes('promotion'))) {
+                if (!mapped && (lower.includes('đợt giảm') || lower.includes('khuyến mãi'))) {
                     if (lower.includes('đã tồn tại') || lower.includes('exists') || lower.includes('duplicate')) {
                         setErrors(prev => ({ ...prev, promotionName: 'Tên đợt giảm giá bị trùng' }));
                         setTimeout(() => nameRef.current?.focus(), 0);
@@ -3327,7 +3336,7 @@ export default function VouchersPage() {
                                                     <div className="space-y-3">
                                                         <h4 className="font-medium text-gray-700 border-b pb-2">Thông tin sử dụng</h4>
                                                         <div>
-                                                            <span className="text-sm text-gray-600">Số lượt tối đa:</span>
+                                                            <span className="text-sm text-gray-600">Số lượt sử d:</span>
                                                             <p className="font-medium">{selectedVoucherDetail.maxUsage.toLocaleString()}</p>
                                                         </div>
                                                         <div>

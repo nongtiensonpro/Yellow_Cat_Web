@@ -124,6 +124,8 @@ interface OrderTimeline {
     toStatus: string;
     note: string;
     changedAt: string;
+    updatedBy: string | null;
+    emailUserUpdate: string | null;
 }
 
 interface OrderOnlineDetail {
@@ -465,6 +467,11 @@ export default function OrdersManagementPage() {
         'ReturnedToSeller',
     ];
 
+    //lấy ra id keycloak để nhận diện người xử lí đơn hàng
+    let keycloakid = '';
+    if (session?.user?.id) {
+        keycloakid = session.user.id;
+    }
     // Hàm gọi API update trạng thái trực tiếp, không popup
     const updateStatusDirectly = async (orderId: number, newStatus: string) => {
         setActionLoading(orderId);
@@ -474,6 +481,7 @@ export default function OrdersManagementPage() {
                 newStatus,
                 note: 'Tự động chuyển trạng thái',
                 imageUrls: [],
+                keycloakid,
             };
             const response = await fetch('http://localhost:8080/api/order-timelines/admin/update', {
                 method: 'POST',
@@ -525,6 +533,7 @@ export default function OrdersManagementPage() {
             newStatus: pendingStatusUpdate.newStatus,
             note: statusNote || 'Admin xác nhận đơn',
             imageUrls: allImageUrls,
+            keycloakid,
         };
         
         console.log('Body gửi lên cập nhật trạng thái:', body);
@@ -1353,6 +1362,12 @@ export default function OrdersManagementPage() {
                                                                                                 </p>
                                                                                                 <p className="text-xs text-gray-500 mt-1">
                                                                                                     {formatDateTime(timeline.changedAt)}
+                                                                                                </p>
+                                                                                                <p className="text-xs text-gray-500 mt-1">
+                                                                                                    <span className="font-medium">Cập nhật bởi:</span> {timeline.updatedBy || 'Không xác định'}
+                                                                                                </p>
+                                                                                                <p className="text-xs text-gray-500 mt-1">
+                                                                                                    <span className="font-medium">Email:</span> {timeline.emailUserUpdate || 'Không có email'}
                                                                                                 </p>
                                                                                             </div>
                                                                                         </div>
