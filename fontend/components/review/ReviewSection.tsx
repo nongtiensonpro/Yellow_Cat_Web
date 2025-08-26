@@ -1,5 +1,6 @@
 import { StarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
+import AIReviewSummary from "./AIReviewSummary";
 
 const API_BASE_URL = 'http://localhost:8080';
 
@@ -224,8 +225,11 @@ export default function ReviewSection({ productId, onReviewStatsChange }: Review
     };
 
     return (
-        <div className="bg-white p-6 rounded-md border shadow-sm">
+                    <div className="bg-white p-6 rounded-md border shadow-sm">
             <h3 className="text-xl font-bold mb-6">Đánh giá sản phẩm ({totalReviewsCount})</h3>
+
+            {/* AI Review Summary */}
+            <AIReviewSummary reviews={reviews} />
 
             <div className="flex items-start gap-6 border-b pb-6 mb-6">
                 <div className="text-center w-32">

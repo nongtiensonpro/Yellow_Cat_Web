@@ -25,10 +25,12 @@ import {
     SelectItem,
 } from "@heroui/react";
 import {useEffect, useState, useCallback} from "react";
-import {Eye, Edit, Trash2, Plus, ToggleLeft, ToggleRight} from "lucide-react";
+import { Edit, Trash2, Plus, ToggleLeft, ToggleRight} from "lucide-react";
+import { BuildingStorefrontIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useDisclosure } from "@heroui/react";
 import { useSession, signIn } from "next-auth/react";
+import { CldImage } from "next-cloudinary";
 
 interface Product {
     productId: number;
@@ -73,12 +75,18 @@ interface ApiResponse {
     message: string;
     data: {
         content: Product[];
-        page: {
-            size: number;
-            number: number;
-            totalElements: number;
-            totalPages: number;
+        totalElements: number;
+        totalPages: number;
+        size: number;
+        number: number;
+        pageable: {
+            pageNumber: number;
+            pageSize: number;
         };
+        last: boolean;
+        first: boolean;
+        numberOfElements: number;
+        empty: boolean;
     };
 }
 
@@ -91,6 +99,17 @@ export default function Page() {
     const [totalPages, setTotalPages] = useState<number>(1);
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [totalElements, setTotalElements] = useState<number>(0);
+    
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>("");
+    
+    // Debounced search term để tránh gọi API quá nhiều
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 500);
+        
+        return () => clearTimeout(timeoutId);
+    }, [searchTerm]);
     const [productToDelete, setProductToDelete] = useState<Product | null>(null);
     const [productToToggle, setProductToToggle] = useState<Product | null>(null);
     const { isOpen, onOpen, onClose } = useDisclosure();
@@ -98,6 +117,7 @@ export default function Page() {
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [toggleError, setToggleError] = useState<string | null>(null);
     const [isToggling, setIsToggling] = useState<boolean>(false);
+    const [isDeleting, setIsDeleting] = useState<boolean>(false);
     const { data: session, status } = useSession();
     
     // New filter states
@@ -190,22 +210,49 @@ export default function Page() {
         }
     }, [status, session]);
 
-    const fetchProductsData = async () => {
+    const fetchProductsData = useCallback(async () => {
         try {
             setLoading(true);
-            const searchQuery = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : "";
+            
+            // Kiểm tra đăng nhập
+            if (status !== "authenticated" || !session) {
+                console.log("Chưa đăng nhập, không thể tải sản phẩm");
+                return;
+            }
+            
+            const token = session?.accessToken;
+            if (!token) {
+                console.log("Không tìm thấy token xác thực");
+                return;
+            }
+            
+            const searchQuery = debouncedSearchTerm ? `&search=${encodeURIComponent(debouncedSearchTerm)}` : "";
             const categoryQuery = selectedCategory ? `&categoryId=${selectedCategory}` : "";
             const brandQuery = selectedBrand ? `&brandId=${selectedBrand}` : "";
-            const response = await fetch(`http://localhost:8080/api/products/management?page=${currentPage}&size=${itemsPerPage}${searchQuery}${categoryQuery}${brandQuery}`);
-            if (!response.ok) console.log(`HTTP error! Status: ${response.status}`);
+            
+            const response = await fetch(`http://localhost:8080/api/products/management?page=${currentPage}&size=${itemsPerPage}${searchQuery}${categoryQuery}${brandQuery}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                console.log(`HTTP error! Status: ${response.status}`);
+                return;
+            }
+            
             const apiResponse: ApiResponse = await response.json();
 
             if (apiResponse.status === 200 && apiResponse.data) {
-                setProducts(apiResponse.data.content);
-                setTotalPages(apiResponse.data.page.totalPages);
-                setTotalElements(apiResponse.data.page.totalElements);
+                setProducts(apiResponse.data.content || []);
+                setTotalPages(apiResponse.data.totalPages || 1);
+                setTotalElements(apiResponse.data.totalElements || 0);
+                setError(null); // Clear any previous errors
             } else {
                 console.log(apiResponse.message || "Lỗi khi tải dữ liệu");
+                setError(apiResponse.message || "Lỗi khi tải dữ liệu");
             }
         } catch (err) {
             setError('Không thể tải dữ liệu. Vui lòng thử lại sau.');
@@ -213,7 +260,7 @@ export default function Page() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [currentPage, itemsPerPage, debouncedSearchTerm, selectedCategory, selectedBrand, status, session]);
 
     useEffect(() => {
         if (status === "authenticated" && session) {
@@ -223,9 +270,10 @@ export default function Page() {
     }, [fetchCategoriesData, fetchBrandsData, status, session]);
 
     useEffect(() => {
-        fetchProductsData();
-        // eslint-disable-next-line
-    }, [currentPage, itemsPerPage, searchTerm, selectedCategory, selectedBrand]);
+        if (status === "authenticated" && session) {
+            fetchProductsData();
+        }
+    }, [fetchProductsData, status, session]);
 
     // Format giá tiền
     const formatPrice = (price: number | null) => {
@@ -285,12 +333,16 @@ export default function Page() {
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => null);
-                console.log(errorData?.message || `HTTP error! Status: ${response.status}`);
+                const errorMessage = errorData?.message || `HTTP error! Status: ${response.status}`;
+                console.log(errorMessage);
+                setToggleError(errorMessage);
+                return;
             }
             
             onToggleClose();
             setProductToToggle(null);
-            fetchProductsData(); // Refresh data để cập nhật trạng thái mới
+            // Refresh data để cập nhật trạng thái mới
+            setTimeout(() => fetchProductsData(), 100);
             
         } catch (err) {
             setToggleError(err instanceof Error ? err.message : 'Không thể thay đổi trạng thái sản phẩm. Vui lòng thử lại sau.');
@@ -313,7 +365,7 @@ export default function Page() {
                 console.log("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
             }
 
-            setLoading(true);
+            setIsDeleting(true);
             setDeleteError(null);
             const response = await fetch(`http://localhost:8080/api/products/${productToDelete.productId}`, {
                 method: 'DELETE',
@@ -324,15 +376,19 @@ export default function Page() {
             });
             if (!response.ok) {
                 const errorData = await response.json().catch(() => null);
-                console.log(errorData?.message || `HTTP error! Status: ${response.status}`);
+                const errorMessage = errorData?.message || `HTTP error! Status: ${response.status}`;
+                console.log(errorMessage);
+                setDeleteError(errorMessage);
+                return;
             }
             onClose();
             setProductToDelete(null);
-            fetchProductsData();
+            // Refresh data sau khi xóa
+            setTimeout(() => fetchProductsData(), 100);
         } catch (err) {
             setDeleteError(err instanceof Error ? err.message : 'Không thể xóa sản phẩm. Vui lòng thử lại sau.');
         } finally {
-            setLoading(false);
+            setIsDeleting(false);
         }
     };
 
@@ -348,8 +404,9 @@ export default function Page() {
             <CardHeader className="flex gap-3">
                 <div className="flex flex-col">
                     <p className="text-4xl font-bold">Quản lý sản phẩm</p>
-                    <span
-                        className="text-grey-500 text-sm">Hiện tại có {totalElements} sản phẩm trong cửa hàng</span>
+                    <span className="text-grey-500 text-sm">
+                        {loading ? "Đang tải..." : `Hiện tại có ${totalElements} sản phẩm trong cửa hàng`}
+                    </span>
                 </div>
             </CardHeader>
             <Divider/>
@@ -367,7 +424,7 @@ export default function Page() {
                             <Select
                                 placeholder={categoriesLoading ? "Đang tải..." : "Chọn danh mục"}
                                 className="w-60"
-                                isDisabled={categoriesLoading || categories.length === 0}
+                                isDisabled={categoriesLoading}
                                 selectedKeys={selectedCategory ? [selectedCategory] : []}
                                 onSelectionChange={(keys) => {
                                     const selected = Array.from(keys)[0];
@@ -390,7 +447,7 @@ export default function Page() {
                             <Select
                                 placeholder={brandsLoading ? "Đang tải..." : "Chọn thương hiệu"}
                                 className="w-60"
-                                isDisabled={brandsLoading || brands.length === 0}
+                                isDisabled={brandsLoading}
                                 selectedKeys={selectedBrand ? [selectedBrand] : []}
                                 onSelectionChange={(keys) => {
                                     const selected = Array.from(keys)[0];
@@ -459,9 +516,27 @@ export default function Page() {
                     )}
                 </div>
                 {loading ? (
-                    <div className="my-6 text-lg text-center text-blue-500">Đang tải dữ liệu...</div>
+                    <div className="my-8 text-center">
+                        <div className="flex flex-col items-center gap-4">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+                            <div className="text-default-600">Đang tải dữ liệu sản phẩm...</div>
+                        </div>
+                    </div>
                 ) : error ? (
-                    <div className="my-6 text-lg text-center text-red-500">{error}</div>
+                    <div className="my-8 text-center">
+                        <div className="flex flex-col items-center gap-4">
+                            <div className="text-danger-500 text-4xl">⚠️</div>
+                            <div className="text-lg font-semibold text-default-900">Có lỗi xảy ra</div>
+                            <div className="text-default-600 max-w-md">{error}</div>
+                            <Button 
+                                color="primary" 
+                                variant="flat" 
+                                onPress={() => fetchProductsData()}
+                            >
+                                Thử lại
+                            </Button>
+                        </div>
+                    </div>
                 ) : (
                     <Table aria-label="Danh sách sản phẩm">
                         <TableHeader>
@@ -481,21 +556,56 @@ export default function Page() {
                             {products.length > 0 ? (
                                 products.map((product) => (
                                     <TableRow key={product.productId}>
-                                        <TableCell>{product.productId}</TableCell>
+                                        <TableCell>
+                                            <span className="text-sm font-mono text-default-600">
+                                                #{product.productId}
+                                            </span>
+                                        </TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-3">
-                                                <div>
-                                                    <div className="font-medium">{product.productName}</div>
+                                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                                                    {product.thumbnail ? (
+                                                        <CldImage
+                                                            width={48}
+                                                            height={48}
+                                                            src={product.thumbnail}
+                                                            alt={product.productName || "Product image"}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                                            <BuildingStorefrontIcon className="w-6 h-6" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="font-medium truncate">{product.productName}</div>
                                                     <div className="text-xs text-gray-500 truncate max-w-[200px]">
                                                         {product.description}
                                                     </div>
                                                 </div>
                                             </div>
                                         </TableCell>
-                                        <TableCell>{product.categoryName}</TableCell>
-                                        <TableCell>{product.brandName}</TableCell>
-                                        <TableCell>{formatPrice(product.minCostPrice)}</TableCell>
-                                        <TableCell>{formatPrice(product.minPrice)}</TableCell>
+                                        <TableCell>
+                                            <Chip size="sm" color="secondary" variant="flat">
+                                                {product.categoryName}
+                                            </Chip>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Chip size="sm" color="primary" variant="flat">
+                                                {product.brandName}
+                                            </Chip>
+                                        </TableCell>
+                                        <TableCell>
+                                            <span className="text-sm text-gray-600">
+                                                {formatPrice(product.minCostPrice)}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell>
+                                            <span className="text-sm font-medium text-success">
+                                                {formatPrice(product.minPrice)}
+                                            </span>
+                                        </TableCell>
                                         <TableCell>
                                             {product.totalStock !== null ? (
                                                 <Badge
@@ -506,7 +616,11 @@ export default function Page() {
                                                 <span className="text-gray-400">N/A</span>
                                             )}
                                         </TableCell>
-                                        <TableCell>{product.purchases != null ? product.purchases : "-"}</TableCell>
+                                        <TableCell>
+                                            <span className="text-sm text-default-600">
+                                                {product.purchases != null ? product.purchases : "-"}
+                                            </span>
+                                        </TableCell>
                                         <TableCell>
                                             <Chip
                                                 color={product.isActive ? "success" : "danger"}
@@ -515,7 +629,11 @@ export default function Page() {
                                                 {product.isActive ? "Đang bán" : "Ngừng bán"}
                                             </Chip>
                                         </TableCell>
-                                        <TableCell>{formatDate(product.updatedAt)}</TableCell>
+                                        <TableCell>
+                                            <span className="text-xs text-default-500">
+                                                {formatDate(product.updatedAt)}
+                                            </span>
+                                        </TableCell>
                                         <TableCell>
                                             <div className="flex gap-2">
                                                 {/*<Tooltip content="Xem chi tiết">*/}
@@ -613,7 +731,7 @@ export default function Page() {
                                 color="danger"
                                 onPress={handleDeleteProduct}
                                 className="bg-red-500 text-white"
-                                isLoading={loading}
+                                isLoading={isDeleting}
                             >
                                 Xóa
                             </Button>

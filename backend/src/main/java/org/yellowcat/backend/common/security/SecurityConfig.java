@@ -51,6 +51,7 @@ public class SecurityConfig {
                         // Cho phép truy cập không cần xác thực cho các endpoint công khai
                         .requestMatchers(
                                 "/demo/all",
+                                "/api/products/ai-overview",
                                 "/api/public/**",
                                 "/api/users/**",
                                 "/api/addresses/**",

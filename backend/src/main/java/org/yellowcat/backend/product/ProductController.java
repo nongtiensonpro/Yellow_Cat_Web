@@ -40,6 +40,18 @@ public class ProductController {
         this.categoryRepository = categoryRepository;
         this.brandRepository = brandRepository;
     }
+    @GetMapping("/ai-overview")
+    @Operation(summary = "Get products overview for AI", description = "Returns optimized product data for AI to provide customer recommendations")
+    public ResponseEntity<?> getProductsOverviewForAI() {
+        try {
+            List<ProductOverviewForAIDTO> productsOverview = productService.getProductsOverviewForAI();
+            return ResponseEntityBuilder.success(productsOverview);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Error retrieving products overview for AI", e.getMessage());
+        }
+    }
+
     @GetMapping("/low-stock")
     @Operation(summary = "Get products with low stock", description = "Returns a list of products with total stock below a specified threshold.")
     @PreAuthorize("hasAnyAuthority('Admin_Web')") // Assuming this is an admin-only feature

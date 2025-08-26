@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-    User, ShoppingCart, Heart, MapPin, Home
+    User, ShoppingCart, Heart,  Home
 } from 'lucide-react';
 
 const MENU_ITEMS = [

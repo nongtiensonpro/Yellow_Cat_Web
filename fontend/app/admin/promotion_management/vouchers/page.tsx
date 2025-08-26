@@ -311,7 +311,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
         }
 
         // Điều kiện áp dụng
-        if (form.minimumOrderValue === ('' as any) || form.minimumOrderValue === null || form.minimumOrderValue === undefined) {
+        if (form.minimumOrderValue === null || form.minimumOrderValue === undefined || (typeof form.minimumOrderValue === 'string' && form.minimumOrderValue === '')) {
             newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu là bắt buộc (cho phép 0).';
         } else if (Number(form.minimumOrderValue) < 0) {
             newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu không được âm.';
@@ -432,7 +432,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                 const fieldErrors = (errorData && (errorData.fieldErrors || errorData.errors)) || [];
                 if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
                     const newErrors: { [key: string]: string } = {};
-                    fieldErrors.forEach((fe: any) => {
+                    fieldErrors.forEach((fe: { field?: string; name?: string; message?: string; defaultMessage?: string }) => {
                         const field = (fe.field || fe.name || '').toString();
                         const msg = (fe.message || fe.defaultMessage || '').toString();
                         if (!field) return;
@@ -1486,7 +1486,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
         }
 
         // Điều kiện áp dụng
-        if (form.minimumOrderValue === '' || form.minimumOrderValue === null || form.minimumOrderValue === undefined) {
+        if (form.minimumOrderValue === null || form.minimumOrderValue === undefined || (typeof form.minimumOrderValue === 'string' && form.minimumOrderValue === '')) {
             newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu là bắt buộc (cho phép 0).';
         } else if (Number(form.minimumOrderValue) < 0) {
             newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu không được âm.';
