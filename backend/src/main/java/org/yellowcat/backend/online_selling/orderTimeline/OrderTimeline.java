@@ -36,12 +36,16 @@ public class OrderTimeline {
     @Column(name = "changed_at")
     private LocalDateTime changedAt;
 
-    public OrderTimeline(Integer orderId, String fromStatus, String toStatus, String note, LocalDateTime changedAt) {
+    @Column(name = "updated_by")
+    private Integer updatedBy;
+
+    public OrderTimeline(Integer orderId, String fromStatus, String toStatus, String note, LocalDateTime changedAt, Integer updatedBy) {
         this.orderId = orderId;
         this.fromStatus = fromStatus;
         this.toStatus = toStatus;
         this.note = note;
         this.changedAt = changedAt;
+        this.updatedBy = updatedBy;
     }
 
 }

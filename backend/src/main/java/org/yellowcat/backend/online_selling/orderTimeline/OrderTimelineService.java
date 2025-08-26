@@ -8,12 +8,16 @@ import org.springframework.stereotype.Service;
 import org.yellowcat.backend.online_selling.image_of_order_timeline.ImageRepository;
 import org.yellowcat.backend.online_selling.image_of_order_timeline.OrderTimelineImage;
 import org.yellowcat.backend.online_selling.oder_online.OderOnlineRepository;
+import org.yellowcat.backend.online_selling.orderTimeline.dto.DetailOrderTimeLine;
 import org.yellowcat.backend.product.order.Order;
 import org.yellowcat.backend.product.orderItem.OrderItem;
 import org.yellowcat.backend.product.payment.Payment;
 import org.yellowcat.backend.product.payment.PaymentRepository;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
+import org.yellowcat.backend.user.AppUser;
+import org.yellowcat.backend.user.AppUserRepository;
 import org.yellowcat.backend.zalopay.ZaloPayService;
+import java.util.stream.Collectors;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -29,12 +33,15 @@ public class OrderTimelineService {
     private final OderOnlineRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final ImageRepository imageRepository;
+    private final AppUserRepository appUserRepository;
     private final ZaloPayService zaloPayService;
 
     private static final int RETURN_ALLOWED_DAYS = 3;
 
     @Transactional
-    public Map<String, Object> updateOrderStatus(Integer orderId, String newStatus, String note, List<String> imageUrls) {
+    public Map<String, Object> updateOrderStatus(Integer orderId, String newStatus, String note, List<String> imageUrls, UUID keycloakid) {
+        Integer userid = appUserRepository.findByKeycloakId(keycloakid).get().getAppUserId();
+
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng với ID: " + orderId));
 
@@ -72,10 +79,10 @@ public class OrderTimelineService {
             if (payment != null && "ZALOPAY".equalsIgnoreCase(payment.getPaymentMethod()) && "SUCCESS".equalsIgnoreCase(paymentStatus)) {
                 // Lưu timeline cho ReturnedToSeller trước
                 String finalNote = (note == null || note.trim().isEmpty()) ? "Không có ghi chú." : note;
-                saveTimeline(orderId, currentStatus, newStatus, finalNote, imageUrls);
+                saveTimeline(orderId, currentStatus, newStatus, finalNote, imageUrls,userid);
                 order.setOrderStatus("Refunded");
                 orderRepository.save(order);
-                saveTimeline(orderId, newStatus, "Refunded", "Tự động hoàn tiền cho đơn ZaloPay đã trả về người bán", null);
+                saveTimeline(orderId, newStatus, "Refunded", "Tự động hoàn tiền cho đơn ZaloPay đã trả về người bán", null,userid);
                 Map<String, Object> response = new HashMap<>();
                 response.put("orderId", orderId);
                 response.put("fromStatus", currentStatus);
@@ -114,7 +121,7 @@ public class OrderTimelineService {
         orderRepository.save(order);
 
         String finalNote = (note == null || note.trim().isEmpty()) ? "Không có ghi chú." : note;
-        saveTimeline(orderId, currentStatus, newStatus, finalNote, imageUrls);
+        saveTimeline(orderId, currentStatus, newStatus, finalNote, imageUrls, userid);
 
         Map<String, Object> response = new HashMap<>();
         response.put("orderId", orderId);
@@ -147,6 +154,7 @@ public class OrderTimelineService {
                         previousStatus,
                         "Pending",
                         "Đủ hàng và tự động chuyển sang trạng thái chờ xác nhận.",
+                        null,
                         null
                 );
             }
@@ -156,8 +164,11 @@ public class OrderTimelineService {
 
     @Transactional
     public Map<String, Object> confirmCustomerReceived(Integer orderId, String note) {
+
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng."));
+
+        Integer id = order.getUser().getAppUserId();
 
         if (!"Delivered".equalsIgnoreCase(order.getOrderStatus())) {
             throw new RuntimeException("Chỉ có thể xác nhận nhận hàng sau khi đã giao.");
@@ -176,7 +187,7 @@ public class OrderTimelineService {
         updateCodPaymentStatus(order);
 
         String finalNote = (note == null || note.trim().isEmpty()) ? "Khách hàng xác nhận đã nhận hàng." : note;
-        saveTimeline(orderId, "Delivered", "CustomerReceived", finalNote, null);
+        saveTimeline(orderId, "Delivered", "CustomerReceived", finalNote, null,id);
 
         Map<String, Object> res = new HashMap<>();
         res.put("orderId", orderId);
@@ -202,7 +213,7 @@ public class OrderTimelineService {
                 // Cập nhật thanh toán COD nếu có
                 updateCodPaymentStatus(order);
 
-                saveTimeline(orderId, "Delivered", "CustomerReceived", "Tự động xác nhận sau 3 ngày kể từ khi nhận hàng", null);
+                saveTimeline(orderId, "Delivered", "CustomerReceived", "Tự động xác nhận sau 3 ngày kể từ khi nhận hàng", null,null);
             }
         }
     }
@@ -235,6 +246,7 @@ public class OrderTimelineService {
                         order.getOrderId(),
                         "Cancelled",
                         "Tự động hủy do không thanh toán sau 24 giờ",
+                        null,
                         null
                 );
 
@@ -245,8 +257,8 @@ public class OrderTimelineService {
         }
     }
 
-    public void saveTimeline(Integer orderId, String fromStatus, String toStatus, String note, List<String> imageUrls) {
-        OrderTimeline timeline = new OrderTimeline(orderId, fromStatus, toStatus, note, LocalDateTime.now());
+    public void saveTimeline(Integer orderId, String fromStatus, String toStatus, String note, List<String> imageUrls, Integer id) {
+        OrderTimeline timeline = new OrderTimeline(orderId, fromStatus, toStatus, note, LocalDateTime.now(), id);
         orderTimelineRepository.save(timeline);
         if (imageUrls != null) {
             for (String url : imageUrls) {
@@ -260,9 +272,33 @@ public class OrderTimelineService {
         }
     }
 
-    public List<OrderTimeline> getTimelineByOrderId(Integer orderId) {
-        return orderTimelineRepository.findByOrderIdOrderByChangedAtAsc(orderId);
+    public List<DetailOrderTimeLine> getTimelineByOrderId(Integer orderId) {
+        List<OrderTimeline> timelines = orderTimelineRepository.findByOrderIdOrderByChangedAtAsc(orderId);
+
+        return timelines.stream()
+                .map(this::convertToDetailOrderTimeLine)
+                .collect(Collectors.toList());
     }
+
+    private DetailOrderTimeLine convertToDetailOrderTimeLine(OrderTimeline timeline) {
+        AppUser user = null;
+
+        if (timeline.getUpdatedBy() != null) {
+            user = appUserRepository.findById(timeline.getUpdatedBy()).orElse(null);
+        }
+
+        return DetailOrderTimeLine.builder()
+                .id(timeline.getId())
+                .orderId(timeline.getOrderId())
+                .fromStatus(timeline.getFromStatus())
+                .toStatus(timeline.getToStatus())
+                .note(timeline.getNote())
+                .changedAt(timeline.getChangedAt())
+                .updatedBy(user != null ? user.getFullName() : null)
+                .emailUserUpdate(user != null ? user.getEmail() : null)
+                .build();
+    }
+
 
     private boolean isTerminalStatus(String status, Payment payment) {
         // Nếu là ReturnedToSeller, kiểm tra payment method

@@ -846,7 +846,7 @@ public class VoucherService1 {
 
             System.out.println("🔍 Chạy hàm kiểm tra điều kiện sử dụng voucher");
             validateVoucherForOrder(voucher, userId, order);
-            System.out.println("✅ Đã qua kiểm tra điều kiện");
+            System.out.println("✅ Đã qua kiểm tr a điều kiện");
 
             System.out.println("🔍 Tính toán số tiền giảm giá");
             BigDecimal discountAmount = calculateDiscountAmount(
@@ -951,6 +951,11 @@ public class VoucherService1 {
         System.out.println("userId: " + userId);
         System.out.println("productIds: " + productIds);
         System.out.println("orderTotal: " + orderTotal);
+
+        // kiểm tra người dùng
+        if(userId == null) {
+            throw new IllegalArgumentException("Cần đăng nhập để sử dung voucher");
+        }
 
         try {
             List<Voucher> activeVouchers = voucherRepository.findAllByIsActive(true);
@@ -1290,11 +1295,10 @@ public class VoucherService1 {
      */
     private void validateUserEligibility(Voucher voucher, Integer userId) {
         System.out.println("=======> Chạy qua hàm check user với voucher");
-        if (userId == null) {
-            // Không có user → bỏ qua kiểm tra điều kiện user
-            return;
-        }
-
+//        if (userId == null) {
+//            // Không có user → bỏ qua kiểm tra điều kiện user
+//            return;
+//        }
         AppUser currentUser = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại"));
 
@@ -1415,18 +1419,19 @@ public class VoucherService1 {
      * @param userId ID người dùng
      */
     private void updateUserVoucherUsage(Voucher voucher, Integer userId) {
-        // Nếu userId là null (khách chưa đăng nhập), gán mặc định là 0
-        int effectiveUserId = (userId == null) ? 0 : userId;
+        // Kiểm tra nếu userId là null -> không xử lý, thoát hàm
+        if (userId == null) {
+            return;
+        }
 
-        VoucherUser userUsage = voucherUserRepository.findByVoucherIdAndUserId(voucher.getId(), effectiveUserId);
+        VoucherUser userUsage = voucherUserRepository.findByVoucherIdAndUserId(voucher.getId(), userId);
         if (userUsage == null) {
-            userUsage = new VoucherUser(null, effectiveUserId, voucher, 1);
+            userUsage = new VoucherUser(null, userId, voucher, 1);
         } else {
             userUsage.setUsageCount(userUsage.getUsageCount() + 1);
         }
         voucherUserRepository.save(userUsage);
     }
-
 
     /**
      * Lưu lịch sử sử dụng voucher

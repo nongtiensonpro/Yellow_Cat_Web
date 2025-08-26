@@ -200,6 +200,7 @@ CREATE TABLE order_timelines
     to_status   VARCHAR(50) NOT NULL,
     note        TEXT,
     changed_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by  int,
     FOREIGN KEY (order_id) REFERENCES orders (order_id) ON DELETE CASCADE
 );
 

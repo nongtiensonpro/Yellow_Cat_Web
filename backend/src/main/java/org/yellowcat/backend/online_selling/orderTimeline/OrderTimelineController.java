@@ -5,11 +5,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.yellowcat.backend.common.config_api.response.ApiResponse;
+import org.yellowcat.backend.online_selling.orderTimeline.dto.DetailOrderTimeLine;
 import org.yellowcat.backend.online_selling.orderTimeline.dto.UpdateStatusRequest;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/order-timelines")
@@ -23,9 +25,9 @@ public class OrderTimelineController {
      * API lấy toàn bộ lịch sử thay đổi trạng thái của một đơn hàng
      */
     @GetMapping("/{orderId}")
-    public ResponseEntity<ApiResponse<List<OrderTimeline>>> getTimeline(@PathVariable Integer orderId) {
-        List<OrderTimeline> timeline = orderTimelineService.getTimelineByOrderId(orderId);
-        ApiResponse<List<OrderTimeline>> response = new ApiResponse<>(HttpStatus.OK,
+    public ResponseEntity<ApiResponse<List<DetailOrderTimeLine>>> getTimeline(@PathVariable Integer orderId) {
+        List<DetailOrderTimeLine> timeline = orderTimelineService.getTimelineByOrderId(orderId);
+        ApiResponse<List<DetailOrderTimeLine>> response = new ApiResponse<>(HttpStatus.OK,
                 "Lấy lịch sử trạng thái đơn hàng thành công", timeline);
         return ResponseEntity.ok(response);
     }
@@ -62,7 +64,7 @@ public class OrderTimelineController {
      */
     @PostMapping("/request-return")
     public ResponseEntity<ApiResponse<Map<String, Object>>> requestReturn(@RequestBody UpdateStatusRequest request) {
-        return updateOrderStatus(request.getOrderId(), "ReturnRequested", request.getNote(), request.getImageUrls());
+        return updateOrderStatus(request.getOrderId(), "ReturnRequested", request.getNote(), request.getImageUrls(),  request.getKeycloakid());
     }
 
     /**
@@ -70,7 +72,7 @@ public class OrderTimelineController {
      */
     @PostMapping("/not-received")
     public ResponseEntity<ApiResponse<Map<String, Object>>> reportNotReceived(@RequestBody UpdateStatusRequest request) {
-        return updateOrderStatus(request.getOrderId(), "NotReceivedReported", "Khách hàng báo không nhận được hàng", request.getImageUrls());
+        return updateOrderStatus(request.getOrderId(), "NotReceivedReported", "Khách hàng báo không nhận được hàng", request.getImageUrls(),  request.getKeycloakid()     );
     }
 
     /**
@@ -90,7 +92,7 @@ public class OrderTimelineController {
         } else {
             newStatus = "Cancelled";
         }
-        return updateOrderStatus(orderId, newStatus, "Khách hàng hủy đơn hàng", request.getImageUrls());
+        return updateOrderStatus(orderId, newStatus, "Khách hàng hủy đơn hàng", request.getImageUrls(),  request.getKeycloakid());
     }
 
     /**
@@ -98,7 +100,7 @@ public class OrderTimelineController {
      */
     @PostMapping("/dispute")
     public ResponseEntity<ApiResponse<Map<String, Object>>> disputeReturn(@RequestBody UpdateStatusRequest request) {
-        return updateOrderStatus(request.getOrderId(), "Dispute", request.getNote(), request.getImageUrls());
+        return updateOrderStatus(request.getOrderId(), "Dispute", request.getNote(), request.getImageUrls(), request.getKeycloakid());
     }
 
     /**
@@ -111,7 +113,7 @@ public class OrderTimelineController {
             return ResponseEntity.badRequest().body(new ApiResponse<>(HttpStatus.BAD_REQUEST,
                     "Chỉ được chọn Cancelled hoặc Pending cho trạng thái CustomerDecisionPending", null));
         }
-        return updateOrderStatus(request.getOrderId(), request.getNewStatus(), request.getNote(), request.getImageUrls());
+        return updateOrderStatus(request.getOrderId(), request.getNewStatus(), request.getNote(), request.getImageUrls(), request.getKeycloakid());
     }
 
     // ========================== ADMIN ==========================
@@ -121,7 +123,7 @@ public class OrderTimelineController {
      */
     @PostMapping("/admin/update")
     public ResponseEntity<ApiResponse<Map<String, Object>>> adminUpdateStatus(@RequestBody UpdateStatusRequest request) {
-        return updateOrderStatus(request.getOrderId(), request.getNewStatus(), request.getNote(), request.getImageUrls());
+        return updateOrderStatus(request.getOrderId(), request.getNewStatus(), request.getNote(), request.getImageUrls(), request.getKeycloakid());
     }
 
     // ========================== HÀM CHUNG ==========================
@@ -129,9 +131,9 @@ public class OrderTimelineController {
     /**
      * Hàm xử lý chung cập nhật trạng thái đơn hàng
      */
-    private ResponseEntity<ApiResponse<Map<String, Object>>> updateOrderStatus(Integer orderId, String newStatus, String note, List<String> imageUrls) {
+    private ResponseEntity<ApiResponse<Map<String, Object>>> updateOrderStatus(Integer orderId, String newStatus, String note, List<String> imageUrls, UUID keyloackid) {
         try {
-            Map<String, Object> result = orderTimelineService.updateOrderStatus(orderId, newStatus, note, imageUrls);
+            Map<String, Object> result = orderTimelineService.updateOrderStatus(orderId, newStatus, note, imageUrls, keyloackid);
             return ResponseEntity.ok(new ApiResponse<>(HttpStatus.OK, (String) result.get("message"), result));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(new ApiResponse<>(HttpStatus.BAD_REQUEST,
