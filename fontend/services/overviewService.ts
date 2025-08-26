@@ -2,7 +2,7 @@ import { getSession } from "next-auth/react";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
-// types/overview.ts
+// ---------------- Types ----------------
 export type OverviewResponseDTO = {
     revenue: number;
     orders: number;
@@ -29,6 +29,7 @@ export type OverviewWithChangeDTO = {
     };
 };
 
+// ---------------- Helpers ----------------
 const mapRangeToBackend = (range: string): string => {
     switch (range) {
         case "today":
@@ -44,8 +45,9 @@ const mapRangeToBackend = (range: string): string => {
     }
 };
 
+// ---------------- Service ----------------
 export const overviewService = {
-    getOverview: async (range: string): Promise<OverviewResponseDTO> => {
+    getOverview: async (range: string): Promise<OverviewWithChangeDTO> => {
         const session = await getSession();
 
         if (!session?.accessToken) {
@@ -71,9 +73,7 @@ export const overviewService = {
             throw new Error(`API Error: ${response.status} ${response.statusText}`);
         }
 
-        const data: OverviewResponseDTO = await response.json();
+        const data: OverviewWithChangeDTO = await response.json();
         return data;
     },
 };
-
-

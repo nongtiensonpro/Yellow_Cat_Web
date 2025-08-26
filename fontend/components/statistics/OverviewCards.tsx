@@ -12,7 +12,7 @@ import {
 } from "@heroicons/react/24/outline";
 import {
     overviewService,
-    type OverviewResponseDTO,
+    type OverviewWithChangeDTO,
 } from "@/services/overviewService";
 
 interface OverviewCardsProps {
@@ -20,7 +20,7 @@ interface OverviewCardsProps {
 }
 
 const OverviewCards: React.FC<OverviewCardsProps> = ({timeRange}) => {
-    const [data, setData] = useState<OverviewResponseDTO | null>(null);
+    const [data, setData] = useState<OverviewWithChangeDTO | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -58,7 +58,7 @@ const OverviewCards: React.FC<OverviewCardsProps> = ({timeRange}) => {
     };
 
     const cards = useMemo(() => {
-        const safe = data ?? {
+        const safe = data?.current ?? {
             revenue: 0,
             orders: 0,
             newCustomers: 0,
@@ -68,12 +68,19 @@ const OverviewCards: React.FC<OverviewCardsProps> = ({timeRange}) => {
             orderStats: {placed: 0, delivered: 0, cancelled: 0},
         };
 
-        // Vì service chỉ trả về current data, không có change data
-        // Nên chúng ta sẽ hiển thị 0% change cho tất cả metrics
-        // const formatChange = (value: number) => {
-        //     const fixed = value.toFixed(1);
-        //     return `${value >= 0 ? "+" : ""}${fixed}%`;
-        // };
+        const change = data?.change ?? {
+            revenueChange: 0,
+            ordersChange: 0,
+            newCustomersChange: 0,
+            completionRateChange: 0,
+            netProfitChange: 0,
+            cancelRateChange: 0,
+        };
+
+        const formatChange = (value: number) => {
+            const fixed = value.toFixed(1);
+            return `${value >= 0 ? "+" : ""}${fixed}%`;
+        };
 
         return [
             {
@@ -82,8 +89,8 @@ const OverviewCards: React.FC<OverviewCardsProps> = ({timeRange}) => {
                 icon: CurrencyDollarIcon,
                 color: "text-green-600",
                 bgColor: "bg-green-50",
-                change: "0.0%", // Placeholder vì không có change data
-                changeType: "positive" as const,
+                change: formatChange(change.revenueChange),
+                changeType: change.revenueChange >= 0 ? "positive" : "negative",
             },
             {
                 title: "Đơn hàng",
@@ -91,8 +98,8 @@ const OverviewCards: React.FC<OverviewCardsProps> = ({timeRange}) => {
                 icon: ShoppingBagIcon,
                 color: "text-blue-600",
                 bgColor: "bg-blue-50",
-                change: "0.0%", // Placeholder vì không có change data
-                changeType: "positive" as const,
+                change: formatChange(change.ordersChange),
+                changeType: change.ordersChange >= 0 ? "positive" : "negative",
             },
             {
                 title: "Khách hàng mới",
@@ -100,8 +107,8 @@ const OverviewCards: React.FC<OverviewCardsProps> = ({timeRange}) => {
                 icon: UsersIcon,
                 color: "text-purple-600",
                 bgColor: "bg-purple-50",
-                change: "0.0%", // Placeholder vì không có change data
-                changeType: "positive" as const,
+                change: formatChange(change.newCustomersChange),
+                changeType: change.newCustomersChange >= 0 ? "positive" : "negative",
             },
             {
                 title: "Tỷ lệ hoàn thành",
@@ -109,8 +116,8 @@ const OverviewCards: React.FC<OverviewCardsProps> = ({timeRange}) => {
                 icon: CheckCircleIcon,
                 color: "text-emerald-600",
                 bgColor: "bg-emerald-50",
-                change: "0.0%", // Placeholder vì không có change data
-                changeType: "positive" as const,
+                change: formatChange(change.completionRateChange),
+                changeType: change.completionRateChange >= 0 ? "positive" : "negative",
             },
             {
                 title: "Lợi nhuận ròng",
@@ -118,8 +125,8 @@ const OverviewCards: React.FC<OverviewCardsProps> = ({timeRange}) => {
                 icon: ArrowTrendingUpIcon,
                 color: "text-orange-600",
                 bgColor: "bg-orange-50",
-                change: "0.0%", // Placeholder vì không có change data
-                changeType: "positive" as const,
+                change: formatChange(change.netProfitChange),
+                changeType: change.netProfitChange >= 0 ? "positive" : "negative",
             },
             {
                 title: "Tỷ lệ hủy",
@@ -127,11 +134,11 @@ const OverviewCards: React.FC<OverviewCardsProps> = ({timeRange}) => {
                 icon: XCircleIcon,
                 color: "text-red-600",
                 bgColor: "bg-red-50",
-                change: "0.0%", // Placeholder vì không có change data
-                changeType: "positive" as const,
+                change: formatChange(change.cancelRateChange),
+                changeType: change.cancelRateChange <= 0 ? "positive" : "negative",
             },
         ];
-    }, [data]); // Xóa timeRange dependency vì không cần thiết
+    }, [data, timeRange]);
 
     return (
         <div className="space-y-6">
@@ -214,14 +221,14 @@ const OverviewCards: React.FC<OverviewCardsProps> = ({timeRange}) => {
                             <div className="flex justify-between items-center">
                                 <span className="text-gray-600 dark:text-gray-400">Đã đặt</span>
                                 <span className="font-semibold text-gray-900 dark:text-white">
-                  {formatNumber(Number(data?.orders || 0))}
+                  {formatNumber(Number(data?.current?.orders || 0))}
                 </span>
                             </div>
                             <div className="flex justify-between items-center">
                                 <span className="text-gray-600 dark:text-gray-400">Đã giao</span>
                                 <span className="font-semibold text-green-600">
                   {formatNumber(
-                      Number(data?.orderStats?.delivered || 0)
+                      Number(data?.current?.orderStats?.delivered || 0)
                   )}
                 </span>
                             </div>
@@ -229,7 +236,7 @@ const OverviewCards: React.FC<OverviewCardsProps> = ({timeRange}) => {
                                 <span className="text-gray-600 dark:text-gray-400">Bị hủy</span>
                                 <span className="font-semibold text-red-600">
                   {formatNumber(
-                      Number(data?.orderStats?.cancelled || 0)
+                      Number(data?.current?.orderStats?.cancelled || 0)
                   )}
                 </span>
                             </div>
@@ -251,9 +258,9 @@ const OverviewCards: React.FC<OverviewCardsProps> = ({timeRange}) => {
                 </span>
                                 <span className="font-semibold text-green-600">
                   {Number(
-                      data?.revenue
-                          ? (Number(data.netProfit || 0) /
-                              Number(data.revenue || 1)) *
+                      data?.current?.revenue
+                          ? (Number(data.current.netProfit || 0) /
+                              Number(data.current.revenue || 1)) *
                           100
                           : 0
                   ).toFixed(1)}
@@ -267,10 +274,10 @@ const OverviewCards: React.FC<OverviewCardsProps> = ({timeRange}) => {
                                 <span className="font-semibold text-gray-900 dark:text-white">
                   {formatCurrency(
                       Number(
-                          data?.orders
+                          data?.current?.orders
                               ? Math.round(
-                                  Number(data.revenue || 0) /
-                                  Number(data.orders || 1)
+                                  Number(data.current.revenue || 0) /
+                                  Number(data.current.orders || 1)
                               )
                               : 0
                       )
@@ -282,7 +289,7 @@ const OverviewCards: React.FC<OverviewCardsProps> = ({timeRange}) => {
                   Tăng trưởng lợi nhuận
                 </span>
                                 <span className="font-semibold text-blue-600">
-                  0.0%
+                  {`${data?.change?.netProfitChange?.toFixed(1) ?? "0"}%`}
                 </span>
                             </div>
                         </div>
