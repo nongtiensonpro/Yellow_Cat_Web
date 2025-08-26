@@ -174,9 +174,9 @@ export default function PromotionManagementPage() {
                 <div className="flex items-center gap-3">
                     <Link
                         href="/admin/promotion_products/create"
-                        className="inline-flex items-center justify-center bg-orange-500 text-white px-5 py-2.5 rounded-lg hover:bg-orange-600 transition-colors shadow-sm font-semibold"
+                        className="inline-flex items-center justify-center bg-blue-500 text-white px-5 py-2.5 rounded-lg hover:bg-blue-600 transition-colors shadow-sm font-semibold"
                     >
-                        + Tạo Khuyến Mãi Mới
+                        + Tạo mới
                     </Link>
                 </div>
             </div>
