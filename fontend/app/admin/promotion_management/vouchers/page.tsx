@@ -408,7 +408,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                 onClose();
             } else {
                 let errorText = '';
-                let errorData: any = null;
+                let errorData: Record<string, unknown> | null = null;
                 const contentType = res.headers.get('content-type') || '';
                 try {
                     if (contentType.toLowerCase().includes('application/json')) {
