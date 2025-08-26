@@ -1,6 +1,7 @@
 "use client";
 
 import React, {useEffect, useState, useMemo} from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {CldImage} from "next-cloudinary";
 import {
@@ -198,6 +199,7 @@ const ProductListPage = () => {
     const [fetchedCategories, setFetchedCategories] = useState<string[]>([]);
     const [fetchedColors, setFetchedColors] = useState<Color[]>([]);
     const [searchTerm, setSearchTerm] = useState<string>('');
+    const searchParams = useSearchParams();
     const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
     const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -255,6 +257,12 @@ const ProductListPage = () => {
         };
         fetchInitialData();
     }, []);
+
+    // Đồng bộ từ khóa từ query ?search=
+    useEffect(() => {
+        const q = searchParams?.get('search') || '';
+        setSearchTerm(q);
+    }, [searchParams]);
 
     const displayedProducts = useMemo(() => {
         return products

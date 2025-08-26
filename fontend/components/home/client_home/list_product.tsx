@@ -11,6 +11,9 @@ import {
     Skeleton,
     Divider,
     Pagination, // Thêm Pagination
+    Badge,
+    Chip,
+    Tooltip,
 } from "@heroui/react";
 import {
     CurrencyDollarIcon,
@@ -20,8 +23,8 @@ import {
     HeartIcon as HeartIconOutline,
 } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartIconSolid } from "@heroicons/react/24/solid";
+import { StarIcon as StarIconSolid } from "@heroicons/react/24/solid";
 
-// --- Interfaces (Không đổi) ---
 interface Product {
     productId: number;
     productName: string;
@@ -55,15 +58,14 @@ interface ApiResponse {
     data: ApiResponseData | Product[];
 }
 
-// --- Component chính ---
+
 const ProductList = () => {
-    // --- State đã được cập nhật ---
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [wishlist, setWishlist] = useState<Product[]>([]);
+    const [reviewStatsMap, setReviewStatsMap] = useState<Record<number, { averageRating: number; totalReviews: number }>>({});
 
-    // Khôi phục state cho phân trang
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [totalPages, setTotalPages] = useState<number>(0);
     const productsPerPage = 12;
@@ -82,7 +84,6 @@ const ProductList = () => {
         window.dispatchEvent(new Event('wishlistUpdated'));
     }, []);
 
-    // --- useEffect đã được cập nhật để tải sản phẩm theo trang ---
     useEffect(() => {
         const fetchProductsByPage = async () => {
             setLoading(true);
@@ -112,12 +113,35 @@ const ProductList = () => {
         fetchProductsByPage();
     }, [currentPage, productsPerPage]);
 
-    // Bỏ các hàm và state liên quan đến carousel
-    // const allProductsScrollRef = useRef<HTMLDivElement>(null);
-    // const [canScrollLeft, setCanScrollLeft] = useState(false);
-    // const [canScrollRight, setCanScrollRight] = useState(true);
-    // const checkScrollability = () => { ... };
-    // const handleScroll = (direction) => { ... };
+    useEffect(() => {
+        if (!products || products.length === 0) return;
+        const fetchStats = async () => {
+            try {
+                const entries = await Promise.all(
+                    products.map(async (p) => {
+                        try {
+                            const res = await fetch(`http://localhost:8080/api/reviews/stats?productId=${p.productId}`);
+                            if (!res.ok) throw new Error('stats failed');
+                            const data = await res.json();
+                            return [p.productId, {
+                                averageRating: typeof data.averageRating === 'number' ? data.averageRating : 0,
+                                totalReviews: typeof data.totalReviews === 'number' ? data.totalReviews : 0,
+                            }] as const;
+                        } catch {
+                            return [p.productId, { averageRating: 0, totalReviews: 0 }] as const;
+                        }
+                    })
+                );
+                const map: Record<number, { averageRating: number; totalReviews: number }> = {};
+                entries.forEach(([id, stats]) => { map[id] = stats; });
+                setReviewStatsMap(map);
+            } catch {
+                // ignore stats errors
+            }
+        };
+        fetchStats();
+    }, [products]);
+
 
     const formatPrice = (price: number | null) => {
         if (price === null || isNaN(Number(price))) return 'Liên hệ';
@@ -146,19 +170,25 @@ const ProductList = () => {
         const discountPercent = product.minSalePrice && product.minPrice
             ? calculateDiscountPercent(product.minPrice, product.minSalePrice)
             : null;
+        const stats = reviewStatsMap[product.productId];
+        const averageRating = stats?.averageRating ?? 0;
+        const totalReviews = stats?.totalReviews ?? 0;
+        const isStatsLoading = stats === undefined;
 
         return (
             <Card
                 key={product.productId}
-                className="group hover:scale-[1.02] transition-all duration-300 hover:shadow-xl border-transparent hover:border-primary-200 cursor-pointer"
+                className="group transition-all duration-300 hover:shadow-xl border border-default-200 hover:border-primary-200 hover:-translate-y-0.5 rounded-xl overflow-hidden bg-white"
             >
-                <CardHeader className="pb-0 pt-2 px-4 relative">
-                    <div className="relative w-full h-48 rounded-xl overflow-hidden bg-gradient-to-br from-default-100 to-default-200">
+                <CardHeader className="pb-0 pt-0 px-0 relative">
+                    <div className="relative w-full h-48 bg-gradient-to-br from-default-100 to-default-200">
                         <div className="absolute top-2 right-2 z-30">
                             <button
                                 onClick={(e) => { e.stopPropagation(); toggleWishlist(product); }}
-                                className="p-1 rounded-full bg-white/80 hover:bg-white shadow"
-                                aria-label="Add to wishlist"
+                                className="p-1 rounded-full bg-white/80 hover:bg-white shadow outline-none focus-visible:ring-2 ring-offset-2 ring-primary"
+                                aria-label={isWishlisted ? "Bỏ khỏi yêu thích" : "Thêm vào yêu thích"}
+                                tabIndex={0}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleWishlist(product); } }}
                             >
                                 {isWishlisted ? (
                                     <HeartIconSolid className="w-5 h-5 text-red-500" />
@@ -168,9 +198,9 @@ const ProductList = () => {
                             </button>
                         </div>
                         {discountPercent !== null && discountPercent > 0 && (
-                            <div className="absolute top-2 left-2 z-30 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
+                            <Chip color="danger" variant="solid" size="sm" className="absolute top-2 left-2 z-30">
                                 -{discountPercent}%
-                            </div>
+                            </Chip>
                         )}
 
                         {product.thumbnail ? (
@@ -186,15 +216,44 @@ const ProductList = () => {
                                 <BuildingStorefrontIcon className="w-16 h-16" />
                             </div>
                         )}
+
+                        {/* Brand overlay removed to free image space */}
                     </div>
                 </CardHeader>
 
                 <CardBody className="px-4 py-3">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                            {product.logoPublicId && (
+                                <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 border border-default-200">
+                                    <CldImage width={24} height={24} src={product.logoPublicId} alt={product.brandName || 'Thương hiệu'} className="w-full h-full object-cover" />
+                                </div>
+                            )}
+                            <span className="text-xs font-medium text-default-700 truncate">{product.brandName}</span>
+                        </div>
+                        <Badge color="warning" variant="flat" className="text-[10px]">
+                            {product.categoryName}
+                        </Badge>
+                    </div>
                     <Link href={`/products/${product.productId}`}>
                         <h4 className="font-bold text-lg line-clamp-2 hover:text-primary transition-colors group-hover:text-primary cursor-pointer h-14">
                             {product.productName || "Tên sản phẩm không xác định"}
                         </h4>
                     </Link>
+
+                    <div className="flex items-center gap-2 mt-1" aria-label={`Đánh giá trung bình ${averageRating.toFixed(1)} trên 5`}>
+                        <div className={`flex items-center ${isStatsLoading ? 'animate-pulse' : ''}`} role="img" aria-hidden="true">
+                            {Array.from({ length: 5 }).map((_, idx) => {
+                                const filled = idx < Math.round(averageRating);
+                                return filled ? (
+                                    <StarIconSolid key={idx} className="w-4 h-4 text-yellow-500" />
+                                ) : (
+                                    <StarIcon key={idx} className="w-4 h-4 text-default-300" />
+                                );
+                            })}
+                        </div>
+                        <span className="text-xs text-default-500">{isStatsLoading ? 'Đang tải…' : `${averageRating.toFixed(1)} (${totalReviews})`}</span>
+                    </div>
 
                     <div className="flex items-center gap-2 my-2">
                         <CurrencyDollarIcon className="w-4 h-4 text-success" />
@@ -216,6 +275,9 @@ const ProductList = () => {
                                     <span className="text-lg font-semibold text-red-600">
                                         {formatPrice(product.minSalePrice)}
                                     </span>
+                                    {!!discountPercent && (
+                                        <Chip color="danger" variant="flat" size="sm" className="ml-1">-{discountPercent}%</Chip>
+                                    )}
                                 </>
                             ) : (
                                 <span className="text-lg font-semibold text-success">
@@ -228,14 +290,17 @@ const ProductList = () => {
                     <Divider className="my-2" />
 
                     <div className="flex justify-between items-center text-sm">
-                        <div className="flex items-center gap-1 text-default-600">
+                        <div className="flex items-center gap-2 text-default-600">
                             <TagIcon className="w-4 h-4" />
-                            <span>Kho: {product.totalStock ?? 'N/A'}</span>
+                            <Chip size="sm" variant="flat" color={product.totalStock && product.totalStock > 10 ? 'success' : product.totalStock && product.totalStock > 0 ? 'warning' : 'danger'}>
+                                {product.totalStock && product.totalStock > 0 ? `${product.totalStock} sản phẩm còn lại` : 'Đang hết hàng'}
+                            </Chip>
                         </div>
-                        <div className="flex items-center gap-1 text-default-600">
-                            <StarIcon className="w-4 h-4" />
-                            <span>Đã bán: {product.purchases}</span>
-                        </div>
+                        <Tooltip content="Lượt mua" placement="top">
+                            <Badge color="primary" variant="flat" className="font-medium">
+                                {product.purchases} đã bán
+                            </Badge>
+                        </Tooltip>
                     </div>
                 </CardBody>
             </Card>

@@ -2,7 +2,7 @@ import { ProductOverview, ChatMessage } from '@/types/chat';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export class GeminiService {
-  private static readonly API_KEY = 'AIzaSyAngio9lHhhKrSYBeh_RBYxnQvkflv8CXQ';
+  private static readonly API_KEY = 'AIzaSyDR9sRjMT_G3mV1nNIjvtH6Zr1KaFUuGS8';
 
   /**
    * Gửi tin nhắn tới Gemini AI với context sản phẩm
