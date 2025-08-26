@@ -863,21 +863,21 @@ export default function OrderDetailPage() {
                                                             )}
 
                                                             {/* Hiển thị giá hiện tại nếu khác giá mua */}
-                                                            {item.currentPrice && item.currentPrice !== item.priceAtPurchase && (
-                                                                <div className="text-xs text-default-500 bg-default-100 px-2 py-1 rounded">
-                                                                    <span>Giá hiện tại: {formatCurrency(item.currentPrice)}</span>
-                                                                    {item.currentPrice > item.priceAtPurchase && (
-                                                                        <Chip size="sm" color="warning" variant="flat" className="ml-2">
-                                                                            Đã tăng giá
-                                                                        </Chip>
-                                                                    )}
-                                                                    {item.currentPrice < item.priceAtPurchase && (
-                                                                        <Chip size="sm" color="success" variant="flat" className="ml-2">
-                                                                            Đã giảm giá
-                                                                        </Chip>
-                                                                    )}
-                                                                </div>
-                                                            )}
+                                                            {/*{item.currentPrice && item.currentPrice !== item.priceAtPurchase && (*/}
+                                                            {/*    <div className="text-xs text-default-500 bg-default-100 px-2 py-1 rounded">*/}
+                                                            {/*        <span>Giá hiện tại: {formatCurrency(item.currentPrice)}</span>*/}
+                                                            {/*        {item.currentPrice > item.priceAtPurchase && (*/}
+                                                            {/*            <Chip size="sm" color="warning" variant="flat" className="ml-2">*/}
+                                                            {/*                Đã tăng giá*/}
+                                                            {/*            </Chip>*/}
+                                                            {/*        )}*/}
+                                                            {/*        {item.currentPrice < item.priceAtPurchase && (*/}
+                                                            {/*            <Chip size="sm" color="success" variant="flat" className="ml-2">*/}
+                                                            {/*                Đã giảm giá*/}
+                                                            {/*            </Chip>*/}
+                                                            {/*        )}*/}
+                                                            {/*    </div>*/}
+                                                            {/*)}*/}
 
                                                             <div className="flex items-center gap-2 text-sm text-default-600">
                                                                 <span>Số lượng:</span>
