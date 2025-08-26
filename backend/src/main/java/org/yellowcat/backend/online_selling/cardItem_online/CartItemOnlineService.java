@@ -96,7 +96,7 @@ public class CartItemOnlineService {
 //        }
 
         if (requestedQuantity >= LARGE_QUANTITY_THRESHOLD) {
-            throw new RuntimeException("Số lượng đặt hàng lớn. Vui lòng liên hệ tư vấn viên để được hỗ trợ.");
+            throw new RuntimeException("Số lượng đặt hàng lớn. Vui lòng liên hệ tư vấn viên qua hotline để được hỗ trợ.");
         }
 
         if (variant.getQuantityInStock() < requestedQuantity) {

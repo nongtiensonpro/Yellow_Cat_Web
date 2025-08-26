@@ -359,16 +359,22 @@ const getStatusColor = (status: string) => {
         }
     }, [openDetailOrderId, orderDetailCache, orderTimeline, fetchOrderTimeline]);
 
+    let KeycloakIdUser = '';
+    if (session?.user?.id) {
+        KeycloakIdUser = session.user.id;
+    }
     // Hàm xác nhận nhận hàng
     const handleConfirmReceived = async (orderId: number) => {
         setConfirmLoading(true);
         setConfirmError(null);
         setConfirmSuccess(null);
+        let keycloakid = '';
+        keycloakid = KeycloakIdUser
         try {
             const res = await fetch('http://localhost:8080/api/order-timelines/confirm-received', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderId, note: 'Khách xác nhận đã nhận hàng' }),
+                body: JSON.stringify({ orderId, note: 'Khách xác nhận đã nhận hàng', imageUrls: returnImages, keycloakid }),
             });
             const data = await res.json();
             if (res.ok) {
@@ -388,12 +394,14 @@ const getStatusColor = (status: string) => {
         setReturnLoading(true);
         setReturnError(null);
         setReturnSuccess(null);
+        let keycloakid = '';
+        keycloakid = KeycloakIdUser
         const note = returnReason === 'Khác' ? customReason : returnReason;
         try {
             const res = await fetch('http://localhost:8080/api/order-timelines/request-return', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderId, note, imageUrls: returnImages }),
+                body: JSON.stringify({ orderId, note, imageUrls: returnImages, keycloakid }),
             });
             const data = await res.json();
             if (res.ok) {
@@ -412,11 +420,13 @@ const getStatusColor = (status: string) => {
     // Hàm huỷ đơn hàng
     const handleCancelOrder = async (orderId: number, orderCode: string) => {
         setCancelLoading(true);
+        let keycloakid = '';
+        keycloakid = KeycloakIdUser
         try {
             const res = await fetch('http://localhost:8080/api/order-timelines/cancel', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderId }),
+                body: JSON.stringify({ orderId, keycloakid }),
             });
             if (res.ok) {
                 toast.success(`Đã huỷ đơn hàng thành công! (Mã đơn: ${orderCode})`);
