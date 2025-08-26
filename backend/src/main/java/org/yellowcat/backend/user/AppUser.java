@@ -30,7 +30,7 @@ public class AppUser {
     private Integer appUserId;
 
 
-    @Column(name = "keycloak_id", nullable = false)
+    @Column(name = "keycloak_id", nullable = true)
     private UUID keycloakId;
 
     @Column(name = "username")

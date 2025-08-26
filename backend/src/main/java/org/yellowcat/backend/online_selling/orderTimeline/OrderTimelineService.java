@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.yellowcat.backend.online_selling.gmail_sending.EmailService;
 import org.yellowcat.backend.online_selling.image_of_order_timeline.ImageRepository;
 import org.yellowcat.backend.online_selling.image_of_order_timeline.OrderTimelineImage;
 import org.yellowcat.backend.online_selling.oder_online.OderOnlineRepository;
@@ -35,6 +36,7 @@ public class OrderTimelineService {
     private final ImageRepository imageRepository;
     private final AppUserRepository appUserRepository;
     private final ZaloPayService zaloPayService;
+    private final EmailService emailService;
 
     private static final int RETURN_ALLOWED_DAYS = 3;
 
@@ -62,10 +64,6 @@ public class OrderTimelineService {
             if (delivered.isEmpty() || delivered.get().getChangedAt().plusDays(RETURN_ALLOWED_DAYS).isBefore(LocalDateTime.now())) {
                 throw new RuntimeException("Không đủ điều kiện để hoàn hàng.");
             }
-            // Bỏ kiểm tra paymentStatus để cho phép hoàn hàng cả khi chưa thanh toán
-            // if ("Pending".equals(paymentStatus)) {
-            //     throw new RuntimeException("Đơn hàng chưa thanh toán. Vui lòng liên hệ cửa hàng để xử lý.");
-            // }
         }
 
         if ("Pending".equalsIgnoreCase(currentStatus) && "Cancelled".equalsIgnoreCase(newStatus)) {
@@ -79,10 +77,18 @@ public class OrderTimelineService {
             if (payment != null && "ZALOPAY".equalsIgnoreCase(payment.getPaymentMethod()) && "SUCCESS".equalsIgnoreCase(paymentStatus)) {
                 // Lưu timeline cho ReturnedToSeller trước
                 String finalNote = (note == null || note.trim().isEmpty()) ? "Không có ghi chú." : note;
-                saveTimeline(orderId, currentStatus, newStatus, finalNote, imageUrls,userid);
+
+                // GỬI MAIL cho ReturnedToSeller
+                emailService.sendOrderStatusUpdateEmail(order, currentStatus, "ReturnedToSeller", finalNote);
+                saveTimeline(orderId, currentStatus, "ReturnedToSeller", finalNote, imageUrls, userid);
+
                 order.setOrderStatus("Refunded");
                 orderRepository.save(order);
-                saveTimeline(orderId, newStatus, "Refunded", "Tự động hoàn tiền cho đơn ZaloPay đã trả về người bán", null,userid);
+
+                // GỬI MAIL cho Refunded
+                emailService.sendOrderStatusUpdateEmail(order, "ReturnedToSeller", "Refunded", "Tự động hoàn tiền cho đơn ZaloPay đã trả về người bán");
+                saveTimeline(orderId, "ReturnedToSeller", "Refunded", "Tự động hoàn tiền cho đơn ZaloPay đã trả về người bán", null, userid);
+
                 Map<String, Object> response = new HashMap<>();
                 response.put("orderId", orderId);
                 response.put("fromStatus", currentStatus);
@@ -123,11 +129,15 @@ public class OrderTimelineService {
         String finalNote = (note == null || note.trim().isEmpty()) ? "Không có ghi chú." : note;
         saveTimeline(orderId, currentStatus, newStatus, finalNote, imageUrls, userid);
 
+        // GỬI MAIL cho tất cả các trạng thái
+        emailService.sendOrderStatusUpdateEmail(order, currentStatus, newStatus, finalNote);
+
         Map<String, Object> response = new HashMap<>();
         response.put("orderId", orderId);
         response.put("fromStatus", currentStatus);
         response.put("toStatus", newStatus);
         response.put("message", "Chuyển trạng thái đơn hàng thành công từ '" + currentStatus + "' sang '" + newStatus + "'.");
+
         return response;
     }
 
@@ -149,6 +159,15 @@ public class OrderTimelineService {
                 String previousStatus = order.getOrderStatus();
                 order.setOrderStatus("Pending");
                 orderRepository.save(order);
+
+                // GỬI MAIL khi tự động chuyển trạng thái
+                emailService.sendOrderStatusUpdateEmail(
+                        order,
+                        previousStatus,
+                        "Pending",
+                        "Đủ hàng và tự động chuyển sang trạng thái chờ xác nhận."
+                );
+
                 saveTimeline(
                         order.getOrderId(),
                         previousStatus,
@@ -189,6 +208,8 @@ public class OrderTimelineService {
         String finalNote = (note == null || note.trim().isEmpty()) ? "Khách hàng xác nhận đã nhận hàng." : note;
         saveTimeline(orderId, "Delivered", "CustomerReceived", finalNote, null,id);
 
+        emailService.sendOrderStatusUpdateEmail(order, "Delivered", "CustomerReceived", finalNote);
+
         Map<String, Object> res = new HashMap<>();
         res.put("orderId", orderId);
         res.put("fromStatus", "Delivered");
@@ -213,12 +234,20 @@ public class OrderTimelineService {
                 // Cập nhật thanh toán COD nếu có
                 updateCodPaymentStatus(order);
 
-                saveTimeline(orderId, "Delivered", "CustomerReceived", "Tự động xác nhận sau 3 ngày kể từ khi nhận hàng", null,null);
+                // GỬI MAIL khi tự động xác nhận
+                emailService.sendOrderStatusUpdateEmail(
+                        order,
+                        "Delivered",
+                        "CustomerReceived",
+                        "Tự động xác nhận sau 3 ngày kể từ khi nhận hàng"
+                );
+
+                saveTimeline(orderId, "Delivered", "CustomerReceived", "Tự động xác nhận sau 3 ngày kể từ khi nhận hàng", null, null);
             }
         }
     }
 
-    @Scheduled(cron = "0 0 * * * *", zone = "Asia/Ho_Chi_Minh") // Chạy mỗi giờ tại phút 0
+    @Scheduled(cron = "0 0 * * * *", zone = "Asia/Ho_Chi_Minh")
     @Transactional
     public void autoCancelUnpaidOrders() {
         // Thời gian chờ: 24 giờ
@@ -241,6 +270,14 @@ public class OrderTimelineService {
         for (Order order : unpaidOrders) {
             try {
                 log.info("Hủy đơn: {} - Tạo lúc: {}", order.getOrderCode(), order.getCreatedAt());
+
+                // GỬI MAIL khi tự động hủy
+                emailService.sendOrderStatusUpdateEmail(
+                        order,
+                        order.getOrderStatus(),
+                        "Cancelled",
+                        "Tự động hủy do không thanh toán sau 24 giờ"
+                );
 
                 updateOrderStatus(
                         order.getOrderId(),

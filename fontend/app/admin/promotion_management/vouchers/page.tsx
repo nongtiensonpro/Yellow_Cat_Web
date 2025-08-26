@@ -114,6 +114,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
     const [categories, setCategories] = useState<Category[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [loadingTargets, setLoadingTargets] = useState(false);
+    const [dataFetched, setDataFetched] = useState(false);
 
     const [form, setForm] = useState({
         promotionName: '',
@@ -160,9 +161,16 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
         setActiveTab('products');
     };
 
-    // Fetch target data
-    const fetchTargetData = React.useCallback(async () => {
+    // Fetch target data - chỉ fetch khi cần thiết
+    const fetchTargetData = React.useCallback(async (forceRefresh = false) => {
         if (!session?.accessToken) return;
+        
+        // Kiểm tra nếu đã có data và không cần force refresh
+        if (!forceRefresh && products.length > 0 && categories.length > 0 && users.length > 0) {
+            console.log('Target data already loaded, skipping fetch');
+            return;
+        }
+        
         setLoadingTargets(true);
 
         try {
@@ -199,17 +207,26 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
             console.error('Error fetching target data:', error);
         } finally {
             setLoadingTargets(false);
+            setDataFetched(true);
         }
-    }, [session?.accessToken]);
+    }, [session?.accessToken]); // Loại bỏ products.length, categories.length, users.length khỏi dependency array
 
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && !dataFetched) {
+            // Chỉ fetch khi modal mở và chưa có data
             fetchTargetData();
-        } else {
+        } else if (!isOpen) {
             // Reset form when modal is closed
             resetForm();
         }
-    }, [isOpen, fetchTargetData]);
+    }, [isOpen, dataFetched]); // Loại bỏ fetchTargetData khỏi dependency array
+
+    // Reset dataFetched khi modal đóng
+    useEffect(() => {
+        if (!isOpen) {
+            setDataFetched(false);
+        }
+    }, [isOpen]);
 
     const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
         // Chặn việc nhập ký tự không phải số và dấu chấm
@@ -1016,10 +1033,18 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
     const [categories, setCategories] = useState<Category[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [loadingTargets, setLoadingTargets] = useState(false);
+    const [dataFetched, setDataFetched] = useState(false);
 
-    // Fetch target data for edit modal
-    const fetchEditTargetData = React.useCallback(async () => {
+    // Fetch target data for edit modal - chỉ fetch khi cần thiết
+    const fetchEditTargetData = React.useCallback(async (forceRefresh = false) => {
         if (!session?.accessToken) return;
+        
+        // Kiểm tra nếu đã có data và không cần force refresh
+        if (!forceRefresh && products.length > 0 && categories.length > 0 && users.length > 0) {
+            console.log('Target data already loaded, skipping fetch');
+            return;
+        }
+        
         console.log('Fetching target data for edit modal...');
         setLoadingTargets(true);
 
@@ -1110,9 +1135,10 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
             console.error('Error fetching target data:', error);
         } finally {
             setLoadingTargets(false);
+            setDataFetched(true);
             console.log('Target data fetching completed');
         }
-    }, [session?.accessToken]);
+    }, [session?.accessToken]); // Loại bỏ products.length, categories.length, users.length khỏi dependency array
 
     // Load voucher data when modal opens
     useEffect(() => {
@@ -1163,7 +1189,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
             const voucherScopes = voucher.scopes ? [...voucher.scopes] : [];
 
             // Load data first, then map scopes
-            fetchEditTargetData().then(() => {
+            fetchEditTargetData(true).then(() => {
                 // Chờ cho state products/categories/users được cập nhật
                 setTimeout(() => {
                         // Map scopes sử dụng dữ liệu mới nhất
@@ -1217,11 +1243,11 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                     console.error('Error fetching or mapping scopes:', error);
                 });
         }
-    }, [voucher, isOpen, products, categories, users, fetchEditTargetData]);
+    }, [voucher, isOpen, fetchEditTargetData]); // Loại bỏ products, categories, users khỏi dependency array
 
-    // Separate useEffect to map scopes after data is loaded
+    // Separate useEffect to map scopes after data is loaded - chỉ chạy một lần khi data được load
     useEffect(() => {
-        if (voucher && products.length > 0 && categories.length > 0 && users.length > 0) {
+        if (voucher && products.length > 0 && categories.length > 0 && users.length > 0 && !dataFetched) {
             console.log('Mapping scopes with loaded data:', {
                 products: products.length,
                 categories: categories.length,
@@ -1356,33 +1382,42 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                 });
             }
         }
-    }, [voucher, products, categories, users]);
+    }, [voucher, products.length, categories.length, users.length, dataFetched]); // Chỉ chạy khi length thay đổi và chưa fetch
 
-    // Log when products change
+    // Log when products change (only for debugging, can be removed in production)
     useEffect(() => {
-        console.log('Products state changed:', products.length, 'items');
         if (products.length > 0) {
-            console.log('First few products:', products.slice(0, 3).map(p => ({ id: p.productId, name: p.name })));
+            console.log('Products loaded:', products.length, 'items');
         }
-    }, [products]);
+    }, [products.length]);
 
-    // Log render state
+    // Log render state (only for debugging, can be removed in production)
     useEffect(() => {
-        console.log('Render state:', {
+        console.log('Edit modal state:', {
             loadingTargets,
             productsLength: products.length,
+            categoriesLength: categories.length,
+            usersLength: users.length,
             activeTab,
             selectedProducts: selectedProducts.length,
             selectedCategories: selectedCategories.length,
             selectedUsers: selectedUsers.length
         });
-    }, [loadingTargets, products.length, activeTab, selectedProducts.length, selectedCategories.length, selectedUsers.length]);
+    }, [loadingTargets, products.length, categories.length, users.length, activeTab, selectedProducts.length, selectedCategories.length, selectedUsers.length]);
 
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && !dataFetched) {
+            // Chỉ fetch khi modal mở và chưa có data
             fetchEditTargetData();
         }
-    }, [isOpen, fetchEditTargetData]);
+    }, [isOpen, dataFetched]); // Loại bỏ fetchEditTargetData khỏi dependency array
+
+    // Reset dataFetched khi modal đóng
+    useEffect(() => {
+        if (!isOpen) {
+            setDataFetched(false);
+        }
+    }, [isOpen]);
 
     const handleTargetToggle = (type: 'products' | 'categories' | 'users', id: number | string) => {
         if (type === 'products') {

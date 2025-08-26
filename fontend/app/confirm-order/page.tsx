@@ -89,6 +89,7 @@ export default function ConfirmOrderPage() {
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [loadingCart, setLoadingCart] = useState(true);
     const [fullName, setFullName] = useState('');
+    const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [addressDetail, setAddressDetail] = useState('');
     const [note, setNote] = useState('');
@@ -207,7 +208,7 @@ export default function ConfirmOrderPage() {
                 code: voucherCode,
                 subtotal: subtotal,
                 shippingFee: shippingFee
-            });
+            }); 
             
             const response = await fetch(
                 `http://localhost:8080/api/admin/vouchers/totle-discount?code=${encodeURIComponent(voucherCode)}&subtotal=${subtotal}&shippingFee=${shippingFee}`,
@@ -296,7 +297,7 @@ export default function ConfirmOrderPage() {
                     0
                 )
             );
-        } else {
+        } else {       
             setShippingFee(0);
         }
     }, [selectedAddress, selectedProvinceCode, selectedDistrictCode, cartItems, provinces, districts, fetchShippingFee]);
@@ -442,6 +443,13 @@ export default function ConfirmOrderPage() {
                 setPlacingOrder(false);
                 return;
             }
+            
+            // Validate email format nếu có nhập
+            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                setOrderError('Email không đúng định dạng.');
+                setPlacingOrder(false);
+                return;
+            }
             // Lấy tên tỉnh/huyện/xã từ danh sách
             const province = provinces.find(p => p.code === selectedProvinceCode)?.name || '';
             const district = districts.find(d => d.code === selectedDistrictCode)?.name || '';
@@ -459,7 +467,7 @@ export default function ConfirmOrderPage() {
                 keycloakId: guestId,
                 username: fullName,
                 phoneNumber: phone,
-                email: '', // Guest không có email
+                email: email || '', // Sử dụng email từ form nếu có
                 enabled: true
             };
             shippingAddress = {
@@ -506,6 +514,7 @@ export default function ConfirmOrderPage() {
                 shippingFee: shippingFee,
                 note: note,
                 paymentMethod: paymentMethod,
+                email: email,
                 orderStatus: 'Pending',
                 products: cartItems.map(item => ({
                     id: item.productId,
@@ -957,6 +966,17 @@ export default function ConfirmOrderPage() {
                                                 onChange={e => setFullName(e.target.value)} 
                                                 className="p-3 border border-gray-300 rounded-md w-full" 
                                                 placeholder="Nhập họ và tên"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                            <input 
+                                                type="email" 
+                                                id="email" 
+                                                value={email} 
+                                                onChange={e => setEmail(e.target.value)} 
+                                                className="p-3 border border-gray-300 rounded-md w-full" 
+                                                placeholder="Nhập Email để có thể nhận thông báo tình trạng đơn hàng"
                                             />
                                         </div>
                                         <div>

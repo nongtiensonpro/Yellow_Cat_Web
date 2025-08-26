@@ -3,6 +3,7 @@ package org.yellowcat.backend.online_selling.oder_online;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.yellowcat.backend.address.AddressRepository;
@@ -10,6 +11,7 @@ import org.yellowcat.backend.address.Addresses;
 import org.yellowcat.backend.online_selling.PaymentStatus;
 import org.yellowcat.backend.online_selling.cardItem_online.CartItemOnlineRepository;
 import org.yellowcat.backend.online_selling.card_online.CartOnlineRepository;
+import org.yellowcat.backend.online_selling.gmail_sending.EmailService;
 import org.yellowcat.backend.online_selling.oder_online.dto.OrderOnlineDetailDTO;
 import org.yellowcat.backend.online_selling.oder_online.dto.OrderOnlineRequestDTO;
 import org.yellowcat.backend.online_selling.oder_online.dto.OrderSummaryDTO;
@@ -34,10 +36,12 @@ import org.yellowcat.backend.user.AppUserRepository;
 import org.yellowcat.backend.online_selling.voucher.entity.VoucherRedemption;
 import org.yellowcat.backend.online_selling.voucher.repository.VoucherRedemptionRepository;
 
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderOnlineService {
@@ -54,6 +58,7 @@ public class OrderOnlineService {
     private final ShippingMethodRepository shippingMethodRepository;
     private final VoucherService1 voucherService1;
     private final VoucherRedemptionRepository voucherRedemptionRepository;
+    private final EmailService emailService;
 
     @Autowired
     OrderTimelineService orderTimelineService;
@@ -98,9 +103,9 @@ public class OrderOnlineService {
             orderItems.add(item);
             subTotal = subTotal.add(totalPrice);
         }
-        
+
         BigDecimal shippingFee = request.getShippingFee() != null ? request.getShippingFee() : BigDecimal.ZERO;
-        
+
         // Logic tính toán tổng tiền rõ ràng
         BigDecimal finalAmount;
         BigDecimal subTotal_use_voucher;
@@ -120,12 +125,59 @@ public class OrderOnlineService {
             finalAmount = subTotal.add(shippingFee);
         }
 
-        // Tìm AppUser
+        // Tìm hoặc tạo AppUser
         AppUser user = null;
         if (request.getAppUser() != null && request.getAppUser().getKeycloakId() != null) {
-            user = appUserRepository.findByKeycloakId(request.getAppUser().getKeycloakId())
-                    .orElse(null);
+            UUID keycloakId = request.getAppUser().getKeycloakId();
+            String email = request.getAppUser().getEmail();
+
+            System.out.println("🔍 Đang tìm user bằng keycloakId: " + keycloakId);
+
+            Optional<AppUser> optionalUser = appUserRepository.findByKeycloakId(keycloakId);
+
+            if (optionalUser.isPresent()) {
+                user = optionalUser.get();
+                System.out.println("✅ Tìm thấy user trong DB: "
+                        + "appUserId=" + user.getAppUserId()
+                        + ", username=" + user.getUsername()
+                        + ", email=" + user.getEmail());
+            } else {
+                System.out.println("❌ Không tìm thấy user với keycloakId: " + keycloakId);
+
+                // Check theo email
+                if (email != null && !email.isBlank()) {
+                    Optional<AppUser> optionalUserByMail = appUserRepository.findByEmail(email);
+
+                    if (optionalUserByMail.isPresent()) {
+                        AppUser existingUser = optionalUserByMail.get();
+
+                        if (existingUser.getRoles().contains("GUEST")) {
+                            // 👉 Nếu user này là GUEST thì tái sử dụng
+                            user = existingUser;
+                            System.out.println("♻️ Tái sử dụng GUEST user với email: " + email
+                                    + ", appUserId=" + user.getAppUserId());
+                        } else {
+                            // 👉 Nếu user không phải GUEST thì báo lỗi
+                            throw new RuntimeException("Email " + email + " đã được đăng ký trong hệ thống. Vui lòng đăng nhập để tiếp tục.");
+                        }
+                    }
+                }
+
+                // Nếu email chưa tồn tại → tạo guest user mới
+                if (user == null) {
+                    System.out.println("🆕 Tạo mới GUEST user (vì không tồn tại keycloakId và email chưa được đăng ký)");
+                    user = new AppUser();
+                    user.setFullName(request.getShippingAddress().getRecipientName());
+                    user.setEmail(email);
+                    user.setEnabled(true);
+                    user.setRoles(List.of("GUEST"));
+
+                    user = appUserRepository.save(user);
+                    System.out.println("✅ Guest user được tạo với appUserId: " + user.getAppUserId());
+                }
+            }
         }
+
 
         // Xử lý địa chỉ giao hàng
         Addresses shippingAddress = request.getShippingAddress();
@@ -141,7 +193,7 @@ public class OrderOnlineService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phương thức giao hàng với ID: " + request.getShippingMethodId()));
 
         // Tạo đơn hàng
-        
+
         Order order = Order.builder()
                 .orderCode(generateOrderCode())
                 .user(user)
@@ -169,6 +221,8 @@ public class OrderOnlineService {
         // Lưu order
         Order savedOrder = orderRepository.save(order);
 
+
+
         // gắn voucher cho đơn hàng
         if(request.getCodeVoucher() != null) {
             voucherService1.applyVoucher(request.getCodeVoucher(), savedOrder, user != null ? user.getAppUserId() : null);
@@ -181,6 +235,7 @@ public class OrderOnlineService {
         timeline.setToStatus(request.getOrderStatus());
         timeline.setChangedAt(LocalDateTime.now());
         timeline.setOrderId(savedOrder.getOrderId());
+        timeline.setUpdatedBy(user != null ? user.getAppUserId() : null);
         orderTimelineRepository.save(timeline);
 
         //Lưu phương thức thanh toán
@@ -189,7 +244,7 @@ public class OrderOnlineService {
         payment.setOrder(order);
         payment.setPaymentMethod(request.getPaymentMethod());
         payment.setPaymentStatus("Pending");
-        
+
         Payment savedPayment = paymentRepository.save(payment);
 
         // Xóa sản phẩm khỏi giỏ hàng nếu user đăng nhập
@@ -206,9 +261,11 @@ public class OrderOnlineService {
             });
         }
 
+        // Gửi mail xác nhận đơn hàng
+        emailService.sendNewOrderConfirmationEmail(savedOrder);
+
         return savedOrder;
     }
-
 
     /**
      * Sinh mã đơn hàng tự động

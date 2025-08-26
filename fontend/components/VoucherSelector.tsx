@@ -194,7 +194,7 @@ export default function VoucherSelector({
                 setError('Không thể xác định người dùng');
                 return;
             }
-
+            console.log("chạy đến đây");
             // Kiểm tra xem userId có phải là UUID không
             if (!userId || userId.length !== 36) {
                 setError('ID người dùng không hợp lệ');
@@ -258,7 +258,7 @@ export default function VoucherSelector({
             };
 
             console.log('Fetching vouchers with request:', requestBody);
-
+            console.log("chạy đến đây");
             const response = await fetch('http://localhost:8080/api/admin/vouchers/user_get_list_vouchers', {
                 method: 'POST',
                 headers: {
