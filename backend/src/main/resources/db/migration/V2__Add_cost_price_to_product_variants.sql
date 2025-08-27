@@ -1,2 +1,0 @@
-ALTER TABLE product_variants
-ADD COLUMN cost_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00;
