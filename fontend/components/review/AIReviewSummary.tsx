@@ -18,14 +18,14 @@ const AIReviewSummary = ({ reviews }: AIReviewSummaryProps) => {
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
 
-    const apiKey = 'AIzaSyBIYJJNMbe-QBA2Z1uihw_iqywxtmei9jo';
+    const apiKey = 'AIzaSyCW1jh4rRrAIDeji8I1pwSt_6JraiyY_CY';
 
     const generateSummary = async (reviewsData: Review[]) => {
         try {
             const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+            const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
-            const context = `Bạn là AI chuyên phân tích đánh giá. Tóm tắt ngắn gọn các đánh giá sau, mục đích chính là cho biết sản phẩm này chất lượng ra sao:
+            const context = `Bạn là AI chuyên phân tích đánh giá giày thể thao. Tóm tắt ngắn gọn các đánh giá sau, mục đích chính là cho biết sản phẩm này chất lượng ra sao:
             ${JSON.stringify(reviewsData, null, 2)}
             Tạo bản tóm tắt ngắn gọn (khoảng 100 từ) bao gồm:
             1. Điểm trung bình

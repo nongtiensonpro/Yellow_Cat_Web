@@ -10,6 +10,21 @@
     animation: fadeInUp 0.8s cubic-bezier(0.39, 0.575, 0.565, 1) both;
   }
   
+  /* Line clamp utilities */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
   /* Chat message animations */
   .animate-message-in {
     animation: messageIn 0.3s ease-out;
