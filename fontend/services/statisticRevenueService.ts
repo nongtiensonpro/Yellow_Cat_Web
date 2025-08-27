@@ -10,13 +10,13 @@ export type RevenueTrendDTO = {
 };
 
 export type RevenueByCategoryDTO = {
-    categoryName: string[];
-    totalRevenue: number[];
+    categoryName: string;
+    totalRevenue: number;
 };
 
 export type RevenueByBrandDTO = {
-    brandName: string[];
-    totalRevenue: number[];
+    brandName: string;
+    totalRevenue: number;
 };
 
 export type RevenueSummaryDTO = {
@@ -75,20 +75,20 @@ export const revenueService = {
         return response.json();
     },
 
-    getByCategory: async (range: string): Promise<RevenueByCategoryDTO> => {
+    getByCategory: async (range: string): Promise<RevenueByCategoryDTO[]> => {
         const url = new URL(`${API_BASE_URL}/api/statistic/revenue/by-category`);
         url.searchParams.append("range", mapRangeToBackend(range));
 
         const response = await fetchWithAuth(url.toString());
-        return response.json();
+        return response.json(); // mảng
     },
 
-    getByBrand: async (range: string): Promise<RevenueByBrandDTO> => {
+    getByBrand: async (range: string): Promise<RevenueByBrandDTO[]> => {
         const url = new URL(`${API_BASE_URL}/api/statistic/revenue/by-brand`);
         url.searchParams.append("range", mapRangeToBackend(range));
 
         const response = await fetchWithAuth(url.toString());
-        return response.json();
+        return response.json(); // mảng
     },
 
     getSummary: async (range: string): Promise<RevenueSummaryDTO> => {

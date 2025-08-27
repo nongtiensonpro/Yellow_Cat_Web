@@ -41,21 +41,27 @@ public interface ProductVariantStatisticRepository extends JpaRepository<Product
 
     @Query(value = """
             SELECT p.product_id,
-                   p.product_name AS product_name,
-                   c.category_name AS category_name,
-                   b.brand_name AS brand_name,
-                   COALESCE(SUM(oi.quantity), 0) AS sales,
-                   COALESCE(SUM(oi.quantity * oi.price_at_purchase), 0) AS revenue,
+                   p.product_name,
+                   c.category_name,
+                   b.brand_name,
+                   COALESCE(SUM(s.total_sold), 0)   AS sold,
+                   COALESCE(SUM(s.total_revenue), 0) AS revenue,
                    COALESCE(SUM(v.quantity_in_stock), 0) AS stock
             FROM products p
                      JOIN categories c ON p.category_id = c.category_id
                      JOIN brands b ON p.brand_id = b.brand_id
                      JOIN product_variants v ON v.product_id = p.product_id
-                     LEFT JOIN order_items oi ON oi.variant_id = v.variant_id
-                     LEFT JOIN orders o ON o.order_id = oi.order_id
-                                        AND o.order_status IN ('Delivered', 'Paid', 'Completed')
+                     LEFT JOIN (
+                        SELECT oi.variant_id,
+                               SUM(oi.quantity) AS total_sold,
+                               SUM(oi.quantity * oi.price_at_purchase) AS total_revenue
+                        FROM order_items oi
+                                 JOIN orders o ON o.order_id = oi.order_id
+                        WHERE o.order_status IN ('Delivered', 'Paid', 'Completed')
+                        GROUP BY oi.variant_id
+                     ) s ON s.variant_id = v.variant_id
             GROUP BY p.product_id, p.product_name, c.category_name, b.brand_name
-            ORDER BY sales DESC
+            ORDER BY sold DESC
             """, nativeQuery = true)
     List<Object[]> findProductStatistics();
 }
