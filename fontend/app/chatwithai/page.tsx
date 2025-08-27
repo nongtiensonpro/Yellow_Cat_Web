@@ -11,7 +11,7 @@ import {
 } from '@heroui/react'
 import { ChatMessage, ProductOverview } from '@/types/chat'
 import { ChatService } from '@/services/chatService'
-
+import DOMPurify from 'dompurify';
 export default function ChatWithAIPage() {
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
   const [userInput, setUserInput] = useState('')
@@ -247,7 +247,7 @@ export default function ChatWithAIPage() {
                     {message.role === 'ai' && (
                       <div 
                         className="ai-message-content text-gray-800"
-                        dangerouslySetInnerHTML={{ __html: message.content }}
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(message.content) }}
                       />
                     )}
                     {message.role === 'user' && (
