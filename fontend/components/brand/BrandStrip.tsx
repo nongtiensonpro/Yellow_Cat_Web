@@ -36,7 +36,7 @@ type ApiWrap<T> = {
     data?: T | PageInfo<T> | { content?: T[] } | unknown;
 };
 
-// === Component ===
+
 const BrandStrip: React.FC = () => {
     const [brands, setBrands] = useState<Brand[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
@@ -64,6 +64,7 @@ const BrandStrip: React.FC = () => {
             setLoading(true);
             setError(null);
             try {
+
                 const res = await fetch("http://localhost:8080/api/brands?page=0&size=50");
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const json: ApiWrap<Brand[]> = await res.json();
@@ -189,7 +190,6 @@ const BrandStrip: React.FC = () => {
                 </div>
             </div>
 
-            {/* Error */}
             {error && (
                 <Card className="max-w-md">
                     <CardBody className="py-6 text-center">
@@ -198,7 +198,6 @@ const BrandStrip: React.FC = () => {
                     </CardBody>
                 </Card>
             )}
-
             {/* Loading */}
             {loading && (
                 <div className="w-full aspect-[16/6]">
@@ -298,3 +297,4 @@ const BrandStrip: React.FC = () => {
 };
 
 export default BrandStrip;
+

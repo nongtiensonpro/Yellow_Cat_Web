@@ -139,7 +139,6 @@ const OverviewCards: React.FC<OverviewCardsProps> = ({timeRange}) => {
             },
         ];
     }, [data]);
-
     return (
         <div className="space-y-6">
             {/* Loading / Error */}

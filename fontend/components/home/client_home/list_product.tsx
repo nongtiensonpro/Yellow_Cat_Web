@@ -253,11 +253,9 @@ const ProductList = () => {
                                 {product.categoryName}
                             </Badge>
                         </div>
-
                         <h4 className="font-bold text-lg line-clamp-2 hover:text-primary transition-colors group-hover:text-primary cursor-pointer h-14">
                             {product.productName || "Tên sản phẩm không xác định"}
                         </h4>
-
 
                         <div className="flex items-center gap-2 mt-1"
                              aria-label={`Đánh giá trung bình ${averageRating.toFixed(1)} trên 5`}>
