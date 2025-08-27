@@ -42,8 +42,18 @@ interface ApiStatsResponse {
     starDistribution: StarDistributionItem[];
 }
 
+interface ProductInfoForAI {
+    productId: number;
+    productName: string;
+    brandName?: string;
+    categoryName?: string;
+    materialName?: string;
+    targetAudienceName?: string;
+}
+
 interface ReviewSectionProps {
     productId: number;
+    productInfo?: ProductInfoForAI;
     // Updated: Now sends an object with totalReviews and averageRating
     onReviewStatsChange?: (stats: { totalReviews: number; averageRating: number }) => void;
 }
@@ -61,7 +71,7 @@ const formatDate = (dateStr: string) => {
 
 const REVIEWS_PER_PAGE = 5; // Define how many reviews to show per page
 
-export default function ReviewSection({ productId, onReviewStatsChange }: ReviewSectionProps) {
+export default function ReviewSection({ productId, productInfo, onReviewStatsChange }: ReviewSectionProps) {
     const [reviews, setReviews] = useState<Review[]>([]);
     const [loading, setLoading] = useState(true);
     const [overallRating, setOverallRating] = useState<number | null>(null);
@@ -229,7 +239,7 @@ export default function ReviewSection({ productId, onReviewStatsChange }: Review
             <h3 className="text-xl font-bold mb-6">Đánh giá sản phẩm ({totalReviewsCount})</h3>
 
             {/* AI Review Summary */}
-            <AIReviewSummary reviews={reviews} />
+            <AIReviewSummary reviews={reviews} productInfo={productInfo} />
 
             <div className="flex items-start gap-6 border-b pb-6 mb-6">
                 <div className="text-center w-32">

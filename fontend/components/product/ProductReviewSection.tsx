@@ -4,12 +4,18 @@ import { Card, CardHeader, CardBody, Divider, Badge } from '@heroui/react';
 import ReviewSection from '@/components/review/ReviewSection';
 import { useState } from 'react';
 
-interface ProductReviewSectionProps {
+interface ProductInfoForAI {
     productId: number;
     productName: string;
+    brandName?: string;
+    categoryName?: string;
+    materialName?: string;
+    targetAudienceName?: string;
 }
 
-const ProductReviewSection = ({ productId }: ProductReviewSectionProps) => {
+type ProductReviewSectionProps = ProductInfoForAI;
+
+const ProductReviewSection = ({ productId, productName, brandName, categoryName, materialName, targetAudienceName }: ProductReviewSectionProps) => {
     const [reviewCount, setReviewCount] = useState(0);
 
     const handleReviewStatsChange = (stats: { totalReviews: number; averageRating: number }) => {
@@ -41,6 +47,7 @@ const ProductReviewSection = ({ productId }: ProductReviewSectionProps) => {
             <CardBody className="p-6">
                 <ReviewSection
                     productId={productId}
+                    productInfo={{ productId, productName, brandName, categoryName, materialName, targetAudienceName }}
                     onReviewStatsChange={handleReviewStatsChange}
                 />
             </CardBody>

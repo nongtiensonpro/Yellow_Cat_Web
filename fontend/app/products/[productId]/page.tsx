@@ -1311,6 +1311,10 @@ export default function ProductDetailPage() {
                         <ProductReviewSection
                             productId={view.productId}
                             productName={view.productName}
+                            brandName={view.brandName}
+                            categoryName={view.categoryName}
+                            materialName={view.materialName}
+                            targetAudienceName={view.targetAudienceName}
                         />
                     </div>
                 </CardBody>
