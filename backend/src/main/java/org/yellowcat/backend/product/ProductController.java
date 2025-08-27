@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Pageable;
 import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
 import org.yellowcat.backend.product.dto.*;
+import org.yellowcat.backend.product.dto.LatestProductDTO;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserService;
 import org.yellowcat.backend.product.dto.VariantPromosDTO;
@@ -75,6 +76,33 @@ public class ProductController {
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Error retrieving top-selling products", e.getMessage());
+        }
+    }
+
+    @GetMapping("/latest")
+    @Operation(summary = "Get 3 latest products", description = "Returns the 3 most recently created products with full details including images for landing page slider")
+    public ResponseEntity<?> getLatest3Products() {
+        try {
+            List<LatestProductDTO> latestProducts = productService.getLatest3Products();
+            return ResponseEntityBuilder.success(latestProducts);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Error retrieving latest products", e.getMessage());
+        }
+    }
+
+    @GetMapping("/featured")
+    @Operation(summary = "Get featured product", description = "Returns the best rated product or a random product for customer recommendations")
+    public ResponseEntity<?> getFeaturedProduct() {
+        try {
+            FeaturedProductDTO featuredProduct = productService.getTopRatedOrRandomProduct();
+            if (featuredProduct == null) {
+                return ResponseEntityBuilder.notFound("No products available", "No active products found");
+            }
+            return ResponseEntityBuilder.success(featuredProduct);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Error retrieving featured product", e.getMessage());
         }
     }
 

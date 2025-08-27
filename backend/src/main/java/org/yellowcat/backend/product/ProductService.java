@@ -13,6 +13,7 @@ import org.yellowcat.backend.product.category.CategoryRepository;
 import org.yellowcat.backend.product.color.Color;
 import org.yellowcat.backend.product.color.ColorRepository;
 import org.yellowcat.backend.product.dto.*;
+import org.yellowcat.backend.product.dto.LatestProductDTO;
 import org.yellowcat.backend.product.material.Material;
 import org.yellowcat.backend.product.material.MaterialRepository;
 import org.yellowcat.backend.product.productvariant.ProductVariant;
@@ -105,6 +106,145 @@ public class ProductService {
             );
         }).collect(Collectors.toList());
     }
+
+    /**
+     * Lấy 3 sản phẩm mới nhất với đầy đủ thông tin bao gồm cả ảnh
+     */
+    public List<LatestProductDTO> getLatest3Products() {
+        List<Object[]> results = productRepository.findLatest3Products();
+        
+        Map<Integer, LatestProductDTO> productMap = new HashMap<>();
+        
+        for (Object[] row : results) {
+            Integer productId = (Integer) row[0];
+            
+            // Tạo hoặc lấy product DTO
+            LatestProductDTO productDTO = productMap.computeIfAbsent(productId, k -> {
+                LatestProductDTO dto = new LatestProductDTO();
+                dto.setProductId((Integer) row[0]);
+                dto.setProductName((String) row[1]);
+                dto.setDescription((String) row[2]);
+                dto.setPurchases((Integer) row[3]);
+                dto.setIsActive((Boolean) row[4]);
+                // Convert Timestamp to Instant
+                if (row[5] != null) {
+                    dto.setCreatedAt(((java.sql.Timestamp) row[5]).toInstant());
+                }
+                if (row[6] != null) {
+                    dto.setUpdatedAt(((java.sql.Timestamp) row[6]).toInstant());
+                }
+                dto.setCategoryId((Integer) row[7]);
+                dto.setCategoryName((String) row[8]);
+                dto.setBrandId((Integer) row[9]);
+                dto.setBrandName((String) row[10]);
+                dto.setBrandInfo((String) row[11]);
+                dto.setLogoPublicId((String) row[12]);
+                dto.setMaterialId((Integer) row[13]);
+                dto.setMaterialName((String) row[14]);
+                dto.setTargetAudienceId((Integer) row[15]);
+                dto.setTargetAudienceName((String) row[16]);
+                dto.setThumbnail((String) row[17]);
+                dto.setMinPrice((BigDecimal) row[18]);
+                dto.setMinSalePrice((BigDecimal) row[19]);
+                dto.setTotalStock(((Number) row[20]).longValue());
+                dto.setVariants(new ArrayList<>());
+                return dto;
+            });
+            
+            // Thêm variant nếu có
+            if (row[21] != null) { // variantId
+                LatestProductDTO.ProductVariantImageDTO variantDTO = new LatestProductDTO.ProductVariantImageDTO();
+                variantDTO.setVariantId((Integer) row[21]);
+                variantDTO.setSku((String) row[22]);
+                variantDTO.setColorName((String) row[23]);
+                variantDTO.setSizeName((String) row[24]);
+                variantDTO.setPrice((BigDecimal) row[25]);
+                variantDTO.setSalePrice((BigDecimal) row[26]);
+                variantDTO.setQuantityInStock((Integer) row[27]);
+                variantDTO.setSold((Integer) row[28]);
+                variantDTO.setImageUrl((String) row[29]);
+                variantDTO.setWeight((Double) row[30]);
+                variantDTO.setCostPrice((BigDecimal) row[31]);
+                
+                productDTO.getVariants().add(variantDTO);
+            }
+        }
+        
+        return new ArrayList<>(productMap.values());
+    }
+
+    /**
+     * Lấy sản phẩm được đánh giá tốt nhất hoặc sản phẩm ngẫu nhiên
+     */
+    public FeaturedProductDTO getTopRatedOrRandomProduct() {
+        List<Object[]> results = productRepository.findTopRatedOrRandomProduct();
+        
+        if (results.isEmpty()) {
+            return null;
+        }
+        
+        Map<Integer, FeaturedProductDTO> productMap = new HashMap<>();
+        
+        for (Object[] row : results) {
+            Integer productId = (Integer) row[0];
+            
+            // Tạo hoặc lấy product DTO
+            FeaturedProductDTO productDTO = productMap.computeIfAbsent(productId, k -> {
+                FeaturedProductDTO dto = new FeaturedProductDTO();
+                dto.setProductId((Integer) row[0]);
+                dto.setProductName((String) row[1]);
+                dto.setDescription((String) row[2]);
+                dto.setPurchases((Integer) row[3]);
+                dto.setIsActive((Boolean) row[4]);
+                // Convert Timestamp to Instant
+                if (row[5] != null) {
+                    dto.setCreatedAt(((java.sql.Timestamp) row[5]).toInstant());
+                }
+                if (row[6] != null) {
+                    dto.setUpdatedAt(((java.sql.Timestamp) row[6]).toInstant());
+                }
+                dto.setCategoryId((Integer) row[7]);
+                dto.setCategoryName((String) row[8]);
+                dto.setBrandId((Integer) row[9]);
+                dto.setBrandName((String) row[10]);
+                dto.setBrandInfo((String) row[11]);
+                dto.setLogoPublicId((String) row[12]);
+                dto.setMaterialId((Integer) row[13]);
+                dto.setMaterialName((String) row[14]);
+                dto.setTargetAudienceId((Integer) row[15]);
+                dto.setTargetAudienceName((String) row[16]);
+                dto.setThumbnail((String) row[17]);
+                dto.setMinPrice((BigDecimal) row[18]);
+                dto.setMinSalePrice((BigDecimal) row[19]);
+                dto.setTotalStock(((Number) row[20]).longValue());
+                dto.setAverageRating(((Number) row[21]).doubleValue());
+                dto.setTotalReviews(((Number) row[22]).intValue());
+                dto.setVariants(new ArrayList<>());
+                return dto;
+            });
+            
+            // Thêm variant nếu có
+            if (row[23] != null) { // variantId
+                FeaturedProductDTO.ProductVariantImageDTO variantDTO = new FeaturedProductDTO.ProductVariantImageDTO();
+                variantDTO.setVariantId((Integer) row[23]);
+                variantDTO.setSku((String) row[24]);
+                variantDTO.setColorName((String) row[25]);
+                variantDTO.setSizeName((String) row[26]);
+                variantDTO.setPrice((BigDecimal) row[27]);
+                variantDTO.setSalePrice((BigDecimal) row[28]);
+                variantDTO.setQuantityInStock((Integer) row[29]);
+                variantDTO.setSold((Integer) row[30]);
+                variantDTO.setImageUrl((String) row[31]);
+                variantDTO.setWeight((Double) row[32]);
+                variantDTO.setCostPrice((BigDecimal) row[33]);
+                
+                productDTO.getVariants().add(variantDTO);
+            }
+        }
+        
+        return new ArrayList<>(productMap.values()).get(0);
+    }
+
     public Page<ProductListItemDTO> getProductsPaginated(Pageable pageable) {
         int pageSize = pageable.getPageSize();
         int offset = (int) pageable.getOffset();
