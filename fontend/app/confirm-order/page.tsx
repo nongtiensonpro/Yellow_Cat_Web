@@ -443,13 +443,38 @@ export default function ConfirmOrderPage() {
                 setPlacingOrder(false);
                 return;
             }
-            
+
+            // Validate độ dài tên và địa chỉ
+            if (fullName.length < 2 || fullName.length > 50) {
+                setOrderError('Tên phải từ 2 đến 50 ký tự.');
+                setPlacingOrder(false);
+                return;
+            }
+
+            if (addressDetail.length < 5 || addressDetail.length > 200) {
+                setOrderError('Địa chỉ cụ thể phải từ 5 đến 200 ký tự.');
+                setPlacingOrder(false);
+                return;
+            }
+
+            // Regex số điện thoại VN
+            const vnPhoneRegex = /^(0?)(3[2-9]|5[6|8|9]|7[0|6-9]|8[1-5]|9[0-9])[0-9]{7}$/;
+
+            if (!vnPhoneRegex.test(phone)) {
+                setOrderError('Số điện thoại không hợp lệ.');
+                setPlacingOrder(false);
+                return;
+            }
+
             // Validate email format nếu có nhập
-            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            const strictEmailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
+
+            if (!strictEmailRegex.test(email)) {
                 setOrderError('Email không đúng định dạng.');
                 setPlacingOrder(false);
                 return;
             }
+
             // Lấy tên tỉnh/huyện/xã từ danh sách
             const province = provinces.find(p => p.code === selectedProvinceCode)?.name || '';
             const district = districts.find(d => d.code === selectedDistrictCode)?.name || '';
