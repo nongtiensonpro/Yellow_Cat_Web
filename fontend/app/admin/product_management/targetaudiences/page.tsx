@@ -20,14 +20,17 @@ import {
     useDisclosure,
     Input
 } from "@heroui/react";
-import { useEffect, useState, useCallback } from "react";
-import { useSession, signIn } from "next-auth/react";
-import { addToast } from "@heroui/react";
-import { PlusIcon, PencilSquareIcon, TrashIcon } from "@heroicons/react/20/solid";
+import {useEffect, useState, useCallback} from "react";
+import {useSession, signIn} from "next-auth/react";
+import {addToast} from "@heroui/react";
+import {PlusIcon, PencilSquareIcon, TrashIcon} from "@heroicons/react/20/solid";
+import {CheckIcon} from "lucide-react";
+import {XMarkIcon} from "@heroicons/react/24/outline";
 
 interface targetaudience {
     id: number;
     name: string;
+    status: boolean;
     createdAt: string;
     updatedAt: string;
 }
@@ -39,32 +42,32 @@ interface targetaudienceFormData {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api';
 
 export default function Page() {
-    const { data: session, status } = useSession();
+    const {data: session, status} = useSession();
     const [targetaudiences, settargetaudiences] = useState<targetaudience[]>([]);
     const [currentPage, setCurrentPage] = useState(0);
     const itemsPerPage = 5;
     const [modalMode, setModalMode] = useState<'add' | 'edit' | 'delete' | null>(null);
-    const [formData, setFormData] = useState<targetaudienceFormData>({ name: '' });
+    const [formData, setFormData] = useState<targetaudienceFormData>({name: ''});
     const [selected, setSelected] = useState<targetaudience | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const { isOpen, onOpen, onClose } = useDisclosure();
+    const {isOpen, onOpen, onClose} = useDisclosure();
     const [searchTerm, setSearchTerm] = useState('');
 
     const handleFormInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
+        const {name, value} = e.target;
+        setFormData((prev) => ({...prev, [name]: value}));
     }, []);
 
     const openAddModal = () => {
         setModalMode("add");
-        setFormData({ name: '' });
+        setFormData({name: ''});
         setSelected(null);
         onOpen();
     };
 
     const openEditModal = (targetaudience: targetaudience) => {
         setModalMode("edit");
-        setFormData({ name: targetaudience.name });
+        setFormData({name: targetaudience.name});
         setSelected(targetaudience);
         onOpen();
     };
@@ -78,7 +81,7 @@ export default function Page() {
     const fetchtargetaudiences = useCallback(async () => {
         if (!session?.accessToken) return;
         const res = await fetch(`${API_BASE_URL}/target-audiences?page=0&size=1000`, {
-            headers: { Authorization: `Bearer ${session.accessToken}` }
+            headers: {Authorization: `Bearer ${session.accessToken}`}
         });
         const json = await res.json();
         settargetaudiences(json.data.content || []);
@@ -120,7 +123,7 @@ export default function Page() {
             await fetchtargetaudiences();
             onClose();
         } catch (err) {
-            addToast({ title: "Lỗi", description: (err as Error).message, color: "danger" });
+            addToast({title: "Lỗi", description: (err as Error).message, color: "danger"});
         } finally {
             setIsSubmitting(false);
         }
@@ -139,11 +142,32 @@ export default function Page() {
 
             if (!res.ok) throw new Error("Lỗi khi xoá đối tượng");
 
-            addToast({ title: "Thành công", description: "Xoá đối tượng thành công", color: "success" });
+            addToast({title: "Thành công", description: "Xoá đối tượng thành công", color: "success"});
             await fetchtargetaudiences();
             onClose();
         } catch (err) {
-            addToast({ title: "Lỗi", description: (err as Error).message, color: "danger" });
+            addToast({title: "Lỗi", description: (err as Error).message, color: "danger"});
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleStatus = async () => {
+        if (!selected || !session?.accessToken) return;
+        setIsSubmitting(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/target-audiences/status/${selected.id}`, {
+                method: "PUT",
+                headers: {Authorization: `Bearer ${session.accessToken}`},
+            });
+
+            if (!res.ok) throw new Error("Lỗi khi chuyển trạng thái");
+
+            addToast({title: "Thành công", description: "Chuyển trạng thái thành công", color: "success"});
+            await fetchtargetaudiences();
+            onClose();
+        } catch (err) {
+            addToast({title: "Lỗi", description: (err as Error).message, color: "danger"});
         } finally {
             setIsSubmitting(false);
         }
@@ -162,12 +186,12 @@ export default function Page() {
                 <Button
                     color="primary"
                     onClick={openAddModal}
-                    startContent={<PlusIcon className="h-5 w-5" />}
+                    startContent={<PlusIcon className="h-5 w-5"/>}
                 >
                     Thêm mới
                 </Button>
             </CardHeader>
-            <Divider className="my-4" />
+            <Divider className="my-4"/>
             <CardBody>
                 <Input
                     placeholder="Tìm kiếm theo tên"
@@ -185,6 +209,7 @@ export default function Page() {
                         <TableColumn>Tên đối tượng</TableColumn>
                         <TableColumn>Ngày tạo</TableColumn>
                         <TableColumn>Ngày cập nhật</TableColumn>
+                        <TableColumn>Trạng thái</TableColumn>
                         <TableColumn>Hành động</TableColumn>
                     </TableHeader>
                     <TableBody>
@@ -194,13 +219,29 @@ export default function Page() {
                                 <TableCell>{m.name}</TableCell>
                                 <TableCell>{new Date(m.createdAt).toLocaleDateString()}</TableCell>
                                 <TableCell>{new Date(m.updatedAt).toLocaleDateString()}</TableCell>
+                                <TableCell>{m.status ? "Đang hoạt động" : "Ngừng hoạt động"}</TableCell>
                                 <TableCell>
                                     <div className="flex gap-2">
                                         <Button isIconOnly size="sm" color="warning" onClick={() => openEditModal(m)}>
-                                            <PencilSquareIcon className="h-4 w-4" />
+                                            <PencilSquareIcon className="h-4 w-4"/>
                                         </Button>
                                         <Button isIconOnly size="sm" color="danger" onClick={() => openDeleteModal(m)}>
-                                            <TrashIcon className="h-4 w-4" />
+                                            <TrashIcon className="h-4 w-4"/>
+                                        </Button>
+                                        <Button
+                                            isIconOnly
+                                            size="sm"
+                                            color={m.status ? "success" : "default"}
+                                            onClick={() => {
+                                                setSelected(m);
+                                                handleStatus();
+                                            }}
+                                        >
+                                            {m.status ? (
+                                                <CheckIcon className="h-4 w-4"/>   // trạng thái đang hoạt động
+                                            ) : (
+                                                <XMarkIcon className="h-4 w-4"/>   // trạng thái ngừng
+                                            )}
                                         </Button>
                                     </div>
                                 </TableCell>
@@ -240,7 +281,8 @@ export default function Page() {
                     <ModalBody>
                         {modalMode === 'delete' ? (
                             <p className="text-gray-700 dark:text-gray-300">
-                                Bạn có chắc chắn muốn xoá đối tượng <span className="font-semibold text-red-600">{selected?.name}</span> không?
+                                Bạn có chắc chắn muốn xoá đối tượng <span
+                                className="font-semibold text-red-600">{selected?.name}</span> không?
                             </p>
                         ) : (
                             <form className="space-y-4">
