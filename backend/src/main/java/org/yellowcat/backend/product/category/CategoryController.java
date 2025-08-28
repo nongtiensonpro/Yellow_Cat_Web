@@ -51,4 +51,10 @@ public class CategoryController {
     public ResponseEntity<Boolean> deleteCategory(@PathVariable Integer id) {
         return ResponseEntity.ok(categoryService.deleteCategory(id));
     }
+
+    @PutMapping("/status/{id}")
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    public ResponseEntity<Boolean> updateStatus(@PathVariable Integer id) {
+        return ResponseEntity.ok(categoryService.updateStatus(id));
+    }
 }
