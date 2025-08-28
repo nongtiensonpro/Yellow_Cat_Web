@@ -8,11 +8,17 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.yellowcat.backend.product.dto.ProductListItemDTO;
 import org.yellowcat.backend.product.dto.ProductListItemManagementDTO;
+import org.yellowcat.backend.product.dto.LatestProductDTO;
 
 import java.util.List;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Integer> {
+    List<Product> findByTargetAudienceId(Integer targetAudienceId);
+    List<Product> findByMaterialId(Integer materialId);
+    List<Product> findByBrandId(Integer brandId);
+    List<Product> findByCategoryId(Integer categoryId);
+
     @Query(nativeQuery = true, value = """
             SELECT
                 p.product_id,
@@ -350,5 +356,117 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
             ORDER BY p.is_featured DESC, p.purchases DESC, p.product_id
             """)
     List<Object[]> findProductsOverviewForAI();
+
+    // Query lấy 3 sản phẩm mới nhất với đầy đủ thông tin
+    @Query(nativeQuery = true, value = """
+            SELECT
+                p.product_id,
+                p.product_name,
+                p.description,
+                p.purchases,
+                p.is_active,
+                p.created_at,
+                p.updated_at,
+                p.category_id,
+                c.category_name,
+                p.brand_id,
+                b.brand_name,
+                b.brand_info,
+                b.logo_public_id,
+                p.material_id,
+                m.material_name,
+                p.target_audience_id,
+                ta.audience_name as target_audience_name,
+                p.thumbnail,
+                COALESCE(CAST((SELECT MIN(pv.price) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS NUMERIC), 0.00) AS min_price,
+                COALESCE(CAST((SELECT MIN(pv.sale_price) FROM Product_Variants pv WHERE pv.product_id = p.product_id AND pv.sale_price > 0.00 AND pv.sale_price IS NOT NULL) AS NUMERIC), 0.00) AS min_sale_price,
+                COALESCE(CAST((SELECT SUM(pv.quantity_in_stock) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS BIGINT), 0) AS total_stock,
+                pv.variant_id,
+                pv.sku,
+                co.color_name,
+                s.size_name,
+                pv.price,
+                pv.sale_price,
+                pv.quantity_in_stock,
+                pv.sold,
+                pv.image_url,
+                pv.weight,
+                pv.cost_price
+            FROM Products p
+            LEFT JOIN Categories c ON p.category_id = c.category_id
+            LEFT JOIN Brands b ON p.brand_id = b.brand_id
+            LEFT JOIN Materials m ON p.material_id = m.material_id
+            LEFT JOIN Target_Audiences ta ON p.target_audience_id = ta.target_audience_id
+            LEFT JOIN Product_Variants pv ON p.product_id = pv.product_id
+            LEFT JOIN Colors co ON pv.color_id = co.color_id
+            LEFT JOIN Sizes s ON pv.size_id = s.size_id
+            WHERE p.is_active = true
+            ORDER BY p.created_at DESC
+            LIMIT 3
+            """)
+    List<Object[]> findLatest3Products();
+
+    // Query lấy sản phẩm được đánh giá tốt nhất hoặc sản phẩm ngẫu nhiên
+    @Query(nativeQuery = true, value = """
+            SELECT
+                p.product_id,
+                p.product_name,
+                p.description,
+                p.purchases,
+                p.is_active,
+                p.created_at,
+                p.updated_at,
+                p.category_id,
+                c.category_name,
+                p.brand_id,
+                b.brand_name,
+                b.brand_info,
+                b.logo_public_id,
+                p.material_id,
+                m.material_name,
+                p.target_audience_id,
+                ta.audience_name as target_audience_name,
+                p.thumbnail,
+                COALESCE(CAST((SELECT MIN(pv.price) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS NUMERIC), 0.00) AS min_price,
+                COALESCE(CAST((SELECT MIN(pv.sale_price) FROM Product_Variants pv WHERE pv.product_id = p.product_id AND pv.sale_price > 0.00 AND pv.sale_price IS NOT NULL) AS NUMERIC), 0.00) AS min_sale_price,
+                COALESCE(CAST((SELECT SUM(pv.quantity_in_stock) FROM Product_Variants pv WHERE pv.product_id = p.product_id) AS BIGINT), 0) AS total_stock,
+                COALESCE(ROUND(AVG(r.rating), 1), 0.0) as average_rating,
+                COALESCE(COUNT(r.review_id), 0) as total_reviews,
+                pv.variant_id,
+                pv.sku,
+                co.color_name,
+                s.size_name,
+                pv.price,
+                pv.sale_price,
+                pv.quantity_in_stock,
+                pv.sold,
+                pv.image_url,
+                pv.weight,
+                pv.cost_price
+            FROM Products p
+            LEFT JOIN Categories c ON p.category_id = c.category_id
+            LEFT JOIN Brands b ON p.brand_id = b.brand_id
+            LEFT JOIN Materials m ON p.material_id = m.material_id
+            LEFT JOIN Target_Audiences ta ON p.target_audience_id = ta.target_audience_id
+            LEFT JOIN Product_Variants pv ON p.product_id = pv.product_id
+            LEFT JOIN Colors co ON pv.color_id = co.color_id
+            LEFT JOIN Sizes s ON pv.size_id = s.size_id
+            LEFT JOIN Reviews r ON p.product_id = r.product_id
+            WHERE p.is_active = true
+            GROUP BY p.product_id, p.product_name, p.description, p.purchases, p.is_active, p.created_at, p.updated_at,
+                     p.category_id, c.category_name, p.brand_id, b.brand_name, b.brand_info, b.logo_public_id,
+                     p.material_id, m.material_name, p.target_audience_id, ta.audience_name, p.thumbnail,
+                     pv.variant_id, pv.sku, co.color_name, s.size_name, pv.price, pv.sale_price,
+                     pv.quantity_in_stock, pv.sold, pv.image_url, pv.weight, pv.cost_price
+            ORDER BY 
+                CASE 
+                    WHEN COUNT(r.review_id) > 0 THEN AVG(r.rating) 
+                    ELSE 0 
+                END DESC,
+                p.purchases DESC,
+                RANDOM()
+            LIMIT 1
+            """)
+    List<Object[]> findTopRatedOrRandomProduct();
 
 }

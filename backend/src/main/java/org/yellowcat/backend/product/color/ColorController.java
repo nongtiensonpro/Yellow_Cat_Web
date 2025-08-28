@@ -51,4 +51,10 @@ public class ColorController {
     public ResponseEntity<Boolean> deleteColor(@PathVariable Integer id) {
         return ResponseEntity.ok(colorService.deleteColor(id));
     }
+
+    @PutMapping("/status/{id}")
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    public ResponseEntity<Boolean> updateStatus(@PathVariable Integer id) {
+        return ResponseEntity.ok(colorService.updateStatus(id));
+    }
 }

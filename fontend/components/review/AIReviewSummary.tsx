@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 interface Review {
@@ -9,23 +9,44 @@ interface Review {
     createdAt?: string;
 }
 
-interface AIReviewSummaryProps {
-    reviews: Review[];
+interface ProductInfoForAI {
+    productId: number;
+    productName: string;
+    brandName?: string;
+    categoryName?: string;
+    materialName?: string;
+    targetAudienceName?: string;
 }
 
-const AIReviewSummary = ({ reviews }: AIReviewSummaryProps) => {
+interface AIReviewSummaryProps {
+    reviews: Review[];
+    productInfo?: ProductInfoForAI;
+}
+
+const AIReviewSummary = ({ reviews, productInfo }: AIReviewSummaryProps) => {
     const [aiSummary, setAiSummary] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
 
-    const apiKey = 'AIzaSyBIYJJNMbe-QBA2Z1uihw_iqywxtmei9jo';
+    const apiKey = 'AIzaSyCW1jh4rRrAIDeji8I1pwSt_6JraiyY_CY';
 
-    const generateSummary = async (reviewsData: Review[]) => {
+    const generateSummary = useCallback(async (reviewsData: Review[]) => {
         try {
             const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+            const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
-            const context = `Bạn là AI chuyên phân tích đánh giá. Tóm tắt ngắn gọn các đánh giá sau, mục đích chính là cho biết sản phẩm này chất lượng ra sao:
+            const productContext = [
+                'Thông tin sản phẩm:',
+                `- Tên: ${productInfo?.productName ?? '(không có)'}`,
+                `- Thương hiệu: ${productInfo?.brandName ?? '(không có)'}`,
+                `- Danh mục: ${productInfo?.categoryName ?? '(không có)'} ,`,
+                `- Chất liệu: ${productInfo?.materialName ?? '(không có)'} ,`,
+                `- Đối tượng: ${productInfo?.targetAudienceName ?? '(không có)'} ,`
+            ].join('\n');
+
+            const context = `Bạn là AI chuyên phân tích đánh giá giày thể thao. Hãy dựa cả vào thông tin sản phẩm và danh sách đánh giá dưới đây để đưa ra tổng hợp ngắn gọn, hữu ích cho người mua.
+            ${productContext}
+            Danh sách đánh giá:
             ${JSON.stringify(reviewsData, null, 2)}
             Tạo bản tóm tắt ngắn gọn (khoảng 100 từ) bao gồm:
             1. Điểm trung bình
@@ -40,7 +61,7 @@ const AIReviewSummary = ({ reviews }: AIReviewSummaryProps) => {
             console.error("Error generating AI summary:", error);
             throw new Error("Xin lỗi, có lỗi xảy ra khi tạo tóm tắt. Vui lòng thử lại sau! 🙏");
         }
-    };
+    }, [apiKey, productInfo]);
 
     const formattedSummary = useMemo(() => {
         if (!aiSummary) return [];
@@ -89,7 +110,7 @@ const AIReviewSummary = ({ reviews }: AIReviewSummaryProps) => {
         };
 
         handleGenerateSummary();
-    }, [reviews]);
+    }, [reviews, generateSummary]);
 
     if (reviews.length === 0) {
         return null;

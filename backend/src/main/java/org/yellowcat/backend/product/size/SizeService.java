@@ -10,16 +10,21 @@ import org.springframework.data.domain.Sort;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.yellowcat.backend.common.websocket.EntityMessage;
+import org.yellowcat.backend.product.productvariant.ProductVariant;
+import org.yellowcat.backend.product.productvariant.ProductVariantRepository;
 import org.yellowcat.backend.product.size.dto.SizeCreateDto;
 import org.yellowcat.backend.product.size.dto.SizeRequestDto;
 import org.yellowcat.backend.product.size.dto.SizeResponse;
 import org.yellowcat.backend.product.size.mapper.SizeMapper;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class SizeService {
     SizeRepository sizeRepository;
+    ProductVariantRepository productVariantRepository;
     SizeMapper sizeMapper;
     SimpMessagingTemplate messagingTemplate;
 
@@ -38,6 +43,14 @@ public class SizeService {
 
     public boolean deleteSize(Integer id) {
         if (sizeRepository.existsById(id)) {
+            Size size = sizeRepository.findById(id).orElse(null);
+            List<ProductVariant> productVariants = productVariantRepository.findBySizeId(id);
+            if (!productVariants.isEmpty() && size != null) {
+                size.setStatus(false);
+                sizeRepository.save(size);
+                messagingTemplate.convertAndSend("/topic/sizes", new EntityMessage("Size deactivated: ", size));
+                return false;
+            }
             messagingTemplate.convertAndSend("/topic/sizes", new EntityMessage("Size deleted: ", getSizeById(id)));
             sizeRepository.deleteById(id);
             return true;
@@ -60,5 +73,18 @@ public class SizeService {
         sizeRepository.save(size);
         messagingTemplate.convertAndSend("/topic/sizes", new EntityMessage("Size updated: ", size));
         return sizeMapper.toResponse(size);
+    }
+
+    public boolean updateStatusSize(Integer id) {
+        if (sizeRepository.existsById(id)) {
+            Size size = sizeRepository.findById(id).orElse(null);
+            if (size != null) {
+                size.setStatus(!size.getStatus());
+                sizeRepository.save(size);
+                messagingTemplate.convertAndSend("/topic/sizes", new EntityMessage("Size status updated: ", size));
+                return true;
+            }
+        }
+        return false;
     }
 }

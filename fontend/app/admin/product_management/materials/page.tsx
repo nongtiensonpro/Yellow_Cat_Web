@@ -24,10 +24,13 @@ import {
 import { useEffect, useState, useCallback } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { PlusIcon, PencilSquareIcon, TrashIcon } from "@heroicons/react/20/solid";
+import {CheckIcon} from "lucide-react";
+import {XMarkIcon} from "@heroicons/react/24/outline";
 
 interface Material {
     id: number;
     name: string;
+    status: boolean;
     createdAt: string;
     updatedAt: string;
 }
@@ -189,6 +192,27 @@ export default function Page() {
         }
     };
 
+    const handleStatus = async () => {
+        if (!selected || !session?.accessToken) return;
+        setIsSubmitting(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/target-audiences/status/${selected.id}`, {
+                method: "PUT",
+                headers: {Authorization: `Bearer ${session.accessToken}`},
+            });
+
+            if (!res.ok) throw new Error("Lỗi khi chuyển trạng thái");
+
+            addToast({title: "Thành công", description: "Chuyển trạng thái thành công", color: "success"});
+            await fetchMaterials();
+            onClose();
+        } catch (err) {
+            addToast({title: "Lỗi", description: (err as Error).message, color: "danger"});
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     const filteredMaterials = materials.filter((m) =>
         m.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -224,6 +248,7 @@ export default function Page() {
                         <TableColumn>Tên chất liệu</TableColumn>
                         <TableColumn>Ngày tạo</TableColumn>
                         <TableColumn>Ngày cập nhật</TableColumn>
+                        <TableColumn>Trạng thái</TableColumn>
                         <TableColumn>Hành động</TableColumn>
                     </TableHeader>
                     <TableBody>
@@ -234,6 +259,7 @@ export default function Page() {
                                     <TableCell>{m.name}</TableCell>
                                     <TableCell>{new Date(m.createdAt).toLocaleDateString()}</TableCell>
                                     <TableCell>{new Date(m.updatedAt).toLocaleDateString()}</TableCell>
+                                    <TableCell>{m.status ? "Đang hoạt động" : "Ngừng hoạt động"}</TableCell>
                                     <TableCell>
                                         <div className="flex gap-2">
                                             <Button isIconOnly size="sm" color="warning" onClick={() => openEditModal(m)}>
@@ -242,13 +268,28 @@ export default function Page() {
                                             <Button isIconOnly size="sm" color="danger" onClick={() => openDeleteModal(m)}>
                                                 <TrashIcon className="h-4 w-4" />
                                             </Button>
+                                            <Button
+                                                isIconOnly
+                                                size="sm"
+                                                color={m.status ? "success" : "default"}
+                                                onClick={() => {
+                                                    setSelected(m);
+                                                    handleStatus();
+                                                }}
+                                            >
+                                                {m.status ? (
+                                                    <CheckIcon className="h-4 w-4"/>   // trạng thái đang hoạt động
+                                                ) : (
+                                                    <XMarkIcon className="h-4 w-4"/>   // trạng thái ngừng
+                                                )}
+                                            </Button>
                                         </div>
                                     </TableCell>
                                 </TableRow>
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={5}>
+                                <TableCell colSpan={6}>
                                     <div className="text-center py-4 text-gray-600 dark:text-gray-400 italic">
                                         Không tìm thấy chất liệu nào phù hợp.
                                     </div>

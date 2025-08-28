@@ -18,8 +18,8 @@ interface RevenueChartsProps {
 const RevenueCharts: React.FC<RevenueChartsProps> = ({timeRange}) => {
     const [chartType, setChartType] = useState<"daily" | "weekly" | "monthly">("daily");
     const [trendData, setTrendData] = useState<RevenueTrendDTO | null>(null);
-    const [categoryData, setCategoryData] = useState<RevenueByCategoryDTO | null>(null);
-    const [brandData, setBrandData] = useState<RevenueByBrandDTO | null>(null);
+    const [categoryData, setCategoryData] = useState<RevenueByCategoryDTO[]>([]);
+    const [brandData, setBrandData] = useState<RevenueByBrandDTO[]>([]);
     const [summary, setSummary] = useState<RevenueSummaryDTO | null>(null);
 
     // load dữ liệu khi chartType hoặc timeRange thay đổi
@@ -32,8 +32,8 @@ const RevenueCharts: React.FC<RevenueChartsProps> = ({timeRange}) => {
                 const sum = await revenueService.getSummary(timeRange);
 
                 setTrendData(trend);
-                setCategoryData(cat);
-                setBrandData(brand);
+                setCategoryData(cat || []);
+                setBrandData(brand || []);
                 setSummary(sum);
             } catch (err) {
                 console.error("Lỗi load dữ liệu:", err);
@@ -50,7 +50,7 @@ const RevenueCharts: React.FC<RevenueChartsProps> = ({timeRange}) => {
         }).format(amount);
 
     // Nếu chưa có dữ liệu thì hiển thị loading
-    if (!trendData || !categoryData || !brandData || !summary) {
+    if (!trendData || !summary) {
         return <p>Đang tải dữ liệu...</p>;
     }
 
@@ -82,10 +82,10 @@ const RevenueCharts: React.FC<RevenueChartsProps> = ({timeRange}) => {
     };
 
     const categoryChartData = {
-        labels: categoryData.categoryName,
+        labels: categoryData.map(item => item.categoryName),
         datasets: [
             {
-                data: categoryData.totalRevenue,
+                data: categoryData.map(item => item.totalRevenue),
                 backgroundColor: [
                     "rgba(59, 130, 246, 0.8)",
                     "rgba(16, 185, 129, 0.8)",
@@ -98,11 +98,11 @@ const RevenueCharts: React.FC<RevenueChartsProps> = ({timeRange}) => {
     };
 
     const brandChartData = {
-        labels: brandData.brandName,
+        labels: brandData.map(item => item.brandName),
         datasets: [
             {
                 label: "Doanh thu",
-                data: brandData.totalRevenue,
+                data: brandData.map(item => item.totalRevenue),
                 backgroundColor: "rgba(59, 130, 246, 0.8)"
             }
         ]
@@ -123,22 +123,17 @@ const RevenueCharts: React.FC<RevenueChartsProps> = ({timeRange}) => {
         }
     };
 
-    const handleChartTypeChange = (value: string) => {
-        setChartType(value as "daily" | "weekly" | "monthly");
-    };
-
     return (
         <div className="space-y-6">
             {/* Biểu đồ xu hướng */}
             <Card>
                 <CardHeader className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold">Xu hướng doanh thu</h3>
-                    <Select 
-                        selectedKeys={[chartType]} 
-                        onSelectionChange={(keys) => {
-                            const selectedKey = Array.from(keys)[0] as string;
-                            handleChartTypeChange(selectedKey);
-                        }} 
+                    <Select
+                        selectedKeys={[chartType]}
+                        onSelectionChange={(keys) =>
+                            setChartType(Array.from(keys)[0] as "daily" | "weekly" | "monthly")
+                        }
                         className="w-40"
                     >
                         <SelectItem key="daily">Theo ngày</SelectItem>

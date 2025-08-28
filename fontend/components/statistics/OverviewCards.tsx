@@ -138,8 +138,7 @@ const OverviewCards: React.FC<OverviewCardsProps> = ({timeRange}) => {
                 changeType: change.cancelRateChange <= 0 ? "positive" : "negative",
             },
         ];
-    }, [data, timeRange]);
-
+    }, [data]);
     return (
         <div className="space-y-6">
             {/* Loading / Error */}

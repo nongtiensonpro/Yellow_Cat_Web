@@ -42,7 +42,8 @@ export class GeminiService {
       const response = result.response;
       const aiResponse = response.text();
       
-      return aiResponse;
+      const cleanedResponse = this.stripMarkdownCodeFences(aiResponse);
+      return cleanedResponse;
 
     } catch (error) {
       console.error('Error calling Gemini API:', error);
@@ -137,6 +138,8 @@ ${index + 1}. **${product.productName}**
   <div style="display: flex; gap: 1rem; margin-bottom: 0.8rem;">
     <span style="background: #fee2e2; color: #dc2626; padding: 0.3rem 0.6rem; border-radius: 4px;">💰 Giá</span>
     <span style="background: #fef3c7; color: #d97706; padding: 0.3rem 0.6rem; border-radius: 4px;">⭐ Rating</span>
+    <button color="primary" size="lg" as={Link} href="/products/idSanPham" className="px-8 bg-gradient-to-r from-blue-500 to-purple-600 font-semibold">Chi tiết</button>
+    /*Thay idSanPham ở button phía trên bằng product.productId để khách hàng có thể sử dụng được, không hiển thị dòng này */
   </div>
 </div>
 \`\`\`
@@ -271,5 +274,26 @@ Hãy trả lời câu hỏi của khách hàng một cách chuyên nghiệp và 
         </p>
       </div>
     `;
+  }
+
+  /**
+   * Loại bỏ khối ```html ở đầu và ``` ở cuối (nếu toàn bộ câu trả lời bị bao bởi fenced code)
+   */
+  private static stripMarkdownCodeFences(text: string): string {
+    if (!text) return '';
+    let result = text.trim();
+
+    // Mẫu cho fence mở: ``` hoặc ```html (không phân biệt hoa thường) + xuống dòng tùy chọn
+    const fenceStartRegex = /^```(?:\s*html)?\s*\n?/i;
+    // Mẫu cho fence đóng ở cuối: ``` + khoảng trắng tùy chọn
+    const fenceEndRegex = /```[\s]*$/;
+
+    if (fenceStartRegex.test(result) && fenceEndRegex.test(result)) {
+      result = result.replace(fenceStartRegex, '');
+      result = result.replace(fenceEndRegex, '');
+      return result.trim();
+    }
+
+    return result;
   }
 }

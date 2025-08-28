@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 public class ColorResponse {
     private Integer id;
     private String name;
+    private Boolean status;
     private String description;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

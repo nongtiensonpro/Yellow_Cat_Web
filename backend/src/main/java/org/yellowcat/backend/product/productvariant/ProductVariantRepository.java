@@ -10,13 +10,16 @@ import org.springframework.stereotype.Repository;
 import org.yellowcat.backend.product.productvariant.dto.ProductVariantDetailDTO;
 import org.yellowcat.backend.product.productvariant.dto.ProductVariantListResponse;
 import org.yellowcat.backend.product.promotionproduct.dto.ProductVariantSelectionResponse;
+import org.yellowcat.backend.product.size.Size;
 
 import java.util.List;
 
 @Repository
 public interface ProductVariantRepository extends JpaRepository<ProductVariant, Integer>,
         JpaSpecificationExecutor<ProductVariant> {
+    List<ProductVariant> findBySizeId(Integer sizeId);
 
+    List<ProductVariant> findByColorId(Integer colorId);
 
     @Query("select p from ProductVariant p where p.product.productId = ?1")
     List<ProductVariant> findByProductId(Integer productId);
@@ -50,40 +53,40 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     long countTotalProductVariants();
 
     @Query("""
-    SELECT new org.yellowcat.backend.product.promotionproduct.dto.ProductVariantSelectionResponse(
-        v.variantId,
-        v.sku,
-        v.price,
-        v.salePrice,
-        v.imageUrl,
-        p.productName
-    )
-    FROM ProductVariant v
-    JOIN v.product p
-    WHERE LOWER(p.productName) LIKE LOWER(CONCAT('%', :keyword, '%'))
-    GROUP BY v.variantId, v.sku, v.price, v.salePrice, v.imageUrl, p.productName
-""")
+                SELECT new org.yellowcat.backend.product.promotionproduct.dto.ProductVariantSelectionResponse(
+                    v.variantId,
+                    v.sku,
+                    v.price,
+                    v.salePrice,
+                    v.imageUrl,
+                    p.productName
+                )
+                FROM ProductVariant v
+                JOIN v.product p
+                WHERE LOWER(p.productName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                GROUP BY v.variantId, v.sku, v.price, v.salePrice, v.imageUrl, p.productName
+            """)
     Page<ProductVariantSelectionResponse> searchVariantsByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
     @Query("""
-    SELECT new org.yellowcat.backend.product.productvariant.dto.ProductVariantDetailDTO(
-        v.variantId,
-        p.productName,
-        b.brandName,
-        c.name,
-        s.name,
-        m.name,
-        v.price,
-        v.salePrice
-    )
-    FROM ProductVariant v
-    JOIN v.product p
-    LEFT JOIN p.brand b
-    LEFT JOIN v.color c
-    LEFT JOIN v.size s
-    LEFT JOIN p.material m
-    WHERE v.variantId IN :ids
-""")
+                SELECT new org.yellowcat.backend.product.productvariant.dto.ProductVariantDetailDTO(
+                    v.variantId,
+                    p.productName,
+                    b.brandName,
+                    c.name,
+                    s.name,
+                    m.name,
+                    v.price,
+                    v.salePrice
+                )
+                FROM ProductVariant v
+                JOIN v.product p
+                LEFT JOIN p.brand b
+                LEFT JOIN v.color c
+                LEFT JOIN v.size s
+                LEFT JOIN p.material m
+                WHERE v.variantId IN :ids
+            """)
     List<ProductVariantDetailDTO> findDetailsByVariantIds(@Param("ids") List<Integer> ids);
 
 }

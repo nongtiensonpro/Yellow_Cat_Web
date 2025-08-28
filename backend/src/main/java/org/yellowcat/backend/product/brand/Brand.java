@@ -34,6 +34,10 @@ public class Brand {
     @Column(name = "brand_info", nullable = false, length = Integer.MAX_VALUE)
     private String brandInfo;
 
+    @ColumnDefault("true")
+    @Column(name = "status", nullable = false)
+    private Boolean status;
+
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "created_at")
     private Instant createdAt;
@@ -102,4 +106,11 @@ public class Brand {
         this.products = products;
     }
 
+    public Boolean getStatus() {
+        return status;
+    }
+
+    public void setStatus(Boolean status) {
+        this.status = status;
+    }
 }
