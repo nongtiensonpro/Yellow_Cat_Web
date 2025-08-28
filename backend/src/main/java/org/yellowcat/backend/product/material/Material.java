@@ -26,6 +26,9 @@ public class Material {
     @Column(name = "description")
     private String description;
 
+    @Column(name = "status", nullable = false)
+    private Boolean status;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -37,6 +40,9 @@ public class Material {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (status == null) {
+            status = true;
+        }
     }
 
     @PreUpdate
