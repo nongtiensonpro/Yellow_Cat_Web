@@ -182,9 +182,26 @@ const   FeaturedProductCard = () => {
     // Kiểm tra xem ảnh có phải từ Cloudinary không
     const isCloudinaryImage = (imageUrl: string) => {
         if (!imageUrl) return false
-        return imageUrl.includes('cloudinary.com') || 
-               imageUrl.includes('res.cloudinary.com') ||
-               (!imageUrl.startsWith('http') && !imageUrl.startsWith('/'))
+        // Handle absolute URLs
+        if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+            try {
+                const host = new URL(imageUrl).host.toLowerCase();
+                // Accept exactly res.cloudinary.com and *.res.cloudinary.com
+                if (host === 'res.cloudinary.com' || host.endsWith('.res.cloudinary.com')) {
+                    return true;
+                }
+                // Optionally handle other official cloudinary subdomains/set as needed
+                return false;
+            } catch {
+                return false;
+            }
+        }
+        // Handle relative and protocol-less paths (like Cloudinary's public ID format)
+        if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
+            // Not a web URL, so treat as Cloudinary image string or path
+            return true;
+        }
+        return false;
     }
 
     return (
