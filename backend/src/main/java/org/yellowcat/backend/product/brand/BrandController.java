@@ -73,7 +73,13 @@ public class BrandController {
         if (isDeleted) {
             return ResponseEntityBuilder.success("Brand đã được xóa thành công");
         } else {
-            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST,"Xóa Brand thất bại","Brand không tồn tại hoặc đã bị xóa rồi");
+            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "Xóa Brand thất bại", "Brand không tồn tại hoặc đã bị xóa rồi");
         }
+    }
+
+    @PutMapping("/status/{id}")
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    public ResponseEntity<Boolean> updateStatus(@PathVariable Integer id) {
+        return ResponseEntity.ok(brandService.updateStatus(id));
     }
 }

@@ -14,6 +14,11 @@ import java.util.List;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Integer> {
+    List<Product> findByTargetAudienceId(Integer targetAudienceId);
+    List<Product> findByMaterialId(Integer materialId);
+    List<Product> findByBrandId(Integer brandId);
+    List<Product> findByCategoryId(Integer categoryId);
+
     @Query(nativeQuery = true, value = """
             SELECT
                 p.product_id,

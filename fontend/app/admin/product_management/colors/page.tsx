@@ -20,13 +20,16 @@ import {
     Input,
     addToast,
 } from "@heroui/react";
-import { useEffect, useState, useCallback } from "react";
-import { useSession, signIn } from "next-auth/react";
-import { PlusIcon, PencilSquareIcon, TrashIcon } from "@heroicons/react/20/solid";
+import {useEffect, useState, useCallback} from "react";
+import {useSession, signIn} from "next-auth/react";
+import {PlusIcon, PencilSquareIcon, TrashIcon} from "@heroicons/react/20/solid";
+import {XMarkIcon} from "@heroicons/react/24/outline";
+import {CheckIcon} from "lucide-react";
 
 interface color {
     id: number;
     name: string;
+    status: boolean;
     createdAt: string;
     updatedAt: string;
 }
@@ -59,27 +62,27 @@ const validatecolorName = (
 };
 
 export default function Page() {
-    const { data: session, status } = useSession();
+    const {data: session, status} = useSession();
     const [colors, setcolors] = useState<color[]>([]);
     const [currentPage, setCurrentPage] = useState(0);
     const [modalMode, setModalMode] = useState<"add" | "edit" | "delete" | null>(null);
-    const [formData, setFormData] = useState<colorFormData>({ name: "" });
+    const [formData, setFormData] = useState<colorFormData>({name: ""});
     const [selected, setSelected] = useState<color | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const { isOpen, onOpen, onClose } = useDisclosure();
+    const {isOpen, onOpen, onClose} = useDisclosure();
     const [searchTerm, setSearchTerm] = useState("");
     const [updateError, setUpdateError] = useState("");
     const itemsPerPage = 5;
 
     const handleFormInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
+        const {name, value} = e.target;
+        setFormData((prev) => ({...prev, [name]: value}));
     }, []);
 
     const fetchcolors = useCallback(async () => {
         if (!session?.accessToken) return;
         const res = await fetch(`${API_BASE_URL}/colors?page=0&size=1000`, {
-            headers: { Authorization: `Bearer ${session.accessToken}` },
+            headers: {Authorization: `Bearer ${session.accessToken}`},
         });
         const json = await res.json();
         setcolors(json.data.content || []);
@@ -95,7 +98,7 @@ export default function Page() {
 
     const openAddModal = () => {
         setModalMode("add");
-        setFormData({ name: "" });
+        setFormData({name: ""});
         setSelected(null);
         setUpdateError("");
         onOpen();
@@ -103,7 +106,7 @@ export default function Page() {
 
     const openEditModal = (color: color) => {
         setModalMode("edit");
-        setFormData({ name: color.name });
+        setFormData({name: color.name});
         setSelected(color);
         setUpdateError("");
         onOpen();
@@ -120,7 +123,7 @@ export default function Page() {
         const trimmedName = formData.name.trim();
 
         if (!modalMode || (modalMode !== "add" && modalMode !== "edit")) {
-            addToast({ title: "Lỗi", description: "Không xác định được thao tác", color: "danger" });
+            addToast({title: "Lỗi", description: "Không xác định được thao tác", color: "danger"});
             return;
         }
 
@@ -129,7 +132,7 @@ export default function Page() {
             if (modalMode === "edit" || modalMode === "add") {
                 setUpdateError(validationError);
             }
-            addToast({ title: "Lỗi", description: validationError, color: "danger" });
+            addToast({title: "Lỗi", description: validationError, color: "danger"});
             return;
         }
 
@@ -146,7 +149,7 @@ export default function Page() {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${session?.accessToken}`,
                 },
-                body: JSON.stringify({ name: trimmedName }),
+                body: JSON.stringify({name: trimmedName}),
             });
 
             if (!res.ok) throw new Error("Lỗi khi lưu dữ liệu");
@@ -161,7 +164,7 @@ export default function Page() {
             setUpdateError("");
             onClose();
         } catch (err) {
-            addToast({ title: "Lỗi", description: (err as Error).message, color: "danger" });
+            addToast({title: "Lỗi", description: (err as Error).message, color: "danger"});
         } finally {
             setIsSubmitting(false);
         }
@@ -173,16 +176,37 @@ export default function Page() {
         try {
             const res = await fetch(`${API_BASE_URL}/colors/${selected.id}`, {
                 method: "DELETE",
-                headers: { Authorization: `Bearer ${session.accessToken}` },
+                headers: {Authorization: `Bearer ${session.accessToken}`},
             });
 
             if (!res.ok) throw new Error("Lỗi khi xoá màu sắc");
 
-            addToast({ title: "Thành công", description: "Xoá màu sắc thành công", color: "success" });
+            addToast({title: "Thành công", description: "Xoá màu sắc thành công", color: "success"});
             await fetchcolors();
             onClose();
         } catch (err) {
-            addToast({ title: "Lỗi", description: (err as Error).message, color: "danger" });
+            addToast({title: "Lỗi", description: (err as Error).message, color: "danger"});
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleStatus = async () => {
+        if (!selected || !session?.accessToken) return;
+        setIsSubmitting(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/colors/status/${selected.id}`, {
+                method: "PUT",
+                headers: {Authorization: `Bearer ${session.accessToken}`},
+            });
+
+            if (!res.ok) throw new Error("Lỗi khi chuyển trạng thái");
+
+            addToast({title: "Thành công", description: "Chuyển trạng thái thành công", color: "success"});
+            await fetchcolors();
+            onClose();
+        } catch (err) {
+            addToast({title: "Lỗi", description: (err as Error).message, color: "danger"});
         } finally {
             setIsSubmitting(false);
         }
@@ -201,11 +225,11 @@ export default function Page() {
         <Card className="min-h-screen p-6 bg-gray-50 dark:bg-gray-900">
             <CardHeader className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Quản lý màu sắc</h1>
-                <Button color="primary" onClick={openAddModal} startContent={<PlusIcon className="h-5 w-5" />}>
+                <Button color="primary" onClick={openAddModal} startContent={<PlusIcon className="h-5 w-5"/>}>
                     Thêm mới
                 </Button>
             </CardHeader>
-            <Divider className="my-4" />
+            <Divider className="my-4"/>
             <CardBody>
                 <Input
                     placeholder="Tìm kiếm theo tên"
@@ -223,6 +247,7 @@ export default function Page() {
                         <TableColumn>Tên màu sắc</TableColumn>
                         <TableColumn>Ngày tạo</TableColumn>
                         <TableColumn>Ngày cập nhật</TableColumn>
+                        <TableColumn>Trạng thái</TableColumn>
                         <TableColumn>Hành động</TableColumn>
                     </TableHeader>
                     <TableBody>
@@ -233,13 +258,31 @@ export default function Page() {
                                     <TableCell>{m.name}</TableCell>
                                     <TableCell>{new Date(m.createdAt).toLocaleDateString()}</TableCell>
                                     <TableCell>{new Date(m.updatedAt).toLocaleDateString()}</TableCell>
+                                    <TableCell>{m.status ? "Đang hoạt động" : "Ngừng hoạt động"}</TableCell>
                                     <TableCell>
                                         <div className="flex gap-2">
-                                            <Button isIconOnly size="sm" color="warning" onClick={() => openEditModal(m)}>
-                                                <PencilSquareIcon className="h-4 w-4" />
+                                            <Button isIconOnly size="sm" color="warning"
+                                                    onClick={() => openEditModal(m)}>
+                                                <PencilSquareIcon className="h-4 w-4"/>
                                             </Button>
-                                            <Button isIconOnly size="sm" color="danger" onClick={() => openDeleteModal(m)}>
-                                                <TrashIcon className="h-4 w-4" />
+                                            <Button isIconOnly size="sm" color="danger"
+                                                    onClick={() => openDeleteModal(m)}>
+                                                <TrashIcon className="h-4 w-4"/>
+                                            </Button>
+                                            <Button
+                                                isIconOnly
+                                                size="sm"
+                                                color={m.status ? "success" : "default"}
+                                                onClick={() => {
+                                                    setSelected(m);
+                                                    handleStatus();
+                                                }}
+                                            >
+                                                {m.status ? (
+                                                    <CheckIcon className="h-4 w-4"/>   // trạng thái đang hoạt động
+                                                ) : (
+                                                    <XMarkIcon className="h-4 w-4"/>   // trạng thái ngừng
+                                                )}
                                             </Button>
                                         </div>
                                     </TableCell>
@@ -247,7 +290,7 @@ export default function Page() {
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={5}>
+                                <TableCell colSpan={6}>
                                     <div className="text-center py-4 text-gray-600 dark:text-gray-400 italic">
                                         Không tìm thấy màu sắc nào phù hợp.
                                     </div>
@@ -291,7 +334,8 @@ export default function Page() {
                         <ModalBody>
                             {modalMode === "delete" ? (
                                 <p className="text-gray-700 dark:text-gray-300">
-                                    Bạn có chắc chắn muốn xoá màu sắc <span className="font-semibold text-red-600">{selected?.name}</span> không?
+                                    Bạn có chắc chắn muốn xoá màu sắc <span
+                                    className="font-semibold text-red-600">{selected?.name}</span> không?
                                 </p>
                             ) : (
                                 <form className="space-y-4">

@@ -12,6 +12,7 @@ public class BrandDTO {
     private String brandName;
     private String logoPublicId;
     private String brandInfo;
+    private Boolean status;
     private Instant createdAt;
     private Instant updatedAt;
     private Set<Integer> productIds;
@@ -22,6 +23,7 @@ public class BrandDTO {
         this.brandName = brand.getBrandName();
         this.logoPublicId = brand.getLogoPublicId();
         this.brandInfo = brand.getBrandInfo();
+        this.status = brand.getStatus();
         this.createdAt = brand.getCreatedAt();
         this.updatedAt = brand.getUpdatedAt();
         this.productIds = brand.getProducts().stream()
@@ -87,5 +89,13 @@ public class BrandDTO {
 
     public void setProductIds(Set<Integer> productIds) {
         this.productIds = productIds;
+    }
+
+    public Boolean getStatus() {
+        return status;
+    }
+
+    public void setStatus(Boolean status) {
+        this.status = status;
     }
 }

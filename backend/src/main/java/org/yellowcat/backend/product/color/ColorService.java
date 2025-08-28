@@ -14,12 +14,17 @@ import org.yellowcat.backend.product.color.dto.ColorCreateDto;
 import org.yellowcat.backend.product.color.dto.ColorRequestDto;
 import org.yellowcat.backend.product.color.dto.ColorResponse;
 import org.yellowcat.backend.product.color.mapper.ColorMapper;
+import org.yellowcat.backend.product.productvariant.ProductVariant;
+import org.yellowcat.backend.product.productvariant.ProductVariantRepository;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ColorService {
     ColorRepository colorRepository;
+    ProductVariantRepository productVariantRepository;
     ColorMapper colorMapper;
     SimpMessagingTemplate messagingTemplate;
 
@@ -38,6 +43,14 @@ public class ColorService {
 
     public boolean deleteColor(Integer id) {
         if (colorRepository.existsById(id)) {
+            Color color = colorRepository.findById(id).orElse(null);
+            List<ProductVariant> productVariants = productVariantRepository.findByColorId(id);
+            if (!productVariants.isEmpty() && color != null) {
+                color.setStatus(false);
+                colorRepository.save(color);
+
+                return false;
+            }
             messagingTemplate.convertAndSend("/topic/colors", new EntityMessage("Color deleted: ", getColorById(id)));
             colorRepository.deleteById(id);
             return true;
@@ -60,5 +73,18 @@ public class ColorService {
         colorRepository.save(color);
         messagingTemplate.convertAndSend("/topic/colors", new EntityMessage("Color updated: ", color));
         return colorMapper.toResponse(color);
+    }
+
+    public boolean updateStatus(Integer id) {
+        if (colorRepository.existsById(id)) {
+            Color color = colorRepository.findById(id).orElse(null);
+            if (color != null) {
+                color.setStatus(!color.getStatus());
+                colorRepository.save(color);
+
+                return true;
+            }
+        }
+        return false;
     }
 }

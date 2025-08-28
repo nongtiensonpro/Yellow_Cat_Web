@@ -6,20 +6,25 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.yellowcat.backend.common.websocket.EntityMessage;
 import org.yellowcat.backend.common.websocket.WebSocketHandler;
+import org.yellowcat.backend.product.Product;
+import org.yellowcat.backend.product.ProductRepository;
 import org.yellowcat.backend.product.brand.dto.BrandCreateDto;
 import org.yellowcat.backend.product.brand.dto.BrandDTO;
 import org.yellowcat.backend.product.brand.dto.BrandUpdateDto;
 
 import java.time.Instant;
+import java.util.List;
 
 @Service
 public class BrandService {
 
     private final BrandRepository brandRepository;
+    private final ProductRepository productRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
-    public BrandService(BrandRepository brandRepository, WebSocketHandler webSocketHandler, SimpMessagingTemplate messagingTemplate) {
+    public BrandService(BrandRepository brandRepository, WebSocketHandler webSocketHandler, ProductRepository productRepository, SimpMessagingTemplate messagingTemplate) {
         this.brandRepository = brandRepository;
+        this.productRepository = productRepository;
         this.messagingTemplate = messagingTemplate;
     }
 
@@ -33,19 +38,25 @@ public class BrandService {
     }
 
 
-
     public boolean deleteBrand(Integer id) {
         if (brandRepository.existsById(id)) {
             Brand brand = brandRepository.findById(id).get();
+            List<Product> products = productRepository.findByBrandId(id);
+            if (!products.isEmpty() && brand != null) {
+                brand.setStatus(false);
+                brandRepository.save(brand);
+
+                return false;
+            }
+
             BrandDTO result = convertToDTO(brand);
-            messagingTemplate.convertAndSend("/topic/brands",new EntityMessage( "delete",result));
+            messagingTemplate.convertAndSend("/topic/brands", new EntityMessage("delete", result));
             brandRepository.deleteById(id);
             return true;
-        }else {
+        } else {
             return false;
         }
     }
-
 
 
     public BrandDTO addBrand(BrandCreateDto brandDTO) {
@@ -53,25 +64,27 @@ public class BrandService {
         newBrand.setBrandName(brandDTO.brandName());
         newBrand.setLogoPublicId(brandDTO.logoPublicId());
         newBrand.setBrandInfo(brandDTO.brandInfo());
+        newBrand.setStatus(true);
         Brand savedBrand = brandRepository.save(newBrand);
-        messagingTemplate.convertAndSend("/topic/brands", new EntityMessage( "add", convertToDTO(savedBrand)                                                       ));
+        messagingTemplate.convertAndSend("/topic/brands", new EntityMessage("add", convertToDTO(savedBrand)));
         return new BrandDTO(savedBrand);
     }
 
     public BrandDTO updateBrand(Integer id, BrandUpdateDto brandDTO) {
         Brand existingBrand = brandRepository.findById(id).orElse(null);
-        if (existingBrand!= null) {
+        if (existingBrand != null) {
             existingBrand.setBrandName(brandDTO.brandName());
             existingBrand.setLogoPublicId(brandDTO.logoPublicId());
             existingBrand.setBrandInfo(brandDTO.brandInfo());
             existingBrand.setUpdatedAt(Instant.now());
             Brand updatedBrand = brandRepository.save(existingBrand);
-            messagingTemplate.convertAndSend("/topic/brands", new EntityMessage( "update", convertToDTO(updatedBrand)                                                       ));
+            messagingTemplate.convertAndSend("/topic/brands", new EntityMessage("update", convertToDTO(updatedBrand)));
             return new BrandDTO(updatedBrand);
         } else {
             return null;
         }
     }
+
     private BrandDTO convertToDTO(Brand brand) {
         BrandDTO brandDTO = new BrandDTO();
         brandDTO.setId(brand.getId());
@@ -81,6 +94,19 @@ public class BrandService {
         brandDTO.setCreatedAt(brand.getCreatedAt());
         brandDTO.setUpdatedAt(brand.getUpdatedAt());
         return brandDTO;
+    }
+
+    public boolean updateStatus(Integer id) {
+        if (brandRepository.existsById(id)) {
+            Brand brand = brandRepository.findById(id).orElse(null);
+            if (brand != null) {
+                brand.setStatus(!brand.getStatus());
+                brandRepository.save(brand);
+
+                return true;
+            }
+        }
+        return false;
     }
 }
 

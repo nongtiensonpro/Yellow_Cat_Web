@@ -51,4 +51,10 @@ public class TargetAudienceController {
     public ResponseEntity<Boolean> deleteSize(@PathVariable Integer id) {
         return ResponseEntity.ok(targetAudienceService.deleteTargetAudience(id));
     }
+
+    @PutMapping("/status/{id}")
+    @PreAuthorize("hasAnyAuthority('Admin_Web')")
+    public ResponseEntity<Boolean> updateStatus(@PathVariable Integer id) {
+        return ResponseEntity.ok(targetAudienceService.updateStatus(id));
+    }
 }
