@@ -26,13 +26,21 @@ public class OrderStatisticService {
         LocalDateTime start = end.minus(1, toChronosUnit(range));
 
         long totalOrder = orderRepository.countOrders(start, end);
+        long pending = orderRepository.countOrdersByStatus("Pending", start, end);
+        long confirmed = orderRepository.countOrdersByStatus("Confirmed", start, end);
         long processing = orderRepository.countOrdersByStatus("Processing", start, end);
-        long shipped = orderRepository.countOrdersByStatus("Shipped", start, end);
+        long inProgress = pending + confirmed + processing;
+        long shipped = orderRepository.countOrdersByStatus("Shipping", start, end);
         long delivered = orderRepository.countOrdersByStatus("Delivered", start, end);
         long paid = orderRepository.countOrdersByStatus("Paid", start, end);
-        long completedOrders = delivered + paid;
+        long completed = orderRepository.countOrdersByStatus("Completed", start, end);
+        long returnRejected = orderRepository.countOrdersByStatus("ReturnRejected", start, end);
+        long completedOrders = delivered + paid + completed + returnRejected;
         long cancelled = orderRepository.countOrdersByStatus("Cancelled", start, end);
-        long returned = orderRepository.countOrdersByStatus("Returned", start, end);
+        long deliveryFailed = orderRepository.countOrdersByStatus("DeliveryFailed", start, end);
+        long returnedToSeller = orderRepository.countOrdersByStatus("ReturnedToSeller", start, end);
+        long returnRequested = orderRepository.countOrdersByStatus("ReturnRequested", start, end);
+        long returned = deliveryFailed + returnRequested + returnedToSeller;
         double totalRevenue = orderRepository.totalRevenueBetween(start, end);
         double avgOrderValue = (completedOrders > 0) ? round((totalRevenue / completedOrders)) : 0.0;
         double processingRate = (totalOrder > 0) ? round(((double) processing / totalOrder) * 100) : 0.0;
@@ -48,9 +56,14 @@ public class OrderStatisticService {
         long prevTotalOrder = orderRepository.countOrders(prevStart, prevEnd);
         long prevDelivered = orderRepository.countOrdersByStatus("Delivered", prevStart, prevEnd);
         long prevPaid = orderRepository.countOrdersByStatus("Paid", prevStart, prevEnd);
-        long prevCompletedOrders = prevDelivered + prevPaid;
+        long prevCompleted = orderRepository.countOrdersByStatus("Completed", prevStart, prevEnd);
+        long prevReturnRejected = orderRepository.countOrdersByStatus("ReturnRejected", start, end);
+        long prevCompletedOrders = prevDelivered + prevPaid + prevCompleted + prevReturnRejected;
         long prevCancelled = orderRepository.countOrdersByStatus("Cancelled", prevStart, prevEnd);
-        long prevReturned = orderRepository.countOrdersByStatus("Returned", prevStart, prevEnd);
+        long prevDeliveryFailed = orderRepository.countOrdersByStatus("DeliveryFailed", start, end);
+        long prevReturnedToSeller = orderRepository.countOrdersByStatus("ReturnedToSeller", start, end);
+        long prevReturnRequested = orderRepository.countOrdersByStatus("ReturnRequested", start, end);
+        long prevReturned = prevDeliveryFailed + prevReturnRequested + prevReturnedToSeller;
         double prevTotalRevenue = orderRepository.totalRevenueBetween(prevStart, prevEnd);
         double prevAvgOrderValue = (prevCompletedOrders > 0) ? round((prevTotalRevenue / prevCompletedOrders)) : 0.0;
         double prevCompletionRate = (prevTotalOrder > 0) ? round(((double) prevCompletedOrders / prevTotalOrder) * 100) : 0.0;
@@ -71,7 +84,7 @@ public class OrderStatisticService {
 
         return OrderSummaryDTO.builder()
                 .totalOrder(totalOrder)
-                .processing(processing)
+                .processing(inProgress)
                 .shipped(shipped)
                 .delivered(completedOrders)
                 .cancelled(cancelled)

@@ -135,7 +135,7 @@ const OrderAnalytics: React.FC<OrderAnalyticsProps> = ({timeRange}) => {
     };
 
     const orderStatusData = {
-        labels: ["Đang xử lý", "Đã giao", "Đã giao hàng", "Bị hủy", "Trả hàng"],
+        labels: ["Đang xử lý", "Đang giao hàng", "Đã giao hàng", "Bị hủy", "Trả hàng"],
         datasets: [
             {
                 data: [
