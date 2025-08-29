@@ -196,7 +196,7 @@ export default function Page() {
         if (!selected || !session?.accessToken) return;
         setIsSubmitting(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/target-audiences/status/${selected.id}`, {
+            const res = await fetch(`${API_BASE_URL}/categories/status/${selected.id}`, {
                 method: "PUT",
                 headers: {Authorization: `Bearer ${session.accessToken}`},
             });
