@@ -61,6 +61,7 @@ interface Order {
 }
 
 interface OrderItem {
+    productId?: number;
     productName: string;
     variantName: string;
     quantity: number;
@@ -146,6 +147,18 @@ export default function OrderOnlinePage() {
     // Đã bỏ thông báo huỷ đơn
     // State cho xác nhận huỷ đơn
     const [showCancelConfirm, setShowCancelConfirm] = useState<{orderId: number, orderCode: string} | null>(null);
+    
+    // State cho đánh giá sản phẩm
+    const [showReviewModal, setShowReviewModal] = useState(false);
+    const [reviewProductId, setReviewProductId] = useState<number | null>(null);
+    const [reviewProductName, setReviewProductName] = useState<string>('');
+    const [reviewRating, setReviewRating] = useState(5);
+    const [reviewComment, setReviewComment] = useState('');
+    const [reviewLoading, setReviewLoading] = useState(false);
+    const [reviewError, setReviewError] = useState<string | null>(null);
+    const [reviewSuccess, setReviewSuccess] = useState<string | null>(null);
+    const [canReviewProduct, setCanReviewProduct] = useState<Record<number, boolean>>({});
+    const [hasReviewedProduct, setHasReviewedProduct] = useState<Record<number, boolean>>({});
 
     // Lấy user info từ backend
     const fetchUserByKeycloakId = useCallback(async (keycloakId: string, accessToken: string) => {
@@ -290,13 +303,21 @@ const getStatusColor = (status: string) => {
         setDetailError(null);
         if (orderDetailCache[orderId]) {
             setLoadingDetail(false);
+            // Kiểm tra trạng thái đánh giá cho đơn hàng đã cache
+            if (orderDetailCache[orderId].orderStatus === 'Completed') {
+                checkReviewStatusForOrder(orderId);
+            }
             return;
         }
         try {
             const res = await fetch(`http://localhost:8080/api/orders/detail-online/${orderId}`);
             const data = await res.json();
-            console.log('Order detail response:', data);
             setOrderDetailCache(prev => ({ ...prev, [orderId]: data }));
+            
+            // Kiểm tra trạng thái đánh giá nếu đơn hàng đã hoàn thành
+            if (data.orderStatus === 'Completed') {
+                checkReviewStatusForOrder(orderId);
+            }
         } catch {
             setDetailError('Không lấy được chi tiết đơn hàng');
         } finally {
@@ -439,6 +460,183 @@ const getStatusColor = (status: string) => {
             toast.error('Lỗi hệ thống');
         } finally {
             setCancelLoading(false);
+        }
+    };
+
+    // Hàm kiểm tra có thể đánh giá sản phẩm không
+    const checkCanReviewProduct = async (productId: number) => {
+        if (!session?.accessToken) return false;
+        
+        try {
+            const res = await fetch(`http://localhost:8080/api/reviews/can-review?productId=${productId}`, {
+                headers: { 'Authorization': `Bearer ${session.accessToken}` }
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                return data.data || false;
+            } else {
+                return false;
+            }
+        } catch (error) {
+            return false;
+        }
+    };
+
+    // Hàm kiểm tra đã đánh giá sản phẩm chưa
+    const checkHasReviewedProduct = async (productId: number) => {
+        if (!session?.accessToken) return false;
+        
+        try {
+            const res = await fetch(`http://localhost:8080/api/reviews/has-reviewed?productId=${productId}`, {
+                headers: { 'Authorization': `Bearer ${session.accessToken}` }
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                return data.data || false;
+            } else {
+                return false;
+            }
+        } catch (error) {
+            return false;
+        }
+    };
+
+    // Hàm kiểm tra trạng thái đánh giá cho tất cả sản phẩm trong đơn hàng
+    const checkReviewStatusForOrder = async (orderId: number) => {
+        if (!session?.accessToken) return;
+        
+        const orderDetail = orderDetailCache[orderId];
+        if (!orderDetail || !orderDetail.items) return;
+        
+        const newCanReview: Record<number, boolean> = {};
+        const newHasReviewed: Record<number, boolean> = {};
+        
+        for (const item of orderDetail.items) {
+            if (item.productId) {
+                // Gọi API kiểm tra quyền đánh giá
+                const canReview = await checkCanReviewProduct(item.productId);
+                
+                // Gọi API kiểm tra đã đánh giá chưa
+                const hasReviewed = await checkHasReviewedProduct(item.productId);
+                
+                newCanReview[item.productId] = canReview;
+                newHasReviewed[item.productId] = hasReviewed;
+            }
+        }
+        
+        setCanReviewProduct(newCanReview);
+        setHasReviewedProduct(newHasReviewed);
+    };
+
+    // Hàm tìm productId từ tên sản phẩm
+    const findProductIdByName = async (productName: string): Promise<number | null> => {
+        if (!session?.accessToken) return null;
+        
+        try {
+            // Tìm sản phẩm theo tên
+            const res = await fetch(`http://localhost:8080/api/products?page=0&size=100&search=${encodeURIComponent(productName)}`, {
+                headers: { 'Authorization': `Bearer ${session.accessToken}` }
+            });
+            const data = await res.json();
+            
+            if (data.data?.content && data.data.content.length > 0) {
+                // Tìm sản phẩm có tên khớp nhất
+                const matchingProduct = data.data.content.find((product: any) => 
+                    product.productName?.toLowerCase().includes(productName.toLowerCase()) ||
+                    product.displayName?.toLowerCase().includes(productName.toLowerCase())
+                );
+                
+                if (matchingProduct) {
+                    return matchingProduct.productId;
+                }
+            }
+            
+            return null;
+        } catch (error) {
+            return null;
+        }
+    };
+
+    // Hàm mở modal đánh giá
+    const handleOpenReviewModal = async (productId: number | undefined, productName: string) => {
+        let finalProductId = productId;
+        
+        // Kiểm tra productId có hợp lệ không
+        if (productId === undefined || productId === null || productId === 0) {
+            // Thử tìm productId từ tên sản phẩm nếu có thể
+            if (productName) {
+                toast.success('Đang tìm thông tin sản phẩm...');
+                
+                const foundProductId = await findProductIdByName(productName);
+                if (foundProductId) {
+                    finalProductId = foundProductId;
+                } else {
+                    toast.error('Không tìm thấy ID sản phẩm. Vui lòng liên hệ hỗ trợ.');
+                    return;
+                }
+            } else {
+                toast.error('Không tìm thấy thông tin sản phẩm. Vui lòng thử lại sau.');
+                return;
+            }
+        }
+        
+        setReviewProductId(finalProductId || null);
+        setReviewProductName(productName);
+        setReviewRating(5);
+        setReviewComment('');
+        setReviewError(null);
+        setReviewSuccess(null);
+        
+        // Mở modal ngay lập tức, không cần kiểm tra trước
+        setShowReviewModal(true);
+    };
+
+    // Hàm gửi đánh giá
+    const handleSubmitReview = async () => {
+        if (!reviewProductId || !session?.accessToken) return;
+        
+        setReviewLoading(true);
+        setReviewError(null);
+        
+        try {
+            const res = await fetch('http://localhost:8080/api/reviews', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.accessToken}`
+                },
+                body: JSON.stringify({
+                    productId: reviewProductId,
+                    rating: reviewRating,
+                    comment: reviewComment
+                })
+            });
+            
+            const data = await res.json();
+            
+            if (res.ok) {
+                setReviewSuccess('Đánh giá sản phẩm thành công!');
+                
+                // Cập nhật trạng thái đánh giá
+                setHasReviewedProduct(prev => ({ ...prev, [reviewProductId]: true }));
+                setCanReviewProduct(prev => ({ ...prev, [reviewProductId]: false }));
+                
+                // Hiển thị thông báo thành công
+                toast.success('Đánh giá sản phẩm thành công!');
+                
+                setTimeout(() => {
+                    setShowReviewModal(false);
+                    setReviewSuccess(null);
+                }, 1500);
+            } else {
+                setReviewError(data.message || 'Không thể gửi đánh giá');
+            }
+        } catch {
+            setReviewError('Lỗi hệ thống');
+        } finally {
+            setReviewLoading(false);
         }
     };
 
@@ -905,6 +1103,53 @@ const getStatusColor = (status: string) => {
                                                                     </Button>
                                                                 </div>
                                                             )}
+
+                                                            {/* Button đánh giá cho đơn hàng hoàn thành */}
+                                                            {orderDetailCache[order.orderId].orderStatus === 'Completed' && (
+                                                                <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                                                                    <h4 className="text-lg font-bold text-green-800 mb-3 flex items-center">
+                                                                        <span className="mr-2">⭐</span>
+                                                                        Đánh giá sản phẩm
+                                                                    </h4>
+                                                                    <p className="text-sm text-green-700 mb-4">
+                                                                        Chia sẻ trải nghiệm của bạn về các sản phẩm trong đơn hàng này
+                                                                    </p>
+                                                                    <div className="space-y-3">
+                                                                        {orderDetailCache[order.orderId].items?.map((item: OrderItem, idx: number) => {
+                                                                            const productId = item.productId;
+                                                                            const canReview = productId ? canReviewProduct[productId] : false;
+                                                                            const hasReviewed = productId ? hasReviewedProduct[productId] : false;
+                                                                            
+                                                                            return (
+                                                                                <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-lg border border-green-100">
+                                                                                    <div className="flex-1">
+                                                                                        <h5 className="font-semibold text-gray-900">{item.productName}</h5>
+                                                                                        <p className="text-sm text-gray-600">{item.variantName}</p>
+                                                                                    </div>
+                                                                                    
+                                                                                    {hasReviewed ? (
+                                                                                        <div className="flex items-center space-x-2">
+                                                                                            <span className="text-green-600 font-semibold">✅ Đã đánh giá</span>
+                                                                                        </div>
+                                                                                    ) : canReview ? (
+                                                                                        <Button
+                                                                                            size="sm"
+                                                                                            color="success"
+                                                                                            variant="solid"
+                                                                                            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold shadow-lg"
+                                                                                            onClick={() => handleOpenReviewModal(item.productId, item.productName)}
+                                                                                        >
+                                                                                            ⭐ Đánh giá ngay
+                                                                                        </Button>
+                                                                                    ) : (
+                                                                                        <span className="text-gray-500 text-sm">Không thể đánh giá</span>
+                                                                                    )}
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                             {confirmError && <div className="text-red-600 mt-2">{confirmError}</div>}
                                                             {confirmSuccess && <div className="text-green-600 mt-2">{confirmSuccess}</div>}
                                                         </div>
@@ -979,6 +1224,96 @@ const getStatusColor = (status: string) => {
                             <Button color="default" variant="flat" onClick={() => setShowCancelConfirm(null)} disabled={cancelLoading}>Không</Button>
                             <Button color="danger" onClick={() => { if (showCancelConfirm) { handleCancelOrder(showCancelConfirm.orderId, showCancelConfirm.orderCode); setShowCancelConfirm(null); } }} disabled={cancelLoading}>
                                 {cancelLoading ? 'Đang huỷ...' : 'Xác nhận huỷ'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </Dialog>
+
+            {/* Modal đánh giá sản phẩm */}
+            <Dialog open={showReviewModal} onClose={() => setShowReviewModal(false)} className="fixed z-50 inset-0 overflow-y-auto">
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="fixed inset-0 bg-black opacity-30" />
+                    <div className="relative bg-white rounded-lg shadow-xl p-6 w-full max-w-lg mx-auto z-10">
+                        <div className="text-center mb-6">
+                            <div className="text-4xl mb-2">⭐</div>
+                            <Dialog.Title className="text-2xl font-bold text-green-700">Đánh giá sản phẩm</Dialog.Title>
+                            {reviewProductName && (
+                                <p className="text-sm text-gray-600 mt-2">{reviewProductName}</p>
+                            )}
+                        </div>
+                        
+                        {reviewError && (
+                            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                                {reviewError}
+                            </div>
+                        )}
+                        
+                        {reviewSuccess && (
+                            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-green-700 text-sm">
+                                {reviewSuccess}
+                            </div>
+                        )}
+
+                        <div className="mb-6">
+                            <label className="block font-semibold mb-3 text-center">Bạn đánh giá sản phẩm này như thế nào?</label>
+                            <div className="flex justify-center gap-2">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                        key={star}
+                                        type="button"
+                                        onClick={() => setReviewRating(star)}
+                                        className={`text-4xl ${reviewRating >= star ? 'text-yellow-400' : 'text-gray-300'} hover:text-yellow-400 transition-colors transform hover:scale-110`}
+                                    >
+                                        ★
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="text-center text-sm text-gray-600 mt-3 font-medium">
+                                {reviewRating === 1 && '😞 Rất không hài lòng'}
+                                {reviewRating === 2 && '😕 Không hài lòng'}
+                                {reviewRating === 3 && '😐 Bình thường'}
+                                {reviewRating === 4 && '😊 Hài lòng'}
+                                {reviewRating === 5 && '😍 Rất hài lòng'}
+                            </p>
+                        </div>
+
+                        <div className="mb-6">
+                            <label className="block font-semibold mb-2">Nhận xét của bạn</label>
+                            <textarea
+                                value={reviewComment}
+                                onChange={(e) => setReviewComment(e.target.value)}
+                                className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none"
+                                rows={4}
+                                placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm này..."
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Nhận xét giúp người khác hiểu rõ hơn về sản phẩm</p>
+                        </div>
+
+                        <div className="flex justify-end gap-3">
+                            <Button 
+                                color="default" 
+                                variant="flat" 
+                                onClick={() => setShowReviewModal(false)}
+                                disabled={reviewLoading}
+                                className="px-6"
+                            >
+                                Hủy
+                            </Button>
+                            <Button 
+                                color="success" 
+                                onClick={handleSubmitReview}
+                                disabled={reviewLoading || !reviewComment.trim()}
+                                className="px-6 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                            >
+                                {reviewLoading ? (
+                                    <div className="flex items-center">
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                        Đang gửi...
+                                    </div>
+                                ) : (
+                                    'Gửi đánh giá'
+                                )}
                             </Button>
                         </div>
                     </div>

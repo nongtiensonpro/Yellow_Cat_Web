@@ -467,6 +467,7 @@ public class OrderOnlineService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
 
         List<OrderItemOnlineDTO> itemDTOs = order.getOrderItems().stream().map(item -> OrderItemOnlineDTO.builder()
+                .productId(item.getVariant().getProduct().getProductId())
                 .productName(item.getVariant().getProduct().getProductName())
                 .variantName(item.getVariant().getProduct().getProductName()) // hoặc getVariantName() nếu có sẵn
                 .quantity(item.getQuantity())

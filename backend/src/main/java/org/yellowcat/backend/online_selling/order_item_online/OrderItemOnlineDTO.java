@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 @Data
 @Builder
 public class OrderItemOnlineDTO {
+    private Integer productId;
     private String productName;
     private String variantName;
     private Integer quantity;

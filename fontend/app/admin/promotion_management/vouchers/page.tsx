@@ -236,6 +236,23 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
         }
     };
 
+    // Validation cho giá trị số theo giới hạn database
+    const validateNumericInput = (value: string, maxDigits: number, maxDecimals: number = 2) => {
+        if (!value) return true;
+        
+        // Kiểm tra format số
+        const numberRegex = new RegExp(`^\\d{1,${maxDigits}}(\\.\\d{1,${maxDecimals}})?$`);
+        if (!numberRegex.test(value)) {
+            return false;
+        }
+        
+        // Kiểm tra giá trị tối đa
+        const numValue = parseFloat(value);
+        const maxValue = Math.pow(10, maxDigits - maxDecimals) - Math.pow(10, -maxDecimals);
+        
+        return numValue <= maxValue;
+    };
+
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
     ) => {
@@ -263,6 +280,18 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
             // Kiểm tra nếu có ký tự không phải số hoặc dấu chấm
             if (value && !/^[0-9]*\.?[0-9]*$/.test(value)) {
                 return; // Không cập nhật nếu có ký tự không hợp lệ
+            }
+
+            // Validation theo giới hạn database
+            let isValid = true;
+            if (name === 'discountValue') {
+                isValid = validateNumericInput(value, 10, 2); // numeric(10,2)
+            } else if (name === 'maximumDiscountValue' || name === 'minimumOrderValue') {
+                isValid = validateNumericInput(value, 12, 2); // numeric(12,2)
+            }
+
+            if (!isValid) {
+                return; // Không cập nhật nếu vượt quá giới hạn
             }
         }
 
@@ -318,13 +347,31 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                 newErrors.discountValue = 'Giá trị giảm phải lớn hơn 0.';
             } else if (form.discountValue > 100) {
                 newErrors.discountValue = 'Giá trị giảm không được vượt quá 100%.';
+            } else {
+                // Kiểm tra giới hạn database cho discountValue (numeric(10,2))
+                const discountValueStr = form.discountValue.toString();
+                if (!validateNumericInput(discountValueStr, 10, 2)) {
+                    newErrors.discountValue = 'Giá trị giảm không được vượt quá 99,999,999.99';
+                }
             }
         } else if (form.discountType !== 'free_shipping' && form.discountValue <= 0) {
             newErrors.discountValue = 'Giá trị giảm phải lớn hơn 0.';
+        } else if (form.discountType !== 'free_shipping') {
+            // Kiểm tra giới hạn database cho discountValue (numeric(10,2))
+            const discountValueStr = form.discountValue.toString();
+            if (!validateNumericInput(discountValueStr, 10, 2)) {
+                newErrors.discountValue = 'Giá trị giảm không được vượt quá 99,999,999.99';
+            }
         }
 
         if ((form.discountType === 'percentage' || form.discountType === 'free_shipping') && (!form.maximumDiscountValue || (typeof form.maximumDiscountValue === 'string' ? parseFloat(form.maximumDiscountValue) : form.maximumDiscountValue) <= 0)) {
             newErrors.maximumDiscountValue = 'Giảm tối đa là bắt buộc và phải lớn hơn 0 khi chọn giảm theo % hoặc miễn phí vận chuyển.';
+        } else if (form.maximumDiscountValue && form.maximumDiscountValue > 0) {
+            // Kiểm tra giới hạn database cho maximumDiscountValue (numeric(12,2))
+            const maxDiscountValueStr = form.maximumDiscountValue.toString();
+            if (!validateNumericInput(maxDiscountValueStr, 12, 2)) {
+                newErrors.maximumDiscountValue = 'Giảm tối đa không được vượt quá 99,999,999,999.99';
+            }
         }
 
         // Điều kiện áp dụng
@@ -332,9 +379,26 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
             newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu là bắt buộc (cho phép 0).';
         } else if (Number(form.minimumOrderValue) < 0) {
             newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu không được âm.';
+        } else if (form.minimumOrderValue > 0) {
+            // Kiểm tra giới hạn database cho minimumOrderValue (numeric(12,2))
+            const minOrderValueStr = form.minimumOrderValue.toString();
+            if (!validateNumericInput(minOrderValueStr, 12, 2)) {
+                newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu không được vượt quá 99,999,999,999.99';
+            }
         }
         if (form.usageLimitTotal === undefined || form.usageLimitTotal === null || Number(form.usageLimitTotal) <= 0) {
             newErrors.usageLimitTotal = 'Số lượng voucher phải lớn hơn 0.';
+        }
+
+        // Validation cho đối tượng áp dụng - chỉ được chọn 1 trong 3 loại
+        const hasSelectedProducts = selectedProducts.length > 0;
+        const hasSelectedCategories = selectedCategories.length > 0;
+        const hasSelectedUsers = selectedUsers.length > 0;
+        
+        const selectedTypes = [hasSelectedProducts, hasSelectedCategories, hasSelectedUsers].filter(Boolean);
+        
+        if (selectedTypes.length > 1) {
+            newErrors.targetScope = 'Chỉ được chọn 1 loại đối tượng áp dụng (Sản phẩm, Danh mục hoặc Người dùng).';
         }
 
         setErrors(newErrors);
@@ -540,24 +604,51 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
 
     const handleTargetToggle = (type: 'products' | 'categories' | 'users', id: number | string) => {
         if (type === 'products') {
-            setSelectedProducts(prev =>
-                prev.includes(id as number)
+            setSelectedProducts(prev => {
+                const newProducts = prev.includes(id as number)
                     ? prev.filter(p => p !== id)
-                    : [...prev, id as number]
-            );
+                    : [...prev, id as number];
+                
+                // Nếu đang chọn sản phẩm, bỏ chọn danh mục và người dùng
+                if (newProducts.length > 0) {
+                    setSelectedCategories([]);
+                    setSelectedUsers([]);
+                }
+                
+                return newProducts;
+            });
         } else if (type === 'categories') {
-            setSelectedCategories(prev =>
-                prev.includes(id as number)
+            setSelectedCategories(prev => {
+                const newCategories = prev.includes(id as number)
                     ? prev.filter(c => c !== id)
-                    : [...prev, id as number]
-            );
+                    : [...prev, id as number];
+                
+                // Nếu đang chọn danh mục, bỏ chọn sản phẩm và người dùng
+                if (newCategories.length > 0) {
+                    setSelectedProducts([]);
+                    setSelectedUsers([]);
+                }
+                
+                return newCategories;
+            });
         } else if (type === 'users') {
-            setSelectedUsers(prev =>
-                prev.includes(id as string)
+            setSelectedUsers(prev => {
+                const newUsers = prev.includes(id as string)
                     ? prev.filter(u => u !== id)
-                    : [...prev, id as string]
-            );
+                    : [...prev, id as string];
+                
+                // Nếu đang chọn người dùng, bỏ chọn sản phẩm và danh mục
+                if (newUsers.length > 0) {
+                    setSelectedProducts([]);
+                    setSelectedCategories([]);
+                }
+                
+                return newUsers;
+            });
         }
+        
+        // Clear validation error when user makes a selection
+        setErrors(prev => ({ ...prev, targetScope: '' }));
     };
 
     if (!isOpen) return null;
@@ -662,7 +753,12 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                                         className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
                                         disabled={form.discountType === 'free_shipping'}
                                         placeholder={form.discountType === 'percentage' ? 'VD: 10' : 'VD: 50000'}
+                                        max={form.discountType === 'percentage' ? 100 : 99999999.99}
+                                        step="0.01"
                                     />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Tối đa: {form.discountType === 'percentage' || form.discountType === 'free_shipping' ? '100%' : '99,999,999.99 ₫'}
+                                    </p>
                                     {errors.discountValue && <p className="text-red-600 text-sm mt-1">{errors.discountValue}</p>}
                                 </div>
                                 <div>
@@ -676,7 +772,12 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                                         className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
                                         disabled={form.discountType === 'fixed_amount'}
                                         placeholder="VD: 100000"
+                                        max="999999999999.99"
+                                        step="0.01"
                                     />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Tối đa: 99,999,999,999.99 ₫
+                                    </p>
                                     {(form.discountType === 'percentage' || form.discountType === 'free_shipping') && errors.maximumDiscountValue && <p className="text-red-600 text-sm mt-1">{errors.maximumDiscountValue}</p>}
                                 </div>
                             </div>
@@ -699,7 +800,12 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                                         onKeyPress={handleKeyPress}
                                         className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                                         placeholder="VD: 200000"
+                                        max="999999999999.99"
+                                        step="0.01"
                                     />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Tối đa: 99,999,999,999.99 ₫
+                                    </p>
                                     {errors.minimumOrderValue && <p className="text-red-600 text-sm mt-1">{errors.minimumOrderValue}</p>}
                                 </div>
                                 <div>
@@ -798,8 +904,13 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                         <h3 className="text-lg font-semibold text-gray-900">Đối tượng áp dụng</h3>
                         <p className="text-sm text-gray-600 mt-1">Chọn sản phẩm, danh mục hoặc người dùng</p>
                         <p className="text-xs text-blue-600 mt-2 bg-blue-50 p-2 rounded">
-                            💡 <strong>Lưu ý:</strong> Nếu không chọn gì, voucher sẽ áp dụng cho tất cả sản phẩm
+                            💡 <strong>Lưu ý:</strong> Chỉ được chọn 1 loại đối tượng (Sản phẩm, Danh mục hoặc Người dùng). Nếu không chọn gì, voucher sẽ áp dụng cho tất cả sản phẩm
                         </p>
+                        {errors.targetScope && (
+                            <p className="text-xs text-red-600 mt-2 bg-red-50 p-2 rounded border border-red-200">
+                                ⚠️ {errors.targetScope}
+                            </p>
+                        )}
                     </div>
 
                     {/* Tabs */}
@@ -1421,24 +1532,51 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
 
     const handleTargetToggle = (type: 'products' | 'categories' | 'users', id: number | string) => {
         if (type === 'products') {
-            setSelectedProducts(prev =>
-                prev.includes(id as number)
+            setSelectedProducts(prev => {
+                const newProducts = prev.includes(id as number)
                     ? prev.filter(p => p !== id)
-                    : [...prev, id as number]
-            );
+                    : [...prev, id as number];
+                
+                // Nếu đang chọn sản phẩm, bỏ chọn danh mục và người dùng
+                if (newProducts.length > 0) {
+                    setSelectedCategories([]);
+                    setSelectedUsers([]);
+                }
+                
+                return newProducts;
+            });
         } else if (type === 'categories') {
-            setSelectedCategories(prev =>
-                prev.includes(id as number)
+            setSelectedCategories(prev => {
+                const newCategories = prev.includes(id as number)
                     ? prev.filter(c => c !== id)
-                    : [...prev, id as number]
-            );
+                    : [...prev, id as number];
+                
+                // Nếu đang chọn danh mục, bỏ chọn sản phẩm và người dùng
+                if (newCategories.length > 0) {
+                    setSelectedProducts([]);
+                    setSelectedUsers([]);
+                }
+                
+                return newCategories;
+            });
         } else if (type === 'users') {
-            setSelectedUsers(prev =>
-                prev.includes(id as string)
+            setSelectedUsers(prev => {
+                const newUsers = prev.includes(id as string)
                     ? prev.filter(u => u !== id)
-                    : [...prev, id as string]
-            );
+                    : [...prev, id as string];
+                
+                // Nếu đang chọn người dùng, bỏ chọn sản phẩm và danh mục
+                if (newUsers.length > 0) {
+                    setSelectedProducts([]);
+                    setSelectedCategories([]);
+                }
+                
+                return newUsers;
+            });
         }
+        
+        // Clear validation error when user makes a selection
+        setErrors(prev => ({ ...prev, targetScope: '' }));
     };
 
     const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -1447,6 +1585,23 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
         if (!/[0-9.]/.test(char)) {
             e.preventDefault();
         }
+    };
+
+    // Validation cho giá trị số theo giới hạn database
+    const validateNumericInput = (value: string, maxDigits: number, maxDecimals: number = 2) => {
+        if (!value) return true;
+        
+        // Kiểm tra format số
+        const numberRegex = new RegExp(`^\\d{1,${maxDigits}}(\\.\\d{1,${maxDecimals}})?$`);
+        if (!numberRegex.test(value)) {
+            return false;
+        }
+        
+        // Kiểm tra giá trị tối đa
+        const numValue = parseFloat(value);
+        const maxValue = Math.pow(10, maxDigits - maxDecimals) - Math.pow(10, -maxDecimals);
+        
+        return numValue <= maxValue;
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -1473,6 +1628,18 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
             // Kiểm tra nếu có ký tự không phải số hoặc dấu chấm
             if (value && !/^[0-9]*\.?[0-9]*$/.test(value)) {
                 return; // Không cập nhật nếu có ký tự không hợp lệ
+            }
+
+            // Validation theo giới hạn database
+            let isValid = true;
+            if (name === 'discountValue') {
+                isValid = validateNumericInput(value, 10, 2); // numeric(10,2)
+            } else if (name === 'maximumDiscountValue' || name === 'minimumOrderValue') {
+                isValid = validateNumericInput(value, 12, 2); // numeric(12,2)
+            }
+
+            if (!isValid) {
+                return; // Không cập nhật nếu vượt quá giới hạn
             }
         }
         
@@ -1515,9 +1682,21 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                 newErrors.discountValue = 'Giá trị giảm phải lớn hơn 0.';
             } else if (discountValue > 100) {
                 newErrors.discountValue = 'Giá trị giảm không được vượt quá 100%.';
+            } else {
+                // Kiểm tra giới hạn database cho discountValue (numeric(10,2))
+                const discountValueStr = form.discountValue.toString();
+                if (!validateNumericInput(discountValueStr, 10, 2)) {
+                    newErrors.discountValue = 'Giá trị giảm không được vượt quá 99,999,999.99';
+                }
             }
         } else if (form.discountType !== 'free_shipping' && !form.discountValue) {
             newErrors.discountValue = 'Giá trị giảm là bắt buộc';
+        } else if (form.discountType !== 'free_shipping' && form.discountValue) {
+            // Kiểm tra giới hạn database cho discountValue (numeric(10,2))
+            const discountValueStr = form.discountValue.toString();
+            if (!validateNumericInput(discountValueStr, 10, 2)) {
+                newErrors.discountValue = 'Giá trị giảm không được vượt quá 99,999,999.99';
+            }
         }
 
         // Điều kiện áp dụng
@@ -1525,13 +1704,36 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
             newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu là bắt buộc (cho phép 0).';
         } else if (Number(form.minimumOrderValue) < 0) {
             newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu không được âm.';
+        } else if (form.minimumOrderValue && Number(form.minimumOrderValue) > 0) {
+            // Kiểm tra giới hạn database cho minimumOrderValue (numeric(12,2))
+            const minOrderValueStr = form.minimumOrderValue.toString();
+            if (!validateNumericInput(minOrderValueStr, 12, 2)) {
+                newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu không được vượt quá 99,999,999,999.99';
+            }
         }
         if (!form.usageLimitTotal || Number(form.usageLimitTotal) <= 0) {
             newErrors.usageLimitTotal = 'Số lượng voucher phải lớn hơn 0.';
         }
 
+        // Validation cho đối tượng áp dụng - chỉ được chọn 1 trong 3 loại
+        const hasSelectedProducts = selectedProducts.length > 0;
+        const hasSelectedCategories = selectedCategories.length > 0;
+        const hasSelectedUsers = selectedUsers.length > 0;
+        
+        const selectedTypes = [hasSelectedProducts, hasSelectedCategories, hasSelectedUsers].filter(Boolean);
+        
+        if (selectedTypes.length > 1) {
+            newErrors.targetScope = 'Chỉ được chọn 1 loại đối tượng áp dụng (Sản phẩm, Danh mục hoặc Người dùng).';
+        }
+
         if ((form.discountType === 'percentage' || form.discountType === 'free_shipping') && (!form.maximumDiscountValue || (typeof form.maximumDiscountValue === 'string' ? parseFloat(form.maximumDiscountValue) : form.maximumDiscountValue) <= 0)) {
             newErrors.maximumDiscountValue = 'Giảm tối đa là bắt buộc và phải lớn hơn 0 khi chọn giảm theo % hoặc miễn phí vận chuyển.';
+        } else if (form.maximumDiscountValue && (typeof form.maximumDiscountValue === 'string' ? parseFloat(form.maximumDiscountValue) : form.maximumDiscountValue) > 0) {
+            // Kiểm tra giới hạn database cho maximumDiscountValue (numeric(12,2))
+            const maxDiscountValueStr = form.maximumDiscountValue.toString();
+            if (!validateNumericInput(maxDiscountValueStr, 12, 2)) {
+                newErrors.maximumDiscountValue = 'Giảm tối đa không được vượt quá 99,999,999,999.99';
+            }
         }
 
         setErrors(newErrors);
@@ -1779,7 +1981,12 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                             className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
                                             disabled={form.discountType === 'free_shipping'}
                                             placeholder={form.discountType === 'percentage' ? 'VD: 10' : 'VD: 50000'}
+                                            max={form.discountType === 'percentage' ? 100 : 99999999.99}
+                                            step="0.01"
                                         />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Tối đa: {form.discountType === 'percentage' || form.discountType === 'free_shipping' ? '100%' : '99,999,999.99 ₫'}
+                                        </p>
                                         {errors.discountValue && <p className="text-red-600 text-sm mt-1">{errors.discountValue}</p>}
                                     </div>
                                     <div>
@@ -1793,7 +2000,12 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                             className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
                                             disabled={form.discountType === 'fixed_amount'}
                                             placeholder="VD: 100000"
+                                            max="999999999999.99"
+                                            step="0.01"
                                         />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Tối đa: 99,999,999,999.99 ₫
+                                        </p>
                                         {(form.discountType === 'percentage' || form.discountType === 'free_shipping') && errors.maximumDiscountValue && <p className="text-red-600 text-sm mt-1">{errors.maximumDiscountValue}</p>}
                                     </div>
                                 </div>
@@ -1816,7 +2028,12 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                             onKeyPress={handleKeyPress}
                                             className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                                             placeholder="VD: 200000"
+                                            max="999999999999.99"
+                                            step="0.01"
                                         />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Tối đa: 99,999,999,999.99 ₫
+                                        </p>
                                         {errors.minimumOrderValue && <p className="text-red-600 text-sm mt-1">{errors.minimumOrderValue}</p>}
                                     </div>
                                     <div>
@@ -1885,8 +2102,13 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                 </h3>
                                 <p className="text-sm text-gray-600 mb-2">Chọn sản phẩm, danh mục hoặc người dùng</p>
                                 <p className="text-xs text-blue-600 mb-4 bg-blue-50 p-2 rounded">
-                                    💡 <strong>Lưu ý:</strong> Nếu không chọn gì, voucher sẽ áp dụng cho tất cả sản phẩm
+                                    💡 <strong>Lưu ý:</strong> Chỉ được chọn 1 loại đối tượng (Sản phẩm, Danh mục hoặc Người dùng). Nếu không chọn gì, voucher sẽ áp dụng cho tất cả sản phẩm
                                 </p>
+                                {errors.targetScope && (
+                                    <p className="text-xs text-red-600 mb-4 bg-red-50 p-2 rounded border border-red-200">
+                                        ⚠️ {errors.targetScope}
+                                    </p>
+                                )}
 
                                 {/* Existing scopes info */}
                                 {voucher?.scopes && voucher.scopes.length > 0 && (
