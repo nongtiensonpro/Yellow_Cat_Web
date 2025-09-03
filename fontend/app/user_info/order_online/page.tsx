@@ -69,6 +69,12 @@ interface OrderItem {
     totalPrice: number;
 }
 
+interface Product {
+    productId: number;
+    productName?: string;
+    displayName?: string;
+}
+
 interface OrderDetail {
     orderId: number;
     orderCode: string;
@@ -478,7 +484,7 @@ const getStatusColor = (status: string) => {
             } else {
                 return false;
             }
-        } catch (error) {
+        } catch {
             return false;
         }
     };
@@ -498,7 +504,7 @@ const getStatusColor = (status: string) => {
             } else {
                 return false;
             }
-        } catch (error) {
+        } catch {
             return false;
         }
     };
@@ -543,7 +549,7 @@ const getStatusColor = (status: string) => {
             
             if (data.data?.content && data.data.content.length > 0) {
                 // Tìm sản phẩm có tên khớp nhất
-                const matchingProduct = data.data.content.find((product: any) => 
+                const matchingProduct = data.data.content.find((product: Product) => 
                     product.productName?.toLowerCase().includes(productName.toLowerCase()) ||
                     product.displayName?.toLowerCase().includes(productName.toLowerCase())
                 );
@@ -554,7 +560,7 @@ const getStatusColor = (status: string) => {
             }
             
             return null;
-        } catch (error) {
+        } catch {
             return null;
         }
     };
