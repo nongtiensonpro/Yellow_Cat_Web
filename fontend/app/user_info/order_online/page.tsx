@@ -48,6 +48,7 @@ interface User {
     email?: string;
     phoneNumber?: string;
     avatarUrl?: string;
+    appUserId?: number;
 }
 
 interface Order {
@@ -67,12 +68,6 @@ interface OrderItem {
     quantity: number;
     unitPrice: number;
     totalPrice: number;
-}
-
-interface Product {
-    productId: number;
-    productName?: string;
-    displayName?: string;
 }
 
 interface OrderDetail {
@@ -165,6 +160,7 @@ export default function OrderOnlinePage() {
     const [reviewSuccess, setReviewSuccess] = useState<string | null>(null);
     const [canReviewProduct, setCanReviewProduct] = useState<Record<number, boolean>>({});
     const [hasReviewedProduct, setHasReviewedProduct] = useState<Record<number, boolean>>({});
+    const [reviewStatusLoading, setReviewStatusLoading] = useState<Record<number, boolean>>({});
 
     // Lấy user info từ backend
     const fetchUserByKeycloakId = useCallback(async (keycloakId: string, accessToken: string) => {
@@ -376,6 +372,9 @@ const getStatusColor = (status: string) => {
             fetchOrderDetail(openDetailOrderId);
         } else {
             setDetailError(null);
+            // Reset review status khi đóng order detail
+            setHasReviewedProduct({});
+            setCanReviewProduct({});
         }
     }, [openDetailOrderId, fetchOrderDetail]);
 
@@ -469,149 +468,101 @@ const getStatusColor = (status: string) => {
         }
     };
 
-    // Hàm kiểm tra có thể đánh giá sản phẩm không
-    const checkCanReviewProduct = async (productId: number) => {
-        if (!session?.accessToken) return false;
-        
+    // Lấy danh sách review theo orderId (để xác định sản phẩm đã/ chưa đánh giá)
+    const fetchReviewsByOrder = async (orderId: number) => {
         try {
-            const res = await fetch(`http://localhost:8080/api/reviews/can-review?productId=${productId}`, {
-                headers: { 'Authorization': `Bearer ${session.accessToken}` }
-            });
-            
-            if (res.ok) {
-                const data = await res.json();
-                return data.data || false;
-            } else {
-                return false;
-            }
+            const res = await fetch(`http://localhost:8080/api/reviews/order/${orderId}`);
+            if (!res.ok) return [] as unknown[];
+            const data = await res.json();
+            // API có thể trả về mảng trực tiếp hoặc bọc trong data
+            return Array.isArray(data) ? data : (data.data || []);
         } catch {
-            return false;
+            return [] as unknown[];
         }
     };
 
-    // Hàm kiểm tra đã đánh giá sản phẩm chưa
-    const checkHasReviewedProduct = async (productId: number) => {
-        if (!session?.accessToken) return false;
-        
-        try {
-            const res = await fetch(`http://localhost:8080/api/reviews/has-reviewed?productId=${productId}`, {
-                headers: { 'Authorization': `Bearer ${session.accessToken}` }
-            });
-            
-            if (res.ok) {
-                const data = await res.json();
-                return data.data || false;
-            } else {
-                return false;
-            }
-        } catch {
-            return false;
-        }
-    };
 
     // Hàm kiểm tra trạng thái đánh giá cho tất cả sản phẩm trong đơn hàng
     const checkReviewStatusForOrder = async (orderId: number) => {
-        if (!session?.accessToken) return;
-        
+        setReviewStatusLoading(prev => ({ ...prev, [orderId]: true }));
         const orderDetail = orderDetailCache[orderId];
         if (!orderDetail || !orderDetail.items) return;
-        
+
+        // Lấy danh sách review của đơn hàng
+        const reviews = await fetchReviewsByOrder(orderId);
+
+        // Tập hợp productId đã được review trong đơn này
+        const reviewedProductIds = new Set<number>();
+        for (const r of reviews) {
+            const pid = (r?.productId ?? r?.product?.productId);
+            if (typeof pid === 'number') {
+                reviewedProductIds.add(pid);
+            }
+        }
+
         const newCanReview: Record<number, boolean> = {};
         const newHasReviewed: Record<number, boolean> = {};
-        
+
         for (const item of orderDetail.items) {
             if (item.productId) {
-                // Gọi API kiểm tra quyền đánh giá
-                const canReview = await checkCanReviewProduct(item.productId);
-                
-                // Gọi API kiểm tra đã đánh giá chưa
-                const hasReviewed = await checkHasReviewedProduct(item.productId);
-                
-                newCanReview[item.productId] = canReview;
+                const hasReviewed = reviewedProductIds.has(item.productId);
                 newHasReviewed[item.productId] = hasReviewed;
+                newCanReview[item.productId] = !hasReviewed;
             }
         }
-        
+
         setCanReviewProduct(newCanReview);
         setHasReviewedProduct(newHasReviewed);
-    };
-
-    // Hàm tìm productId từ tên sản phẩm
-    const findProductIdByName = async (productName: string): Promise<number | null> => {
-        if (!session?.accessToken) return null;
-        
-        try {
-            // Tìm sản phẩm theo tên
-            const res = await fetch(`http://localhost:8080/api/products?page=0&size=100&search=${encodeURIComponent(productName)}`, {
-                headers: { 'Authorization': `Bearer ${session.accessToken}` }
-            });
-            const data = await res.json();
-            
-            if (data.data?.content && data.data.content.length > 0) {
-                // Tìm sản phẩm có tên khớp nhất
-                const matchingProduct = data.data.content.find((product: Product) => 
-                    product.productName?.toLowerCase().includes(productName.toLowerCase()) ||
-                    product.displayName?.toLowerCase().includes(productName.toLowerCase())
-                );
-                
-                if (matchingProduct) {
-                    return matchingProduct.productId;
-                }
-            }
-            
-            return null;
-        } catch {
-            return null;
-        }
+        setReviewStatusLoading(prev => ({ ...prev, [orderId]: false }));
     };
 
     // Hàm mở modal đánh giá
     const handleOpenReviewModal = async (productId: number | undefined, productName: string) => {
-        let finalProductId = productId;
-        
-        // Kiểm tra productId có hợp lệ không
         if (productId === undefined || productId === null || productId === 0) {
-            // Thử tìm productId từ tên sản phẩm nếu có thể
-            if (productName) {
-                toast.success('Đang tìm thông tin sản phẩm...');
-                
-                const foundProductId = await findProductIdByName(productName);
-                if (foundProductId) {
-                    finalProductId = foundProductId;
-                } else {
-                    toast.error('Không tìm thấy ID sản phẩm. Vui lòng liên hệ hỗ trợ.');
-                    return;
-                }
-            } else {
-                toast.error('Không tìm thấy thông tin sản phẩm. Vui lòng thử lại sau.');
-                return;
-            }
+            toast.error('Không tìm thấy ID sản phẩm');
+            return;
         }
         
-        setReviewProductId(finalProductId || null);
+        // Chặn mở modal nếu sản phẩm đã được đánh giá
+        if (hasReviewedProduct[productId]) {
+            toast.success('Bạn đã đánh giá sản phẩm này rồi');
+            return;
+        }
+
+        setReviewProductId(productId || null);
         setReviewProductName(productName);
         setReviewRating(5);
         setReviewComment('');
         setReviewError(null);
         setReviewSuccess(null);
         
-        // Mở modal ngay lập tức, không cần kiểm tra trước
+        // Mở modal ngay lập tức
         setShowReviewModal(true);
     };
 
     // Hàm gửi đánh giá
     const handleSubmitReview = async () => {
-        if (!reviewProductId || !session?.accessToken) return;
+        if (!reviewProductId) {
+            toast.error('Thiếu thông tin sản phẩm để đánh giá');
+            return;
+        }
+        if (!openDetailOrderId) {
+            toast.error('Không xác định được đơn hàng để đánh giá');
+            return;
+        }
+        if (!user?.appUserId) {
+            toast.error('Không tìm thấy thông tin người dùng');
+            return;
+        }
         
         setReviewLoading(true);
         setReviewError(null);
         
         try {
-            const res = await fetch('http://localhost:8080/api/reviews', {
+            const res = await fetch(`http://localhost:8080/api/reviews/creat-online?appUserId=${user.appUserId}&orderId=${openDetailOrderId}`, {
                 method: 'POST',
                 headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.accessToken}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     productId: reviewProductId,
@@ -620,8 +571,12 @@ const getStatusColor = (status: string) => {
                 })
             });
             
-            const data = await res.json();
-            
+            // Thử đọc JSON; nếu lỗi hệ DB trả plain text, bắt an toàn
+            let data: { message?: string } | null = null;
+            try { data = await res.json(); } catch {
+                try { data = { message: await res.text() }; } catch { data = { message: '' }; }
+            }
+
             if (res.ok) {
                 setReviewSuccess('Đánh giá sản phẩm thành công!');
                 
@@ -632,12 +587,39 @@ const getStatusColor = (status: string) => {
                 // Hiển thị thông báo thành công
                 toast.success('Đánh giá sản phẩm thành công!');
                 
+                // Đồng bộ lại trạng thái từ backend theo đơn
+                if (openDetailOrderId) {
+                    await checkReviewStatusForOrder(openDetailOrderId);
+                }
+
                 setTimeout(() => {
                     setShowReviewModal(false);
                     setReviewSuccess(null);
                 }, 1500);
+            } else if (res.status === 409) {
+                const friendly = 'Bạn đã đánh giá sản phẩm này rồi';
+                setReviewError(friendly);
+                toast.error(friendly);
+                if (reviewProductId) {
+                    setHasReviewedProduct(prev => ({ ...prev, [reviewProductId]: true }));
+                    setCanReviewProduct(prev => ({ ...prev, [reviewProductId]: false }));
+                }
+                if (openDetailOrderId) {
+                    await checkReviewStatusForOrder(openDetailOrderId);
+                }
             } else {
-                setReviewError(data.message || 'Không thể gửi đánh giá');
+                const rawMsg = (data?.message || '').toString().toLowerCase();
+                const duplicate = rawMsg.includes('duplicate') || rawMsg.includes('unique') || rawMsg.includes('đã đánh giá');
+                const friendly = duplicate ? 'Bạn đã đánh giá sản phẩm này rồi' : (data?.message || 'Không thể gửi đánh giá');
+                setReviewError(friendly);
+                toast.error(friendly);
+                if (duplicate && reviewProductId) {
+                    setHasReviewedProduct(prev => ({ ...prev, [reviewProductId]: true }));
+                    setCanReviewProduct(prev => ({ ...prev, [reviewProductId]: false }));
+                    if (openDetailOrderId) {
+                        await checkReviewStatusForOrder(openDetailOrderId);
+                    }
+                }
             }
         } catch {
             setReviewError('Lỗi hệ thống');
@@ -1113,10 +1095,22 @@ const getStatusColor = (status: string) => {
                                                             {/* Button đánh giá cho đơn hàng hoàn thành */}
                                                             {orderDetailCache[order.orderId].orderStatus === 'Completed' && (
                                                                 <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-                                                                    <h4 className="text-lg font-bold text-green-800 mb-3 flex items-center">
+                                                                    <h4 className="text-lg font-bold text-green-800 mb-1 flex items-center">
                                                                         <span className="mr-2">⭐</span>
                                                                         Đánh giá sản phẩm
                                                                     </h4>
+                                                                    {(() => {
+                                                                        const items = orderDetailCache[order.orderId].items || [];
+                                                                        const reviewedCount = items.filter((it: OrderItem) => it.productId && hasReviewedProduct[it.productId]).length;
+                                                                        const total = items.length;
+                                                                        return (
+                                                                            <div className="mb-3 flex items-center gap-2">
+                                                                                <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 font-semibold">
+                                                                                    {reviewedCount > 0 ? `Đã đánh giá ${reviewedCount}/${total} sản phẩm` : 'Chưa có đánh giá'}
+                                                                                </span>
+                                                                            </div>
+                                                                        );
+                                                                    })()}
                                                                     <p className="text-sm text-green-700 mb-4">
                                                                         Chia sẻ trải nghiệm của bạn về các sản phẩm trong đơn hàng này
                                                                     </p>
@@ -1133,7 +1127,9 @@ const getStatusColor = (status: string) => {
                                                                                         <p className="text-sm text-gray-600">{item.variantName}</p>
                                                                                     </div>
                                                                                     
-                                                                                    {hasReviewed ? (
+                                                                                    {reviewStatusLoading[order.orderId] ? (
+                                                                                        <span className="text-gray-500 text-sm">Đang kiểm tra...</span>
+                                                                                    ) : hasReviewed ? (
                                                                                         <div className="flex items-center space-x-2">
                                                                                             <span className="text-green-600 font-semibold">✅ Đã đánh giá</span>
                                                                                         </div>
@@ -1144,6 +1140,7 @@ const getStatusColor = (status: string) => {
                                                                                             variant="solid"
                                                                                             className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold shadow-lg"
                                                                                             onClick={() => handleOpenReviewModal(item.productId, item.productName)}
+                                                                                            isDisabled={reviewStatusLoading[order.orderId]}
                                                                                         >
                                                                                             ⭐ Đánh giá ngay
                                                                                         </Button>

@@ -4,16 +4,19 @@ package org.yellowcat.backend.product.review;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
+import org.yellowcat.backend.product.ProductRepository;
 import org.yellowcat.backend.product.review.dto.*;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserRepository;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -24,6 +27,7 @@ import java.util.UUID;
 public class ReviewController {
     private final ReviewService reviewService;
     private final AppUserRepository appUserRepository;
+    private final ReviewServiceImpl reviewServiceImpl;
 
     @GetMapping
     public ResponseEntity<PaginatedReviewResponse> getProductReviews(
@@ -141,6 +145,38 @@ public class ReviewController {
             return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "Lỗi lấy đánh giá", e.getMessage());
         } catch (Exception e) {
             return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống", e.getMessage());
+        }
+    }
+
+    // API tạo review mới cho đơn hàng online
+    @PostMapping("/creat-online")
+    public ResponseEntity<?> createReviewOnline(
+            @RequestBody CreateReviewDTO createReviewDTO,
+            @RequestParam Integer appUserId,
+            @RequestParam Integer orderId) {
+        try {
+            Review review = reviewServiceImpl.createReviewOnline(createReviewDTO, appUserId, orderId);
+            return ResponseEntityBuilder.success("Đánh giá sản phẩm online thành công", review);
+        } catch (DataIntegrityViolationException e) {
+            // Lỗi vi phạm ràng buộc (ví dụ unique: 1 người dùng chỉ đánh giá 1 lần/ sản phẩm)
+            return ResponseEntityBuilder.error(HttpStatus.CONFLICT, "Đánh giá đã tồn tại", "Bạn đã đánh giá sản phẩm này rồi");
+        } catch (RuntimeException e) {
+            // Lỗi nghiệp vụ (chưa mua hàng, order không hợp lệ, v.v.)
+            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "Không thể tạo đánh giá", e.getMessage());
+        } catch (Exception e) {
+            // Lỗi hệ thống chung
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống", e.getMessage());
+        }
+    }
+
+    // API lấy danh sách review theo orderId
+    @GetMapping("/order/{orderId}")
+    public ResponseEntity<?> getReviewsByOrder(@PathVariable Integer orderId) {
+        try {
+            List<Map<String, Object>> reviews = reviewServiceImpl.getListReviewByOrder(orderId);
+            return ResponseEntityBuilder.success("Lấy danh sách đánh giá theo đơn hàng thành công", reviews);
+        } catch (Exception e) {
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi khi lấy danh sách review", e.getMessage());
         }
     }
 }

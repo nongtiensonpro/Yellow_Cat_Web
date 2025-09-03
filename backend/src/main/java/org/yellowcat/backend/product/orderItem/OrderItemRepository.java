@@ -89,4 +89,8 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Integer> {
                     "WHERE o.order_code = :orderCode " +
                     "ORDER BY oi.order_item_id")
     List<OrderItemDetailProjection> findOrderItemsDetailByOrderCode(@Param("orderCode") String orderCode);
+
+    @Query("SELECT oi.variant.variantId FROM OrderItem oi WHERE oi.order.orderId = :orderId")
+    List<Integer> findProductIdsByOrderId(@Param("orderId") Integer orderId);
+
 }

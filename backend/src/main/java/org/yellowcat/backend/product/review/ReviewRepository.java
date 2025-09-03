@@ -35,5 +35,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     @Query("SELECT r FROM Review r JOIN FETCH r.appUser WHERE r.productId = :productId AND r.appUserId = :appUserId")
     Optional<Review> findByProductIdAndAppUserIdWithUser(@Param("productId") Integer productId, @Param("appUserId") Integer appUserId);
+
+    @Query("SELECT r FROM Review r WHERE r.orderId = :orderId")
+    List<Review> findAllByOrderId(@Param("orderId") Integer orderId);
 }
 
