@@ -1140,7 +1140,7 @@ export default function UpdateProductPage() {
                                             <TableColumn>TRỌNG LƯỢNG</TableColumn>
                                             <TableColumn>TỒN KHO</TableColumn>
                                             <TableColumn>GIÁ NHẬP</TableColumn>
-                                            <TableColumn>GIÁ GỐC</TableColumn>
+                                            <TableColumn>GIÁ BÁN</TableColumn>
                                             <TableColumn>ẢNH BIẾN THỂ</TableColumn>
                                         </TableHeader>
                                         <TableBody>
