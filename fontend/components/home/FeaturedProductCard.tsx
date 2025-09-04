@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Star, Heart, Eye } from 'lucide-react'
+import { Star, Heart } from 'lucide-react'
 import Link from 'next/link'
 import { CldImage } from 'next-cloudinary'
 import Image from 'next/image'
@@ -289,13 +289,6 @@ const   FeaturedProductCard = () => {
                                     >
                                         <Heart className={`w-5 h-5 ${isWishlisted ? 'fill-current' : ''}`} />
                                     </button>
-                                    <Link
-                                        href={`/products/${product.productId}`}
-                                        className="p-2 bg-white text-gray-600 rounded-full shadow-lg hover:bg-blue-50 transition-all duration-200"
-                                        aria-label="Xem chi tiết"
-                                    >
-                                        <Eye className="w-5 h-5" />
-                                    </Link>
                                 </div>
                             </div>
                         </div>
@@ -306,7 +299,9 @@ const   FeaturedProductCard = () => {
                             <div className="space-y-2">
                                 <div className="flex items-center space-x-2">
                                     <span className="text-sm text-gray-500">Thương hiệu:</span>
+
                                     <span className="text-sm font-medium text-blue-600">{product.brandName}</span>
+
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     <span className="text-sm text-gray-500">Danh mục:</span>
@@ -317,7 +312,12 @@ const   FeaturedProductCard = () => {
                             {/* Product Name */}
                             <div>
                                 <h3 className="text-2xl font-bold text-gray-900 mb-2 line-clamp-2">
+                                    <Link
+                                        href={`/products/${product.productId}`}
+                                        aria-label="Xem chi tiết"
+                                    >
                                     {product.productName}
+                                    </Link>
                                 </h3>
                                 <p className="text-gray-600 text-sm line-clamp-3">
                                     {product.description}
