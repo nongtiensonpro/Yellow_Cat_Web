@@ -256,6 +256,7 @@ CREATE TABLE order_timeline_images
     timeline_id INT,
     FOREIGN KEY (timeline_id) REFERENCES order_timelines (id)
 );
+
 -- Bảng Đánh giá sản phẩm
 CREATE TABLE reviews
 (
@@ -265,10 +266,11 @@ CREATE TABLE reviews
     rating      SMALLINT NOT NULL CHECK (rating >= 1 AND rating <= 5),
     comment     TEXT,
     review_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    order_id    INT,
     FOREIGN KEY (product_id) REFERENCES products (product_id) ON DELETE CASCADE,
-    FOREIGN KEY (app_user_id) REFERENCES app_users (app_user_id) ON DELETE CASCADE,
-    UNIQUE (product_id, app_user_id)
+    FOREIGN KEY (app_user_id) REFERENCES app_users (app_user_id) ON DELETE CASCADE
 );
+
 
 -- Bảng Khuyến mãin cho san phẩm
 CREATE TABLE promotions

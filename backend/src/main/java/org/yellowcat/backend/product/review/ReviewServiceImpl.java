@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.yellowcat.backend.online_selling.oder_online.OderOnlineRepository;
 import org.yellowcat.backend.product.order.Order;
 import org.yellowcat.backend.product.orderItem.OrderItem;
+import org.yellowcat.backend.product.orderItem.OrderItemRepository;
 import org.yellowcat.backend.product.review.dto.*;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserRepository;
@@ -15,6 +16,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +25,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewRepository reviewRepository;
     private final OderOnlineRepository orderRepository;
     private final AppUserRepository appUserRepository;
+    private final OrderItemRepository orderItemRepository;
 
     @Override
     public PaginatedReviewResponse findByProduct(Integer productId, int page, int limit) {
@@ -140,4 +144,84 @@ public class ReviewServiceImpl implements ReviewService {
         return reviewRepository.findByProductIdAndAppUserIdWithUser(productId, appUserId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đánh giá"));
     }
+
+
+    //================= ONLINE ----------------------
+
+//    public List<Integer> checkrevieweByOrder(Integer orderId) {
+//       List<Integer> listPOroductId = orderItemRepository.findProductIdsByOrderId(orderId);
+//
+//       List review = reviewRepository.findAllByOrderId(orderId);
+//
+//       List<Integer> produictCanReview = new ArrayList<>();
+//       for (Integer productId : listPOroductId) {
+//           if (!review.getProductId().equals(productId)) {
+//               produictCanReview.add(productId);
+//           }
+//
+//       }
+//       return produictCanReview;
+//    }
+
+
+
+
+    public Review createReviewOnline(CreateReviewDTO createReviewDTO, Integer appUserId, Integer orderId) {
+        // Kiểm tra người dùng có tồn tại không
+        AppUser appUser = appUserRepository.findById(appUserId)
+                .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại"));
+
+        // Kiểm tra người dùng có quyền đánh giá sản phẩm này không
+        if (!canUserReviewProductOnline(orderId)){
+            throw new RuntimeException("Bạn không thể đánh giá cho đơn hàng này");
+        }
+
+        // Tạo đánh giá mới
+        Review review = new Review();
+        review.setProductId(createReviewDTO.getProductId());
+        review.setAppUserId(appUserId);
+        review.setRating(createReviewDTO.getRating());
+        review.setComment(createReviewDTO.getComment());
+        review.setReviewDate(Instant.now());
+        review.setOrderId(orderId);
+
+        return reviewRepository.save(review);
+    }
+
+    public List<Map<String, Object>> getListReviewByOrder(Integer orderId){
+        List<Review> listReview = reviewRepository.findAllByOrderId(orderId);
+        
+        // Convert to DTO to avoid LazyInitializationException
+        List<Map<String, Object>> reviewDTOs = new ArrayList<>();
+        for (Review review : listReview) {
+            Map<String, Object> dto = new HashMap<>();
+            dto.put("id", review.getId());
+            dto.put("productId", review.getProductId());
+            dto.put("appUserId", review.getAppUserId());
+            dto.put("rating", review.getRating());
+            dto.put("comment", review.getComment());
+            dto.put("reviewDate", review.getReviewDate());
+            dto.put("orderId", review.getOrderId());
+            reviewDTOs.add(dto);
+        }
+        
+        return reviewDTOs;
+    }
+
+    public boolean canUserReviewProductOnline(Integer orderId) {
+        // Lấy đơn hàng theo orderId
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Đơn hàng không tồn tại"));
+
+        System.out.println("Trạng thái đơn hàng: " + order.getOrderStatus());
+        // Kiểm tra trạng thái đơn hàng (Completed hoặc Delivered)
+        String status = order.getOrderStatus();
+        if (!(status.equals("Completed") || status.equals("Delivered"))) {
+            return false;
+        }
+
+        return true;
+    }
+
+
 }

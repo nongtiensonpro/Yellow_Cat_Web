@@ -38,6 +38,9 @@ public class Review {
     @Column(name = "review_date")
     private Instant reviewDate;
 
+    @Column(name = "order_id", nullable = false)
+    private Integer orderId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "app_user_id", insertable = false, updatable = false)
     private AppUser appUser;

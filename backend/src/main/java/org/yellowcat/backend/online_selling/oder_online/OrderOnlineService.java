@@ -22,6 +22,8 @@ import org.yellowcat.backend.online_selling.orderTimeline.OrderTimelineService;
 import org.yellowcat.backend.online_selling.order_item_online.OrderItemOnlineDTO;
 import org.yellowcat.backend.online_selling.voucher.VoucherService1;
 import org.yellowcat.backend.product.cartItem.CartItem;
+import org.yellowcat.backend.product.color.Color;
+import org.yellowcat.backend.product.color.ColorService;
 import org.yellowcat.backend.product.order.Order;
 import org.yellowcat.backend.product.orderItem.OrderItem;
 import org.yellowcat.backend.product.orderItem.OrderItemRepository;
@@ -31,6 +33,8 @@ import org.yellowcat.backend.product.productvariant.ProductVariant;
 import org.yellowcat.backend.product.productvariant.ProductVariantRepository;
 import org.yellowcat.backend.product.shippingMethod.ShippingMethod;
 import org.yellowcat.backend.product.shippingMethod.ShippingMethodRepository;
+import org.yellowcat.backend.product.size.Size;
+import org.yellowcat.backend.product.size.SizeService;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserRepository;
 import org.yellowcat.backend.online_selling.voucher.entity.VoucherRedemption;
@@ -59,6 +63,8 @@ public class OrderOnlineService {
     private final VoucherService1 voucherService1;
     private final VoucherRedemptionRepository voucherRedemptionRepository;
     private final EmailService emailService;
+    private final ColorService colorService;
+    private final SizeService sizeService;
 
     @Autowired
     OrderTimelineService orderTimelineService;
@@ -466,14 +472,27 @@ public class OrderOnlineService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
 
-        List<OrderItemOnlineDTO> itemDTOs = order.getOrderItems().stream().map(item -> OrderItemOnlineDTO.builder()
-                .productId(item.getVariant().getProduct().getProductId())
-                .productName(item.getVariant().getProduct().getProductName())
-                .variantName(item.getVariant().getProduct().getProductName()) // hoặc getVariantName() nếu có sẵn
-                .quantity(item.getQuantity())
-                .unitPrice(item.getPriceAtPurchase())
-                .totalPrice(item.getTotalPrice())
-                .build()).toList();
+
+
+        List<OrderItemOnlineDTO> itemDTOs = order.getOrderItems().stream()
+                .map(item -> {
+                    Color colorObj = item.getVariant().getColor();
+                    String colorName = (colorObj != null) ? colorObj.getName() : "";
+
+                    Size sizeObj = item.getVariant().getSize();
+                    String sizeName = (sizeObj != null) ? sizeObj.getName() : "";
+
+                    return OrderItemOnlineDTO.builder()
+                            .productId(item.getVariant().getProduct().getProductId())
+                            .productName(item.getVariant().getProduct().getProductName())
+                            .variantName(item.getVariant().getProduct().getProductName() + " " + colorName + " " + sizeName)
+                            .quantity(item.getQuantity())
+                            .unitPrice(item.getPriceAtPurchase())
+                            .totalPrice(item.getTotalPrice())
+                            .build();
+                })
+                .toList();
+
 
         Addresses address = addressRepository.findByAddressId(order.getShippingAddress().getAddressId());
         Payment payment= paymentRepository.findByOrder(order);

@@ -14,24 +14,41 @@ import {
     TableCell,
 } from "@heroui/react";
 import { Dialog } from "@headlessui/react";
-import { 
-    ShoppingCart, 
-    Calendar, 
+import {
+    ShoppingCart,
+    Calendar,
     Phone,
-    CreditCard, 
+    CreditCard,
     Package,
     TrendingUp,
     Clock,
     Gift,
     Percent,
 } from "lucide-react";
-import {CldImage} from "next-cloudinary";
+import { CldImage } from "next-cloudinary";
 import React, { useState } from "react";
 import OrderTabs from '@/components/order/OrderTabs';
 import { useSession } from 'next-auth/react';
 import { jwtDecode } from 'jwt-decode';
 import { useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
+
+
+interface ProductReviewStatus {
+    productId: number;
+    productName: string;
+    variants: { variantName: string }[];
+    hasReviewed: boolean;
+    canReview: boolean;
+}
+
+interface ProductsMap {
+    [key: number]: ProductReviewStatus;
+}
+
+interface ReviewStatus {
+    [key: string]: boolean;
+}
 
 interface OrderTimeline {
     id: number;
@@ -48,6 +65,7 @@ interface User {
     email?: string;
     phoneNumber?: string;
     avatarUrl?: string;
+    appUserId?: number;
 }
 
 interface Order {
@@ -67,12 +85,6 @@ interface OrderItem {
     quantity: number;
     unitPrice: number;
     totalPrice: number;
-}
-
-interface Product {
-    productId: number;
-    productName?: string;
-    displayName?: string;
 }
 
 interface OrderDetail {
@@ -104,16 +116,16 @@ interface TokenData {
 }
 
 const tabList = [
-  { key: "Pending", label: "Chờ xác nhận" },
-  { key: "Confirmed", label: "Chờ giao hàng" },
-  { key: "Shipping", label: "Đang giao hàng" },
-  { key: "Delivered", label: "Đã giao" },
-  { key: "Completed", label: "Hoàn thành" },
-  { key: "Refunded", label: "Đã hoàn tiền" },
-  { key: "Cancelled", label: "Đã hủy" },
-  { key: "DeliveryFailed", label: "Giao thất bại" },
-  { key: "ReturnedToSeller", label: "Đã trả về người bán" },
-  { key: "ReturnRequested", label: "Hoàn hàng" },
+    { key: "Pending", label: "Chờ xác nhận" },
+    { key: "Confirmed", label: "Chờ giao hàng" },
+    { key: "Shipping", label: "Đang giao hàng" },
+    { key: "Delivered", label: "Đã giao" },
+    { key: "Completed", label: "Hoàn thành" },
+    { key: "Refunded", label: "Đã hoàn tiền" },
+    { key: "Cancelled", label: "Đã hủy" },
+    { key: "DeliveryFailed", label: "Giao thất bại" },
+    { key: "ReturnedToSeller", label: "Đã trả về người bán" },
+    { key: "ReturnRequested", label: "Hoàn hàng" },
 ];
 
 const RETURN_REASONS = [
@@ -152,8 +164,8 @@ export default function OrderOnlinePage() {
     const [cancelLoading, setCancelLoading] = useState(false);
     // Đã bỏ thông báo huỷ đơn
     // State cho xác nhận huỷ đơn
-    const [showCancelConfirm, setShowCancelConfirm] = useState<{orderId: number, orderCode: string} | null>(null);
-    
+    const [showCancelConfirm, setShowCancelConfirm] = useState<{ orderId: number, orderCode: string } | null>(null);
+
     // State cho đánh giá sản phẩm
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [reviewProductId, setReviewProductId] = useState<number | null>(null);
@@ -163,8 +175,9 @@ export default function OrderOnlinePage() {
     const [reviewLoading, setReviewLoading] = useState(false);
     const [reviewError, setReviewError] = useState<string | null>(null);
     const [reviewSuccess, setReviewSuccess] = useState<string | null>(null);
-    const [canReviewProduct, setCanReviewProduct] = useState<Record<number, boolean>>({});
-    const [hasReviewedProduct, setHasReviewedProduct] = useState<Record<number, boolean>>({});
+    const [canReviewProduct, setCanReviewProduct] = useState<ReviewStatus>({});
+    const [hasReviewedProduct, setHasReviewedProduct] = useState<ReviewStatus>({});
+    const [reviewStatusLoading, setReviewStatusLoading] = useState<Record<number, boolean>>({});
 
     // Lấy user info từ backend
     const fetchUserByKeycloakId = useCallback(async (keycloakId: string, accessToken: string) => {
@@ -184,12 +197,12 @@ export default function OrderOnlinePage() {
             });
             const data = await res.json();
             const allOrdersData = Array.isArray(data) ? data : data.data || [];
-            
+
             // Sắp xếp đơn hàng theo thời gian tạo giảm dần (mới nhất lên đầu)
             const sortedAllOrders = allOrdersData.sort((a: Order, b: Order) => {
                 return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
             });
-            
+
             setAllOrders(sortedAllOrders);
         } catch {
             console.error('Không lấy được tất cả đơn hàng');
@@ -221,12 +234,12 @@ export default function OrderOnlinePage() {
             });
             const data = await res.json();
             const ordersData = Array.isArray(data) ? data : data.data || [];
-            
+
             // Sắp xếp đơn hàng theo thời gian tạo giảm dần (mới nhất lên đầu)
             const sortedOrders = ordersData.sort((a: Order, b: Order) => {
                 return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
             });
-            
+
             setOrders(sortedOrders);
         } catch {
             setError('Không lấy được danh sách đơn hàng');
@@ -265,14 +278,14 @@ export default function OrderOnlinePage() {
         getUserAndOrders();
     }, [session, status, activeTab, fetchUserByKeycloakId, fetchAllOrders, fetchOrdersByStatus]);
 
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-        style: 'currency',
-        currency: 'VND'
-    }).format(amount);
-};
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND'
+        }).format(amount);
+    };
 
-const formatDate = (dateString: string) => {
+    const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         const day = String(date.getDate()).padStart(2, '0');
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -280,18 +293,18 @@ const formatDate = (dateString: string) => {
         const hours = String(date.getHours()).padStart(2, '0');
         const minutes = String(date.getMinutes()).padStart(2, '0');
         return `${day}/${month}/${year} ${hours}:${minutes}`;
-};
+    };
 
-const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-        case 'pending': return 'warning';
-        case 'paid': return 'success';
-        case 'partial': return 'secondary';
-        case 'completed': return 'success';
-        case 'cancelled': return 'danger';
-        default: return 'default';
-    }
-};
+    const getStatusColor = (status: string) => {
+        switch (status.toLowerCase()) {
+            case 'pending': return 'warning';
+            case 'paid': return 'success';
+            case 'partial': return 'secondary';
+            case 'completed': return 'success';
+            case 'cancelled': return 'danger';
+            default: return 'default';
+        }
+    };
 
     // Thêm hàm getStatusBadgeClass cho orderStatus và paymentStatus
     const getStatusBadgeClass = (status: string) => {
@@ -319,7 +332,7 @@ const getStatusColor = (status: string) => {
             const res = await fetch(`http://localhost:8080/api/orders/detail-online/${orderId}`);
             const data = await res.json();
             setOrderDetailCache(prev => ({ ...prev, [orderId]: data }));
-            
+
             // Kiểm tra trạng thái đánh giá nếu đơn hàng đã hoàn thành
             if (data.orderStatus === 'Completed') {
                 checkReviewStatusForOrder(orderId);
@@ -337,7 +350,7 @@ const getStatusColor = (status: string) => {
 
         try {
             setTimelineLoading(prev => ({ ...prev, [orderId]: true }));
-            
+
             const res = await fetch(`http://localhost:8080/api/order-timelines/${orderId}`);
             if (res.ok) {
                 const data = await res.json();
@@ -376,6 +389,9 @@ const getStatusColor = (status: string) => {
             fetchOrderDetail(openDetailOrderId);
         } else {
             setDetailError(null);
+            // Reset review status khi đóng order detail
+            setHasReviewedProduct({});
+            setCanReviewProduct({});
         }
     }, [openDetailOrderId, fetchOrderDetail]);
 
@@ -469,149 +485,101 @@ const getStatusColor = (status: string) => {
         }
     };
 
-    // Hàm kiểm tra có thể đánh giá sản phẩm không
-    const checkCanReviewProduct = async (productId: number) => {
-        if (!session?.accessToken) return false;
-        
+    // Lấy danh sách review theo orderId (để xác định sản phẩm đã/ chưa đánh giá)
+    const fetchReviewsByOrder = async (orderId: number) => {
         try {
-            const res = await fetch(`http://localhost:8080/api/reviews/can-review?productId=${productId}`, {
-                headers: { 'Authorization': `Bearer ${session.accessToken}` }
-            });
-            
-            if (res.ok) {
-                const data = await res.json();
-                return data.data || false;
-            } else {
-                return false;
-            }
+            const res = await fetch(`http://localhost:8080/api/reviews/order/${orderId}`);
+            if (!res.ok) return [] as unknown[];
+            const data = await res.json();
+            // API có thể trả về mảng trực tiếp hoặc bọc trong data
+            return Array.isArray(data) ? data : (data.data || []);
         } catch {
-            return false;
+            return [] as unknown[];
         }
     };
 
-    // Hàm kiểm tra đã đánh giá sản phẩm chưa
-    const checkHasReviewedProduct = async (productId: number) => {
-        if (!session?.accessToken) return false;
-        
-        try {
-            const res = await fetch(`http://localhost:8080/api/reviews/has-reviewed?productId=${productId}`, {
-                headers: { 'Authorization': `Bearer ${session.accessToken}` }
-            });
-            
-            if (res.ok) {
-                const data = await res.json();
-                return data.data || false;
-            } else {
-                return false;
-            }
-        } catch {
-            return false;
-        }
-    };
 
     // Hàm kiểm tra trạng thái đánh giá cho tất cả sản phẩm trong đơn hàng
     const checkReviewStatusForOrder = async (orderId: number) => {
-        if (!session?.accessToken) return;
-        
+        setReviewStatusLoading(prev => ({ ...prev, [orderId]: true }));
         const orderDetail = orderDetailCache[orderId];
         if (!orderDetail || !orderDetail.items) return;
-        
+
+        // Lấy danh sách review của đơn hàng
+        const reviews = await fetchReviewsByOrder(orderId);
+
+        // Tập hợp productId đã được review trong đơn này
+        const reviewedProductIds = new Set<number>();
+        for (const r of reviews) {
+            const pid = (r?.productId ?? r?.product?.productId);
+            if (typeof pid === 'number') {
+                reviewedProductIds.add(pid);
+            }
+        }
+
         const newCanReview: Record<number, boolean> = {};
         const newHasReviewed: Record<number, boolean> = {};
-        
+
         for (const item of orderDetail.items) {
             if (item.productId) {
-                // Gọi API kiểm tra quyền đánh giá
-                const canReview = await checkCanReviewProduct(item.productId);
-                
-                // Gọi API kiểm tra đã đánh giá chưa
-                const hasReviewed = await checkHasReviewedProduct(item.productId);
-                
-                newCanReview[item.productId] = canReview;
+                const hasReviewed = reviewedProductIds.has(item.productId);
                 newHasReviewed[item.productId] = hasReviewed;
+                newCanReview[item.productId] = !hasReviewed;
             }
         }
-        
+
         setCanReviewProduct(newCanReview);
         setHasReviewedProduct(newHasReviewed);
-    };
-
-    // Hàm tìm productId từ tên sản phẩm
-    const findProductIdByName = async (productName: string): Promise<number | null> => {
-        if (!session?.accessToken) return null;
-        
-        try {
-            // Tìm sản phẩm theo tên
-            const res = await fetch(`http://localhost:8080/api/products?page=0&size=100&search=${encodeURIComponent(productName)}`, {
-                headers: { 'Authorization': `Bearer ${session.accessToken}` }
-            });
-            const data = await res.json();
-            
-            if (data.data?.content && data.data.content.length > 0) {
-                // Tìm sản phẩm có tên khớp nhất
-                const matchingProduct = data.data.content.find((product: Product) => 
-                    product.productName?.toLowerCase().includes(productName.toLowerCase()) ||
-                    product.displayName?.toLowerCase().includes(productName.toLowerCase())
-                );
-                
-                if (matchingProduct) {
-                    return matchingProduct.productId;
-                }
-            }
-            
-            return null;
-        } catch {
-            return null;
-        }
+        setReviewStatusLoading(prev => ({ ...prev, [orderId]: false }));
     };
 
     // Hàm mở modal đánh giá
     const handleOpenReviewModal = async (productId: number | undefined, productName: string) => {
-        let finalProductId = productId;
-        
-        // Kiểm tra productId có hợp lệ không
         if (productId === undefined || productId === null || productId === 0) {
-            // Thử tìm productId từ tên sản phẩm nếu có thể
-            if (productName) {
-                toast.success('Đang tìm thông tin sản phẩm...');
-                
-                const foundProductId = await findProductIdByName(productName);
-                if (foundProductId) {
-                    finalProductId = foundProductId;
-                } else {
-                    toast.error('Không tìm thấy ID sản phẩm. Vui lòng liên hệ hỗ trợ.');
-                    return;
-                }
-            } else {
-                toast.error('Không tìm thấy thông tin sản phẩm. Vui lòng thử lại sau.');
-                return;
-            }
+            toast.error('Không tìm thấy ID sản phẩm');
+            return;
         }
-        
-        setReviewProductId(finalProductId || null);
+
+        // Chặn mở modal nếu sản phẩm đã được đánh giá
+        if (hasReviewedProduct[productId]) {
+            toast.success('Bạn đã đánh giá sản phẩm này rồi');
+            return;
+        }
+
+        setReviewProductId(productId || null);
         setReviewProductName(productName);
         setReviewRating(5);
         setReviewComment('');
         setReviewError(null);
         setReviewSuccess(null);
-        
-        // Mở modal ngay lập tức, không cần kiểm tra trước
+
+        // Mở modal ngay lập tức
         setShowReviewModal(true);
     };
 
     // Hàm gửi đánh giá
     const handleSubmitReview = async () => {
-        if (!reviewProductId || !session?.accessToken) return;
-        
+        if (!reviewProductId) {
+            toast.error('Thiếu thông tin sản phẩm để đánh giá');
+            return;
+        }
+        if (!openDetailOrderId) {
+            toast.error('Không xác định được đơn hàng để đánh giá');
+            return;
+        }
+        if (!user?.appUserId) {
+            toast.error('Không tìm thấy thông tin người dùng');
+            return;
+        }
+
         setReviewLoading(true);
         setReviewError(null);
-        
+
         try {
-            const res = await fetch('http://localhost:8080/api/reviews', {
+            const res = await fetch(`http://localhost:8080/api/reviews/creat-online?appUserId=${user.appUserId}&orderId=${openDetailOrderId}`, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.accessToken}`
+                headers: {
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     productId: reviewProductId,
@@ -619,25 +587,56 @@ const getStatusColor = (status: string) => {
                     comment: reviewComment
                 })
             });
-            
-            const data = await res.json();
-            
+
+            // Thử đọc JSON; nếu lỗi hệ DB trả plain text, bắt an toàn
+            let data: { message?: string } | null = null;
+            try { data = await res.json(); } catch {
+                try { data = { message: await res.text() }; } catch { data = { message: '' }; }
+            }
+
             if (res.ok) {
                 setReviewSuccess('Đánh giá sản phẩm thành công!');
-                
+
                 // Cập nhật trạng thái đánh giá
                 setHasReviewedProduct(prev => ({ ...prev, [reviewProductId]: true }));
                 setCanReviewProduct(prev => ({ ...prev, [reviewProductId]: false }));
-                
+
                 // Hiển thị thông báo thành công
                 toast.success('Đánh giá sản phẩm thành công!');
-                
+
+                // Đồng bộ lại trạng thái từ backend theo đơn
+                if (openDetailOrderId) {
+                    await checkReviewStatusForOrder(openDetailOrderId);
+                }
+
                 setTimeout(() => {
                     setShowReviewModal(false);
                     setReviewSuccess(null);
                 }, 1500);
+            } else if (res.status === 409) {
+                const friendly = 'Bạn đã đánh giá sản phẩm này rồi';
+                setReviewError(friendly);
+                toast.error(friendly);
+                if (reviewProductId) {
+                    setHasReviewedProduct(prev => ({ ...prev, [reviewProductId]: true }));
+                    setCanReviewProduct(prev => ({ ...prev, [reviewProductId]: false }));
+                }
+                if (openDetailOrderId) {
+                    await checkReviewStatusForOrder(openDetailOrderId);
+                }
             } else {
-                setReviewError(data.message || 'Không thể gửi đánh giá');
+                const rawMsg = (data?.message || '').toString().toLowerCase();
+                const duplicate = rawMsg.includes('duplicate') || rawMsg.includes('unique') || rawMsg.includes('đã đánh giá');
+                const friendly = duplicate ? 'Bạn đã đánh giá sản phẩm này rồi' : (data?.message || 'Không thể gửi đánh giá');
+                setReviewError(friendly);
+                toast.error(friendly);
+                if (duplicate && reviewProductId) {
+                    setHasReviewedProduct(prev => ({ ...prev, [reviewProductId]: true }));
+                    setCanReviewProduct(prev => ({ ...prev, [reviewProductId]: false }));
+                    if (openDetailOrderId) {
+                        await checkReviewStatusForOrder(openDetailOrderId);
+                    }
+                }
             }
         } catch {
             setReviewError('Lỗi hệ thống');
@@ -648,7 +647,7 @@ const getStatusColor = (status: string) => {
 
     const formatTimelineNote = (timeline: OrderTimeline) => {
         const toStatus = timeline.toStatus;
-        
+
         // Mapping trạng thái cho timeline
         const TIMELINE_STATUS_MAP: Record<string, string> = {
             Pending: 'Đơn hàng đang chờ xác nhận',
@@ -666,7 +665,7 @@ const getStatusColor = (status: string) => {
             Completed: 'Đơn hàng đã hoàn tất',
             Cancelled: 'Đơn hàng đã bị hủy',
         };
-        
+
         return TIMELINE_STATUS_MAP[toStatus] || toStatus;
     };
 
@@ -690,13 +689,13 @@ const getStatusColor = (status: string) => {
                 <CardHeader className="flex gap-3">
                     <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
                         {user?.avatarUrl ? (
-                        <CldImage
-                            width={64}
-                            height={64}
-                            src={user.avatarUrl}
-                            alt="Avatar"
-                            className="w-full h-full object-cover"
-                        />
+                            <CldImage
+                                width={64}
+                                height={64}
+                                src={user.avatarUrl}
+                                alt="Avatar"
+                                className="w-full h-full object-cover"
+                            />
                         ) : (
                             <div className="w-full h-full bg-default-200 flex items-center justify-center">
                                 <span className="text-default-500 text-lg font-medium">
@@ -711,10 +710,10 @@ const getStatusColor = (status: string) => {
                             {user?.fullName || user?.username} • {user?.email}
                         </p>
                         {user?.phoneNumber && (
-                        <p className="text-small text-default-500 flex items-center gap-1">
-                            <Phone size={12} />
-                            {user.phoneNumber}
-                        </p>
+                            <p className="text-small text-default-500 flex items-center gap-1">
+                                <Phone size={12} />
+                                {user.phoneNumber}
+                            </p>
                         )}
                     </div>
                 </CardHeader>
@@ -733,7 +732,7 @@ const getStatusColor = (status: string) => {
                         <p className="text-xs text-default-400">Tất cả đơn hàng đã đặt</p>
                     </CardBody>
                 </Card>
-                
+
                 {/* Card 2: Đơn hàng thành công */}
                 <Card>
                     <CardBody className="text-center">
@@ -821,7 +820,7 @@ const getStatusColor = (status: string) => {
                             <Calendar className="text-info" size={24} />
                         </div>
                         <p className="text-lg font-bold text-info">
-                            {allOrders.length > 0 
+                            {allOrders.length > 0
                                 ? formatDate(allOrders[0].createdAt)
                                 : 'Chưa có đơn hàng'
                             }
@@ -838,7 +837,7 @@ const getStatusColor = (status: string) => {
                             <Percent className="text-primary" size={24} />
                         </div>
                         <p className="text-3xl font-bold text-primary">
-                            {allOrders.length > 0 
+                            {allOrders.length > 0
                                 ? Math.round((allOrders.filter(o => o.orderStatus.toLowerCase() === 'completed').length / allOrders.length) * 100)
                                 : 0
                             }%
@@ -856,8 +855,8 @@ const getStatusColor = (status: string) => {
                         key={tab.key}
                         className={`px-6 py-2 -mb-px font-semibold transition-colors border-b-2
                           ${activeTab === tab.key
-                            ? 'border-primary text-primary'
-                            : 'border-transparent text-gray-500 hover:text-primary'}
+                                ? 'border-primary text-primary'
+                                : 'border-transparent text-gray-500 hover:text-primary'}
                         `}
                         onClick={() => setActiveTab(tab.key)}
                     >
@@ -893,43 +892,43 @@ const getStatusColor = (status: string) => {
                                 {orders.map((order) => (
                                     <React.Fragment key={order.orderId}>
                                         <TableRow>
-                                        <TableCell>
-                                            <div>
-                                                <p className="font-medium">{order.orderCode}</p>
-                                                <p className="text-small text-default-500">{order.customerName}</p>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <Calendar size={16} className="text-default-400" />
+                                            <TableCell>
+                                                <div>
+                                                    <p className="font-medium">{order.orderCode}</p>
+                                                    <p className="text-small text-default-500">{order.customerName}</p>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <Calendar size={16} className="text-default-400" />
                                                     {formatDate(order.createdAt)}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Chip 
-                                                color={getStatusColor(order.orderStatus)} 
-                                                variant="flat"
-                                                size="sm"
-                                            >
-                                                {order.orderStatus}
-                                            </Chip>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div>
-                                                <p className="font-medium">{formatCurrency(order.finalAmount)}</p>
-                                                {order.discountAmount > 0 && (
-                                                    <p className="text-small text-success">
-                                                        Giảm: {formatCurrency(order.discountAmount)}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    size="sm"
-                                                    color="primary"
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    color={getStatusColor(order.orderStatus)}
                                                     variant="flat"
+                                                    size="sm"
+                                                >
+                                                    {order.orderStatus}
+                                                </Chip>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div>
+                                                    <p className="font-medium">{formatCurrency(order.finalAmount)}</p>
+                                                    {order.discountAmount > 0 && (
+                                                        <p className="text-small text-success">
+                                                            Giảm: {formatCurrency(order.discountAmount)}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        color="primary"
+                                                        variant="flat"
                                                         onClick={() => setOpenDetailOrderId(openDetailOrderId === order.orderId ? null : order.orderId)}
                                                     >
                                                         {openDetailOrderId === order.orderId ? 'Đóng' : 'Chi tiết đầy đủ'}
@@ -944,11 +943,11 @@ const getStatusColor = (status: string) => {
                                                             disabled={cancelLoading}
                                                         >
                                                             {cancelLoading ? 'Đang huỷ...' : 'Huỷ đơn'}
-                                                </Button>
+                                                        </Button>
                                                     )}
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
                                         {/* Hiển thị chi tiết nếu openDetailOrderId === order.orderId */}
                                         {openDetailOrderId === order.orderId && (
                                             <TableRow>
@@ -967,7 +966,7 @@ const getStatusColor = (status: string) => {
                                                                         <div><span className="font-semibold">Mã đơn hàng:</span> {orderDetailCache[order.orderId].orderCode}</div>
                                                                         <div><span className="font-semibold">Ngày đặt:</span> {formatDate(orderDetailCache[order.orderId].orderDate)}</div>
                                                                         <div>
-                                                                            <span className="font-semibold">Trạng thái:</span> 
+                                                                            <span className="font-semibold">Trạng thái:</span>
                                                                             <span className={`inline-block ml-2 px-2 py-1 rounded text-xs font-semibold ${getStatusBadgeClass(orderDetailCache[order.orderId].orderStatus)}`}>
                                                                                 {orderDetailCache[order.orderId].orderStatus}
                                                                             </span>
@@ -1073,13 +1072,12 @@ const getStatusColor = (status: string) => {
                                                                                     {index < orderTimeline[order.orderId].length - 1 && (
                                                                                         <div className="absolute left-3 top-6 w-0.5 h-8 bg-gray-200"></div>
                                                                                     )}
-                                                                                    
+
                                                                                     <div className="flex items-start space-x-3">
                                                                                         {/* Timeline dot */}
-                                                                                        <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 ${
-                                                                                            index === 0 ? 'bg-blue-500 border-blue-500' : 'bg-white border-gray-300'
-                                                                                        }`}></div>
-                                                                                        
+                                                                                        <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 ${index === 0 ? 'bg-blue-500 border-blue-500' : 'bg-white border-gray-300'
+                                                                                            }`}></div>
+
                                                                                         {/* Timeline content */}
                                                                                         <div className="flex-1 min-w-0">
                                                                                             <p className="text-sm text-gray-900 font-medium">
@@ -1111,39 +1109,110 @@ const getStatusColor = (status: string) => {
                                                             )}
 
                                                             {/* Button đánh giá cho đơn hàng hoàn thành */}
-                                                            {orderDetailCache[order.orderId].orderStatus === 'Completed' && (
+                                                            {orderDetailCache[order.orderId]?.orderStatus === 'Completed' && (
                                                                 <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-                                                                    <h4 className="text-lg font-bold text-green-800 mb-3 flex items-center">
+                                                                    <h4 className="text-lg font-bold text-green-800 mb-1 flex items-center">
                                                                         <span className="mr-2">⭐</span>
                                                                         Đánh giá sản phẩm
                                                                     </h4>
+                                                                    {(() => {
+                                                                        const items = orderDetailCache[order.orderId]?.items || [];
+
+                                                                        // Nhóm các biến thể theo productId với type safety
+                                                                        const productsMap: ProductsMap = {};
+                                                                        items.forEach((item: OrderItem) => {
+                                                                            if (!item.productId) return;
+
+                                                                            const productIdStr = item.productId.toString();
+                                                                            if (!productsMap[item.productId]) {
+                                                                                productsMap[item.productId] = {
+                                                                                    productId: item.productId,
+                                                                                    productName: item.productName,
+                                                                                    variants: [],
+                                                                                    hasReviewed: hasReviewedProduct[productIdStr] || false,
+                                                                                    canReview: canReviewProduct[productIdStr] || false
+                                                                                };
+                                                                            }
+
+                                                                            // Thêm biến thể vào sản phẩm
+                                                                            productsMap[item.productId].variants.push({
+                                                                                variantName: item.variantName,
+                                                                            });
+                                                                        });
+
+                                                                        const products = Object.values(productsMap);
+                                                                        const reviewedCount = products.filter(p => p.hasReviewed).length;
+                                                                        const total = products.length;
+
+                                                                        return (
+                                                                            <div className="mb-3 flex items-center gap-2">
+                                                                                <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 font-semibold">
+                                                                                    {reviewedCount > 0 ? `Đã đánh giá ${reviewedCount}/${total} sản phẩm` : 'Chưa có đánh giá'}
+                                                                                </span>
+                                                                            </div>
+                                                                        );
+                                                                    })()}
+
                                                                     <p className="text-sm text-green-700 mb-4">
                                                                         Chia sẻ trải nghiệm của bạn về các sản phẩm trong đơn hàng này
                                                                     </p>
+
                                                                     <div className="space-y-3">
-                                                                        {orderDetailCache[order.orderId].items?.map((item: OrderItem, idx: number) => {
-                                                                            const productId = item.productId;
-                                                                            const canReview = productId ? canReviewProduct[productId] : false;
-                                                                            const hasReviewed = productId ? hasReviewedProduct[productId] : false;
-                                                                            
-                                                                            return (
+                                                                        {(() => {
+                                                                            const items = orderDetailCache[order.orderId]?.items || [];
+
+                                                                            // Nhóm các biến thể theo productId với type safety
+                                                                            const productsMap: ProductsMap = {};
+                                                                            items.forEach((item: OrderItem) => {
+                                                                                if (!item.productId) return;
+
+                                                                                const productIdStr = item.productId.toString();
+                                                                                if (!productsMap[item.productId]) {
+                                                                                    productsMap[item.productId] = {
+                                                                                        productId: item.productId,
+                                                                                        productName: item.productName,
+                                                                                        variants: [],
+                                                                                        hasReviewed: hasReviewedProduct[productIdStr] || false,
+                                                                                        canReview: canReviewProduct[productIdStr] || false
+                                                                                    };
+                                                                                }
+
+                                                                                productsMap[item.productId].variants.push({
+                                                                                    variantName: item.variantName,
+                                                                                });
+                                                                            });
+
+                                                                            return Object.values(productsMap).map((product, idx) => (
                                                                                 <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-lg border border-green-100">
                                                                                     <div className="flex-1">
-                                                                                        <h5 className="font-semibold text-gray-900">{item.productName}</h5>
-                                                                                        <p className="text-sm text-gray-600">{item.variantName}</p>
+                                                                                        <h5 className="font-semibold text-gray-900">{product.productName}</h5>
+                                                                                        {product.variants.length > 0 && (
+                                                                                            <div className="text-sm text-gray-600 mt-1">
+                                                                                                <span className="font-medium">Biến thể: </span>
+                                                                                                {product.variants.map((v: { variantName: string }, i: number) => (
+                                                                                                    <span key={i}>
+                                                                                                        {v.variantName}
+                                                                                                        {i < product.variants.length - 1 ? ', ' : ''}
+                                                                                                    </span>
+                                                                                                ))}
+                                                                                            </div>
+                                                                                        )}
                                                                                     </div>
-                                                                                    
-                                                                                    {hasReviewed ? (
+
+                                                                                    {reviewStatusLoading[order.orderId] ? (
+                                                                                        <span className="text-gray-500 text-sm">Đang kiểm tra...</span>
+                                                                                    ) : product.hasReviewed ? (
                                                                                         <div className="flex items-center space-x-2">
                                                                                             <span className="text-green-600 font-semibold">✅ Đã đánh giá</span>
                                                                                         </div>
-                                                                                    ) : canReview ? (
+                                                                                    ) : product.canReview ? (
                                                                                         <Button
                                                                                             size="sm"
                                                                                             color="success"
                                                                                             variant="solid"
                                                                                             className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold shadow-lg"
-                                                                                            onClick={() => handleOpenReviewModal(item.productId, item.productName)}
+                                                                                            onClick={() => handleOpenReviewModal(product.productId, product.productName)}
+                                                                                            isDisabled={reviewStatusLoading[order.orderId]}
                                                                                         >
                                                                                             ⭐ Đánh giá ngay
                                                                                         </Button>
@@ -1151,8 +1220,8 @@ const getStatusColor = (status: string) => {
                                                                                         <span className="text-gray-500 text-sm">Không thể đánh giá</span>
                                                                                     )}
                                                                                 </div>
-                                                                            );
-                                                                        })}
+                                                                            ));
+                                                                        })()}
                                                                     </div>
                                                                 </div>
                                                             )}
@@ -1248,13 +1317,13 @@ const getStatusColor = (status: string) => {
                                 <p className="text-sm text-gray-600 mt-2">{reviewProductName}</p>
                             )}
                         </div>
-                        
+
                         {reviewError && (
                             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
                                 {reviewError}
                             </div>
                         )}
-                        
+
                         {reviewSuccess && (
                             <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-green-700 text-sm">
                                 {reviewSuccess}
@@ -1297,17 +1366,17 @@ const getStatusColor = (status: string) => {
                         </div>
 
                         <div className="flex justify-end gap-3">
-                            <Button 
-                                color="default" 
-                                variant="flat" 
+                            <Button
+                                color="default"
+                                variant="flat"
                                 onClick={() => setShowReviewModal(false)}
                                 disabled={reviewLoading}
                                 className="px-6"
                             >
                                 Hủy
                             </Button>
-                            <Button 
-                                color="success" 
+                            <Button
+                                color="success"
                                 onClick={handleSubmitReview}
                                 disabled={reviewLoading || !reviewComment.trim()}
                                 className="px-6 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
