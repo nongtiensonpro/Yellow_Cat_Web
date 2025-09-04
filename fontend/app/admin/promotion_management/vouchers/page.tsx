@@ -287,7 +287,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
             if (name === 'discountValue') {
                 isValid = validateNumericInput(value, 10, 2); // numeric(10,2)
             } else if (name === 'maximumDiscountValue' || name === 'minimumOrderValue') {
-                isValid = validateNumericInput(value, 12, 2); // numeric(12,2)
+                isValid = validateNumericInput(value, 10, 2); // numeric(12,2)
             }
 
             if (!isValid) {
@@ -319,6 +319,13 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
             newErrors.promotionName = 'Tên khuyến mãi là bắt buộc.';
         }
 
+        if (form.promotionName.length > 100) {
+            newErrors.promotionName = 'Tên khuyến mãi không được quá 100 ký tự';
+        }
+
+        if (form.voucherCode.length > 50) {
+            newErrors.voucherCode = 'Mã voucher không quá 50 kí tự';
+        }
         // Validation cho thời gian hiệu lực (đầy đủ datetime)
         const now = new Date();
         if (!form.startDate) {
@@ -370,7 +377,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
             // Kiểm tra giới hạn database cho maximumDiscountValue (numeric(12,2))
             const maxDiscountValueStr = form.maximumDiscountValue.toString();
             if (!validateNumericInput(maxDiscountValueStr, 12, 2)) {
-                newErrors.maximumDiscountValue = 'Giảm tối đa không được vượt quá 99,999,999,999.99';
+                newErrors.maximumDiscountValue = 'Giảm tối đa không được vượt quá 99,999,999.99';
             }
         }
 
@@ -383,11 +390,14 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
             // Kiểm tra giới hạn database cho minimumOrderValue (numeric(12,2))
             const minOrderValueStr = form.minimumOrderValue.toString();
             if (!validateNumericInput(minOrderValueStr, 12, 2)) {
-                newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu không được vượt quá 99,999,999,999.99';
+                newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu không được vượt quá 99,999,999.99';
             }
         }
+        // Trong hàm validateForm() của AddVoucherModal
         if (form.usageLimitTotal === undefined || form.usageLimitTotal === null || Number(form.usageLimitTotal) <= 0) {
             newErrors.usageLimitTotal = 'Số lượng voucher phải lớn hơn 0.';
+        } else if (Number(form.usageLimitTotal) > 10000) {
+            newErrors.usageLimitTotal = 'Số lượng voucher không được vượt quá 10000.';
         }
 
         // Validation cho đối tượng áp dụng - chỉ được chọn 1 trong 3 loại
@@ -776,7 +786,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                                         step="0.01"
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                        Tối đa: 99,999,999,999.99 ₫
+                                        Tối đa: 99,999,999.99 ₫
                                     </p>
                                     {(form.discountType === 'percentage' || form.discountType === 'free_shipping') && errors.maximumDiscountValue && <p className="text-red-600 text-sm mt-1">{errors.maximumDiscountValue}</p>}
                                 </div>
@@ -804,7 +814,7 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                                         step="0.01"
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                        Tối đa: 99,999,999,999.99 ₫
+                                        Tối đa: 99,999,999.99 ₫
                                     </p>
                                     {errors.minimumOrderValue && <p className="text-red-600 text-sm mt-1">{errors.minimumOrderValue}</p>}
                                 </div>
@@ -819,6 +829,10 @@ function AddVoucherModal({ isOpen, onClose, onSuccess }: {
                                         className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                                         placeholder="VD: 100"
                                     />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Tối đa: 10,000 voucher
+                                    </p>
+                                    {errors.usageLimitTotal && <p className="text-red-600 text-sm mt-1">{errors.usageLimitTotal}</p>}
                                 </div>
                             </div>
                         </div>
@@ -1711,8 +1725,11 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                 newErrors.minimumOrderValue = 'Giá trị đơn tối thiểu không được vượt quá 99,999,999,999.99';
             }
         }
+        // Trong hàm validateForm() của EditVoucherModal
         if (!form.usageLimitTotal || Number(form.usageLimitTotal) <= 0) {
             newErrors.usageLimitTotal = 'Số lượng voucher phải lớn hơn 0.';
+        } else if (Number(form.usageLimitTotal) > 10000) {
+            newErrors.usageLimitTotal = 'Số lượng voucher không được vượt quá 10000.';
         }
 
         // Validation cho đối tượng áp dụng - chỉ được chọn 1 trong 3 loại
@@ -1843,9 +1860,9 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                     console.log('EditVoucherModal - Mapping to promotionName error');
                     setErrors(prev => ({ ...prev, promotionName: 'Tên khuyến mãi không được để trống' }));
                     setTimeout(() => nameRef.current?.focus(), 0);
-                } else if (errorMessage.includes('Tên đợt giảm giá không được vượt quá 50 ký tự')) {
+                } else if (errorMessage.includes('Tên đợt giảm giá không được vượt quá 100 ký tự')) {
                     console.log('EditVoucherModal - Mapping to promotionName error');
-                    setErrors(prev => ({ ...prev, promotionName: 'Tên khuyến mãi không được vượt quá 50 ký tự' }));
+                    setErrors(prev => ({ ...prev, promotionName: 'Tên khuyến mãi không được vượt quá 100 ký tự' }));
                     setTimeout(() => nameRef.current?.focus(), 0);
                 } else if (errorMessage.includes('Mã giảm giá không được vượt quá 50 ký tự')) {
                     console.log('EditVoucherModal - Mapping to voucherCode error');
@@ -2004,7 +2021,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                             step="0.01"
                                         />
                                         <p className="text-xs text-gray-500 mt-1">
-                                            Tối đa: 99,999,999,999.99 ₫
+                                            Tối đa: 99,999,999.99 ₫
                                         </p>
                                         {(form.discountType === 'percentage' || form.discountType === 'free_shipping') && errors.maximumDiscountValue && <p className="text-red-600 text-sm mt-1">{errors.maximumDiscountValue}</p>}
                                     </div>
@@ -2032,7 +2049,7 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                             step="0.01"
                                         />
                                         <p className="text-xs text-gray-500 mt-1">
-                                            Tối đa: 99,999,999,999.99 ₫
+                                            Tối đa: 99,999,999.99 ₫
                                         </p>
                                         {errors.minimumOrderValue && <p className="text-red-600 text-sm mt-1">{errors.minimumOrderValue}</p>}
                                     </div>
@@ -2047,6 +2064,10 @@ function EditVoucherModal({ isOpen, onClose, onSuccess, voucher }: {
                                             className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                                             placeholder="VD: 100"
                                         />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Tối đa: 10,000 voucher
+                                        </p>
+                                        {errors.usageLimitTotal && <p className="text-red-600 text-sm mt-1">{errors.usageLimitTotal}</p>}
                                     </div>
                                 </div>
                             </div>
@@ -3547,7 +3568,7 @@ export default function VouchersPage() {
                                                         </div>
                                                         <div>
                                                             <span className="text-sm text-gray-600">Mô tả:</span>
-                                                            <p className="text-sm">{selectedVoucherDetail.description || 'Không có mô tả'}</p>
+                                                            <p className="text-sm break-words whitespace-pre-line">{selectedVoucherDetail.description || 'Không có mô tả'}</p>
                                                         </div>
                                                         <div>
                                                             <span className="text-sm text-gray-600">Trạng thái:</span>
