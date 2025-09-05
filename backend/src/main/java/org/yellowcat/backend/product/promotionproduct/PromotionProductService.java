@@ -53,10 +53,6 @@ public class PromotionProductService {
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đợt giảm giá với ID: " + id));
     }
 
-//    // ✅ LỌC
-//    public List<PromotionProductResponse> getFiltered(String keyword, String status, String discountType, Double discountValue) {
-//        return promotionProductRepository.findAllWithFilters(keyword, status, discountType, discountValue);
-//    }
 
     public List<PromotionProductResponse> getFiltered(String keyword, String status, String discountType, Double discountValue, LocalDate startDateFilter, LocalDate endDateFilter) {
         return promotionProductRepository.findAllWithFilters(keyword, status, discountType, discountValue, startDateFilter, endDateFilter);
@@ -150,170 +146,74 @@ public class PromotionProductService {
         }
     }
 
-//    @Transactional
-//    public void updatePromotionWithProducts(Integer promotionProductId, CreatePromotionDTO dto, UUID userId) {
-//        PromotionProduct existingPP = promotionProductRepository.findById(promotionProductId)
-//                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đợt giảm giá với ID: " + promotionProductId));
-//
-//        Promotion promotion = existingPP.getPromotion();
-//
-////        if (promotionProductRepository.existsByPromotionNameIgnoreCaseAndIdNot(
-////                dto.getPromotionName(), promotion.getId())) {
-////            throw new IllegalArgumentException("Tên đợt giảm giá đã tồn tại");
-////        }
-//
-//        String normalizedName = normalizeName(dto.getPromotionName());
-//        if (promotionProductRepository.existsByPromotionNameIgnoreCaseAndIdNot(normalizedName, promotion.getId())) {
-//            throw new IllegalArgumentException("Tên đợt giảm giá đã tồn tại");
-//        }
-//        if (normalizedName.matches("^\\d+$")) {
-//            throw new IllegalArgumentException("Tên đợt giảm giá không thể chỉ chứa số.");
-//        }
-//
-//        // Reset salePrice cũ
-//        List<Integer> oldIds = promotionProductRepository.findVariantIdsByPromotionId(promotion.getId());
-//        // ====== NEW VALIDATION: Kiểm tra xung đột với khuyến mãi khác ======
-//        List<String> conflictingSkus = promotionProductRepository.findConflictingSkusExcludingPromotion(
-//                dto.getVariantIds(),
-//                dto.getStartDate(),
-//                dto.getEndDate(),
-//                promotion.getId()
-//        );
-//        if (!conflictingSkus.isEmpty()) {
-//            throw new IllegalArgumentException("Các SKU đã thuộc khuyến mãi khác trong khoảng thời gian này: " + String.join(", ", conflictingSkus));
-//        }
-//
-//        List<ProductVariant> oldVariants = productVariantRepository.findAllById(oldIds);
-//        for (ProductVariant oldVar : oldVariants) {
-//            oldVar.setSalePrice(null);
-//            productVariantRepository.save(oldVar);
-//        }
-//
-//        // Cập nhật thông tin promotion
-//        promotion.setPromotionName(dto.getPromotionName());
-//        promotion.setDescription(dto.getDescription());
-//        promotion.setDiscountValue(dto.getDiscountValue());
-//        promotion.setDiscountType(dto.getDiscountType() != null ? dto.getDiscountType() : "percentage");
-//        promotion.setStartDate(dto.getStartDate());
-//        promotion.setEndDate(dto.getEndDate());
-//        promotion.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : promotion.getIsActive());
-//        promotionRepository.save(promotion);
-//
-//        // Xóa mapping cũ và tạo mới
-//        promotionProductRepository.deleteByPromotionId(promotion.getId());
-//        List<ProductVariant> newVariants = productVariantRepository.findAllById(dto.getVariantIds());
-//        for (ProductVariant variant : newVariants) {
-//            PromotionProduct pp = new PromotionProduct();
-//            pp.setPromotion(promotion);
-//            pp.setProductVariant(variant);
-//            promotionProductRepository.save(pp);
-//
-//            applyDiscountToVariant(variant, dto);
-//            productVariantRepository.save(variant);
-//        }
-//    }
+    @Transactional
+    public void updatePromotionWithProducts(Integer promotionProductId, CreatePromotionDTO dto, UUID userId) {
+        PromotionProduct existingPP = promotionProductRepository.findById(promotionProductId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đợt giảm giá với ID: " + promotionProductId));
 
-// File: org.yellowcat.backend.product.promotionproduct.PromotionProductService.java
+        Promotion promotion = existingPP.getPromotion();
 
-@Transactional
-public void updatePromotionWithProducts(Integer promotionProductId, CreatePromotionDTO dto, UUID userId) {
-    PromotionProduct existingPP = promotionProductRepository.findById(promotionProductId)
-            .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đợt giảm giá với ID: " + promotionProductId));
-
-    Promotion promotion = existingPP.getPromotion();
-
-    String normalizedName = normalizeName(dto.getPromotionName());
-    if (promotionProductRepository.existsByPromotionNameIgnoreCaseAndIdNot(normalizedName, promotion.getId())) {
-        throw new IllegalArgumentException("Tên đợt giảm giá đã tồn tại");
-    }
-    if (normalizedName.matches("^\\d+$")) {
-        throw new IllegalArgumentException("Tên đợt giảm giá không thể chỉ chứa số.");
-    }
-
-    // ====== NEW VALIDATION: Kiểm tra xung đột với khuyến mãi khác ======
-    List<String> conflictingSkus = promotionProductRepository.findConflictingSkusExcludingPromotion(
-            dto.getVariantIds(),
-            dto.getStartDate(),
-            dto.getEndDate(),
-            promotion.getId()
-    );
-    if (!conflictingSkus.isEmpty()) {
-        throw new IllegalArgumentException("Các SKU đã thuộc khuyến mãi khác trong khoảng thời gian này: " + String.join(", ", conflictingSkus));
-    }
-
-    // Reset salePrice cũ của các sản phẩm liên quan đến đợt khuyến mãi này
-    List<Integer> oldVariantIds = promotionProductRepository.findVariantIdsByPromotionId(promotion.getId());
-    List<ProductVariant> oldVariants = productVariantRepository.findAllById(oldVariantIds);
-    for (ProductVariant oldVar : oldVariants) {
-        oldVar.setSalePrice(null);
-        productVariantRepository.save(oldVar);
-    }
-
-    // Cập nhật thông tin promotion
-    promotion.setPromotionName(dto.getPromotionName());
-    promotion.setDescription(dto.getDescription());
-    promotion.setDiscountValue(dto.getDiscountValue());
-    promotion.setDiscountType(dto.getDiscountType() != null ? dto.getDiscountType() : "percentage");
-    promotion.setStartDate(dto.getStartDate());
-    promotion.setEndDate(dto.getEndDate());
-
-    // --- Bắt đầu sửa đổi logic: Cập nhật trạng thái isActive ---
-    boolean newIsActive = dto.getIsActive() != null ? dto.getIsActive() : promotion.getIsActive();
-    promotion.setIsActive(newIsActive);
-    promotionRepository.save(promotion);
-
-    // Xóa mapping cũ
-    promotionProductRepository.deleteByPromotionId(promotion.getId());
-
-    List<ProductVariant> newVariants = productVariantRepository.findAllById(dto.getVariantIds());
-    for (ProductVariant variant : newVariants) {
-        PromotionProduct pp = new PromotionProduct();
-        pp.setPromotion(promotion);
-        pp.setProductVariant(variant);
-        promotionProductRepository.save(pp);
-
-        // Chỉ áp dụng giảm giá nếu chương trình đang hoạt động
-        if (newIsActive) {
-            applyDiscountToVariant(variant, dto);
-        } else {
-            // Nếu không hoạt động, đặt salePrice về null (đã làm ở trên nhưng làm lại cho chắc chắn)
-            variant.setSalePrice(null);
+        String normalizedName = normalizeName(dto.getPromotionName());
+        if (promotionProductRepository.existsByPromotionNameIgnoreCaseAndIdNot(normalizedName, promotion.getId())) {
+            throw new IllegalArgumentException("Tên đợt giảm giá đã tồn tại");
         }
-        productVariantRepository.save(variant);
+        if (normalizedName.matches("^\\d+$")) {
+            throw new IllegalArgumentException("Tên đợt giảm giá không thể chỉ chứa số.");
+        }
+
+        // ====== NEW VALIDATION: Kiểm tra xung đột với khuyến mãi khác ======
+        List<String> conflictingSkus = promotionProductRepository.findConflictingSkusExcludingPromotion(
+                dto.getVariantIds(),
+                dto.getStartDate(),
+                dto.getEndDate(),
+                promotion.getId()
+        );
+        if (!conflictingSkus.isEmpty()) {
+            throw new IllegalArgumentException("Các SKU đã thuộc khuyến mãi khác trong khoảng thời gian này: " + String.join(", ", conflictingSkus));
+        }
+
+        // Reset salePrice cũ của các sản phẩm liên quan đến đợt khuyến mãi này
+        List<Integer> oldVariantIds = promotionProductRepository.findVariantIdsByPromotionId(promotion.getId());
+        List<ProductVariant> oldVariants = productVariantRepository.findAllById(oldVariantIds);
+        for (ProductVariant oldVar : oldVariants) {
+            oldVar.setSalePrice(null);
+            productVariantRepository.save(oldVar);
+        }
+
+        // Cập nhật thông tin promotion
+        promotion.setPromotionName(dto.getPromotionName());
+        promotion.setDescription(dto.getDescription());
+        promotion.setDiscountValue(dto.getDiscountValue());
+        promotion.setDiscountType(dto.getDiscountType() != null ? dto.getDiscountType() : "percentage");
+        promotion.setStartDate(dto.getStartDate());
+        promotion.setEndDate(dto.getEndDate());
+
+        // --- Bắt đầu sửa đổi logic: Cập nhật trạng thái isActive ---
+        boolean newIsActive = dto.getIsActive() != null ? dto.getIsActive() : promotion.getIsActive();
+        promotion.setIsActive(newIsActive);
+        promotionRepository.save(promotion);
+
+        // Xóa mapping cũ
+        promotionProductRepository.deleteByPromotionId(promotion.getId());
+
+        List<ProductVariant> newVariants = productVariantRepository.findAllById(dto.getVariantIds());
+        for (ProductVariant variant : newVariants) {
+            PromotionProduct pp = new PromotionProduct();
+            pp.setPromotion(promotion);
+            pp.setProductVariant(variant);
+            promotionProductRepository.save(pp);
+
+            // Chỉ áp dụng giảm giá nếu chương trình đang hoạt động
+            if (newIsActive) {
+                applyDiscountToVariant(variant, dto);
+            } else {
+                // Nếu không hoạt động, đặt salePrice về null (đã làm ở trên nhưng làm lại cho chắc chắn)
+                variant.setSalePrice(null);
+            }
+            productVariantRepository.save(variant);
+        }
+        // --- Kết thúc sửa đổi logic ---
     }
-    // --- Kết thúc sửa đổi logic ---
-}
-
-//
-//    // ✅ DELETE - Đã sửa lỗi: Giờ đây hoàn tác giá giảm giá trước khi xóa
-//    @Transactional
-//    public void delete(Integer id, UUID userId) {
-//        PromotionProduct existingPromotionProduct = promotionProductRepository.findById(id)
-//                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy đợt giảm giá với ID: " + id));
-//
-//        Promotion promotion = existingPromotionProduct.getPromotion();
-//
-//        AppUser user = appUserRepository.findByKeycloakId(userId)
-//                .orElseThrow(() -> new RuntimeException("User not found"));
-//
-//        if (!promotion.getAppUser().getAppUserId().equals(user.getAppUserId())) {
-//            throw new RuntimeException("Bạn không có quyền xóa đợt giảm giá này");
-//        }
-//
-//        // Bổ sung logic: Đặt lại giá khuyến mãi của tất cả sản phẩm thuộc đợt này về null
-//        List<Integer> variantIds = promotionProductRepository.findVariantIdsByPromotionId(promotion.getId());
-//        List<ProductVariant> variants = productVariantRepository.findAllById(variantIds);
-//        for (ProductVariant variant : variants) {
-//            variant.setSalePrice(null);
-//            productVariantRepository.save(variant);
-//        }
-//
-//        // Xóa các bản ghi liên quan
-//        promotionProductRepository.deleteByPromotionId(promotion.getId());
-//        promotionRepository.deleteById(promotion.getId());
-//    }
-
-    // File: org.yellowcat.backend.product.promotionproduct.PromotionProductService.java
 
     @Transactional
     public void delete(Integer id, UUID userId) {
@@ -352,7 +252,7 @@ public void updatePromotionWithProducts(Integer promotionProductId, CreatePromot
         // Nếu khuyến mãi chưa bắt đầu hoặc đã kết thúc → không áp dụng, salePrice = 0
         if ((dto.getStartDate() != null && dto.getStartDate().isAfter(now)) ||
                 (dto.getEndDate() != null && dto.getEndDate().isBefore(now))) {
-            variant.setSalePrice(BigDecimal.ZERO);
+            variant.setSalePrice(null);
             return;
         }
 
