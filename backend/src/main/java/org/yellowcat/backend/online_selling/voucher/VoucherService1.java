@@ -8,6 +8,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.yellowcat.backend.online_selling.gmail_sending.EmailService;
 import org.yellowcat.backend.online_selling.oder_online.OderOnlineRepository;
 import org.yellowcat.backend.online_selling.voucher.dto.*;
 import org.yellowcat.backend.online_selling.voucher.entity.*;
@@ -58,6 +59,7 @@ public class VoucherService1 {
     @Autowired private OderOnlineRepository orderOnlineRepository;
     @Autowired private ProductVariantRepository productVariantRepository;
     @Autowired private OrderRepository orderRepository;
+    @Autowired private EmailService emailService;
 
     // ===== CRUD OPERATIONS =====
 
@@ -112,6 +114,13 @@ public class VoucherService1 {
 
         // Gán scope
         associateScopesWithVoucher(scopes, savedVoucher);
+
+        // ✅ Gửi email thông báo - chỉ gọi service email
+        try {
+            emailService.sendVoucherNotification(savedVoucher, scopes);
+        } catch (Exception e) {
+            System.out.println("Lỗi khi gửi email thông báo voucher: " + e.getMessage());
+        }
 
         return savedVoucher;
     }
