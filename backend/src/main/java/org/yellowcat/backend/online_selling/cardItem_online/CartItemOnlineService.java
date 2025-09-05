@@ -23,7 +23,7 @@ public class CartItemOnlineService {
     private final AppUserRepository userRepository;
 
     private static final int MIN_STOCK_FOR_ONLINE = 10;
-    private static final int LARGE_QUANTITY_THRESHOLD = 20;
+//    private static final int LARGE_QUANTITY_THRESHOLD = 20;
 
     @Transactional
     public void addToCart(CartItemRequestDTO dto) {
@@ -95,9 +95,9 @@ public class CartItemOnlineService {
 //            throw new RuntimeException("Sản phẩm tạm hết hàng để ưu tiên bán tại cửa hàng. Vui lòng chọn sản phẩm khác.");
 //        }
 
-        if (requestedQuantity >= LARGE_QUANTITY_THRESHOLD) {
-            throw new RuntimeException("Số lượng đặt hàng lớn. Vui lòng liên hệ tư vấn viên qua hotline để được hỗ trợ.");
-        }
+//        if (requestedQuantity >= LARGE_QUANTITY_THRESHOLD) {
+//            throw new RuntimeException("Số lượng đặt hàng lớn. Vui lòng liên hệ tư vấn viên qua hotline để được hỗ trợ.");
+//        }
 
         if (variant.getQuantityInStock() < requestedQuantity) {
             throw new RuntimeException("Số lượng yêu cầu vượt quá tồn kho. Còn lại: " + variant.getQuantityInStock());

@@ -210,8 +210,6 @@ export default function OrdersManagementPage() {
     const [showStatusPopup, setShowStatusPopup] = useState(false);
     const [pendingStatusUpdate, setPendingStatusUpdate] = useState<{orderId: number, newStatus: string} | null>(null);
     const [statusNote, setStatusNote] = useState('');
-    const [imageUrls, setImageUrls] = useState<string[]>([]);
-    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
     // State lưu lịch sử trạng thái đơn hàng
     const [orderTimeline, setOrderTimeline] = useState<Record<number, OrderTimeline[]>>({});
@@ -513,8 +511,6 @@ export default function OrdersManagementPage() {
         // Nếu không phải auto update thì hiển thị popup
         setPendingStatusUpdate({ orderId, newStatus });
         setStatusNote('');
-        setImageUrls([]);
-        setSelectedFiles([]);
         setShowStatusPopup(true);
     };
 
@@ -524,15 +520,11 @@ export default function OrdersManagementPage() {
         setActionLoading(pendingStatusUpdate.orderId);
         setShowStatusPopup(false);
         
-        // Chuyển đổi file thành đường dẫn local
-        const filePaths = selectedFiles.map(file => file.name);
-        const allImageUrls = [...imageUrls, ...filePaths];
-        
         const body = {
             orderId: pendingStatusUpdate.orderId,
             newStatus: pendingStatusUpdate.newStatus,
             note: statusNote || 'Admin xác nhận đơn',
-            imageUrls: allImageUrls,
+            imageUrls: [],
             keycloakid,
         };
         
@@ -564,29 +556,8 @@ export default function OrdersManagementPage() {
         setShowStatusPopup(false);
         setPendingStatusUpdate(null);
         setStatusNote('');
-        setImageUrls([]);
-        setSelectedFiles([]);
     };
 
-    const handleImageUrlAdd = () => {
-        const url = prompt('Nhập URL ảnh:');
-        if (url && url.trim()) {
-            setImageUrls(prev => [...prev, url.trim()]);
-        }
-    };
-
-    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(event.target.files || []);
-        setSelectedFiles(prev => [...prev, ...files]);
-    };
-
-    const removeImageUrl = (index: number) => {
-        setImageUrls(prev => prev.filter((_, i) => i !== index));
-    };
-
-    const removeSelectedFile = (index: number) => {
-        setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-    };
 
     // const handleCancelOrder = async (orderId: number) => {
     //     if (!session?.accessToken) return;
@@ -1506,77 +1477,6 @@ export default function OrdersManagementPage() {
                                 />
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Ảnh <span className="text-gray-500">(tùy chọn)</span>
-                                </label>
-                                
-                                {/* Chọn file từ máy tính */}
-                                <div className="mb-3">
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        onChange={handleFileSelect}
-                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                    />
-                                </div>
-
-                                {/* Thêm URL ảnh */}
-                                <div className="mb-3">
-                                    <button
-                                        type="button"
-                                        onClick={handleImageUrlAdd}
-                                        className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-                                    >
-                                        + Thêm URL ảnh
-                                    </button>
-                                </div>
-
-                                {/* Hiển thị file đã chọn */}
-                                {selectedFiles.length > 0 && (
-                                    <div className="mb-3">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            File ảnh đã chọn:
-                                        </label>
-                                        <div className="space-y-2">
-                                            {selectedFiles.map((file, index) => (
-                                                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                                                    <span className="text-sm text-gray-600 truncate">{file.name}</span>
-                                                    <button
-                                                        onClick={() => removeSelectedFile(index)}
-                                                        className="text-red-500 hover:text-red-700"
-                                                    >
-                                                        <XMarkIcon className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Hiển thị URL ảnh đã thêm */}
-                                {imageUrls.length > 0 && (
-                                    <div className="mb-3">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            URL ảnh đã thêm:
-                                        </label>
-                                        <div className="space-y-2">
-                                            {imageUrls.map((url, index) => (
-                                                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                                                    <span className="text-sm text-gray-600 truncate">{url}</span>
-                                                    <button
-                                                        onClick={() => removeImageUrl(index)}
-                                                        className="text-red-500 hover:text-red-700"
-                                                    >
-                                                        <XMarkIcon className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
                         </div>
 
                         <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
