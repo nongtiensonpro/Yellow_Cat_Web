@@ -122,8 +122,8 @@ public class VoucherService1 {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tên đợt giảm giá không được để trống");
         }
 
-        if (voucher.getName().length() > 50) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tên đợt giảm giá không được vượt quá 50 ký tự");
+        if (voucher.getName().length() > 100) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tên đợt giảm giá không được vượt quá 100 ký tự");
         }
 
         boolean nameExists = isUpdate
@@ -760,9 +760,19 @@ public class VoucherService1 {
         // Validate sau khi normalize
         validateVoucher(voucherUpdate, true); // true vì đang update
 
+        if (voucherUpdate.getCode() == null || voucherUpdate.getCode().trim().isEmpty()) {
+            System.out.println("===> Code null hoặc rỗng, tạo mã random");
+            String generatedCode = generateUniqueVoucherCode();
+            System.out.println("===> Mã được tạo: " + generatedCode);
+            existingVoucher.setCode(generatedCode);
+        } else {
+            System.out.println("===> Code không null, normalize");
+            existingVoucher.setCode(normalizeCode(voucherUpdate.getCode()));
+        }
+
         // Cập nhật thông tin
         existingVoucher.setName(voucherUpdate.getName());
-        existingVoucher.setCode(voucherUpdate.getCode());
+//        existingVoucher.setCode(voucherUpdate.getCode());
         existingVoucher.setDescription(voucherUpdate.getDescription());
         existingVoucher.setDiscountType(voucherUpdate.getDiscountType());
         existingVoucher.setDiscountValue(voucherUpdate.getDiscountValue());
