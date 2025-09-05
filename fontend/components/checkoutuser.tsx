@@ -43,8 +43,52 @@ const CheckoutUser = () => {
     const { data: session, status } = useSession();
     const syncedRef = useRef<Set<string>>(new Set());
 
+    // Kiểm tra xem user đã được đồng bộ chưa (từ localStorage)
+    const isUserSynced = useCallback((userId: string): boolean => {
+        try {
+            const syncedUsers = JSON.parse(localStorage.getItem('syncedUsers') || '[]');
+            return syncedUsers.includes(userId);
+        } catch {
+            return false;
+        }
+    }, []);
+
+    // Đánh dấu user đã được đồng bộ (lưu vào localStorage)
+    const markUserAsSynced = useCallback((userId: string) => {
+        try {
+            const syncedUsers = JSON.parse(localStorage.getItem('syncedUsers') || '[]');
+            if (!syncedUsers.includes(userId)) {
+                syncedUsers.push(userId);
+                localStorage.setItem('syncedUsers', JSON.stringify(syncedUsers));
+            }
+        } catch (error) {
+            console.error("Lỗi khi lưu trạng thái đồng bộ:", error);
+        }
+    }, []);
+
+    // Kiểm tra xem user đã tồn tại trong backend chưa
+    const checkUserExists = useCallback(async (keycloakId: string): Promise<boolean> => {
+        if (!session) return false;
+        
+        try {
+            const extendedSession = session as unknown as ExtendedSession;
+            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+            const response = await fetch(`${backendUrl}/api/users/keycloak-user/${keycloakId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${extendedSession.accessToken}`,
+                },
+            });
+
+            return response.ok;
+        } catch (error) {
+            console.error("Lỗi khi kiểm tra user tồn tại:", error);
+            return false;
+        }
+    }, [session]);
+
     const syncUserData = useCallback(async (userDTO: UserRequestDTO) => {
-        if (!session) return;
+        if (!session) return false;
         
         try {
             const extendedSession = session as unknown as ExtendedSession;
@@ -61,12 +105,14 @@ const CheckoutUser = () => {
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error(`Lỗi đồng bộ dữ liệu người dùng: ${response.status} - ${errorText}`);
-                return;
+                return false;
             }
 
             console.log("Đồng bộ dữ liệu người dùng thành công");
+            return true;
         } catch (error) {
             console.error("Lỗi khi gọi API đồng bộ người dùng:", error);
+            return false;
         }
     }, [session]);
 
@@ -97,6 +143,23 @@ const CheckoutUser = () => {
                 // Kiểm tra xem đã đồng bộ user này chưa trong session hiện tại
                 if (syncedRef.current.has(userId)) return;
 
+                // Kiểm tra xem user đã được đồng bộ trước đó chưa (từ localStorage)
+                if (isUserSynced(userId)) {
+                    console.log(`User ${userId} đã được đồng bộ trước đó, bỏ qua`);
+                    syncedRef.current.add(userId);
+                    return;
+                }
+
+                // Kiểm tra xem user đã tồn tại trong backend chưa
+                const userExists = await checkUserExists(userId);
+                if (userExists) {
+                    console.log(`User ${userId} đã tồn tại trong backend, bỏ qua đồng bộ`);
+                    // Đánh dấu là đã đồng bộ để tránh kiểm tra lại
+                    syncedRef.current.add(userId);
+                    markUserAsSynced(userId);
+                    return;
+                }
+
                 // Lấy roles từ token
                 const clientRoles = tokenData.resource_access?.["YellowCatCompanyWeb"]?.roles || [];
                 const realmRoles = tokenData.realm_access?.roles || [];
@@ -118,10 +181,16 @@ const CheckoutUser = () => {
                 };
 
                 // Gọi API để đồng bộ dữ liệu
-                await syncUserData(userDTO);
+                console.log(`Đồng bộ dữ liệu user ${userId} lần đầu...`);
+                const syncSuccess = await syncUserData(userDTO);
                 
-                // Đánh dấu đã đồng bộ user này
-                syncedRef.current.add(userId);
+                if (syncSuccess) {
+                    // Đánh dấu đã đồng bộ user này trong session hiện tại
+                    syncedRef.current.add(userId);
+                    // Lưu vào localStorage để tránh đồng bộ lại trong tương lai
+                    markUserAsSynced(userId);
+                    console.log(`Đã lưu trạng thái đồng bộ cho user ${userId}`);
+                }
 
             } catch (error) {
                 console.error("Lỗi khi xử lý token:", error);
@@ -129,7 +198,7 @@ const CheckoutUser = () => {
         };
 
         handleUserSync();
-    }, [session, status, syncUserData]);
+    }, [session, status, syncUserData, isUserSynced, markUserAsSynced, checkUserExists]);
 
     // Component này không render gì cả - chỉ xử lý logic
     return null;
