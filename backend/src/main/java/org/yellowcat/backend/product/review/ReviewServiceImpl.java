@@ -82,12 +82,7 @@ public class ReviewServiceImpl implements ReviewService {
             throw new RuntimeException("Bạn chỉ có thể đánh giá sản phẩm đã mua và thanh toán thành công");
         }
 
-        // Kiểm tra người dùng đã đánh giá sản phẩm này chưa
-        boolean hasReviewed = reviewRepository.existsByProductIdAndAppUserId(
-                createReviewDTO.getProductId(), appUserId);
-        if (hasReviewed) {
-            throw new RuntimeException("Bạn đã đánh giá sản phẩm này rồi");
-        }
+        // Cho phép đánh giá nhiều lần - không kiểm tra đã đánh giá chưa
 
         // Tạo đánh giá mới
         Review review = new Review();
@@ -145,6 +140,21 @@ public class ReviewServiceImpl implements ReviewService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đánh giá"));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Integer, Review> getUserReviewsForProducts(Integer appUserId, List<Integer> productIds) {
+        List<Object[]> results = reviewRepository.findReviewsByUserIdAndProductIds(appUserId, productIds);
+        Map<Integer, Review> reviewsMap = new HashMap<>();
+
+        for (Object[] result : results) {
+            Integer productId = (Integer) result[0];
+            Review review = (Review) result[1];
+            reviewsMap.put(productId, review);
+        }
+
+        return reviewsMap;
+    }
+
 
     //================= ONLINE ----------------------
 
@@ -175,6 +185,8 @@ public class ReviewServiceImpl implements ReviewService {
         if (!canUserReviewProductOnline(orderId)){
             throw new RuntimeException("Bạn không thể đánh giá cho đơn hàng này");
         }
+
+        // Cho phép đánh giá nhiều lần - không kiểm tra đã đánh giá chưa
 
         // Tạo đánh giá mới
         Review review = new Review();

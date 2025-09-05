@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/reviews")
@@ -141,6 +142,50 @@ public class ReviewController {
             return ResponseEntityBuilder.success("Lấy đánh giá thành công", reviewData);
         } catch (RuntimeException e) {
             return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "Lỗi lấy đánh giá", e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống", e.getMessage());
+        }
+    }
+
+    @GetMapping("/bulk-review-status")
+    public ResponseEntity<?> getBulkReviewStatus(
+            @RequestParam("productIds") List<Integer> productIds,
+            @AuthenticationPrincipal Jwt jwt) {
+        try {
+            // Lấy keycloakId từ JWT token
+            String keycloakIdStr = jwt.getSubject();
+            UUID keycloakId = UUID.fromString(keycloakIdStr);
+
+            // Tìm AppUser từ keycloakId
+            AppUser appUser = appUserRepository.findByKeycloakId(keycloakId)
+                    .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại trong hệ thống"));
+
+            // Lấy trạng thái đánh giá của tất cả sản phẩm
+            Map<Integer, Review> userReviews = reviewService.getUserReviewsForProducts(appUser.getAppUserId(), productIds);
+
+            // Tạo response với thông tin đánh giá cho từng sản phẩm
+            Map<String, Object> response = new HashMap<>();
+            Map<Integer, Map<String, Object>> reviewStatus = new HashMap<>();
+
+            for (Integer productId : productIds) {
+                Map<String, Object> productReview = new HashMap<>();
+                if (userReviews.containsKey(productId)) {
+                    Review review = userReviews.get(productId);
+                    productReview.put("hasReviewed", true);
+                    productReview.put("rating", review.getRating());
+                    productReview.put("comment", review.getComment());
+                    productReview.put("reviewDate", review.getReviewDate());
+                } else {
+                    productReview.put("hasReviewed", false);
+                }
+                reviewStatus.put(productId, productReview);
+            }
+
+            response.put("reviewStatus", reviewStatus);
+
+            return ResponseEntityBuilder.success("Lấy trạng thái đánh giá thành công", response);
+        } catch (RuntimeException e) {
+            return ResponseEntityBuilder.error(HttpStatus.BAD_REQUEST, "Lỗi lấy trạng thái đánh giá", e.getMessage());
         } catch (Exception e) {
             return ResponseEntityBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống", e.getMessage());
         }

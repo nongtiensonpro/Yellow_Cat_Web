@@ -124,7 +124,6 @@ export default function OrderDetailPage() {
         productName: string;
         imageUrl?: string;
     } | null>(null);
-    const [reviewableProducts, setReviewableProducts] = useState<Set<number>>(new Set());
     const [reviewedProducts, setReviewedProducts] = useState<Set<number>>(new Set());
     const [userReviews, setUserReviews] = useState<Map<number, {
         rating: number;
@@ -242,7 +241,7 @@ export default function OrderDetailPage() {
 
     // Hàm kiểm tra quyền đánh giá sản phẩm
     const checkReviewPermissions = useCallback(async () => {
-        if (!orderDetail || orderDetail.orderStatus !== 'Paid' || !session) {
+        if (!orderDetail || !session) {
             console.log('Không thể đánh giá: orderDetail =', orderDetail?.orderStatus);
             return;
         }
@@ -252,68 +251,60 @@ export default function OrderDetailPage() {
             return;
         }
 
-        // Nếu trạng thái là Paid, cho phép đánh giá tất cả sản phẩm trong đơn hàng
-        const reviewableProductIds = new Set<number>();
-        const reviewedProductIds = new Set<number>();
+        // Lấy danh sách productId từ đơn hàng
+        const productIds = orderDetail.orderItems.map(item => item.productId);
 
-        // Kiểm tra từng sản phẩm trong đơn hàng
-        for (const item of orderDetail.orderItems) {
-            try {
-                const productId = item.productId;
+        try {
+            // Gọi API bulk để lấy trạng thái đánh giá của tất cả sản phẩm
+            const bulkReviewResponse = await fetch(`http://localhost:8080/api/reviews/bulk-review-status?${productIds.map(id => `productIds=${id}`).join('&')}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${extendedSession.accessToken}`,
+                },
+            });
 
-                // Kiểm tra đã đánh giá chưa
-                const hasReviewedResponse = await fetch(`http://localhost:8080/api/reviews/has-reviewed?productId=${productId}`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${extendedSession.accessToken}`,
-                    },
-                });
+            if (bulkReviewResponse.ok) {
+                const bulkReviewData = await bulkReviewResponse.json();
+                const reviewStatus = bulkReviewData.data?.reviewStatus || {};
 
-                if (hasReviewedResponse.ok) {
-                    const hasReviewedData = await hasReviewedResponse.json();
-                    if (hasReviewedData.data === true) {
+                const reviewedProductIds = new Set<number>();
+                const newUserReviews = new Map<number, {
+                    rating: number;
+                    comment: string;
+                    reviewDate: string;
+                }>();
+
+                // Xử lý kết quả từ API bulk
+                for (const item of orderDetail.orderItems) {
+                    const productId = item.productId;
+                    const productReview = reviewStatus[productId];
+
+                    if (productReview?.hasReviewed) {
                         reviewedProductIds.add(productId);
-                        
-                        // Lấy thông tin đánh giá chi tiết
-                        try {
-                            const userReviewResponse = await fetch(`http://localhost:8080/api/reviews/user-review?productId=${productId}`, {
-                                method: 'GET',
-                                headers: {
-                                    'Authorization': `Bearer ${extendedSession.accessToken}`,
-                                },
-                            });
-
-                            if (userReviewResponse.ok) {
-                                const userReviewData = await userReviewResponse.json();
-                                if (userReviewData.data) {
-                                    const review = userReviewData.data;
-                                    userReviews.set(productId, {
-                                        rating: review.rating,
-                                        comment: review.comment,
-                                        reviewDate: review.reviewDate
-                                    });
-                                }
-                            }
-                        } catch (reviewError) {
-                            console.error('Lỗi khi lấy thông tin đánh giá:', reviewError);
-                        }
-                    } else {
-                        reviewableProductIds.add(productId);
+                        newUserReviews.set(productId, {
+                            rating: productReview.rating,
+                            comment: productReview.comment,
+                            reviewDate: productReview.reviewDate
+                        });
                     }
                 }
-            } catch (error) {
-                console.error('Lỗi khi kiểm tra trạng thái đánh giá:', error);
-                // Nếu có lỗi, vẫn cho phép đánh giá
-                reviewableProductIds.add(item.productId);
-            }
-        }
 
-        console.log('Có thể đánh giá sản phẩm:', Array.from(reviewableProductIds));
-        console.log('Đã đánh giá sản phẩm:', Array.from(reviewedProductIds));
-        setReviewableProducts(reviewableProductIds);
-        setReviewedProducts(reviewedProductIds);
-        setUserReviews(new Map(userReviews));
-    }, [orderDetail, session, userReviews]);
+                console.log('Đã đánh giá sản phẩm:', Array.from(reviewedProductIds));
+                setReviewedProducts(reviewedProductIds);
+                setUserReviews(newUserReviews);
+            } else {
+                console.error('Lỗi khi gọi API bulk review status');
+                // Fallback: reset trạng thái nếu API lỗi
+                setReviewedProducts(new Set());
+                setUserReviews(new Map());
+            }
+        } catch (error) {
+            console.error('Lỗi khi kiểm tra trạng thái đánh giá:', error);
+            // Fallback: reset trạng thái nếu có lỗi
+            setReviewedProducts(new Set());
+            setUserReviews(new Map());
+        }
+    }, [orderDetail, session]);
 
     // Lấy chi tiết đơn hàng khi component mount
     useEffect(() => {
@@ -369,7 +360,7 @@ export default function OrderDetailPage() {
 
     // Kiểm tra quyền đánh giá khi orderDetail được load
     useEffect(() => {
-        if (orderDetail && orderDetail.orderStatus === 'Paid') {
+        if (orderDetail) {
             checkReviewPermissions();
         }
     }, [orderDetail, checkReviewPermissions]);
@@ -391,6 +382,7 @@ export default function OrderDetailPage() {
         // Refresh lại trạng thái đánh giá và thông tin đánh giá
         checkReviewPermissions();
     };
+
 
     // Hàm quay lại
     const handleGoBack = () => {
@@ -895,70 +887,51 @@ export default function OrderDetailPage() {
                                                                 Trạng thái: {orderDetail.orderStatus}
                                                             </p>
                                                             {/* Hiển thị trạng thái đánh giá */}
-                                                                                                                         {(() => {
-                                                                 console.log('Kiểm tra điều kiện đánh giá:', orderDetail.orderStatus === 'Paid', orderDetail.orderStatus);
-                                                                 return orderDetail.orderStatus === 'Paid';
-                                                             })() && (
-                                                                 <>
-                                                                     {reviewedProducts.has(item.productId) ? (
-                                                                         <div className="space-y-2">
-                                                                             <div className="flex items-center gap-2">
-                                                                                 <Chip
-                                                                                     size="sm"
-                                                                                     color="success"
-                                                                                     variant="flat"
-                                                                                     startContent={<Star size={12} className="fill-current" />}
-                                                                                 >
-                                                                                     Đã đánh giá
-                                                                                 </Chip>
-                                                                             </div>
-                                                                             
-                                                                             {/* Hiển thị nội dung đánh giá */}
-                                                                             {userReviews.has(item.productId) && (
-                                                                                 <div className="bg-success-50 border border-success-200 rounded-lg p-3 space-y-2">
-                                                                                     <div className="flex items-center gap-2">
-                                                                                         <span className="text-sm font-medium text-success-700">Đánh giá của bạn:</span>
-                                                                                         <div className="flex items-center gap-1">
-                                                                                             {renderStars(userReviews.get(item.productId)!.rating)}
-                                                                                         </div>
-                                                                                     </div>
-                                                                                     
-                                                                                     {userReviews.get(item.productId)!.comment && (
-                                                                                         <div className="text-sm text-success-600">
-                                                                                             <p className="italic"> {userReviews.get(item.productId)!.comment} </p>
-                                                                                         </div>
-                                                                                     )}
-                                                                                     
-                                                                                     <div className="text-xs text-success-500">
-                                                                                         {formatDate(userReviews.get(item.productId)!.reviewDate)}
-                                                                                     </div>
-                                                                                 </div>
-                                                                             )}
-                                                                         </div>
-                                                                     ) : reviewableProducts.has(item.productId) ? (
-                                                                         <Button
-                                                                             size="sm"
-                                                                             color="primary"
-                                                                             variant="flat"
-                                                                             startContent={<Star size={14} />}
-                                                                             onPress={() => {
-                                                                                 console.log('Mở modal đánh giá cho sản phẩm:', item.productId);
-                                                                                 handleOpenReviewModal(
-                                                                                     item.productId,
-                                                                                     item.productName,
-                                                                                     item.imageUrl
-                                                                                 );
-                                                                             }}
-                                                                         >
-                                                                             Đánh giá sản phẩm
-                                                                         </Button>
-                                                                     ) : (
-                                                                         <div className="text-xs text-gray-400">
-                                                                             Đang kiểm tra...
-                                                                         </div>
-                                                                     )}
-                                                                 </>
-                                                             )}
+                                                            {orderDetail.orderStatus === 'Paid' && (
+                                                                <>
+                                                                    {/* Luôn hiển thị nút đánh giá cho tất cả sản phẩm */}
+                                                                    <div className="space-y-2">
+                                                                        <Button
+                                                                            size="sm"
+                                                                            color="primary"
+                                                                            variant="flat"
+                                                                            startContent={<Star size={14} />}
+                                                                            onPress={() => {
+                                                                                console.log('Mở modal đánh giá cho sản phẩm:', item.productId);
+                                                                                handleOpenReviewModal(
+                                                                                    item.productId,
+                                                                                    item.productName,
+                                                                                    item.imageUrl
+                                                                                );
+                                                                            }}
+                                                                        >
+                                                                            {reviewedProducts.has(item.productId) ? 'Đánh giá lại' : 'Đánh giá sản phẩm'}
+                                                                        </Button>
+
+                                                                        {/* Hiển thị đánh giá hiện tại nếu có */}
+                                                                        {reviewedProducts.has(item.productId) && userReviews.has(item.productId) && (
+                                                                            <div className="bg-success-50 border border-success-200 rounded-lg p-3 space-y-2">
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <span className="text-sm font-medium text-success-700">Đánh giá hiện tại:</span>
+                                                                                    <div className="flex items-center gap-1">
+                                                                                        {renderStars(userReviews.get(item.productId)!.rating)}
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                {userReviews.get(item.productId)!.comment && (
+                                                                                    <div className="text-sm text-success-600">
+                                                                                        <p className="italic"> {userReviews.get(item.productId)!.comment} </p>
+                                                                                    </div>
+                                                                                )}
+
+                                                                                <div className="text-xs text-success-500">
+                                                                                    {formatDate(userReviews.get(item.productId)!.reviewDate)}
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
