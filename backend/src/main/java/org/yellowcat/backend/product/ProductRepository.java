@@ -151,7 +151,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                     "LEFT JOIN Product_Variants pv ON p.product_id = pv.product_id " +
                     "LEFT JOIN sizes s ON pv.size_id = s.size_id " +
                     "LEFT JOIN colors co ON pv.color_id = co.color_id " +
-                    "WHERE p.is_active = true " +
+                    "WHERE p.is_active = true" +
                     "GROUP BY p.product_id, c.category_id, b.brand_id " +
                     "ORDER BY p.product_id " +
                     "LIMIT :pageSize OFFSET :offset",

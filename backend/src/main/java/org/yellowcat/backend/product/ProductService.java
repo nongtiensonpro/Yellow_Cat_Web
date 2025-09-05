@@ -57,7 +57,7 @@ public class ProductService {
 
     public List<ProductListItemDTO> getTop5BestSellingProducts() {
         List<ProductListItemDTO> topProducts = productRepository.findTop5BestSellingProducts();
-        
+
         // 🔥 ÁP DỤNG PROMOTION REAL-TIME CHO TOP SELLING PRODUCTS
         return topProducts.stream()
                 .map(this::refreshPromotionForProductListItem)
@@ -70,39 +70,39 @@ public class ProductService {
      */
     public List<ProductOverviewForAIDTO> getProductsOverviewForAI() {
         List<Object[]> results = productRepository.findProductsOverviewForAI();
-        
+
         return results.stream().map(row -> {
             return new ProductOverviewForAIDTO(
-                (Integer) row[0],  // productId
-                (String) row[1],   // productName
-                (String) row[2],   // description
-                (String) row[3],   // brandName
-                (String) row[4],   // categoryName
-                (String) row[5],   // targetAudience
-                (String) row[6],   // materialName
-                
-                // Thông tin giá cả
-                (BigDecimal) row[7],  // minPrice
-                (BigDecimal) row[8],  // maxPrice
-                (BigDecimal) row[9],  // minSalePrice
-                
-                // Thông tin tồn kho và bán hàng
-                ((Number) row[10]).intValue(),   // totalStock
-                ((Number) row[11]).intValue(),  // totalSold
-                (Integer) row[12], // purchases
-                
-                // Thông tin màu sắc và kích thước
-                (String) row[13],  // availableColors
-                (String) row[14],  // availableSizes
-                
-                // Thông tin đánh giá
-                ((Number) row[15]).doubleValue(), // averageRating
-                ((Number) row[16]).intValue(),    // totalReviews
-                
-                // Trạng thái
-                (Boolean) row[17], // isActive
-                (Boolean) row[18], // isFeatured
-                (Boolean) row[19]  // hasPromotion
+                    (Integer) row[0],  // productId
+                    (String) row[1],   // productName
+                    (String) row[2],   // description
+                    (String) row[3],   // brandName
+                    (String) row[4],   // categoryName
+                    (String) row[5],   // targetAudience
+                    (String) row[6],   // materialName
+
+                    // Thông tin giá cả
+                    (BigDecimal) row[7],  // minPrice
+                    (BigDecimal) row[8],  // maxPrice
+                    (BigDecimal) row[9],  // minSalePrice
+
+                    // Thông tin tồn kho và bán hàng
+                    ((Number) row[10]).intValue(),   // totalStock
+                    ((Number) row[11]).intValue(),  // totalSold
+                    (Integer) row[12], // purchases
+
+                    // Thông tin màu sắc và kích thước
+                    (String) row[13],  // availableColors
+                    (String) row[14],  // availableSizes
+
+                    // Thông tin đánh giá
+                    ((Number) row[15]).doubleValue(), // averageRating
+                    ((Number) row[16]).intValue(),    // totalReviews
+
+                    // Trạng thái
+                    (Boolean) row[17], // isActive
+                    (Boolean) row[18], // isFeatured
+                    (Boolean) row[19]  // hasPromotion
             );
         }).collect(Collectors.toList());
     }
@@ -112,12 +112,12 @@ public class ProductService {
      */
     public List<LatestProductDTO> getLatest3Products() {
         List<Object[]> results = productRepository.findLatest3Products();
-        
+
         Map<Integer, LatestProductDTO> productMap = new HashMap<>();
-        
+
         for (Object[] row : results) {
             Integer productId = (Integer) row[0];
-            
+
             // Tạo hoặc lấy product DTO
             LatestProductDTO productDTO = productMap.computeIfAbsent(productId, k -> {
                 LatestProductDTO dto = new LatestProductDTO();
@@ -150,7 +150,7 @@ public class ProductService {
                 dto.setVariants(new ArrayList<>());
                 return dto;
             });
-            
+
             // Thêm variant nếu có
             if (row[21] != null) { // variantId
                 LatestProductDTO.ProductVariantImageDTO variantDTO = new LatestProductDTO.ProductVariantImageDTO();
@@ -165,11 +165,11 @@ public class ProductService {
                 variantDTO.setImageUrl((String) row[29]);
                 variantDTO.setWeight((Double) row[30]);
                 variantDTO.setCostPrice((BigDecimal) row[31]);
-                
+
                 productDTO.getVariants().add(variantDTO);
             }
         }
-        
+
         return new ArrayList<>(productMap.values());
     }
 
@@ -178,16 +178,16 @@ public class ProductService {
      */
     public FeaturedProductDTO getTopRatedOrRandomProduct() {
         List<Object[]> results = productRepository.findTopRatedOrRandomProduct();
-        
+
         if (results.isEmpty()) {
             return null;
         }
-        
+
         Map<Integer, FeaturedProductDTO> productMap = new HashMap<>();
-        
+
         for (Object[] row : results) {
             Integer productId = (Integer) row[0];
-            
+
             // Tạo hoặc lấy product DTO
             FeaturedProductDTO productDTO = productMap.computeIfAbsent(productId, k -> {
                 FeaturedProductDTO dto = new FeaturedProductDTO();
@@ -222,7 +222,7 @@ public class ProductService {
                 dto.setVariants(new ArrayList<>());
                 return dto;
             });
-            
+
             // Thêm variant nếu có
             if (row[23] != null) { // variantId
                 FeaturedProductDTO.ProductVariantImageDTO variantDTO = new FeaturedProductDTO.ProductVariantImageDTO();
@@ -237,11 +237,11 @@ public class ProductService {
                 variantDTO.setImageUrl((String) row[31]);
                 variantDTO.setWeight((Double) row[32]);
                 variantDTO.setCostPrice((BigDecimal) row[33]);
-                
+
                 productDTO.getVariants().add(variantDTO);
             }
         }
-        
+
         return new ArrayList<>(productMap.values()).get(0);
     }
 
@@ -250,12 +250,12 @@ public class ProductService {
         int offset = (int) pageable.getOffset();
 
         List<ProductListItemDTO> productDTOs = productRepository.findAllProduct(pageSize, offset);
-        
+
         // 🔥 ÁP DỤNG PROMOTION REAL-TIME CHO DANH SÁCH SẢN PHẨM
         productDTOs = productDTOs.stream()
                 .map(this::refreshPromotionForProductListItem)
                 .collect(Collectors.toList());
-        
+
         long totalProducts = productRepository.countTotalProducts();
 
         return new PageImpl<>(productDTOs, pageable, totalProducts);
@@ -273,7 +273,7 @@ public class ProductService {
         int offset = (int) pageable.getOffset();
 
         List<ProductListItemManagementDTO> productDTOs = productRepository.findAllProductManagement(pageSize, offset, search, categoryId, brandId);
-        
+
         // Sử dụng filtered count nếu có filter, ngược lại dùng total count
         long totalProducts;
         if (search != null || categoryId != null || brandId != null) {
@@ -320,10 +320,10 @@ public class ProductService {
                 variantEntity.setSku((String) row[15]);
                 variantEntity.setPrice((BigDecimal) row[18]);
                 variantEntity.setSalePrice((BigDecimal) row[19]); // Giá từ database
-                
+
                 // 🔥 KIỂM TRA VÀ CẬP NHẬT PROMOTION REAL-TIME
                 autoPromotionService.refreshPromotionForDisplay(variantEntity);
-                
+
                 // Tạo DTO với salePrice đã được cập nhật
                 ProductVariantDTO variantDTO = new ProductVariantDTO();
                 variantDTO.setVariantId((Integer) row[14]);
@@ -396,10 +396,10 @@ public class ProductService {
             variant.setImageUrl(variantDto.getImageUrl());
             variant.setWeight(variantDto.getWeight());
             variant.setCreatedBy(appUser);
-            
+
             // Lưu variant trước để có ID
             variant = productVariantRepository.save(variant);
-            
+
             // 🔥 TỰ ĐỘNG ÁP DỤNG PROMOTION (nếu có)
             boolean promotionApplied = autoPromotionService.autoApplyBestPromotion(variant);
             if (promotionApplied) {
@@ -465,13 +465,13 @@ public class ProductService {
         for (var vDto : dto.getVariants()) {
             ProductVariant v;
             boolean isNewVariant = (vDto.getVariantId() == null);
-            
+
             if (isNewVariant) {
                 // Tạo variant mới
                 v = new ProductVariant();
                 v.setProduct(product);
                 v.setCreatedBy(user);
-                
+
                 // Tự động sinh SKU cho variant mới
                 Color variantColor = colors.get(vDto.getColorId());
                 Size variantSize = sizes.get(vDto.getSizeId());
@@ -484,14 +484,14 @@ public class ProductService {
                     throw new RuntimeException("Variant not found with ID: " + vDto.getVariantId());
                 }
                 processedVariantIds.add(vDto.getVariantId());
-                
+
                 // History before update
                 createVariantHistory(v, user, 'U', groupId);
-                
+
                 // Giữ nguyên SKU hiện tại hoặc generate lại nếu color/size thay đổi
                 boolean colorChanged = !v.getColor().getId().equals(vDto.getColorId());
                 boolean sizeChanged = !v.getSize().getId().equals(vDto.getSizeId());
-                
+
                 if (colorChanged || sizeChanged) {
                     Color variantColor = colors.get(vDto.getColorId());
                     Size variantSize = sizes.get(vDto.getSizeId());
@@ -499,7 +499,7 @@ public class ProductService {
                     v.setSku(newSku);
                 }
             }
-            
+
             v.setColor(colors.get(vDto.getColorId()));
             v.setSize(sizes.get(vDto.getSizeId()));
             v.setPrice(vDto.getPrice());
@@ -509,11 +509,11 @@ public class ProductService {
             v.setSold(vDto.getSold() != null ? vDto.getSold() : 0);
             v.setImageUrl(vDto.getImageUrl());
             v.setWeight(vDto.getWeight());
-            
+
             // 🔥 TỰ ĐỘNG ÁP DỤNG PROMOTION (nếu có)
             // Điều này sẽ tự động tính lại salePrice dựa trên promotion đang active
             autoPromotionService.autoApplyBestPromotion(v);
-            
+
             toSave.add(v);
         }
         productVariantRepository.saveAll(toSave);
@@ -751,7 +751,7 @@ public class ProductService {
             item.setDescription((String) r[2]);
             item.setDiscountAmount((java.math.BigDecimal) r[3]);
             item.setFinalPrice((java.math.BigDecimal) r[4]);
-            
+
             // Transform discount type to match frontend expectations
             String discountType = (String) r[5];
             if ("percentage".equalsIgnoreCase(discountType)) {
@@ -761,9 +761,9 @@ public class ProductService {
             } else {
                 item.setDiscountType(discountType != null ? discountType.toUpperCase() : "FIXED_AMOUNT");
             }
-            
+
             item.setDiscountValue((java.math.BigDecimal) r[6]);
-            
+
             // Convert Timestamp to LocalDateTime
             if (r[7] != null) {
                 item.setStartDate(((java.sql.Timestamp) r[7]).toLocalDateTime());
@@ -771,7 +771,7 @@ public class ProductService {
             if (r[8] != null) {
                 item.setEndDate(((java.sql.Timestamp) r[8]).toLocalDateTime());
             }
-            
+
             item.setIsActive((Boolean) r[9]);
             Boolean isBest = (Boolean) r[10];
             if (Boolean.TRUE.equals(isBest) && result.getBestPromo() == null) {
@@ -805,7 +805,7 @@ public class ProductService {
      */
     private String generateProfessionalSku(Integer productId, Integer colorId, Integer sizeId) {
         String baseSku = String.format("P%d-C%d-S%d", productId, colorId, sizeId);
-        
+
         // Kiểm tra unique và thêm suffix nếu cần
         String finalSku = baseSku;
         int counter = 1;
@@ -813,13 +813,13 @@ public class ProductService {
             finalSku = baseSku + "-" + String.format("%02d", counter);
             counter++;
         }
-        
+
         return finalSku;
     }
 
     /**
      * Refresh promotion cho ProductListItemDTO để hiển thị giá chính xác trong danh sách
-     * 
+     *
      * @param productListItem DTO cần refresh promotion
      * @return DTO đã được cập nhật minSalePrice
      */
@@ -827,13 +827,13 @@ public class ProductService {
         try {
             // Lấy tất cả variants của product này
             List<ProductVariant> variants = productVariantRepository.findByProductId(productListItem.getProductId());
-            
+
             if (variants.isEmpty()) {
                 return productListItem; // Không có variant thì không làm gì
             }
-            
+
             BigDecimal minSalePrice = null;
-            
+
             // Kiểm tra promotion cho từng variant và tìm giá sale thấp nhất
             for (ProductVariant variant : variants) {
                 // Tạo bản copy để không ảnh hưởng đến database
@@ -842,10 +842,10 @@ public class ProductService {
                 tempVariant.setSku(variant.getSku());
                 tempVariant.setPrice(variant.getPrice());
                 tempVariant.setSalePrice(variant.getSalePrice());
-                
+
                 // Refresh promotion cho variant này
                 autoPromotionService.refreshPromotionForDisplay(tempVariant);
-                
+
                 // Nếu có salePrice sau khi refresh, so sánh để tìm min
                 if (tempVariant.getSalePrice() != null) {
                     if (minSalePrice == null || tempVariant.getSalePrice().compareTo(minSalePrice) < 0) {
@@ -853,12 +853,12 @@ public class ProductService {
                     }
                 }
             }
-            
+
             // Cập nhật minSalePrice trong DTO
             productListItem.setMinSalePrice(minSalePrice);
-            
+
             return productListItem;
-            
+
         } catch (Exception e) {
             // Trong trường hợp lỗi, set minSalePrice = null để đảm bảo an toàn
             productListItem.setMinSalePrice(null);

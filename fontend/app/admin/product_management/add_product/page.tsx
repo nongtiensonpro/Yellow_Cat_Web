@@ -1,7 +1,7 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import {useSession} from "next-auth/react";
+import {useState, useEffect} from "react";
 import React from "react";
 import {
     Card,
@@ -23,8 +23,8 @@ import {
     Divider,
     addToast
 } from "@heroui/react";
-import {  Save, ArrowLeft, RefreshCw, Settings } from "lucide-react";
-import { useRouter } from "next/navigation";
+import {Save, ArrowLeft, RefreshCw, Settings} from "lucide-react";
+import {useRouter} from "next/navigation";
 import ProductImageUpload from "@/components/product/ProductImageUpload";
 
 // Định nghĩa kiểu dữ liệu
@@ -67,7 +67,7 @@ interface ProductFormData {
 }
 
 export default function AddProductPage() {
-    const { data: session } = useSession();
+    const {data: session} = useSession();
     const router = useRouter();
 
     // Trạng thái form
@@ -108,7 +108,7 @@ export default function AddProductPage() {
     });
 
     // Validation state
-    const [errors, setErrors] = useState<{[key: string]: string}>({});
+    const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
     const token = session?.accessToken;
 
@@ -184,16 +184,16 @@ export default function AddProductPage() {
                 }
 
                 const [brandsData, categoriesData, materialsData, audiencesData, colorsData, sizesData] = await Promise.all([
-                    brandsRes.ok ? brandsRes.json() : { data: { content: [] } },
-                    categoriesRes.ok ? categoriesRes.json() : { data: { content: [] } },
-                    materialsRes.ok ? materialsRes.json() : { data: { content: [] } },
-                    audiencesRes.ok ? audiencesRes.json() : { data: { content: [] } },
-                    colorsRes.ok ? colorsRes.json() : { data: { content: [] } },
-                    sizesRes.ok ? sizesRes.json() : { data: { content: [] } }
+                    brandsRes.ok ? brandsRes.json() : {data: {content: []}},
+                    categoriesRes.ok ? categoriesRes.json() : {data: {content: []}},
+                    materialsRes.ok ? materialsRes.json() : {data: {content: []}},
+                    audiencesRes.ok ? audiencesRes.json() : {data: {content: []}},
+                    colorsRes.ok ? colorsRes.json() : {data: {content: []}},
+                    sizesRes.ok ? sizesRes.json() : {data: {content: []}}
                 ]);
 
                 // Trích xuất dữ liệu từ cấu trúc phản hồi backend
-                const extractData = <T,>(response: unknown): T[] => {
+                const extractData = <T, >(response: unknown): T[] => {
                     if (Array.isArray(response)) {
                         return response as T[];
                     }
@@ -290,7 +290,7 @@ export default function AddProductPage() {
     };
 
     const validateRequiredFields = (): boolean => {
-        const newErrors: {[key: string]: string} = {};
+        const newErrors: { [key: string]: string } = {};
 
         // Validate tên sản phẩm
         const nameError = validateProductName(formData.productName);
@@ -366,7 +366,7 @@ export default function AddProductPage() {
     const clearError = (fieldName: string) => {
         if (errors[fieldName]) {
             setErrors(prev => {
-                const newErrors = { ...prev };
+                const newErrors = {...prev};
                 delete newErrors[fieldName];
                 return newErrors;
             });
@@ -452,7 +452,7 @@ export default function AddProductPage() {
         if (field === 'productName') {
             const error = validateProductName(value as string);
             if (error) {
-                setErrors(prev => ({ ...prev, [field]: error }));
+                setErrors(prev => ({...prev, [field]: error}));
             }
         }
     };
@@ -530,19 +530,13 @@ export default function AddProductPage() {
             variants: prev.variants.map(v =>
                 v.id === variantId
                     ? {
-                          ...v,
-                          price: field === 'price' ? (value as number) : v.price,
-                          salePrice: field === 'price' ? (value as number) : v.salePrice,
-                          [field]: value
-                      }
+                        ...v,
+                        price: field === 'price' ? (value as number) : v.price,
+                        salePrice: field === 'price' ? (value as number) : v.salePrice,
+                        [field]: value
+                    }
                     : v
             )
-
-
-
-
-
-
 
 
         }));
@@ -605,7 +599,7 @@ export default function AddProductPage() {
 
         // Xoá lỗi ảnh (nếu có) sau khi áp dụng ảnh chung
         setErrors(prev => {
-            const newErrors = { ...prev };
+            const newErrors = {...prev};
             enabledVariants.forEach(v => {
                 delete newErrors[`variant_${v.id}_imageUrl`];
             });
@@ -741,14 +735,14 @@ export default function AddProductPage() {
                         variant="light"
                         onPress={() => router.back()}
                     >
-                        <ArrowLeft size={20} />
+                        <ArrowLeft size={20}/>
                     </Button>
                     <h1 className="text-2xl font-bold">Thêm Sản Phẩm Mới</h1>
                 </div>
 
                 <Button
                     color="primary"
-                    startContent={<Save size={18} />}
+                    startContent={<Save size={18}/>}
                     isLoading={isSubmitting}
                     onPress={handleSubmit}
                     isDisabled={!formData.productName || formData.variants.filter(v => v.enabled).length === 0 || !token || Object.keys(errors).length > 0}
@@ -859,7 +853,8 @@ export default function AddProductPage() {
                         </div>
 
                         <div>
-                            <p className="text-sm font-medium mb-2">Ảnh đại diện <span className="text-red-500">*</span></p>
+                            <p className="text-sm font-medium mb-2">Ảnh đại diện <span className="text-red-500">*</span>
+                            </p>
 
                             <ProductImageUpload
                                 onUpload={(imageUrl) => handleInputChange("thumbnail", imageUrl)}
@@ -881,7 +876,7 @@ export default function AddProductPage() {
                             <Button
                                 color="success"
                                 size="sm"
-                                startContent={<RefreshCw size={16} />}
+                                startContent={<RefreshCw size={16}/>}
                                 onPress={generateVariantsMatrix}
                                 isDisabled={selectedColors.length === 0 || selectedSizes.length === 0}
                             >
@@ -927,12 +922,12 @@ export default function AddProductPage() {
                             </Select>
                         </div>
 
-                        <Divider />
+                        <Divider/>
 
                         {/* Cài đặt hàng loạt */}
                         <div className="bg-gray-50 p-4 rounded-lg">
                             <div className="flex items-center gap-2 mb-3">
-                                <Settings size={16} />
+                                <Settings size={16}/>
                                 <h3 className="font-medium">Cài Đặt Hàng Loạt</h3>
                                 <Button
                                     size="sm"
@@ -955,7 +950,7 @@ export default function AddProductPage() {
                                     value={bulkSettings.weight.toString()}
                                     onChange={(e) => {
                                         const value = handleNumberInput(e.target.value, 0, 50000);
-                                        setBulkSettings(prev => ({ ...prev, weight: value }));
+                                        setBulkSettings(prev => ({...prev, weight: value}));
                                     }}
                                     onKeyDown={handleKeyDown}
                                     onPaste={handlePaste}
@@ -969,21 +964,21 @@ export default function AddProductPage() {
                                     value={bulkSettings.stockLevel.toString()}
                                     onChange={(e) => {
                                         const value = handleIntegerInput(e.target.value, 0, 999999);
-                                        setBulkSettings(prev => ({ ...prev, stockLevel: value }));
+                                        setBulkSettings(prev => ({...prev, stockLevel: value}));
                                     }}
                                     onKeyDown={handleKeyDown}
                                     onPaste={handlePaste}
                                 />
                                 <Input
-                                    label="Giá gốc (VNĐ)"
+                                    label="Giá nhập (VNĐ)"
                                     type="number"
                                     size="sm"
                                     min={0}
                                     max={999999999}
-                                    value={bulkSettings.price.toString()}
+                                    value={bulkSettings.costPrice.toString()}
                                     onChange={(e) => {
                                         const value = handleNumberInput(e.target.value, 0, 999999999);
-                                        setBulkSettings(prev => ({ ...prev, price: value }));
+                                        setBulkSettings(prev => ({...prev, costPrice: value}));
                                     }}
                                     onKeyDown={handleKeyDown}
                                     onPaste={handlePaste}
@@ -994,10 +989,10 @@ export default function AddProductPage() {
                                     size="sm"
                                     min={0}
                                     max={999999999}
-                                    value={bulkSettings.costPrice.toString()}
+                                    value={bulkSettings.price.toString()}
                                     onChange={(e) => {
                                         const value = handleNumberInput(e.target.value, 0, 999999999);
-                                        setBulkSettings(prev => ({ ...prev, costPrice: value }));
+                                        setBulkSettings(prev => ({...prev, price: value}));
                                     }}
                                     onKeyDown={handleKeyDown}
                                     onPaste={handlePaste}
@@ -1008,7 +1003,8 @@ export default function AddProductPage() {
                         {/* Bảng danh sách biến thể */}
                         {formData.variants.length > 0 && (
                             <div>
-                                <h3 className="font-medium mb-3">📋 Danh Sách Biến Thể ({formData.variants.filter(v => v.enabled).length}/{formData.variants.length})</h3>
+                                <h3 className="font-medium mb-3">📋 Danh Sách Biến Thể
+                                    ({formData.variants.filter(v => v.enabled).length}/{formData.variants.length})</h3>
 
                                 {errors.variants && (
                                     <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
@@ -1028,7 +1024,7 @@ export default function AddProductPage() {
                                             <TableColumn>TRỌNG LƯỢNG</TableColumn>
                                             <TableColumn>TỒN KHO</TableColumn>
                                             <TableColumn>GIÁ NHẬP</TableColumn>
-                                            <TableColumn>GIÁ GỐC</TableColumn>
+                                            <TableColumn>GIÁ BÁN</TableColumn>
                                             <TableColumn>ẢNH BIẾN THỂ</TableColumn>
                                         </TableHeader>
                                         <TableBody>
@@ -1144,7 +1140,8 @@ export default function AddProductPage() {
                             <div className="text-center py-12 text-gray-500">
                                 <div className="text-4xl mb-4">🎯</div>
                                 <h3 className="text-lg font-medium mb-2">Chưa có biến thể nào</h3>
-                                <p className="text-sm">Chọn màu sắc và kích thước, sau đó nhấn &quot;Tạo Biến Thể&quot; để bắt đầu</p>
+                                <p className="text-sm">Chọn màu sắc và kích thước, sau đó nhấn &quot;Tạo Biến
+                                    Thể&quot; để bắt đầu</p>
 
                             </div>
                         )}

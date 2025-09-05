@@ -10,7 +10,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.yellowcat.backend.common.config_api.response.ResponseEntityBuilder;
-import org.yellowcat.backend.product.ProductRepository;
 import org.yellowcat.backend.product.review.dto.*;
 import org.yellowcat.backend.user.AppUser;
 import org.yellowcat.backend.user.AppUserRepository;
@@ -22,7 +21,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/reviews")
-@CrossOrigin(origins = "http://localhost:3000")
 @RequiredArgsConstructor
 public class ReviewController {
     private final ReviewService reviewService;
