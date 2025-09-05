@@ -29,19 +29,6 @@ public class PromotionProductController {
     PromotionProductService promotionProductService;
     PromotionProductRepository promotionProductRepository;
 
-//    @GetMapping
-//    public ResponseEntity<List<PromotionProductResponse>> getAllOrFiltered(
-//            @RequestParam(required = false) String keyword,
-//            @RequestParam(required = false) String status,
-//            @RequestParam(required = false) String discountType,
-//            @RequestParam(required = false) Double discountValue
-//    ) {
-//        if (keyword != null || status != null || discountType != null || discountValue != null) {
-//            return ResponseEntity.ok(promotionProductService.getFiltered(keyword, status, discountType, discountValue));
-//        } else {
-//            return ResponseEntity.ok(promotionProductService.getAllWithJoin());
-//        }
-//    }
 
     @GetMapping
     public ResponseEntity<List<PromotionProductResponse>> getAllOrFiltered(
