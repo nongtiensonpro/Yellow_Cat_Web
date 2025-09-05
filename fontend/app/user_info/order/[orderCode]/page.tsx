@@ -124,6 +124,7 @@ export default function OrderDetailPage() {
         productName: string;
         imageUrl?: string;
     } | null>(null);
+    const [reviewableProducts, setReviewableProducts] = useState<Set<number>>(new Set());
     const [reviewedProducts, setReviewedProducts] = useState<Set<number>>(new Set());
     const [userReviews, setUserReviews] = useState<Map<number, {
         rating: number;
@@ -214,7 +215,6 @@ export default function OrderDetailPage() {
     // HÀM ĐÃ SỬA LỖI GỌI API LIÊN TỤC
     // =================================================================================
     const checkReviewPermissions = useCallback(async () => {
-
         if (!orderDetail || orderDetail.orderStatus !== 'Paid' || !session) {
             return;
         }
@@ -285,6 +285,7 @@ export default function OrderDetailPage() {
         setUserReviews(newUserReviews);
 
     }, [orderDetail, session]); // <-- LOẠI BỎ `userReviews` khỏi dependency array
+
     useEffect(() => {
         const getOrderDetail = async () => {
             if (status === 'loading') return;
@@ -324,7 +325,7 @@ export default function OrderDetailPage() {
     }, [session, status, orderCode, fetchOrderDetail]);
 
     useEffect(() => {
-        if (orderDetail) {
+        if (orderDetail && orderDetail.orderStatus === 'Paid') {
             checkReviewPermissions();
         }
     }, [orderDetail, checkReviewPermissions]);
